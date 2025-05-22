@@ -21,6 +21,7 @@ namespace citcpp
       void
       entryPoint (ExecHandleImpl &exec_handle)
       {
+	exec_handle.setTestSet (::citcpp::TestSet ());
       }
     };
   }

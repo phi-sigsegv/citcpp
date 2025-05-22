@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <list>
-#include <iostream>
 #include "input_model.hpp"
 
 namespace citcpp
@@ -14,35 +13,6 @@ namespace citcpp
   class TestSet
   {
   public:
-    TestSet ()
-    {
-      std::cout << "Default ctr" << std::endl;
-    }
-
-    TestSet (const TestSet &other)
-    {
-      std::cout << "copy ctr" << std::endl;
-    }
-
-    TestSet (TestSet &&other)
-    {
-      std::cout << "move ctr" << std::endl;
-    }
-
-    TestSet&
-    operator= (const TestSet &other)
-    {
-      std::cout << "copy assign" << std::endl;
-      return *this;
-    }
-
-    TestSet&
-    operator= (TestSet &&other)
-    {
-      std::cout << "move assign" << std::endl;
-      return *this;
-    }
-
     const std::list<std::vector<ParameterValue>>&
     getListOfTests () const
     {
