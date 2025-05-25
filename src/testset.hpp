@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <list>
+#include <iostream>
 #include "input_model.hpp"
 
 namespace citcpp
@@ -23,6 +24,23 @@ namespace citcpp
     getListOfTests ()
     {
       return m_testset;
+    }
+
+    friend std::ostream&
+    operator<< (std::ostream &os, const TestSet &test_set)
+    {
+      for (const auto &test : test_set.getListOfTests ())
+	{
+	  const char *sep = "";
+	  for (const auto &pv : test)
+	    {
+	      os << sep << pv.getValue ();
+	      sep = ", ";
+	    }
+	  os << "\n";
+	}
+
+      return os;
     }
 
   private:

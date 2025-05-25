@@ -1,6 +1,6 @@
-#include "../citcpp.hpp"
-#include "exec_handle_impl.hpp"
-#include "citcpp_ipog.hpp"
+#include "citcpp.hpp"
+#include "detail/exec_handle_impl.hpp"
+#include "detail/citcpp_ipog.hpp"
 
 namespace citcpp
 {

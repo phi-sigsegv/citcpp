@@ -25,4 +25,7 @@ main (int argc, char *argv[])
     }
 
   TestSet t (f.get ());
+
+  std::cout << "test set is:\n";
+  std::cout << t << std::endl;
 }
