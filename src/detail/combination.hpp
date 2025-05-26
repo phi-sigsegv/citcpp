@@ -1,0 +1,57 @@
+#ifndef DETAIL_COMBINATION_HPP_
+#define DETAIL_COMBINATION_HPP_
+
+#include <tuple>
+#include <vector>
+
+namespace citcpp
+{
+  namespace detail
+  {
+    // Represents a t-way combination as a tuple of a list of parameter indices
+    // and value indices.
+    // Both, parameter and value indices must be sorted vectors in order to ensure
+    // a canonical representation.
+    using Combination = std::tuple<std::vector<int>, std::vector<int>>;
+
+    // This is a custom hash function for Combinations, such
+    // that they can be used in hash-based containers.
+    struct CombinationHash
+    {
+      size_t
+      operator() (const Combination &combo) const
+      {
+	std::hash<int> int_hash;
+
+	std::size_t hash_val = 0;
+	const auto &param_indices = std::get<0> (combo);
+	const auto &value_indices = std::get<1> (combo);
+	for (int index : param_indices)
+	  {
+	    hash_val ^= int_hash (index) + 0x9e3779b9 + (hash_val << 6)
+		+ (hash_val >> 2);
+	  }
+	for (int value : value_indices)
+	  {
+	    hash_val ^= int_hash (value) + 0x9e3779b9 + (hash_val << 6)
+		+ (hash_val >> 2);
+	  }
+	return hash_val;
+      }
+    };
+
+    // This is a custom equality operator for Combinations, such
+    // that they can be used in hash-based containers.
+    struct CombinationEqual
+    {
+      bool
+      operator() (const Combination &c1, const Combination &c2) const
+      {
+	return std::get<0> (c1) == std::get<0> (c2)
+	    && std::get<1> (c1) == std::get<1> (c2);
+      }
+    };
+  }
+}
+
+#endif /* DETAIL_COMBINATION_HPP_ */

@@ -16,9 +16,19 @@ namespace citcpp
     {
     public:
       ExecHandleImpl () :
-	  m_num_combinations_to_cover (0), m_covered_combinations (), m_is_aborted (), m_test_set (), m_runnable (), m_thread ()
+	  IExecHandle (), m_num_combinations_to_cover (0), m_covered_combinations (), m_is_aborted (), m_test_set (), m_runnable (), m_thread ()
       {
       }
+
+      ExecHandleImpl (ExecHandleImpl&&) = default;
+
+      ExecHandleImpl (const ExecHandleImpl&) = delete;
+
+      ExecHandleImpl&
+      operator= (ExecHandleImpl&&) = default;
+
+      ExecHandleImpl&
+      operator= (const ExecHandleImpl&) = delete;
 
       ~ExecHandleImpl ()
       {
@@ -51,6 +61,18 @@ namespace citcpp
 	return m_test_set.get_future ();
       }
 
+      void
+      setNumberOfCombinationsToCover (unsigned long num_combinations_to_cover)
+      {
+	m_num_combinations_to_cover = num_combinations_to_cover;
+      }
+
+      void
+      setNumberOfCoveredCombinations (unsigned long covered_combinations)
+      {
+	m_covered_combinations = covered_combinations;
+      }
+
       bool
       isJobAborted ()
       {
@@ -77,8 +99,8 @@ namespace citcpp
       }
 
     public:
-      int m_num_combinations_to_cover;
-      std::atomic_long m_covered_combinations;
+      std::atomic_ulong m_num_combinations_to_cover;
+      std::atomic_ulong m_covered_combinations;
       std::atomic_flag m_is_aborted;
       std::promise<TestSet> m_test_set;
       std::unique_ptr<ICitCppAlgo> m_runnable;

@@ -22,6 +22,12 @@ namespace citcpp
       Model (const InputModel &input_model);
 
       /**
+       * Returns the input which this internal model has been created from.
+       */
+      const InputModel&
+      getInputModel () const;
+
+      /**
        * Constructs and returns a TestSet based on the given internal test set
        * representation.
        */

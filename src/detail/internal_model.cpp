@@ -13,6 +13,12 @@ namespace citcpp
 	}
     }
 
+    const InputModel&
+    Model::getInputModel () const
+    {
+      return m_input_model;
+    }
+
     ::citcpp::TestSet
     Model::createFromInternalTestSet (
 	const ::citcpp::detail::TestSet &testset) const
@@ -34,7 +40,7 @@ namespace citcpp
     {
       for (std::vector<int>::size_type p = 0; p < src.size (); ++p)
 	{
-	  int pv = src.at (p);
+	  std::vector<ParameterValue>::size_type pv = src.at (p);
 
 	  const Parameter &param = m_input_model.getParameters ().at (p);
 	  if (pv >= 0 && pv < param.getValues ().size ())
