@@ -34,10 +34,18 @@ namespace citcpp
     {
       for (std::vector<int>::size_type p = 0; p < src.size (); ++p)
 	{
-	  int v = src.at (p);
+	  int pv = src.at (p);
 
 	  const Parameter &param = m_input_model.getParameters ().at (p);
-	  tgt.push_back (param.getValues ().at (v));
+	  if (pv >= 0 && pv < param.getValues ().size ())
+	    {
+	      tgt.push_back (param.getValues ().at (pv));
+	    }
+	  else
+	    {
+	      // TODO: Add invalid value here....
+	      tgt.push_back (param.getValues ().at (pv));
+	    }
 	}
     }
   }
