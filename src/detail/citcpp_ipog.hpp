@@ -5,7 +5,7 @@
 #include "citcpp_algo_if.hpp"
 #include "exec_handle_impl.hpp"
 #include "internal_model.hpp"
-#include "set_of_covered_combinations.hpp"
+#include "set_of_covered_pv_combinations.hpp"
 
 namespace citcpp
 {
@@ -47,7 +47,7 @@ namespace citcpp
 
     private:
       const Model m_model;
-      SetOfCoveredCombinations m_covered_combinations;
+      SetOfCoveredPVCombinations m_covered_combinations;
     };
   }
 }

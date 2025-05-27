@@ -2,7 +2,7 @@
 #define DETAIL_SET_OF_COVERED_COMBINATIONS_HPP_
 
 #include <unordered_set>
-#include "combination.hpp"
+#include "pv_combination.hpp"
 
 namespace citcpp
 {
@@ -13,14 +13,14 @@ namespace citcpp
      * the covered combinations.
      */
     template<typename T_IMPL>
-      class SetOfCoveredCombinationsTmpl
+      class SetOfCoveredPVCombinationsTmpl
       {
       public:
 	typedef typename T_IMPL::size_type size_type;
 
       public:
 	void
-	insert (const Combination &combination)
+	insert (const PVCombination &combination)
 	{
 	  m_impl.insert (combination);
 	}
@@ -32,7 +32,7 @@ namespace citcpp
 	}
 
 	bool
-	contains (const Combination &combination)
+	contains (const PVCombination &combination)
 	{
 	  return m_impl.contains (combination);
 	}
@@ -41,8 +41,8 @@ namespace citcpp
 	T_IMPL m_impl;
       };
 
-    using HashsetOfCombinations = std::unordered_set<Combination, CombinationHash, CombinationEqual>;
-    using SetOfCoveredCombinations = SetOfCoveredCombinationsTmpl<HashsetOfCombinations>;
+    using HashsetOfCombinations = std::unordered_set<PVCombination, CombinationHash, CombinationEqual>;
+    using SetOfCoveredPVCombinations = SetOfCoveredPVCombinationsTmpl<HashsetOfCombinations>;
   }
 }
 
