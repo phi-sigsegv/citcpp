@@ -17,13 +17,13 @@ namespace citcpp
     const std::list<std::vector<ParameterValue>>&
     getListOfTests () const
     {
-      return m_testset;
+      return testset_;
     }
 
     std::list<std::vector<ParameterValue>>&
     getListOfTests ()
     {
-      return m_testset;
+      return testset_;
     }
 
     friend std::ostream&
@@ -44,7 +44,7 @@ namespace citcpp
     }
 
   private:
-    std::list<std::vector<ParameterValue>> m_testset;
+    std::list<std::vector<ParameterValue>> testset_;
   };
 }
 

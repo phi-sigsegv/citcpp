@@ -12,20 +12,30 @@ namespace citcpp
   class ParameterValue
   {
   public:
+    ParameterValue (const std::string &value) :
+	value_ (value)
+    {
+    }
+
+    operator const std::string & ()
+    {
+      return getValue ();
+    }
+
     const std::string&
     getValue () const
     {
-      return m_value;
+      return value_;
     }
 
     void
     setValue (const std::string &value)
     {
-      m_value = value;
+      value_ = value;
     }
 
   private:
-    std::string m_value;
+    std::string value_;
   };
 
   /**
@@ -34,20 +44,39 @@ namespace citcpp
   class Parameter
   {
   public:
+    const std::string&
+    getName () const
+    {
+      return name_;
+    }
+
+    std::string&
+    getName ()
+    {
+      return name_;
+    }
+
+    void
+    setName (const std::string &name)
+    {
+      name_ = name;
+    }
+
     const std::vector<ParameterValue>&
     getValues () const
     {
-      return m_values;
+      return values_;
     }
 
     std::vector<ParameterValue>&
     getValues ()
     {
-      return m_values;
+      return values_;
     }
 
   private:
-    std::vector<ParameterValue> m_values;
+    std::string name_;
+    std::vector<ParameterValue> values_;
   };
 
   /**
@@ -59,17 +88,17 @@ namespace citcpp
     const std::vector<Parameter>&
     getParameters () const
     {
-      return m_parameters;
+      return parameters_;
     }
 
     std::vector<Parameter>&
     getParameters ()
     {
-      return m_parameters;
+      return parameters_;
     }
 
   private:
-    std::vector<Parameter> m_parameters;
+    std::vector<Parameter> parameters_;
   };
 }
 

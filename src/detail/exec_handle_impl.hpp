@@ -16,7 +16,7 @@ namespace citcpp
     {
     public:
       ExecHandleImpl () :
-	  IExecHandle (), m_num_combinations_to_cover (0), m_covered_combinations (), m_is_aborted (), m_test_set (), m_runnable (), m_thread ()
+	  IExecHandle (), num_combinations_to_cover_ (0), covered_combinations_ (), is_aborted_ (), test_set_ (), runnable_ (), thread_ ()
       {
       }
 
@@ -33,56 +33,57 @@ namespace citcpp
       ~ExecHandleImpl ()
       {
 	abort ();
-	m_thread.join ();
+	thread_.join ();
       }
 
     public:
-      unsigned long
+      unsigned long long
       getNumberOfCombinationsToCover () const
       {
-	return m_num_combinations_to_cover;
+	return num_combinations_to_cover_;
       }
 
-      unsigned long
+      unsigned long long
       getNumberOfCoveredCombinations () const
       {
-	return m_covered_combinations;
+	return covered_combinations_;
       }
 
       void
       abort ()
       {
-	m_is_aborted.test_and_set ();
+	is_aborted_.test_and_set ();
       }
 
       std::future<TestSet>
       getTestSet ()
       {
-	return m_test_set.get_future ();
+	return test_set_.get_future ();
       }
 
       void
-      setNumberOfCombinationsToCover (unsigned long num_combinations_to_cover)
+      setNumberOfCombinationsToCover (
+	  unsigned long long num_combinations_to_cover)
       {
-	m_num_combinations_to_cover = num_combinations_to_cover;
+	num_combinations_to_cover_ = num_combinations_to_cover;
       }
 
       void
-      setNumberOfCoveredCombinations (unsigned long covered_combinations)
+      setNumberOfCoveredCombinations (unsigned long long covered_combinations)
       {
-	m_covered_combinations = covered_combinations;
+	covered_combinations_ = covered_combinations;
       }
 
       bool
       isJobAborted ()
       {
-	return m_is_aborted.test ();
+	return is_aborted_.test ();
       }
 
       void
       setTestSet (TestSet &&test_set)
       {
-	m_test_set.set_value (std::move (test_set));
+	test_set_.set_value (std::move (test_set));
       }
 
       /**
@@ -93,18 +94,18 @@ namespace citcpp
       void
       setRunnable (std::unique_ptr<ICitCppAlgo> &&runnable)
       {
-	m_runnable = std::move (runnable);
-	m_thread = std::thread (&ICitCppAlgo::entryPoint, m_runnable.get (),
-				std::ref (*this));
+	runnable_ = std::move (runnable);
+	thread_ = std::thread (&ICitCppAlgo::entryPoint, runnable_.get (),
+			       std::ref (*this));
       }
 
     public:
-      std::atomic_ulong m_num_combinations_to_cover;
-      std::atomic_ulong m_covered_combinations;
-      std::atomic_flag m_is_aborted;
-      std::promise<TestSet> m_test_set;
-      std::unique_ptr<ICitCppAlgo> m_runnable;
-      std::thread m_thread;
+      std::atomic_ullong num_combinations_to_cover_;
+      std::atomic_ullong covered_combinations_;
+      std::atomic_flag is_aborted_;
+      std::promise<TestSet> test_set_;
+      std::unique_ptr<ICitCppAlgo> runnable_;
+      std::thread thread_;
     };
   }
 }

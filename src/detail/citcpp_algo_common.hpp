@@ -1,0 +1,19 @@
+#ifndef DETAIL_CITCPP_ALGO_COMMON_HPP_
+#define DETAIL_CITCPP_ALGO_COMMON_HPP_
+
+#include "internal_model.hpp"
+
+namespace citcpp
+{
+  namespace detail
+  {
+    /**
+     * Returns the number of tuple combinations to cover for the given model and
+     * interaction strength.
+     */
+    unsigned long long
+    getNumberOfCombinationsToCover (const Model &model, unsigned int t);
+  }
+}
+
+#endif /* DETAIL_CITCPP_ALGO_COMMON_HPP_ */

@@ -6,6 +6,7 @@
 #include "exec_handle_impl.hpp"
 #include "internal_model.hpp"
 #include "set_of_covered_pv_combinations.hpp"
+#include "citcpp_algo_common.hpp"
 
 namespace citcpp
 {
@@ -18,7 +19,7 @@ namespace citcpp
     {
     public:
       CitCppIpog (const InputModel &input_model) :
-	  ICitCppAlgo (), m_model (input_model), m_covered_combinations ()
+	  ICitCppAlgo (), model_ (input_model), strength_ (1), covered_combinations_ ()
       {
       }
 
@@ -36,18 +37,33 @@ namespace citcpp
       CitCppIpog&
       operator= (const CitCppIpog&) = delete;
 
+      void
+      setInteractionStrength (unsigned int t)
+      {
+	strength_ = t;
+      }
+
       /**
        * This is the entry point to be called by a thread.
        */
       void
       entryPoint (ExecHandleImpl &exec_handle)
       {
+	// First we compute the number of combination we have to cover.
+	unsigned long long number_of_combination_to_cover =
+	    getNumberOfCombinationsToCover (model_, strength_);
+	exec_handle.setNumberOfCombinationsToCover (
+	    number_of_combination_to_cover);
+
+	// Set the generated test set.
+	// This will also signal to the client that we are done.
 	exec_handle.setTestSet (::citcpp::TestSet ());
       }
 
     private:
-      const Model m_model;
-      SetOfCoveredPVCombinations m_covered_combinations;
+      const Model model_;
+      unsigned int strength_;
+      SetOfCoveredPVCombinations covered_combinations_;
     };
   }
 }

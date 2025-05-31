@@ -22,23 +22,23 @@ namespace citcpp
 	void
 	insert (const PVCombination &combination)
 	{
-	  m_impl.insert (combination);
+	  impl_.insert (combination);
 	}
 
 	size_type
 	size () const noexcept
 	{
-	  return m_impl.size ();
+	  return impl_.size ();
 	}
 
 	bool
 	contains (const PVCombination &combination)
 	{
-	  return m_impl.contains (combination);
+	  return impl_.contains (combination);
 	}
 
       private:
-	T_IMPL m_impl;
+	T_IMPL impl_;
       };
 
     using HashsetOfCombinations = std::unordered_set<PVCombination, CombinationHash, CombinationEqual>;

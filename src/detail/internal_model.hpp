@@ -28,6 +28,12 @@ namespace citcpp
       getInputModel () const;
 
       /**
+       * Returns the list of parameters of this model.
+       */
+      const std::vector<unsigned int>&
+      getParameters () const;
+
+      /**
        * Constructs and returns a TestSet based on the given internal test set
        * representation.
        */
@@ -41,8 +47,8 @@ namespace citcpp
 		   std::vector<ParameterValue> &tgt) const;
 
     private:
-      const InputModel &m_input_model;
-      std::vector<int> m_parameters;
+      const InputModel &input_model_;
+      std::vector<unsigned int> parameters_;
     };
   }
 }

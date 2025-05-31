@@ -17,17 +17,17 @@ namespace citcpp
       const std::list<std::vector<int>>&
       getListOfTests () const
       {
-	return m_testset;
+	return testset_;
       }
 
       std::list<std::vector<int>>&
       getListOfTests ()
       {
-	return m_testset;
+	return testset_;
       }
 
     private:
-      std::list<std::vector<int>> m_testset;
+      std::list<std::vector<int>> testset_;
     };
   }
 }

@@ -32,7 +32,7 @@ namespace citcpp
      * input model and desired interaction strength. The returned number
      * is constant throughout the whole execution.
      */
-    virtual unsigned long
+    virtual unsigned long long
     getNumberOfCombinationsToCover () const = 0;
 
     /**
@@ -40,7 +40,7 @@ namespace citcpp
      * is frequently updated during the execution. So for instance
      * this method can be used for showing the progress of the execution.
      */
-    virtual unsigned long
+    virtual unsigned long long
     getNumberOfCoveredCombinations () const = 0;
 
     /**

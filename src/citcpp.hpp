@@ -35,11 +35,11 @@ namespace citcpp
      * or to terminate it, as well as to obtain the final results.
      */
     std::unique_ptr<IExecHandle>
-    computeCoveringTestSet (int t, Algorithm alg) const;
+    computeCoveringTestSet (unsigned int t, Algorithm alg) const;
 
   private:
     class impl;
-    std::unique_ptr<impl> m_impl;
+    std::unique_ptr<impl> impl_;
   };
 }
 
