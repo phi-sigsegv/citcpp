@@ -150,10 +150,10 @@ main (int argc, char *argv[])
       handle->abort ();
     }
 
+  TestSet t (f.get ());
+
   std::cout << "Again fetching number of combinations to cover: "
       << handle->getNumberOfCombinationsToCover () << std::endl;
-
-  TestSet t (f.get ());
 
   std::cout << "test set is:\n";
   std::cout << t << std::endl;
