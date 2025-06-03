@@ -13,14 +13,14 @@ namespace citcpp
      * the covered combinations.
      */
     template<typename T_IMPL>
-      class SetOfCoveredPVCombinationsTmpl
+      class set_of_covered_pv_combinations_tmpl
       {
       public:
 	typedef typename T_IMPL::size_type size_type;
 
       public:
 	void
-	insert (const PVCombination &combination)
+	insert (const pv_combination &combination)
 	{
 	  impl_.insert (combination);
 	}
@@ -32,7 +32,7 @@ namespace citcpp
 	}
 
 	bool
-	contains (const PVCombination &combination)
+	contains (const pv_combination &combination)
 	{
 	  return impl_.contains (combination);
 	}
@@ -41,8 +41,8 @@ namespace citcpp
 	T_IMPL impl_;
       };
 
-    using HashsetOfCombinations = std::unordered_set<PVCombination, CombinationHash, CombinationEqual>;
-    using SetOfCoveredPVCombinations = SetOfCoveredPVCombinationsTmpl<HashsetOfCombinations>;
+    using hashset_of_combinations = std::unordered_set<pv_combination, combination_hash, combination_equal>;
+    using set_of_covered_pv_combinations = set_of_covered_pv_combinations_tmpl<hashset_of_combinations>;
   }
 }
 

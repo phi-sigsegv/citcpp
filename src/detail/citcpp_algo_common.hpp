@@ -12,7 +12,7 @@ namespace citcpp
      * interaction strength.
      */
     unsigned long long
-    getNumberOfCombinationsToCover (const Model &model, unsigned int t);
+    number_of_combinations_to_cover (const model &model, unsigned int t);
   }
 }
 

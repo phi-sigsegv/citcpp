@@ -12,25 +12,25 @@ namespace citcpp
 {
   namespace detail
   {
-    class ExecHandleImpl : public IExecHandle
+    class exec_handle_impl : public exec_handle
     {
     public:
-      ExecHandleImpl () :
-	  IExecHandle (), num_combinations_to_cover_ (0), covered_combinations_ (), is_aborted_ (), test_set_ (), runnable_ (), thread_ ()
+      exec_handle_impl () :
+	  exec_handle (), num_combinations_to_cover_ (0), covered_combinations_ (), is_aborted_ (), test_set_ (), runnable_ (), thread_ ()
       {
       }
 
-      ExecHandleImpl (ExecHandleImpl&&) = default;
+      exec_handle_impl (exec_handle_impl&&) = default;
 
-      ExecHandleImpl (const ExecHandleImpl&) = delete;
+      exec_handle_impl (const exec_handle_impl&) = delete;
 
-      ExecHandleImpl&
-      operator= (ExecHandleImpl&&) = default;
+      exec_handle_impl&
+      operator= (exec_handle_impl&&) = default;
 
-      ExecHandleImpl&
-      operator= (const ExecHandleImpl&) = delete;
+      exec_handle_impl&
+      operator= (const exec_handle_impl&) = delete;
 
-      ~ExecHandleImpl ()
+      ~exec_handle_impl ()
       {
 	abort ();
 	thread_.join ();
@@ -38,13 +38,13 @@ namespace citcpp
 
     public:
       unsigned long long
-      getNumberOfCombinationsToCover () const
+      get_number_of_combinations_to_cover () const
       {
 	return num_combinations_to_cover_;
       }
 
       unsigned long long
-      getNumberOfCoveredCombinations () const
+      get_number_of_covered_combinations () const
       {
 	return covered_combinations_;
       }
@@ -55,33 +55,34 @@ namespace citcpp
 	is_aborted_.test_and_set ();
       }
 
-      std::future<TestSet>
-      getTestSet ()
+      std::future<test_set>
+      get_test_set ()
       {
 	return test_set_.get_future ();
       }
 
       void
-      setNumberOfCombinationsToCover (
+      set_number_of_combinations_to_cover (
 	  unsigned long long num_combinations_to_cover)
       {
 	num_combinations_to_cover_ = num_combinations_to_cover;
       }
 
       void
-      setNumberOfCoveredCombinations (unsigned long long covered_combinations)
+      set_number_of_covered_combinations (
+	  unsigned long long covered_combinations)
       {
 	covered_combinations_ = covered_combinations;
       }
 
       bool
-      isJobAborted ()
+      is_job_aborted ()
       {
 	return is_aborted_.test ();
       }
 
       void
-      setTestSet (TestSet &&test_set)
+      set_test_set (test_set &&test_set)
       {
 	test_set_.set_value (std::move (test_set));
       }
@@ -92,10 +93,10 @@ namespace citcpp
        * as soon as this method is being called.
        */
       void
-      setRunnable (std::unique_ptr<ICitCppAlgo> &&runnable)
+      set_runnable (std::unique_ptr<citcpp_algo_if> &&runnable)
       {
 	runnable_ = std::move (runnable);
-	thread_ = std::thread (&ICitCppAlgo::entryPoint, runnable_.get (),
+	thread_ = std::thread (&citcpp_algo_if::entry_point, runnable_.get (),
 			       std::ref (*this));
       }
 
@@ -103,8 +104,8 @@ namespace citcpp
       std::atomic_ullong num_combinations_to_cover_;
       std::atomic_ullong covered_combinations_;
       std::atomic_flag is_aborted_;
-      std::promise<TestSet> test_set_;
-      std::unique_ptr<ICitCppAlgo> runnable_;
+      std::promise<test_set> test_set_;
+      std::unique_ptr<citcpp_algo_if> runnable_;
       std::thread thread_;
     };
   }

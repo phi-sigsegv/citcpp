@@ -4,41 +4,16 @@
 
 namespace citcpp
 {
-  class CitCpp::impl
+  std::unique_ptr<exec_handle>
+  compute_covering_test_set (const input_model &input_model, unsigned int t,
+			     algorithm alg)
   {
-  public:
-    impl (const InputModel &input_model) :
-	input_model_ (input_model)
-    {
-    }
+    auto ipog_algo = std::make_unique<detail::citcpp_ipog> (input_model);
 
-    const InputModel&
-    getInputModel () const
-    {
-      return input_model_;
-    }
+    ipog_algo->set_interaction_strength (t);
 
-  private:
-    InputModel input_model_;
-  };
-
-  CitCpp::CitCpp (const InputModel &input_model) :
-      impl_ (new impl (input_model))
-  {
-  }
-
-  CitCpp::~CitCpp () = default;
-
-  std::unique_ptr<IExecHandle>
-  CitCpp::computeCoveringTestSet (unsigned int t, Algorithm alg) const
-  {
-    auto ipog_algo = std::make_unique<detail::CitCppIpog> (
-	impl_->getInputModel ());
-
-    ipog_algo->setInteractionStrength (t);
-
-    detail::ExecHandleImpl *handle = new detail::ExecHandleImpl ();
-    handle->setRunnable (std::move (ipog_algo));
-    return std::unique_ptr<IExecHandle> (handle);
+    detail::exec_handle_impl *handle = new detail::exec_handle_impl ();
+    handle->set_runnable (std::move (ipog_algo));
+    return std::unique_ptr<exec_handle> (handle);
   }
 }

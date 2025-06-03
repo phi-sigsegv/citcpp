@@ -12,35 +12,20 @@ namespace citcpp
    * This enumeration defines the supported algorithms for computation of
    * a covering test set.
    */
-  enum class Algorithm
+  enum class algorithm
   {
     IPOG
   };
 
   /**
-   * This is the main class which can be used to trigger the calculation
-   * of a test set computation.
+   * Triggers execution of the calculation of a covering test set.
+   * This returns immediately to the caller with a handle object,
+   * which can then be used to monitor the progress of the execution
+   * or to terminate it, as well as to obtain the final results.
    */
-  class CitCpp
-  {
-  public:
-    CitCpp (const InputModel &input_model);
-
-    ~CitCpp ();
-
-    /**
-     * Triggers execution of the calculation of a covering test set.
-     * This returns immediately to the caller with a handle object,
-     * which can then be used to monitor the progress of the execution
-     * or to terminate it, as well as to obtain the final results.
-     */
-    std::unique_ptr<IExecHandle>
-    computeCoveringTestSet (unsigned int t, Algorithm alg) const;
-
-  private:
-    class impl;
-    std::unique_ptr<impl> impl_;
-  };
+  std::unique_ptr<exec_handle>
+  compute_covering_test_set (const input_model &input_model, unsigned int t,
+			     algorithm alg);
 }
 
 #endif /* CITCPP_HPP_ */

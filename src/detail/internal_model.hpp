@@ -3,51 +3,51 @@
 
 #include <vector>
 #include "../input_model.hpp"
-#include "../testset.hpp"
-#include "internal_testset.hpp"
+#include "../test_set.hpp"
+#include "internal_test_set.hpp"
 
 namespace citcpp
 {
   namespace detail
   {
     /**
-     * This is an internal representation of a given InputModel.
+     * This is an internal representation of a given input model.
      */
-    class Model
+    class model
     {
     public:
       /**
-       * Constructs an internal representation of the given InputModel.
+       * Constructs an internal representation of the given input model.
        */
-      Model (const InputModel &input_model);
+      model (const input_model &input_model);
 
       /**
        * Returns the input which this internal model has been created from.
        */
-      const InputModel&
-      getInputModel () const;
+      const input_model&
+      get_input_model () const;
 
       /**
        * Returns the list of parameters of this model.
        */
       const std::vector<unsigned int>&
-      getParameters () const;
+      get_parameters () const;
 
       /**
        * Constructs and returns a TestSet based on the given internal test set
        * representation.
        */
-      ::citcpp::TestSet
-      createFromInternalTestSet (
-	  const ::citcpp::detail::TestSet &testset) const;
+      ::citcpp::test_set
+      create_from_internal_test_set (
+	  const ::citcpp::detail::test_set &test_set) const;
 
     private:
       void
-      convertTest (const std::vector<int> &src,
-		   std::vector<ParameterValue> &tgt) const;
+      convert_test (const std::vector<int> &src,
+		    std::vector<parameter_value> &tgt) const;
 
     private:
-      const InputModel &input_model_;
+      const input_model &input_model_;
       std::vector<unsigned int> parameters_;
     };
   }

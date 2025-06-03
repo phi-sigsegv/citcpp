@@ -15,30 +15,30 @@ namespace citcpp
     /**
      * This class provides an implementation of the IPOG algorithm.
      */
-    class CitCppIpog : public ICitCppAlgo
+    class citcpp_ipog : public citcpp_algo_if
     {
     public:
-      CitCppIpog (const InputModel &input_model) :
-	  ICitCppAlgo (), model_ (input_model), strength_ (1), covered_combinations_ ()
+      citcpp_ipog (const input_model &input_model) :
+	  citcpp_algo_if (), model_ (input_model), strength_ (1), covered_combinations_ ()
       {
       }
 
       /**
        * Too lazy to implement/ensuring that it is well-defined.
        */
-      CitCppIpog (CitCppIpog&&) = delete;
-      CitCppIpog (const CitCppIpog&) = delete;
+      citcpp_ipog (citcpp_ipog&&) = delete;
+      citcpp_ipog (const citcpp_ipog&) = delete;
 
       /**
        * Too lazy to implement/ensuring that it is well-defined.
        */
-      CitCppIpog&
-      operator= (CitCppIpog&&) = delete;
-      CitCppIpog&
-      operator= (const CitCppIpog&) = delete;
+      citcpp_ipog&
+      operator= (citcpp_ipog&&) = delete;
+      citcpp_ipog&
+      operator= (const citcpp_ipog&) = delete;
 
       void
-      setInteractionStrength (unsigned int t)
+      set_interaction_strength (unsigned int t)
       {
 	strength_ = t;
       }
@@ -47,23 +47,23 @@ namespace citcpp
        * This is the entry point to be called by a thread.
        */
       void
-      entryPoint (ExecHandleImpl &exec_handle)
+      entry_point (exec_handle_impl &exec_handle)
       {
 	// First we compute the number of combination we have to cover.
 	unsigned long long number_of_combination_to_cover =
-	    getNumberOfCombinationsToCover (model_, strength_);
-	exec_handle.setNumberOfCombinationsToCover (
+	    number_of_combinations_to_cover (model_, strength_);
+	exec_handle.set_number_of_combinations_to_cover (
 	    number_of_combination_to_cover);
 
 	// Set the generated test set.
 	// This will also signal to the client that we are done.
-	exec_handle.setTestSet (::citcpp::TestSet ());
+	exec_handle.set_test_set (::citcpp::test_set ());
       }
 
     private:
-      const Model model_;
+      const model model_;
       unsigned int strength_;
-      SetOfCoveredPVCombinations covered_combinations_;
+      set_of_covered_pv_combinations covered_combinations_;
     };
   }
 }

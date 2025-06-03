@@ -11,17 +11,17 @@ namespace citcpp
     /**
      * This class represents a produced test set.
      */
-    class TestSet
+    class test_set
     {
     public:
       const std::list<std::vector<int>>&
-      getListOfTests () const
+      get_list_of_tests () const
       {
 	return testset_;
       }
 
       std::list<std::vector<int>>&
-      getListOfTests ()
+      get_list_of_tests ()
       {
 	return testset_;
       }

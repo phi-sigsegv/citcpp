@@ -5,18 +5,18 @@ namespace citcpp
 {
   namespace detail
   {
-    // Forward declaration of ExecHandleImpl due to usage of
-    // ICitCppAlgo by ExecHandleImpl definition.
-    class ExecHandleImpl;
+    // Forward declaration of exec_handle_impl due to usage of
+    // citcpp_algo_if by exec_handle_impl definition.
+    class exec_handle_impl;
 
     /**
      * This class provides an entry point for a thread to call.
      */
-    class ICitCppAlgo
+    class citcpp_algo_if
     {
     public:
       virtual
-      ~ICitCppAlgo ()
+      ~citcpp_algo_if ()
       {
       }
 
@@ -24,13 +24,13 @@ namespace citcpp
        * Sets the desired global interaction strength.
        */
       void
-      setInteractionStrength (unsigned int t);
+      set_interaction_strength (unsigned int t);
 
       /**
        * This is the entry point to be called by a thread.
        */
       virtual void
-      entryPoint (ExecHandleImpl &exec_handle) = 0;
+      entry_point (exec_handle_impl &exec_handle) = 0;
     };
   }
 }

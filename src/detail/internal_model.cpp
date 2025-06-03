@@ -4,61 +4,61 @@ namespace citcpp
 {
   namespace detail
   {
-    Model::Model (const InputModel &input_model) :
+    model::model (const input_model &input_model) :
 	input_model_ (input_model), parameters_ ()
     {
-      for (const Parameter &p : input_model.getParameters ())
+      for (const parameter &p : input_model.get_parameters ())
 	{
-	  parameters_.push_back (p.getValues ().size ());
+	  parameters_.push_back (p.get_values ().size ());
 	}
     }
 
-    const InputModel&
-    Model::getInputModel () const
+    const input_model&
+    model::get_input_model () const
     {
       return input_model_;
     }
 
     const std::vector<unsigned int>&
-    Model::getParameters () const
+    model::get_parameters () const
     {
       return parameters_;
     }
 
-    ::citcpp::TestSet
-    Model::createFromInternalTestSet (
-	const ::citcpp::detail::TestSet &testset) const
+    ::citcpp::test_set
+    model::create_from_internal_test_set (
+	const ::citcpp::detail::test_set &test_set) const
     {
-      ::citcpp::TestSet ret;
+      ::citcpp::test_set ret;
 
-      for (const std::vector<int> &test : testset.getListOfTests ())
+      for (const std::vector<int> &test : test_set.get_list_of_tests ())
 	{
-	  ret.getListOfTests ().emplace_back ();
-	  convertTest (test, ret.getListOfTests ().back ());
+	  ret.get_list_of_tests ().emplace_back ();
+	  convert_test (test, ret.get_list_of_tests ().back ());
 	}
 
       return ret;
     }
 
     void
-    Model::convertTest (const std::vector<int> &src,
-			std::vector<ParameterValue> &tgt) const
+    model::convert_test (const std::vector<int> &src,
+			 std::vector<parameter_value> &tgt) const
     {
       for (std::vector<int>::size_type p = 0; p < src.size (); ++p)
 	{
 	  int pv = src.at (p);
 
-	  const Parameter &param = input_model_.getParameters ().at (p);
+	  const parameter &param = input_model_.get_parameters ().at (p);
 	  if (pv >= 0
-	      && (std::vector<ParameterValue>::size_type) pv
-		  < param.getValues ().size ())
+	      && (std::vector<parameter_value>::size_type) pv
+		  < param.get_values ().size ())
 	    {
-	      tgt.push_back (param.getValues ().at (pv));
+	      tgt.push_back (param.get_values ().at (pv));
 	    }
 	  else
 	    {
 	      // TODO: Add invalid value here....
-	      tgt.push_back (param.getValues ().at (pv));
+	      tgt.push_back (param.get_values ().at (pv));
 	    }
 	}
     }

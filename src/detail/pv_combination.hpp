@@ -12,14 +12,14 @@ namespace citcpp
     // and value indices.
     // Both, parameter and value indices must be sorted vectors in order to ensure
     // a canonical representation.
-    using PVCombination = std::tuple<std::vector<int>, std::vector<int>>;
+    using pv_combination = std::tuple<std::vector<int>, std::vector<int>>;
 
-    // This is a custom hash function for Combinations, such
+    // This is a custom hash function for combinations, such
     // that they can be used in hash-based containers.
-    struct CombinationHash
+    struct combination_hash
     {
       size_t
-      operator() (const PVCombination &combo) const
+      operator() (const pv_combination &combo) const
       {
 	std::hash<int> int_hash;
 
@@ -40,12 +40,12 @@ namespace citcpp
       }
     };
 
-    // This is a custom equality operator for Combinations, such
+    // This is a custom equality operator for combinations, such
     // that they can be used in hash-based containers.
-    struct CombinationEqual
+    struct combination_equal
     {
       bool
-      operator() (const PVCombination &c1, const PVCombination &c2) const
+      operator() (const pv_combination &c1, const pv_combination &c2) const
       {
 	return std::get<0> (c1) == std::get<0> (c2)
 	    && std::get<1> (c1) == std::get<1> (c2);

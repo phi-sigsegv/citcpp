@@ -8,7 +8,7 @@ namespace citcpp
 {
   namespace detail
   {
-    class NextIndexCombination
+    class next_index_combination
     {
     public:
       /**
@@ -16,24 +16,24 @@ namespace citcpp
        * chosen from a range of [0, ... , n]. The iteration is split into
        * num_chunk more or less equally sized number of combinations.
        */
-      NextIndexCombination (unsigned int n, unsigned int k,
-			    unsigned int num_chunks);
+      next_index_combination (unsigned int n, unsigned int k,
+			      unsigned int num_chunks);
 
-      ~NextIndexCombination ();
-
-      /**
-       * Too lazy to implement/ensuring that it is well-defined.
-       */
-      NextIndexCombination (NextIndexCombination&&) = delete;
-      NextIndexCombination (const NextIndexCombination&) = delete;
+      ~next_index_combination ();
 
       /**
        * Too lazy to implement/ensuring that it is well-defined.
        */
-      NextIndexCombination&
-      operator= (NextIndexCombination&&) = delete;
-      NextIndexCombination&
-      operator= (const NextIndexCombination&) = delete;
+      next_index_combination (next_index_combination&&) = delete;
+      next_index_combination (const next_index_combination&) = delete;
+
+      /**
+       * Too lazy to implement/ensuring that it is well-defined.
+       */
+      next_index_combination&
+      operator= (next_index_combination&&) = delete;
+      next_index_combination&
+      operator= (const next_index_combination&) = delete;
 
       /**
        * @brief Returns the total number of combinations.
@@ -41,7 +41,7 @@ namespace citcpp
        * @return The total number of combinations.
        */
       unsigned long long
-      getCombinationsCount () const;
+      get_combinations_count () const;
 
       /**
        * @brief Returns whether more combinations are left.
@@ -50,7 +50,7 @@ namespace citcpp
        * @return True if more combinations are left, false otherwise.
        */
       bool
-      hasNext (unsigned int chunk_index) const;
+      has_next (unsigned int chunk_index) const;
 
       /**
        * @brief Generates the next combination in lexicographical order.

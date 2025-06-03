@@ -9,7 +9,7 @@ namespace
 {
   // Function to calculate nCr (n choose r)
   unsigned long long
-  nCr (int n, int r)
+  n_choose_r (int n, int r)
   {
     if (r < 0 || r > n)
       {
@@ -32,14 +32,14 @@ namespace
   }
 
   unsigned long long
-  getNumberOfCombinationsOfChunk (
-      const citcpp::detail::Model &model,
-      citcpp::detail::NextIndexCombination &next_index_combination,
+  number_of_combinations_of_chunk (
+      const citcpp::detail::model &model,
+      citcpp::detail::next_index_combination &next_index_combination,
       unsigned int chunk_index)
   {
     unsigned long long num_combinations = 0;
 
-    while (next_index_combination.hasNext (chunk_index))
+    while (next_index_combination.has_next (chunk_index))
       {
 	const std::vector<unsigned int> &next_param_index_combination =
 	    next_index_combination.next (chunk_index);
@@ -47,7 +47,7 @@ namespace
 	unsigned long long value_combos = 1;
 	for (int param_index : next_param_index_combination)
 	  {
-	    unsigned int num_param_values = model.getParameters ()[param_index];
+	    unsigned int num_param_values = model.get_parameters ()[param_index];
 	    value_combos = value_combos * num_param_values;
 	  }
 
@@ -58,11 +58,11 @@ namespace
   }
 
   unsigned long long
-  getNumberOfCombinationsToCover_iterative (const citcpp::detail::Model &model,
-					    unsigned int t)
+  number_of_combinations_to_cover_iterative (const citcpp::detail::model &model,
+					     unsigned int t)
   {
     // Handle edge cases for t.
-    if ((std::vector<int>::size_type) t > model.getParameters ().size ())
+    if ((std::vector<int>::size_type) t > model.get_parameters ().size ())
       {
 	// Malformed input.
 	return 0;
@@ -74,7 +74,7 @@ namespace
 	return 0;
       }
 
-    if ((std::vector<int>::size_type) t == model.getParameters ().size ())
+    if ((std::vector<int>::size_type) t == model.get_parameters ().size ())
       {
 	// Trivial case.
 	return 1;
@@ -88,21 +88,21 @@ namespace
       }
 
     // Early exit for trivial cases or very small number of combinations
-    unsigned long long numCombinationsOfFactors = nCr (
-	model.getParameters ().size (), t);
-    if (numCombinationsOfFactors < num_threads * 2)
+    unsigned long long num_combinations_of_factors = n_choose_r (
+	model.get_parameters ().size (), t);
+    if (num_combinations_of_factors < num_threads * 2)
       {
-	citcpp::detail::NextIndexCombination next_index_combination (
-	    model.getParameters ().size (), t, 1);
+	citcpp::detail::next_index_combination next_index_combination (
+	    model.get_parameters ().size (), t, 1);
 
-	unsigned long long num_combinations = getNumberOfCombinationsOfChunk (
+	unsigned long long num_combinations = number_of_combinations_of_chunk (
 	    model, next_index_combination, 0);
 
 	return num_combinations;
       }
 
-    citcpp::detail::NextIndexCombination next_index_combination (
-	model.getParameters ().size (), t, num_threads);
+    citcpp::detail::next_index_combination next_index_combination (
+	model.get_parameters ().size (), t, num_threads);
 
     std::atomic_ullong num_combinations = 0;
 
@@ -116,35 +116,12 @@ namespace
 	[&model, &next_index_combination, &num_combinations]
 	(unsigned int i)
 	  {
-	    unsigned long long chunk_num_combos = getNumberOfCombinationsOfChunk (model, next_index_combination, i);
+	    unsigned long long chunk_num_combos = number_of_combinations_of_chunk (model, next_index_combination, i);
 	    num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
 	  }
 	);
 
     return num_combinations;
-
-//    std::vector<std::future<unsigned long long>> futures;
-//
-//// Launch asynchronous tasks (threads) for each chunk.
-//    for (unsigned int i = 0; i < num_threads; ++i)
-//      {
-//	futures.push_back (
-//	// std::async launches the task. std::launch::async ensures it runs on a new thread.
-//	    std::async (std::launch::async, getNumberOfCombinationsOfChunk,
-//			std::cref (model), std::ref (next_index_combination),
-//			i));
-//      }
-//
-//    unsigned long long num_combinations = 0;
-//
-//// Collect results from all futures. f.get() blocks until the associated task completes.
-//    for (auto &f : futures)
-//      {
-//	unsigned long long chunk_num_combos = f.get ();
-//	num_combinations += chunk_num_combos;
-//      }
-//
-//    return num_combinations;
   }
 
   // Recursive helper function for combination generation and sum calculation
@@ -172,10 +149,10 @@ namespace
   }
 
   unsigned long long
-  getNumberOfCombinationsToCover_recursive (const citcpp::detail::Model &model,
-					    unsigned int t)
+  number_of_combinations_to_cover_recursive (const citcpp::detail::model &model,
+					     unsigned int t)
   {
-    unsigned int numFactors = model.getParameters ().size ();
+    unsigned int numFactors = model.get_parameters ().size ();
     if (t > numFactors)
       {
 	// Malformed input.
@@ -191,14 +168,14 @@ namespace
       }
 
     // Early exit for trivial cases or very small number of combinations
-    unsigned long long numCombinationsOfFactors = nCr (numFactors, t);
-    if (numCombinationsOfFactors == 0)
+    unsigned long long num_combinations_of_factors = n_choose_r (numFactors, t);
+    if (num_combinations_of_factors == 0)
       return 0;
-    if (numCombinationsOfFactors < num_threads * 2)
+    if (num_combinations_of_factors < num_threads * 2)
       { // Example threshold
 	// Fallback to serial for very small cases to avoid async overhead
 	return recursive_combine_and_sum (0, 0, 1, t, numFactors,
-					  model.getParameters ());
+					  model.get_parameters ());
       }
 
     std::atomic_ullong num_combinations = 0;
@@ -213,8 +190,8 @@ namespace
 	[&model, t, numFactors, &num_combinations]
 	(unsigned int i)
 	  {
-	    unsigned long long chunk_num_combos = recursive_combine_and_sum (i+1, 1, model.getParameters ()[i], t, numFactors,
-		model.getParameters ());
+	    unsigned long long chunk_num_combos = recursive_combine_and_sum (i+1, 1, model.get_parameters ()[i], t, numFactors,
+		model.get_parameters ());
 	    num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
 	  }
 	);
@@ -228,9 +205,9 @@ namespace citcpp
   namespace detail
   {
     unsigned long long
-    getNumberOfCombinationsToCover (const Model &model, unsigned int t)
+    number_of_combinations_to_cover (const model &model, unsigned int t)
     {
-      return getNumberOfCombinationsToCover_recursive (model, t);
+      return number_of_combinations_to_cover_recursive (model, t);
     }
   }
 }

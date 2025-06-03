@@ -2,178 +2,178 @@
 #include <iostream>
 #include "citcpp.hpp"
 
-citcpp::InputModel
-createLargeModel ()
+citcpp::input_model
+create_large_model ()
 {
   using namespace citcpp;
 
-  InputModel model;
+  input_model model;
 
   for (int p_idx = 0; p_idx < 120; ++p_idx)
     {
-      Parameter p;
-      p.getValues ().push_back (std::to_string (1));
-      model.getParameters ().push_back (p);
+      parameter p;
+      p.get_values ().push_back (std::to_string (1));
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 43; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 2; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 16; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 3; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 21; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 4; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 13; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 5; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 4; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 6; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 1; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 7; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 2; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 8; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 1; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 9; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 1; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 10; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 1; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 11; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 1; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 12; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 2; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 15; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
   for (int p_idx = 0; p_idx < 1; ++p_idx)
     {
-      Parameter p;
+      parameter p;
       for (int v = 1; v <= 16; ++v)
 	{
-	  p.getValues ().push_back (std::to_string (v));
+	  p.get_values ().push_back (std::to_string (v));
 	}
-      model.getParameters ().push_back (p);
+      model.get_parameters ().push_back (p);
     }
 
   return model;
 }
 
-citcpp::InputModel
-createPictExampleModel ()
+citcpp::input_model
+create_pict_example_model ()
 {
   using namespace citcpp;
 
-  InputModel model;
+  input_model model;
 
-  model.addParameter (Parameter ().name ("PLATFORM").values (
+  model.add_parameter (parameter ().name ("PLATFORM").values (
     {
       { "x86" },
       { "x64" },
       { "arm" } }));
-  model.addParameter (Parameter ().name ("CPUS").values (
+  model.add_parameter (parameter ().name ("CPUS").values (
     {
       { "1" },
       { "2" },
       { "4" } }));
-  model.addParameter (Parameter ().name ("RAM").values (
+  model.add_parameter (parameter ().name ("RAM").values (
     {
       { "1GB" },
       { "4GB" },
       { "64GB" } }));
-  model.addParameter (Parameter ().name ("HDD").values (
+  model.add_parameter (parameter ().name ("HDD").values (
     {
       { "SCSI" },
       { "IDE" } }));
-  model.addParameter (Parameter ().name ("OS").values (
+  model.add_parameter (parameter ().name ("OS").values (
     {
       { "Win7" },
       { "Win8" },
       { "Win10" } }));
-  model.addParameter (Parameter ().name ("Browser").values (
+  model.add_parameter (parameter ().name ("Browser").values (
     {
       { "Edge" },
       { "Opera" },
       { "Chrome" },
       { "Firefox" } }));
-  model.addParameter (Parameter ().name ("APP").values (
+  model.add_parameter (parameter ().name ("APP").values (
     {
       { "Word" },
       { "Excel" },
@@ -188,29 +188,27 @@ main (int argc, char *argv[])
   using namespace citcpp;
   using namespace std::chrono_literals;
 
-  InputModel model (createPictExampleModel ());
-
-  CitCpp citcpp (model);
+  input_model model (create_pict_example_model ());
 
   std::cout << "Starting execution" << std::endl;
-  std::unique_ptr<IExecHandle> handle = citcpp.computeCoveringTestSet (
-      2, Algorithm::IPOG);
+  std::unique_ptr<exec_handle> handle = compute_covering_test_set (
+      model, 2, algorithm::IPOG);
 
   std::cout << "Number of combinations to cover: "
-      << handle->getNumberOfCombinationsToCover () << std::endl;
+      << handle->get_number_of_combinations_to_cover () << std::endl;
 
   std::cout << "Retrieving result, waiting for at most 10s" << std::endl;
-  auto f = handle->getTestSet ();
+  auto f = handle->get_test_set ();
   if (f.wait_for (10s) == std::future_status::timeout)
     {
       std::cout << "Timeout. Aborting execution" << std::endl;
       handle->abort ();
     }
 
-  TestSet t (f.get ());
+  test_set t (f.get ());
 
   std::cout << "Again fetching number of combinations to cover: "
-      << handle->getNumberOfCombinationsToCover () << std::endl;
+      << handle->get_number_of_combinations_to_cover () << std::endl;
 
   std::cout << "test set is:\n";
   std::cout << t << std::endl;

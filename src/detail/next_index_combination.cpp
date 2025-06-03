@@ -126,9 +126,9 @@ namespace
    * @return A std::vector<int> representing the combination.
    */
   std::vector<unsigned int>
-  get_nth_combination (
-      unsigned int n, unsigned int k, unsigned long long rank_to_find,
-      const std::vector<std::vector<long long>> &binomial_coeffs)
+  nth_combination (unsigned int n, unsigned int k,
+		   unsigned long long rank_to_find,
+		   const std::vector<std::vector<long long>> &binomial_coeffs)
   {
     std::vector<unsigned int> combination (k);
     int last_chosen = -1; // The value of the last element chosen (initially -1 as elements are 0-indexed)
@@ -182,15 +182,15 @@ namespace citcpp
 {
   namespace detail
   {
-    class NextIndexCombinationPerChunkData
+    class next_index_combination_per_chunk_data
     {
     public:
-      NextIndexCombinationPerChunkData (
+      next_index_combination_per_chunk_data (
 	  int n, int k, long long start_rank, long long end_rank,
 	  const std::vector<std::vector<long long>> &binomial_coeffs) :
 	  n_ (n), start_rank_ (start_rank), end_rank_ (end_rank), cur_rank_ (
 	      start_rank), cur_combination_ (
-	      get_nth_combination (n, k, start_rank, binomial_coeffs))
+	      nth_combination (n, k, start_rank, binomial_coeffs))
       {
 	// First, find the exact combination corresponding to the 'start_rank'.
 	// This is the starting point for this thread's generation.
@@ -202,7 +202,7 @@ namespace citcpp
        * @return True if more combinations are left, false otherwise.
        */
       bool
-      hasNext () const
+      has_next () const
       {
 	return cur_rank_ < end_rank_;
       }
@@ -236,7 +236,7 @@ namespace citcpp
       std::vector<unsigned int> cur_combination_;
     };
 
-    class NextIndexCombination::impl
+    class next_index_combination::impl
     {
     public:
       impl (unsigned int n, unsigned int k, unsigned int num_chunks) :
@@ -270,7 +270,7 @@ namespace citcpp
        * @return The total number of combinations.
        */
       unsigned long long
-      getCombinationsCount () const
+      get_combinations_count () const
       {
 	return combinations_count (n_, k_, binomial_coeffs_);
       }
@@ -282,7 +282,7 @@ namespace citcpp
        * @return True if more combinations are left, false otherwise.
        */
       bool
-      hasNext (unsigned int chunk_index) const
+      has_next (unsigned int chunk_index) const
       {
 	if (chunk_index < 0)
 	  {
@@ -293,7 +293,7 @@ namespace citcpp
 	    chunk_index = per_chunk_data_.size () - 1;
 	  }
 
-	return per_chunk_data_[chunk_index].hasNext ();
+	return per_chunk_data_[chunk_index].has_next ();
       }
 
       /**
@@ -322,31 +322,32 @@ namespace citcpp
       const unsigned int k_;
       // --- Binomial Coefficients Initialization ---
       const std::vector<std::vector<long long>> binomial_coeffs_;
-      std::vector<NextIndexCombinationPerChunkData> per_chunk_data_;
+      std::vector<next_index_combination_per_chunk_data> per_chunk_data_;
     };
 
-    NextIndexCombination::NextIndexCombination (unsigned int n, unsigned int k,
-						unsigned int num_chunks) :
+    next_index_combination::next_index_combination (unsigned int n,
+						    unsigned int k,
+						    unsigned int num_chunks) :
 	impl_ (new impl (n, k, num_chunks))
     {
     }
 
-    NextIndexCombination::~NextIndexCombination () = default;
+    next_index_combination::~next_index_combination () = default;
 
     unsigned long long
-    NextIndexCombination::getCombinationsCount () const
+    next_index_combination::get_combinations_count () const
     {
-      return impl_->getCombinationsCount ();
+      return impl_->get_combinations_count ();
     }
 
     bool
-    NextIndexCombination::hasNext (unsigned int chunk_index) const
+    next_index_combination::has_next (unsigned int chunk_index) const
     {
-      return impl_->hasNext (chunk_index);
+      return impl_->has_next (chunk_index);
     }
 
     const std::vector<unsigned int>&
-    NextIndexCombination::next (unsigned int chunk_index)
+    next_index_combination::next (unsigned int chunk_index)
     {
       return impl_->next (chunk_index);
     }

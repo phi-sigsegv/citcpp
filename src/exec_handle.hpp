@@ -2,7 +2,8 @@
 #define EXEC_HANDLE_HPP_
 
 #include <future>
-#include "testset.hpp"
+
+#include "test_set.hpp"
 
 namespace citcpp
 {
@@ -13,7 +14,7 @@ namespace citcpp
    * shall be returned.
    * All methods can be safely called from an arbitrary thread.
    */
-  class IExecHandle
+  class exec_handle
   {
   public:
     /**
@@ -23,7 +24,7 @@ namespace citcpp
      * for the execution.
      */
     virtual
-    ~IExecHandle ()
+    ~exec_handle ()
     {
     }
 
@@ -33,7 +34,7 @@ namespace citcpp
      * is constant throughout the whole execution.
      */
     virtual unsigned long long
-    getNumberOfCombinationsToCover () const = 0;
+    get_number_of_combinations_to_cover () const = 0;
 
     /**
      * Returns the currently covered number of combinations. This number
@@ -41,7 +42,7 @@ namespace citcpp
      * this method can be used for showing the progress of the execution.
      */
     virtual unsigned long long
-    getNumberOfCoveredCombinations () const = 0;
+    get_number_of_covered_combinations () const = 0;
 
     /**
      * Calling this method aborts the current execution. The call returns
@@ -55,8 +56,8 @@ namespace citcpp
      * wrapped test set may either be complete with respect to the desired interaction
      * coverage or not. This depends on whether the execution has been aborted.
      */
-    virtual std::future<TestSet>
-    getTestSet () = 0;
+    virtual std::future<test_set>
+    get_test_set () = 0;
   };
 }
 

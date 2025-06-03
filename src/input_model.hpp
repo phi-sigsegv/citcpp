@@ -9,27 +9,27 @@ namespace citcpp
   /**
    * Represents a value of a parameter.
    */
-  class ParameterValue
+  class parameter_value
   {
   public:
-    ParameterValue (const std::string &value) :
+    parameter_value (const std::string &value) :
 	value_ (value)
     {
     }
 
     operator const std::string & ()
     {
-      return getValue ();
+      return get_value ();
     }
 
     const std::string&
-    getValue () const
+    get_value () const
     {
       return value_;
     }
 
     void
-    setValue (const std::string &value)
+    set_value (const std::string &value)
     {
       value_ = value;
     }
@@ -41,108 +41,108 @@ namespace citcpp
   /**
    * Represents a parameter, which has a set of possible values.
    */
-  class Parameter
+  class parameter
   {
   public:
     const std::string&
-    getName () const
+    get_name () const
     {
       return name_;
     }
 
     std::string&
-    getName ()
+    get_name ()
     {
       return name_;
     }
 
     void
-    setName (const std::string &name)
+    set_name (const std::string &name)
     {
       name_ = name;
     }
 
-    Parameter&
+    parameter&
     name (const std::string &name)
     {
       name_ = name;
       return *this;
     }
 
-    const std::vector<ParameterValue>&
-    getValues () const
+    const std::vector<parameter_value>&
+    get_values () const
     {
       return values_;
     }
 
-    std::vector<ParameterValue>&
-    getValues ()
+    std::vector<parameter_value>&
+    get_values ()
     {
       return values_;
     }
 
     void
-    setValues (const std::vector<ParameterValue> &values)
+    set_values (const std::vector<parameter_value> &values)
     {
       values_ = values;
     }
 
-    Parameter&
-    values (const std::vector<ParameterValue> &values)
+    parameter&
+    values (const std::vector<parameter_value> &values)
     {
       values_ = values;
       return *this;
     }
 
     void
-    addValue (const ParameterValue &value)
+    add_value (const parameter_value &value)
     {
       values_.push_back (value);
     }
 
     void
-    addValue (ParameterValue &&value)
+    add_value (parameter_value &&value)
     {
       values_.push_back (std::move (value));
     }
 
   private:
     std::string name_;
-    std::vector<ParameterValue> values_;
+    std::vector<parameter_value> values_;
   };
 
   /**
    * Represents an input model consisting of a list of parameters.
    */
-  class InputModel
+  class input_model
   {
   public:
-    const std::vector<Parameter>&
-    getParameters () const
+    const std::vector<parameter>&
+    get_parameters () const
     {
       return parameters_;
     }
 
-    std::vector<Parameter>&
-    getParameters ()
+    std::vector<parameter>&
+    get_parameters ()
     {
       return parameters_;
     }
 
     void
-    addParameter (const Parameter &parameter)
+    add_parameter (const parameter &parameter)
     {
       parameters_.push_back (parameter);
     }
 
     void
-    addParameter (Parameter &&parameter)
+    add_parameter (parameter &&parameter)
     {
       parameters_.push_back (std::move (parameter));
     }
 
   private:
-    std::vector<Parameter> parameters_;
+    std::vector<parameter> parameters_;
   };
 }
 
