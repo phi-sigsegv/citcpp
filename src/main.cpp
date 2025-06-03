@@ -2,13 +2,13 @@
 #include <iostream>
 #include "citcpp.hpp"
 
-int
-main (int argc, char *argv[])
+citcpp::InputModel
+createLargeModel ()
 {
   using namespace citcpp;
-  using namespace std::chrono_literals;
 
   InputModel model;
+
   for (int p_idx = 0; p_idx < 120; ++p_idx)
     {
       Parameter p;
@@ -133,11 +133,68 @@ main (int argc, char *argv[])
       model.getParameters ().push_back (p);
     }
 
+  return model;
+}
+
+citcpp::InputModel
+createPictExampleModel ()
+{
+  using namespace citcpp;
+
+  InputModel model;
+
+  model.addParameter (Parameter ().name ("PLATFORM").values (
+    {
+      { "x86" },
+      { "x64" },
+      { "arm" } }));
+  model.addParameter (Parameter ().name ("CPUS").values (
+    {
+      { "1" },
+      { "2" },
+      { "4" } }));
+  model.addParameter (Parameter ().name ("RAM").values (
+    {
+      { "1GB" },
+      { "4GB" },
+      { "64GB" } }));
+  model.addParameter (Parameter ().name ("HDD").values (
+    {
+      { "SCSI" },
+      { "IDE" } }));
+  model.addParameter (Parameter ().name ("OS").values (
+    {
+      { "Win7" },
+      { "Win8" },
+      { "Win10" } }));
+  model.addParameter (Parameter ().name ("Browser").values (
+    {
+      { "Edge" },
+      { "Opera" },
+      { "Chrome" },
+      { "Firefox" } }));
+  model.addParameter (Parameter ().name ("APP").values (
+    {
+      { "Word" },
+      { "Excel" },
+      { "Powerpoint" } }));
+
+  return model;
+}
+
+int
+main (int argc, char *argv[])
+{
+  using namespace citcpp;
+  using namespace std::chrono_literals;
+
+  InputModel model (createPictExampleModel ());
+
   CitCpp citcpp (model);
 
   std::cout << "Starting execution" << std::endl;
   std::unique_ptr<IExecHandle> handle = citcpp.computeCoveringTestSet (
-      4, Algorithm::IPOG);
+      2, Algorithm::IPOG);
 
   std::cout << "Number of combinations to cover: "
       << handle->getNumberOfCombinationsToCover () << std::endl;

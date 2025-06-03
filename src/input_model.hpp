@@ -62,6 +62,13 @@ namespace citcpp
       name_ = name;
     }
 
+    Parameter&
+    name (const std::string &name)
+    {
+      name_ = name;
+      return *this;
+    }
+
     const std::vector<ParameterValue>&
     getValues () const
     {
@@ -72,6 +79,31 @@ namespace citcpp
     getValues ()
     {
       return values_;
+    }
+
+    void
+    setValues (const std::vector<ParameterValue> &values)
+    {
+      values_ = values;
+    }
+
+    Parameter&
+    values (const std::vector<ParameterValue> &values)
+    {
+      values_ = values;
+      return *this;
+    }
+
+    void
+    addValue (const ParameterValue &value)
+    {
+      values_.push_back (value);
+    }
+
+    void
+    addValue (ParameterValue &&value)
+    {
+      values_.push_back (std::move (value));
     }
 
   private:
@@ -95,6 +127,18 @@ namespace citcpp
     getParameters ()
     {
       return parameters_;
+    }
+
+    void
+    addParameter (const Parameter &parameter)
+    {
+      parameters_.push_back (parameter);
+    }
+
+    void
+    addParameter (Parameter &&parameter)
+    {
+      parameters_.push_back (std::move (parameter));
     }
 
   private:
