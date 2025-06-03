@@ -8,7 +8,7 @@ namespace citcpp
 {
   namespace detail
   {
-    class next_index_combination
+    class index_combinator
     {
     public:
       /**
@@ -16,24 +16,24 @@ namespace citcpp
        * chosen from a range of [0, ... , n]. The iteration is split into
        * num_chunk more or less equally sized number of combinations.
        */
-      next_index_combination (unsigned int n, unsigned int k,
-			      unsigned int num_chunks);
+      index_combinator (unsigned int n, unsigned int k,
+			     unsigned int num_chunks);
 
-      ~next_index_combination ();
-
-      /**
-       * Too lazy to implement/ensuring that it is well-defined.
-       */
-      next_index_combination (next_index_combination&&) = delete;
-      next_index_combination (const next_index_combination&) = delete;
+      ~index_combinator ();
 
       /**
        * Too lazy to implement/ensuring that it is well-defined.
        */
-      next_index_combination&
-      operator= (next_index_combination&&) = delete;
-      next_index_combination&
-      operator= (const next_index_combination&) = delete;
+      index_combinator (index_combinator&&) = delete;
+      index_combinator (const index_combinator&) = delete;
+
+      /**
+       * Too lazy to implement/ensuring that it is well-defined.
+       */
+      index_combinator&
+      operator= (index_combinator&&) = delete;
+      index_combinator&
+      operator= (const index_combinator&) = delete;
 
       /**
        * @brief Returns the total number of combinations.

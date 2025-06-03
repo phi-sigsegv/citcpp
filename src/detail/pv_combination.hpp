@@ -12,7 +12,7 @@ namespace citcpp
     // and value indices.
     // Both, parameter and value indices must be sorted vectors in order to ensure
     // a canonical representation.
-    using pv_combination = std::tuple<std::vector<int>, std::vector<int>>;
+    using pv_combination = std::tuple<std::vector<unsigned int>, std::vector<unsigned int>>;
 
     // This is a custom hash function for combinations, such
     // that they can be used in hash-based containers.
@@ -21,17 +21,17 @@ namespace citcpp
       size_t
       operator() (const pv_combination &combo) const
       {
-	std::hash<int> int_hash;
+	std::hash<unsigned int> int_hash;
 
 	std::size_t hash_val = 0;
 	const auto &param_indices = std::get<0> (combo);
 	const auto &value_indices = std::get<1> (combo);
-	for (int index : param_indices)
+	for (unsigned int index : param_indices)
 	  {
 	    hash_val ^= int_hash (index) + 0x9e3779b9 + (hash_val << 6)
 		+ (hash_val >> 2);
 	  }
-	for (int value : value_indices)
+	for (unsigned int value : value_indices)
 	  {
 	    hash_val ^= int_hash (value) + 0x9e3779b9 + (hash_val << 6)
 		+ (hash_val >> 2);

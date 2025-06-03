@@ -3,7 +3,8 @@
 #include <ranges>
 #include <atomic>
 #include "citcpp_algo_common.hpp"
-#include "next_index_combination.hpp"
+
+#include "index_combinator.hpp"
 
 namespace
 {
@@ -34,15 +35,15 @@ namespace
   unsigned long long
   number_of_combinations_of_chunk (
       const citcpp::detail::model &model,
-      citcpp::detail::next_index_combination &next_index_combination,
+      citcpp::detail::index_combinator &idx_combinator,
       unsigned int chunk_index)
   {
     unsigned long long num_combinations = 0;
 
-    while (next_index_combination.has_next (chunk_index))
+    while (idx_combinator.has_next (chunk_index))
       {
 	const std::vector<unsigned int> &next_param_index_combination =
-	    next_index_combination.next (chunk_index);
+	    idx_combinator.next (chunk_index);
 
 	unsigned long long value_combos = 1;
 	for (int param_index : next_param_index_combination)
@@ -92,16 +93,16 @@ namespace
 	model.get_parameters ().size (), t);
     if (num_combinations_of_factors < num_threads * 2)
       {
-	citcpp::detail::next_index_combination next_index_combination (
+	citcpp::detail::index_combinator idx_combinator (
 	    model.get_parameters ().size (), t, 1);
 
 	unsigned long long num_combinations = number_of_combinations_of_chunk (
-	    model, next_index_combination, 0);
+	    model, idx_combinator, 0);
 
 	return num_combinations;
       }
 
-    citcpp::detail::next_index_combination next_index_combination (
+    citcpp::detail::index_combinator idx_combinator (
 	model.get_parameters ().size (), t, num_threads);
 
     std::atomic_ullong num_combinations = 0;
@@ -113,10 +114,10 @@ namespace
 	std::execution::par_unseq,
 	range.begin (),
 	range.end (),
-	[&model, &next_index_combination, &num_combinations]
+	[&model, &idx_combinator, &num_combinations]
 	(unsigned int i)
 	  {
-	    unsigned long long chunk_num_combos = number_of_combinations_of_chunk (model, next_index_combination, i);
+	    unsigned long long chunk_num_combos = number_of_combinations_of_chunk (model, idx_combinator, i);
 	    num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
 	  }
 	);

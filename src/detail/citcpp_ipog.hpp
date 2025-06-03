@@ -7,6 +7,7 @@
 #include "internal_model.hpp"
 #include "set_of_covered_pv_combinations.hpp"
 #include "citcpp_algo_common.hpp"
+#include "index_combinator.hpp"
 
 namespace citcpp
 {
@@ -58,6 +59,40 @@ namespace citcpp
 	// Set the generated test set.
 	// This will also signal to the client that we are done.
 	exec_handle.set_test_set (::citcpp::test_set ());
+      }
+
+    private:
+      /**
+       * Function to mark all t-way combinations covered by a given test case
+       */
+      void
+      update_covered_combinations (const std::vector<int> &test_case)
+      {
+	citcpp::detail::index_combinator param_index_combinator (
+	    model_.get_parameters ().size (), strength_, 1);
+
+	while (param_index_combinator.has_next (0))
+	  {
+	    const std::vector<unsigned int> &param_index_combination =
+		param_index_combinator.next (0);
+
+	    std::vector<unsigned int> combo_values;
+	    bool valid_combo = true;
+	    for (unsigned int param_index : param_index_combination)
+	      {
+		if (test_case[param_index] == -1)
+		  { // If any value is unassigned, this combination isn't fully formed yet
+		    valid_combo = false;
+		    break;
+		  }
+		combo_values.push_back (test_case[param_index]);
+	      }
+	    if (valid_combo)
+	      {
+		covered_combinations_.insert (
+		  { param_index_combination, combo_values });
+	      }
+	  }
       }
 
     private:

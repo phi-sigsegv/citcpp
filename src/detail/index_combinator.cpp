@@ -1,5 +1,6 @@
+#include "index_combinator.hpp"
+
 #include <functional>
-#include "next_index_combination.hpp"
 
 namespace
 {
@@ -182,10 +183,10 @@ namespace citcpp
 {
   namespace detail
   {
-    class next_index_combination_per_chunk_data
+    class index_combinator_per_chunk_data
     {
     public:
-      next_index_combination_per_chunk_data (
+      index_combinator_per_chunk_data (
 	  int n, int k, long long start_rank, long long end_rank,
 	  const std::vector<std::vector<long long>> &binomial_coeffs) :
 	  n_ (n), start_rank_ (start_rank), end_rank_ (end_rank), cur_rank_ (
@@ -236,7 +237,7 @@ namespace citcpp
       std::vector<unsigned int> cur_combination_;
     };
 
-    class next_index_combination::impl
+    class index_combinator::impl
     {
     public:
       impl (unsigned int n, unsigned int k, unsigned int num_chunks) :
@@ -322,32 +323,32 @@ namespace citcpp
       const unsigned int k_;
       // --- Binomial Coefficients Initialization ---
       const std::vector<std::vector<long long>> binomial_coeffs_;
-      std::vector<next_index_combination_per_chunk_data> per_chunk_data_;
+      std::vector<index_combinator_per_chunk_data> per_chunk_data_;
     };
 
-    next_index_combination::next_index_combination (unsigned int n,
-						    unsigned int k,
-						    unsigned int num_chunks) :
+    index_combinator::index_combinator (unsigned int n,
+						  unsigned int k,
+						  unsigned int num_chunks) :
 	impl_ (new impl (n, k, num_chunks))
     {
     }
 
-    next_index_combination::~next_index_combination () = default;
+    index_combinator::~index_combinator () = default;
 
     unsigned long long
-    next_index_combination::get_combinations_count () const
+    index_combinator::get_combinations_count () const
     {
       return impl_->get_combinations_count ();
     }
 
     bool
-    next_index_combination::has_next (unsigned int chunk_index) const
+    index_combinator::has_next (unsigned int chunk_index) const
     {
       return impl_->has_next (chunk_index);
     }
 
     const std::vector<unsigned int>&
-    next_index_combination::next (unsigned int chunk_index)
+    index_combinator::next (unsigned int chunk_index)
     {
       return impl_->next (chunk_index);
     }
