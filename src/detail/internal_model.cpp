@@ -4,6 +4,9 @@ namespace citcpp
 {
   namespace detail
   {
+    const parameter_value DONT_CARE_PARAMETER_VALUE
+      { "*" };
+
     model::model (const input_model &input_model) :
 	input_model_ (input_model), parameters_ ()
     {
@@ -57,8 +60,7 @@ namespace citcpp
 	    }
 	  else
 	    {
-	      // TODO: Add invalid value here....
-	      tgt.push_back (param.get_values ().at (pv));
+	      tgt.push_back (DONT_CARE_PARAMETER_VALUE);
 	    }
 	}
     }
