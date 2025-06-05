@@ -1,5 +1,35 @@
 #include "internal_model.hpp"
 
+namespace
+{
+  std::vector<unsigned int>
+  compute_parameter_index_map (
+      const citcpp::input_model &input_model,
+      const std::vector<citcpp::parameter> &parameter_order)
+  {
+    std::vector<unsigned int> parameter_index_map;
+
+    for (unsigned int internal_param_idx = 0;
+	internal_param_idx < parameter_order.size (); ++internal_param_idx)
+      {
+	const citcpp::parameter &param = parameter_order[internal_param_idx];
+	// Find the parameter in the user input model, in particular its index.
+	for (unsigned int user_param_index = 0;
+	    user_param_index < input_model.get_parameters ().size ();
+	    ++user_param_index)
+	  {
+	    if (input_model.get_parameters ()[user_param_index] == param)
+	      {
+		parameter_index_map.push_back (user_param_index);
+		break;
+	      }
+	  }
+      }
+
+    return parameter_index_map;
+  }
+}
+
 namespace citcpp
 {
   namespace detail
@@ -7,8 +37,10 @@ namespace citcpp
     const parameter_value DONT_CARE_PARAMETER_VALUE
       { "*" };
 
-    model::model (const input_model &input_model) :
-	input_model_ (input_model), parameters_ ()
+    model::model (const input_model &input_model,
+		  const std::vector<parameter> &parameter_order) :
+	input_model_ (input_model), parameter_index_map_ (
+	    compute_parameter_index_map (input_model, parameter_order)), parameters_ ()
     {
       for (const parameter &p : input_model.get_parameters ())
 	{
@@ -50,8 +82,10 @@ namespace citcpp
       for (std::vector<int>::size_type p = 0; p < src.size (); ++p)
 	{
 	  int pv = src.at (p);
+	  unsigned param_index_in_model = parameter_index_map_[p];
 
-	  const parameter &param = input_model_.get_parameters ().at (p);
+	  const parameter &param = input_model_.get_parameters ().at (
+	      param_index_in_model);
 	  if (pv >= 0
 	      && (std::vector<parameter_value>::size_type) pv
 		  < param.get_values ().size ())

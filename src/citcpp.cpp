@@ -5,10 +5,11 @@
 namespace citcpp
 {
   std::unique_ptr<exec_handle>
-  compute_covering_test_set (const input_model &input_model, unsigned int t,
+  compute_covering_test_set (input_model input_model, unsigned int t,
 			     algorithm alg)
   {
-    auto ipog_algo = std::make_unique<detail::citcpp_ipog> (input_model);
+    auto ipog_algo = std::make_unique<detail::citcpp_ipog> (
+	std::move (input_model));
 
     ipog_algo->set_interaction_strength (t);
 

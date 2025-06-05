@@ -24,7 +24,7 @@ namespace citcpp
    * or to terminate it, as well as to obtain the final results.
    */
   std::unique_ptr<exec_handle>
-  compute_covering_test_set (const input_model &input_model, unsigned int t,
+  compute_covering_test_set (input_model input_model, unsigned int t,
 			     algorithm alg);
 }
 

@@ -34,6 +34,12 @@ namespace citcpp
       value_ = value;
     }
 
+    bool
+    operator== (const parameter_value &other) const
+    {
+      return value_ == other.value_;
+    }
+
   private:
     std::string value_;
   };
@@ -106,6 +112,12 @@ namespace citcpp
       values_.push_back (std::move (value));
     }
 
+    bool
+    operator== (const parameter &other) const
+    {
+      return values_ == other.values_;
+    }
+
   private:
     std::string name_;
     std::vector<parameter_value> values_;
@@ -139,6 +151,12 @@ namespace citcpp
     add_parameter (parameter &&parameter)
     {
       parameters_.push_back (std::move (parameter));
+    }
+
+    bool
+    operator== (const input_model &other) const
+    {
+      return parameters_ == other.parameters_;
     }
 
   private:

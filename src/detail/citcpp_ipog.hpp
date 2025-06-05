@@ -20,7 +20,14 @@ namespace citcpp
     {
     public:
       citcpp_ipog (const input_model &input_model) :
-	  citcpp_algo_if (), model_ (input_model), strength_ (1), covered_combinations_ ()
+	  citcpp_algo_if (), input_model_ (input_model), model_ (input_model_), strength_ (
+	      1), test_set_ ()
+      {
+      }
+
+      citcpp_ipog (input_model &&input_model) :
+	  citcpp_algo_if (), input_model_ (std::move (input_model)), model_ (
+	      input_model_), strength_ (1), test_set_ ()
       {
       }
 
@@ -56,9 +63,12 @@ namespace citcpp
 	exec_handle.set_number_of_combinations_to_cover (
 	    number_of_combination_to_cover);
 
+	::citcpp::test_set ts (
+	    model_.create_from_internal_test_set (test_set_));
+
 	// Set the generated test set.
 	// This will also signal to the client that we are done.
-	exec_handle.set_test_set (::citcpp::test_set ());
+	exec_handle.set_test_set (std::move (ts));
       }
 
     private:
@@ -66,7 +76,9 @@ namespace citcpp
        * Function to mark all t-way combinations covered by a given test case
        */
       void
-      update_covered_combinations (const std::vector<int> &test_case)
+      update_covered_combinations (
+	  const std::vector<int> &test_case,
+	  set_of_covered_pv_combinations covered_combinations)
       {
 	citcpp::detail::index_combinator param_index_combinator (
 	    model_.get_parameters ().size (), strength_, 1);
@@ -89,16 +101,17 @@ namespace citcpp
 	      }
 	    if (valid_combo)
 	      {
-		covered_combinations_.insert (
+		covered_combinations.insert (
 		  { param_index_combination, combo_values });
 	      }
 	  }
       }
 
     private:
+      const citcpp::input_model input_model_;
       const model model_;
       unsigned int strength_;
-      set_of_covered_pv_combinations covered_combinations_;
+      test_set test_set_;
     };
   }
 }

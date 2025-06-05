@@ -18,8 +18,11 @@ namespace citcpp
     public:
       /**
        * Constructs an internal representation of the given input model.
+       * The given list of parameter allows to specify a desired different
+       * ordering of the parameters in the internal model.
        */
-      model (const input_model &input_model);
+      model (const input_model &input_model,
+	     const std::vector<parameter> &parameter_order);
 
       /**
        * Returns the input which this internal model has been created from.
@@ -34,7 +37,7 @@ namespace citcpp
       get_parameters () const;
 
       /**
-       * Constructs and returns a TestSet based on the given internal test set
+       * Constructs and returns a test set based on the given internal test set
        * representation.
        */
       ::citcpp::test_set
@@ -48,6 +51,7 @@ namespace citcpp
 
     private:
       const input_model &input_model_;
+      const std::vector<unsigned int> parameter_index_map_;
       std::vector<unsigned int> parameters_;
     };
   }
