@@ -1,47 +1,12 @@
 #include "index_combinator.hpp"
+#include "binom_coeff_table.hpp"
 
 #include <functional>
 
 namespace
 {
-  /**
-   * @brief Initializes and returns a 2D vector containing precomputed binomial coefficients C(n, k).
-   *
-   * This function builds Pascal's triangle up to 'max_n' to allow for O(1) lookups
-   * of binomial coefficients later. It's designed to be called once.
-   *
-   * @param max_n The maximum 'n' value for which binomial coefficients should be precomputed.
-   * @return A std::vector<std::vector<long long>> where coeffs[n][k] stores C(n, k).
-   */
-  std::vector<std::vector<long long>>
-  initialize_binomial_coefficients (unsigned int max_n)
-  {
-    // Resize the outer vector to hold up to max_n + 1 rows (for 0 to max_n)
-    std::vector<std::vector<long long>> coeffs (max_n + 1);
-    for (unsigned int i = 0; i <= max_n; ++i)
-      {
-	// Resize the inner vector for row 'i' to hold 'i + 1' elements (for 0 to i)
-	coeffs[i].resize (i + 1);
-	coeffs[i][0] = 1; // C(i, 0) is always 1
-	if (i > 0)
-	  {
-	    coeffs[i][i] = 1; // C(i, i) is always 1
-	  }
-	// Calculate intermediate coefficients using the Pascal's identity: C(n, k) = C(n-1, k-1) + C(n-1, k)
-	for (unsigned int j = 1; j < i; ++j)
-	  {
-	    coeffs[i][j] = coeffs[i - 1][j - 1] + coeffs[i - 1][j];
-	    // Basic overflow check: if the sum overflows, it might become negative.
-	    // Mark it as -1 to indicate overflow, though for typical N, K in combinatorial testing,
-	    // long long is usually sufficient.
-	    if (coeffs[i][j] < 0)
-	      {
-		coeffs[i][j] = -1; // Indicate overflow
-	      }
-	  }
-      }
-    return coeffs;
-  }
+  using namespace citcpp;
+  using namespace citcpp::detail;
 
   /**
    * @brief Generates the next combination in lexicographical order.
@@ -97,9 +62,9 @@ namespace
    * @return The value of C(n, k), or 0 if n < k or k < 0, or an error if coeffs table is not sufficient.
    */
   unsigned long long
-  combinations_count (
-      std::vector<int>::size_type n, std::vector<int>::size_type k,
-      const std::vector<std::vector<long long>> &binomial_coeffs)
+  combinations_count (std::vector<int>::size_type n,
+		      std::vector<int>::size_type k,
+		      const binom_coeff_table &binomial_coeffs)
   {
     if (k < 0 || k > n)
       return 0; // Invalid combination parameters
@@ -107,11 +72,11 @@ namespace
       return 1; // Base cases: C(n, 0) = 1, C(n, n) = 1
     // Defensive check: Ensure the requested n,k are within the precomputed table's bounds.
     // This indicates an error if initialize_binomial_coefficients wasn't called with a sufficiently large max_n.
-    if (n >= binomial_coeffs.size () || k >= binomial_coeffs[n].size ())
+    if (n >= binomial_coeffs.get_max_n ())
       {
 	return 0; // Return 0 or throw an exception to indicate an error
       }
-    return binomial_coeffs[n][k]; // O(1) lookup
+    return binomial_coeffs.get_coefficient (n, k); // O(1) lookup
   }
 
   /**
@@ -129,7 +94,7 @@ namespace
   std::vector<unsigned int>
   nth_combination (unsigned int n, unsigned int k,
 		   unsigned long long rank_to_find,
-		   const std::vector<std::vector<long long>> &binomial_coeffs)
+		   const binom_coeff_table &binomial_coeffs)
   {
     std::vector<unsigned int> combination (k);
     int last_chosen = -1; // The value of the last element chosen (initially -1 as elements are 0-indexed)
@@ -186,9 +151,9 @@ namespace citcpp
     class index_combinator_per_chunk_data
     {
     public:
-      index_combinator_per_chunk_data (
-	  int n, int k, long long start_rank, long long end_rank,
-	  const std::vector<std::vector<long long>> &binomial_coeffs) :
+      index_combinator_per_chunk_data (int n, int k, long long start_rank,
+				       long long end_rank,
+				       const binom_coeff_table &binomial_coeffs) :
 	  n_ (n), start_rank_ (start_rank), end_rank_ (end_rank), cur_rank_ (
 	      start_rank), cur_combination_ (
 	      nth_combination (n, k, start_rank, binomial_coeffs))
@@ -241,8 +206,7 @@ namespace citcpp
     {
     public:
       impl (unsigned int n, unsigned int k, unsigned int num_chunks) :
-	  n_ (n), k_ (k), binomial_coeffs_ (
-	      initialize_binomial_coefficients (n)), per_chunk_data_ ()
+	  n_ (n), k_ (k), binomial_coeffs_ (n), per_chunk_data_ ()
       {
 	// Calculate the total number of combinations using the initialized table.
 	const long long total_combinations = combinations_count (
@@ -322,13 +286,12 @@ namespace citcpp
       const unsigned int n_;
       const unsigned int k_;
       // --- Binomial Coefficients Initialization ---
-      const std::vector<std::vector<long long>> binomial_coeffs_;
+      const binom_coeff_table binomial_coeffs_;
       std::vector<index_combinator_per_chunk_data> per_chunk_data_;
     };
 
-    index_combinator::index_combinator (unsigned int n,
-						  unsigned int k,
-						  unsigned int num_chunks) :
+    index_combinator::index_combinator (unsigned int n, unsigned int k,
+					unsigned int num_chunks) :
 	impl_ (new impl (n, k, num_chunks))
     {
     }
