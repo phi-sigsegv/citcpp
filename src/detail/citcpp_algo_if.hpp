@@ -23,8 +23,8 @@ namespace citcpp
       /**
        * Sets the desired global interaction strength.
        */
-      void
-      set_interaction_strength (unsigned int t);
+      virtual void
+      set_interaction_strength (unsigned int t) = 0;
 
       /**
        * This is the entry point to be called by a thread.
