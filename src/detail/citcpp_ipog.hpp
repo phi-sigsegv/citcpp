@@ -2,12 +2,31 @@
 #define DETAIL_CITCPP_IPOG_HPP_
 
 #include <thread>
+#include <algorithm>
 #include "citcpp_algo_if.hpp"
 #include "exec_handle_impl.hpp"
 #include "internal_model.hpp"
 #include "set_of_covered_pv_combinations.hpp"
 #include "citcpp_algo_common.hpp"
 #include "index_combinator.hpp"
+
+namespace
+{
+  using namespace citcpp;
+
+  std::vector<parameter>
+  get_parameters_sorted_by_number_of_values_desc (
+      const std::vector<parameter> &params)
+  {
+    std::vector<parameter> sorted_params (params);
+
+    std::sort (sorted_params.begin (), sorted_params.end (), []
+    (const parameter &p1, const parameter &p2)
+      { return p2.get_values ().size () > p1.get_values ().size ();});
+
+    return sorted_params;
+  }
+}
 
 namespace citcpp
 {
@@ -20,14 +39,18 @@ namespace citcpp
     {
     public:
       citcpp_ipog (const input_model &input_model) :
-	  citcpp_algo_if (), input_model_ (input_model), model_ (input_model_), strength_ (
-	      1), test_set_ ()
+	  citcpp_algo_if (), input_model_ (input_model), model_ (
+	      input_model_,
+	      get_parameters_sorted_by_number_of_values_desc (
+		  input_model_.get_parameters ())), strength_ (1), test_set_ ()
       {
       }
 
       citcpp_ipog (input_model &&input_model) :
 	  citcpp_algo_if (), input_model_ (std::move (input_model)), model_ (
-	      input_model_), strength_ (1), test_set_ ()
+	      input_model_,
+	      get_parameters_sorted_by_number_of_values_desc (
+		  input_model_.get_parameters ())), strength_ (1), test_set_ ()
       {
       }
 
