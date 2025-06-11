@@ -38,11 +38,11 @@ namespace citcpp
       { "*" };
 
     model::model (const input_model &input_model,
-		  const std::vector<parameter> &parameter_order) :
+		  const std::vector<parameter> &ordered_parameters) :
 	input_model_ (input_model), parameter_index_map_ (
-	    compute_parameter_index_map (input_model, parameter_order)), parameters_ ()
+	    compute_parameter_index_map (input_model, ordered_parameters)), parameters_ ()
     {
-      for (const parameter &p : input_model.get_parameters ())
+      for (const parameter &p : ordered_parameters)
 	{
 	  parameters_.push_back (p.get_values ().size ());
 	}

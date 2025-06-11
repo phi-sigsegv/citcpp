@@ -22,7 +22,7 @@ namespace citcpp
        * ordering of the parameters in the internal model.
        */
       model (const input_model &input_model,
-	     const std::vector<parameter> &parameter_order);
+	     const std::vector<parameter> &ordered_parameters);
 
       /**
        * Returns the input which this internal model has been created from.
