@@ -1,9 +1,8 @@
-#include <algorithm>
-#include <execution>
+#include <thread>
 #include <ranges>
-#include <atomic>
+#include <taskflow/taskflow.hpp>
+#include <taskflow/algorithm/for_each.hpp>
 #include "citcpp_algo_common.hpp"
-
 #include "index_combinator.hpp"
 
 namespace
@@ -105,22 +104,25 @@ namespace
     citcpp::detail::index_combinator idx_combinator (
 	model.get_parameters ().size (), t, num_threads);
 
+    // Distribute the initial choices among threads
+    // Each thread will compute a partial sum which we aggregate.
     std::atomic_ullong num_combinations = 0;
 
-    // Distribute the initial choices among threads
-    // Each thread will compute a partial sum and return it via a future.
-    auto range = std::views::iota ((unsigned int) 0, num_threads);
-    std::for_each (
-	std::execution::par_unseq,
-	range.begin (),
-	range.end (),
+    tf::Taskflow taskflow;
+    taskflow.for_each_index (
+	0u,
+	num_threads,
+	1u,
 	[&model, &idx_combinator, &num_combinations]
 	(unsigned int i)
 	  {
 	    unsigned long long chunk_num_combos = number_of_combinations_of_chunk (model, idx_combinator, i);
 	    num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
-	  }
-	);
+	  });
+
+    tf::Executor executor;
+    executor.run (taskflow);
+    executor.wait_for_all ();
 
     return num_combinations;
   }
@@ -179,23 +181,26 @@ namespace
 					  model.get_parameters ());
       }
 
+    // Distribute the initial choices among threads
+    // Each thread will compute a partial sum which we aggregate.
     std::atomic_ullong num_combinations = 0;
 
-    // Distribute the initial choices among threads
-    // Each thread will compute a partial sum and return it via a future.
-    auto range = std::views::iota ((unsigned int) 0, numFactors);
-    std::for_each (
-	std::execution::par_unseq,
-	range.begin (),
-	range.end (),
+    tf::Taskflow taskflow;
+    taskflow.for_each_index (
+	0u,
+	numFactors,
+	1u,
 	[&model, t, numFactors, &num_combinations]
 	(unsigned int i)
 	  {
 	    unsigned long long chunk_num_combos = recursive_combine_and_sum (i+1, 1, model.get_parameters ()[i], t, numFactors,
 		model.get_parameters ());
 	    num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
-	  }
-	);
+	  });
+
+    tf::Executor executor;
+    executor.run (taskflow);
+    executor.wait_for_all ();
 
     return num_combinations;
   }
