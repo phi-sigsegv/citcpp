@@ -1,5 +1,6 @@
 #include <thread>
 #include <iostream>
+#include <chrono>
 #include "citcpp.hpp"
 
 citcpp::input_model
@@ -190,6 +191,8 @@ main (int argc, char *argv[])
 
   input_model model (create_pict_example_model ());
 
+  const auto t_start = std::chrono::high_resolution_clock::now ();
+
   std::cout << "Starting execution" << std::endl;
   std::unique_ptr<exec_handle> handle = compute_covering_test_set (
       model, 2, algorithm::IPOG);
@@ -212,4 +215,11 @@ main (int argc, char *argv[])
 
   std::cout << "test set is:\n";
   std::cout << t << std::endl;
+
+  const auto t_end = std::chrono::high_resolution_clock::now ();
+
+  /* Getting number of seconds as a double. */
+  const std::chrono::duration<double> duration_in_seconds = t_end - t_start;
+
+  std::cout << "Execution took: " << duration_in_seconds << std::endl;
 }
