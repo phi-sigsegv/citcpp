@@ -1,19 +1,20 @@
+#include <algorithm>
 #include "citcpp_ipog.hpp"
+#include "for_each_cross_product_elem.hpp"
 
 namespace
 {
-  using namespace citcpp;
-  using namespace citcpp::detail;
-
-  std::vector<parameter>
+  std::vector<citcpp::parameter>
   get_parameters_sorted_by_number_of_values_desc (
-      const std::vector<parameter> &params)
+      const std::vector<citcpp::parameter> &params)
   {
+    using namespace citcpp;
+
     std::vector<parameter> sorted_params (params);
 
     std::sort (sorted_params.begin (), sorted_params.end (), []
     (const parameter &p1, const parameter &p2)
-      { return p2.get_values ().size () > p1.get_values ().size ();});
+      { return p1.get_values ().size () > p2.get_values ().size ();});
 
     return sorted_params;
   }
@@ -23,9 +24,9 @@ namespace
    */
   void
   update_covered_combinations (
-      const model &model, unsigned int strength,
+      const citcpp::detail::model &model, unsigned int strength,
       const std::vector<int> &test_case,
-      set_of_covered_pv_combinations covered_combinations)
+      citcpp::detail::set_of_covered_pv_combinations covered_combinations)
   {
     citcpp::detail::index_combinator param_index_combinator (
 	model.get_parameters ().size (), strength, 1);
@@ -52,6 +53,31 @@ namespace
 	      { param_index_combination, combo_values });
 	  }
       }
+  }
+
+  void
+  initial_step_creating_all_value_combinations (
+      const citcpp::detail::model &model, unsigned int t,
+      citcpp::detail::test_set &test_set)
+  {
+    using namespace citcpp::detail;
+
+    std::vector<unsigned int> first_strength_params (
+	model.get_parameters ().begin (), model.get_parameters ().begin () + t);
+
+    for_each_cross_product_elem (
+	first_strength_params,
+	[&model, &test_set]
+	(const std::vector<unsigned int> &next_cross_product_elem)
+	  {
+	    // Initialize all values of the test with don't care.
+	    test t(model.get_parameters().size(), -1);
+
+	    // Replace the first t elements with the cross product element.
+	    std::copy(next_cross_product_elem.begin(),next_cross_product_elem.end(), t.begin());
+
+	    test_set.get_list_of_tests().push_back(std::move(t));
+	  });
   }
 }
 
@@ -84,11 +110,19 @@ namespace citcpp
     void
     citcpp_ipog::entry_point (exec_handle_impl &exec_handle)
     {
+      tf::Executor executor;
+
       // First we compute the number of combination we have to cover.
       unsigned long long number_of_combination_to_cover =
-	  number_of_combinations_to_cover (model_, strength_);
+	  number_of_combinations_to_cover (executor, model_, strength_);
       exec_handle.set_number_of_combinations_to_cover (
 	  number_of_combination_to_cover);
+
+      initial_step_creating_all_value_combinations (model_, strength_,
+						    test_set_);
+
+      exec_handle.add_number_of_covered_combinations (
+	  test_set_.get_list_of_tests ().size ());
 
       ::citcpp::test_set ts (model_.create_from_internal_test_set (test_set_));
 

@@ -8,26 +8,28 @@ namespace citcpp
 {
   namespace detail
   {
+    typedef std::vector<int> test;
+
     /**
      * This class represents a produced test set.
      */
     class test_set
     {
     public:
-      const std::list<std::vector<int>>&
+      const std::list<test>&
       get_list_of_tests () const
       {
 	return testset_;
       }
 
-      std::list<std::vector<int>>&
+      std::list<test>&
       get_list_of_tests ()
       {
 	return testset_;
       }
 
     private:
-      std::list<std::vector<int>> testset_;
+      std::list<test> testset_;
     };
   }
 }

@@ -66,7 +66,7 @@ namespace citcpp
     {
       ::citcpp::test_set ret;
 
-      for (const std::vector<int> &test : test_set.get_list_of_tests ())
+      for (const test &test : test_set.get_list_of_tests ())
 	{
 	  ret.get_list_of_tests ().emplace_back ();
 	  convert_test (test, ret.get_list_of_tests ().back ());
@@ -76,7 +76,7 @@ namespace citcpp
     }
 
     void
-    model::convert_test (const std::vector<int> &src,
+    model::convert_test (const test &src,
 			 std::vector<parameter_value> &tgt) const
     {
       for (std::vector<int>::size_type p = 0; p < src.size (); ++p)

@@ -16,7 +16,8 @@ namespace citcpp
     {
     public:
       exec_handle_impl () :
-	  exec_handle (), num_combinations_to_cover_ (0), covered_combinations_ (), is_aborted_ (), test_set_ (), runnable_ (), thread_ ()
+	  exec_handle (), num_combinations_to_cover_ (0), covered_combinations_ (
+	      0), is_aborted_ (), test_set_ (), runnable_ (), thread_ ()
       {
       }
 
@@ -73,6 +74,14 @@ namespace citcpp
 	  unsigned long long covered_combinations)
       {
 	covered_combinations_ = covered_combinations;
+      }
+
+      void
+      add_number_of_covered_combinations (
+	  unsigned long long covered_combinations)
+      {
+	covered_combinations_.fetch_add (covered_combinations,
+					 std::memory_order_acq_rel);
       }
 
       bool

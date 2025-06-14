@@ -46,8 +46,7 @@ namespace citcpp
 
     private:
       void
-      convert_test (const std::vector<int> &src,
-		    std::vector<parameter_value> &tgt) const;
+      convert_test (const test &src, std::vector<parameter_value> &tgt) const;
 
     private:
       const input_model &input_model_;
