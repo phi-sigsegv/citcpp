@@ -74,7 +74,7 @@ namespace
 	    test t(model.get_parameters().size(), -1);
 
 	    // Replace the first t elements with the cross product element.
-	    std::copy(next_cross_product_elem.begin(),next_cross_product_elem.end(), t.begin());
+	    std::copy(next_cross_product_elem.begin(),next_cross_product_elem.end(), t.get_values().begin());
 
 	    test_set.get_list_of_tests().push_back(std::move(t));
 	  });

@@ -79,9 +79,9 @@ namespace citcpp
     model::convert_test (const test &src,
 			 std::vector<parameter_value> &tgt) const
     {
-      for (std::vector<int>::size_type p = 0; p < src.size (); ++p)
+      for (test::size_type p = 0; p < src.get_values ().size (); ++p)
 	{
-	  int pv = src.at (p);
+	  int pv = src.get_values ().at (p);
 	  unsigned param_index_in_model = parameter_index_map_[p];
 
 	  const parameter &param = input_model_.get_parameters ().at (
