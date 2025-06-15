@@ -30,39 +30,40 @@ namespace citcpp
 
     public:
       test () noexcept :
-	  base_type (), values_ ()
+	  base_type (), values_ (), num_dont_care_values_ (0)
       {
       }
 
       explicit
       test (size_type count) :
-	  base_type (), values_ (count)
+	  base_type (), values_ (count), num_dont_care_values_ (0)
       {
       }
 
       test (size_type count, const int &value) :
-	  base_type (), values_ (count, value)
+	  base_type (), values_ (count, value), num_dont_care_values_ (0)
       {
       }
 
       template<class InputIt>
 	test (InputIt first, InputIt last) :
-	    base_type (), values_ (first, last)
+	    base_type (), values_ (first, last), num_dont_care_values_ (0)
 	{
 	}
 
       test (const test &other) :
-	  base_type (other), values_ (other.values_)
+	  base_type (other), values_ (other.values_), num_dont_care_values_ (0)
       {
       }
 
       test (test &&other) :
-	  base_type (std::move (other)), values_ (std::move (other.values_))
+	  base_type (std::move (other)), values_ (std::move (other.values_)), num_dont_care_values_ (
+	      0)
       {
       }
 
       test (std::initializer_list<int> init) :
-	  base_type (), values_ (std::move (init))
+	  base_type (), values_ (std::move (init)), num_dont_care_values_ (0)
       {
       }
 
@@ -104,8 +105,21 @@ namespace citcpp
 	return values_;
       }
 
+      unsigned int
+      get_num_dont_care_values () const
+      {
+	return num_dont_care_values_;
+      }
+
+      void
+      set_num_dont_care_values (unsigned int num_dont_care_values)
+      {
+	num_dont_care_values_ = num_dont_care_values;
+      }
+
     private:
       std::vector<int> values_;
+      unsigned int num_dont_care_values_;
     };
 
     /**

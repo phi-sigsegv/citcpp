@@ -72,9 +72,11 @@ namespace
 	  {
 	    // Initialize all values of the test with don't care.
 	    test t(model.get_parameters().size(), -1);
+	    t.set_num_dont_care_values(t.get_values().size());
 
 	    // Replace the first t elements with the cross product element.
 	    std::copy(next_cross_product_elem.begin(),next_cross_product_elem.end(), t.get_values().begin());
+	    t.set_num_dont_care_values(t.get_num_dont_care_values() - next_cross_product_elem.size());
 
 	    test_set.get_list_of_tests().push_back(std::move(t));
 	  });
