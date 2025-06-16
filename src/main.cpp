@@ -213,6 +213,9 @@ main (int argc, char *argv[])
   std::cout << "Again fetching number of combinations to cover: "
       << handle->get_number_of_combinations_to_cover () << std::endl;
 
+  std::cout << "Covered combinations: "
+      << handle->get_number_of_covered_combinations () << std::endl;
+
   std::cout << "test set is:\n";
   std::cout << t << std::endl;
 

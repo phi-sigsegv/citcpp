@@ -1,6 +1,9 @@
 #include <algorithm>
 #include "citcpp_ipog.hpp"
 #include "for_each_cross_product_elem.hpp"
+#include "coverage_map.hpp"
+#include "binom_coeff_table.hpp"
+#include "ipog_algorithm_uniform_strength.hpp"
 
 namespace
 {
@@ -56,30 +59,22 @@ namespace
   }
 
   void
-  initial_step_creating_all_value_combinations (
-      const citcpp::detail::model &model, unsigned int t,
-      citcpp::detail::test_set &test_set)
+  main_ipog_loop (const citcpp::detail::model &model, unsigned int strength,
+		  citcpp::detail::test_set &test_set,
+		  citcpp::detail::exec_handle_impl &exec_handle)
   {
     using namespace citcpp::detail;
 
-    std::vector<unsigned int> first_strength_params (
-	model.get_parameters ().begin (), model.get_parameters ().begin () + t);
+    binom_coeff_table binomial_coeffs (model.get_parameters ().size ());
+    std::vector<unsigned int> parameter_index_map (
+	model.get_parameters ().size ());
+    std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
 
-    for_each_cross_product_elem (
-	first_strength_params,
-	[&model, &test_set]
-	(const std::vector<unsigned int> &next_cross_product_elem)
-	  {
-	    // Initialize all values of the test with don't care.
-	    test t(model.get_parameters().size(), -1);
-	    t.set_num_dont_care_values(t.get_values().size());
-
-	    // Replace the first t elements with the cross product element.
-	    std::copy(next_cross_product_elem.begin(),next_cross_product_elem.end(), t.get_values().begin());
-	    t.set_num_dont_care_values(t.get_num_dont_care_values() - next_cross_product_elem.size());
-
-	    test_set.get_list_of_tests().push_back(std::move(t));
-	  });
+    for (unsigned int current_param_idx = strength;
+	current_param_idx < model.get_parameters ().size ();
+	++current_param_idx)
+      {
+      }
   }
 }
 
@@ -120,11 +115,15 @@ namespace citcpp
       exec_handle.set_number_of_combinations_to_cover (
 	  number_of_combination_to_cover);
 
-      initial_step_creating_all_value_combinations (model_, strength_,
-						    test_set_);
-
+      std::vector<unsigned int> parameter_index_map (
+	  model_.get_parameters ().size ());
+      std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
+      auto initial_step_res = create_all_value_combinations (
+	  strength_, model_, parameter_index_map, test_set_);
       exec_handle.add_number_of_covered_combinations (
-	  test_set_.get_list_of_tests ().size ());
+	  initial_step_res.num_created_combinations);
+
+      main_ipog_loop (model_, strength_, test_set_, exec_handle);
 
       ::citcpp::test_set ts (model_.create_from_internal_test_set (test_set_));
 
