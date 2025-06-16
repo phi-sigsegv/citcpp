@@ -66,7 +66,31 @@ namespace
   {
     using namespace citcpp::detail;
 
-    binom_coeff_table binomial_coeffs (model.get_parameters ().size ());
+    tf::Executor executor;
+    const binom_coeff_table binomial_coeffs (model.get_parameters ().size ());
+
+    // First we compute the number of combination we have to cover.
+    unsigned long long number_of_combination_to_cover =
+	number_of_combinations_to_cover (executor, model, strength);
+    exec_handle.set_number_of_combinations_to_cover (
+	number_of_combination_to_cover);
+
+    if (exec_handle.is_job_aborted ())
+      {
+	return;
+      }
+
+      {
+	// Step 1: Initialize for the first t parameters.
+	std::vector<unsigned int> parameter_index_map (
+	    model.get_parameters ().size ());
+	std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
+	auto initial_step_res = create_all_value_combinations (
+	    strength, model, parameter_index_map, test_set);
+	exec_handle.add_number_of_covered_combinations (
+	    initial_step_res.num_created_combinations);
+      }
+
     std::vector<unsigned int> parameter_index_map (
 	model.get_parameters ().size ());
     std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
@@ -108,26 +132,9 @@ namespace citcpp
     void
     citcpp_ipog::entry_point (exec_handle_impl &exec_handle)
     {
-      tf::Executor executor;
-
       const auto t_start = std::chrono::high_resolution_clock::now ();
 
-      // First we compute the number of combination we have to cover.
-      unsigned long long number_of_combination_to_cover =
-	  number_of_combinations_to_cover (executor, model_, strength_);
-      exec_handle.set_number_of_combinations_to_cover (
-	  number_of_combination_to_cover);
-
-      std::vector<unsigned int> parameter_index_map (
-	  model_.get_parameters ().size ());
-      std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
-      auto initial_step_res = create_all_value_combinations (
-	  strength_, model_, parameter_index_map, test_set_);
-      exec_handle.add_number_of_covered_combinations (
-	  initial_step_res.num_created_combinations);
-
       main_ipog_loop (model_, strength_, test_set_, exec_handle);
-
       ::citcpp::test_set ts (model_.create_from_internal_test_set (test_set_));
 
       const auto t_end = std::chrono::high_resolution_clock::now ();
