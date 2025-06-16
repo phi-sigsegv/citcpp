@@ -58,6 +58,16 @@ namespace citcpp
      */
     virtual std::future<test_set>
     get_test_set () = 0;
+
+    /**
+     * Once the computation of the test set has terminated, either because the
+     * complete test set has been generated or because is has been aborted,
+     * this method returns the duration of the computation in milli seconds.
+     * If the computation has not terminated yet, then calling this method
+     * returns 0.0.
+     */
+    virtual unsigned int
+    get_duration_in_milli_seconds () const = 0;
   };
 }
 

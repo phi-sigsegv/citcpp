@@ -17,7 +17,7 @@ namespace citcpp
     public:
       exec_handle_impl () :
 	  exec_handle (), num_combinations_to_cover_ (0), covered_combinations_ (
-	      0), is_aborted_ (), test_set_ (), runnable_ (), thread_ ()
+	      0), is_aborted_ (), test_set_ (), duration_msec_ (0), runnable_ (), thread_ ()
       {
       }
 
@@ -62,6 +62,12 @@ namespace citcpp
 	return test_set_.get_future ();
       }
 
+      unsigned int
+      get_duration_in_milli_seconds () const
+      {
+	return duration_msec_;
+      }
+
       void
       set_number_of_combinations_to_cover (
 	  unsigned long long num_combinations_to_cover)
@@ -96,6 +102,12 @@ namespace citcpp
 	test_set_.set_value (std::move (test_set));
       }
 
+      void
+      set_duration_in_milli_seconds (unsigned int duration_msec)
+      {
+	duration_msec_ = duration_msec;
+      }
+
       /**
        * Sets the runnable to be called by the thread of this execution
        * handle. The thread will invoke the runnable right away,
@@ -114,6 +126,7 @@ namespace citcpp
       std::atomic_ullong covered_combinations_;
       std::atomic_flag is_aborted_;
       std::promise<test_set> test_set_;
+      std::atomic_uint duration_msec_;
       std::unique_ptr<citcpp_algo_if> runnable_;
       std::thread thread_;
     };

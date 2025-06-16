@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include "citcpp_ipog.hpp"
 #include "for_each_cross_product_elem.hpp"
 #include "coverage_map.hpp"
@@ -109,6 +110,8 @@ namespace citcpp
     {
       tf::Executor executor;
 
+      const auto t_start = std::chrono::high_resolution_clock::now ();
+
       // First we compute the number of combination we have to cover.
       unsigned long long number_of_combination_to_cover =
 	  number_of_combinations_to_cover (executor, model_, strength_);
@@ -126,6 +129,12 @@ namespace citcpp
       main_ipog_loop (model_, strength_, test_set_, exec_handle);
 
       ::citcpp::test_set ts (model_.create_from_internal_test_set (test_set_));
+
+      const auto t_end = std::chrono::high_resolution_clock::now ();
+      const auto duration_in_milli_seconds = duration_cast<
+	  std::chrono::milliseconds> (t_end - t_start);
+      exec_handle.set_duration_in_milli_seconds (
+	  duration_in_milli_seconds.count ());
 
       // Set the generated test set.
       // This will also signal to the client that we are done.
