@@ -3,9 +3,11 @@
 
 #include <cstddef>
 #include <cstring>
+#include <cstdint>
 #include <limits>
 #include <algorithm>
 #include <type_traits>
+#include <stdexcept>
 #include <bit>
 
 namespace citcpp
@@ -15,7 +17,7 @@ namespace citcpp
     template<typename T>
       struct all_ones_tmpl
       {
-	constexpr T value = static_cast<T> (-1);
+	static constexpr T value = static_cast<T> (-1);
       };
 
     template<typename T_FUNDAMENTAL_STORAGE_TYPE>
@@ -26,6 +28,11 @@ namespace citcpp
 	typedef std::size_t size_type;
 
       public:
+	bitset () :
+	    size_ (0), bits_ (nullptr)
+	{
+	}
+
 	bitset (size_type num_bits) :
 	    size_ (num_bits), bits_ (
 		new storage_type[calculate_num_storage_blocks_from_num_bits (
@@ -426,11 +433,11 @@ namespace citcpp
       private:
 	static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>, "The underlying type must be a fundamental type");
 
-	const unsigned int size_;
+	unsigned int size_;
 	storage_type *bits_;
       };
 
-    using bitset_uint = bitset<unsigned int>;
+    using bitset_uint64 = bitset<uint_fast64_t>;
   }
 }
 
