@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <chrono>
 #include "citcpp_ipog.hpp"
+#include "exec_handle_ipog_impl.hpp"
+#include "citcpp_algo_common.hpp"
 #include "for_each_cross_product_elem.hpp"
 #include "coverage_map.hpp"
 #include "binom_coeff_table.hpp"
@@ -23,51 +25,14 @@ namespace
     return sorted_params;
   }
 
-  /**
-   * Function to mark all t-way combinations covered by a given test case
-   */
-  void
-  update_covered_combinations (
-      const citcpp::detail::model &model, unsigned int strength,
-      const std::vector<int> &test_case,
-      citcpp::detail::set_of_covered_pv_combinations covered_combinations)
-  {
-    citcpp::detail::index_combinator param_index_combinator (
-	model.get_parameters ().size (), strength, 1);
-
-    while (param_index_combinator.has_next (0))
-      {
-	const std::vector<unsigned int> &param_index_combination =
-	    param_index_combinator.next (0);
-
-	std::vector<unsigned int> combo_values;
-	bool valid_combo = true;
-	for (unsigned int param_index : param_index_combination)
-	  {
-	    if (test_case[param_index] == -1)
-	      { // If any value is unassigned, this combination isn't fully formed yet
-		valid_combo = false;
-		break;
-	      }
-	    combo_values.push_back (test_case[param_index]);
-	  }
-	if (valid_combo)
-	  {
-	    covered_combinations.insert (
-	      { param_index_combination, combo_values });
-	  }
-      }
-  }
-
   void
   main_ipog_loop (const citcpp::detail::model &model, unsigned int strength,
 		  citcpp::detail::test_set &test_set,
-		  citcpp::detail::exec_handle_impl &exec_handle)
+		  citcpp::detail::exec_handle_ipog_impl &exec_handle)
   {
     using namespace citcpp::detail;
 
     tf::Executor executor;
-    const binom_coeff_table binomial_coeffs (model.get_parameters ().size ());
 
     // First we compute the number of combination we have to cover.
     unsigned long long number_of_combination_to_cover =
@@ -89,16 +54,44 @@ namespace
 	    strength, model, parameter_index_map, test_set);
 	exec_handle.add_number_of_covered_combinations (
 	    initial_step_res.num_created_combinations);
+	exec_handle.set_number_of_processed_parameters (strength);
       }
 
-    std::vector<unsigned int> parameter_index_map (
-	model.get_parameters ().size ());
-    std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
-
-    for (unsigned int current_param_idx = strength;
-	current_param_idx < model.get_parameters ().size ();
-	++current_param_idx)
       {
+	// Here is the main IPOG loop.
+	const binom_coeff_table binomial_coeffs (
+	    model.get_parameters ().size ());
+	std::vector<unsigned int> parameter_index_map (
+	    model.get_parameters ().size ());
+	std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
+
+	for (unsigned int current_param_idx = strength;
+	    current_param_idx < model.get_parameters ().size ();
+	    ++current_param_idx)
+	  {
+	    if (exec_handle.is_job_aborted ())
+	      {
+		return;
+	      }
+
+	    coverage_map cov_map (current_param_idx, strength - 1,
+				  binomial_coeffs);
+
+	    auto horizontal_ext_res = ipog_horizontal_extension (
+		current_param_idx, strength, model, parameter_index_map,
+		test_set, cov_map);
+
+	    exec_handle.add_number_of_covered_combinations (
+		horizontal_ext_res.num_new_covered_tuples);
+
+	    if (exec_handle.is_job_aborted ())
+	      {
+		return;
+	      }
+
+	    exec_handle.set_number_of_processed_parameters (
+		current_param_idx + 1);
+	  }
       }
   }
 }
@@ -108,7 +101,7 @@ namespace citcpp
   namespace detail
   {
     citcpp_ipog::citcpp_ipog (const input_model &input_model) :
-	citcpp_algo_if (), input_model_ (input_model), model_ (
+	input_model_ (input_model), model_ (
 	    input_model_,
 	    get_parameters_sorted_by_number_of_values_desc (
 		input_model_.get_parameters ())), strength_ (1), test_set_ ()
@@ -116,7 +109,7 @@ namespace citcpp
     }
 
     citcpp_ipog::citcpp_ipog (input_model &&input_model) :
-	citcpp_algo_if (), input_model_ (std::move (input_model)), model_ (
+	input_model_ (std::move (input_model)), model_ (
 	    input_model_,
 	    get_parameters_sorted_by_number_of_values_desc (
 		input_model_.get_parameters ())), strength_ (1), test_set_ ()
@@ -130,7 +123,7 @@ namespace citcpp
     }
 
     void
-    citcpp_ipog::entry_point (exec_handle_impl &exec_handle)
+    citcpp_ipog::entry_point (exec_handle_ipog_impl &exec_handle)
     {
       const auto t_start = std::chrono::high_resolution_clock::now ();
 

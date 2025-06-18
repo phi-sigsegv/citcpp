@@ -60,11 +60,11 @@ namespace citcpp
       return parameters_;
     }
 
-    ::citcpp::test_set
+    citcpp::test_set
     model::create_from_internal_test_set (
-	const ::citcpp::detail::test_set &test_set) const
+	const citcpp::detail::test_set &test_set) const
     {
-      ::citcpp::test_set ret;
+      citcpp::test_set ret;
 
       for (const test &test : test_set.get_list_of_tests ())
 	{

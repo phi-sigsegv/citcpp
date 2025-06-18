@@ -9,7 +9,7 @@ namespace citcpp
 {
   namespace detail
   {
-    class test : sl_list_node_intrusive
+    class test : public sl_list_node_intrusive
     {
       typedef sl_list_node_intrusive base_type;
       typedef std::vector<int> vector_type;

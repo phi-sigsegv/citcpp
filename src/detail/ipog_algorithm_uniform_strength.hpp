@@ -2,6 +2,7 @@
 #define DETAIL_IPOG_ALGORITHM_UNIFORM_STRENGTH_HPP_
 
 #include "internal_model.hpp"
+#include "internal_test_set.hpp"
 #include "coverage_map.hpp"
 
 namespace citcpp
@@ -28,7 +29,7 @@ namespace citcpp
      */
     create_all_value_combinations_result
     create_all_value_combinations (
-	unsigned int t, const model &model,
+	unsigned int strength, const model &model,
 	const std::vector<unsigned int> &parameter_indices,
 	citcpp::detail::test_set &test_set);
 
@@ -40,7 +41,7 @@ namespace citcpp
 
     ipog_horizontal_extension_result
     ipog_horizontal_extension (
-	unsigned int current_param_idx, unsigned int num_params, unsigned int t,
+	unsigned int current_param_idx, unsigned int strength,
 	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	test_set &test_set, coverage_map &cov_map);

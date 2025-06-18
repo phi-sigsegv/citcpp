@@ -1,23 +1,21 @@
 #ifndef DETAIL_CITCPP_IPOG_HPP_
 #define DETAIL_CITCPP_IPOG_HPP_
 
-#include <thread>
-#include <algorithm>
-#include "citcpp_algo_if.hpp"
-#include "exec_handle_impl.hpp"
 #include "internal_model.hpp"
-#include "set_of_covered_pv_combinations.hpp"
-#include "citcpp_algo_common.hpp"
-#include "index_combinator.hpp"
+#include "internal_test_set.hpp"
 
 namespace citcpp
 {
   namespace detail
   {
+    // Forward declaration of exec_handle_ipog_impl due to usage of
+    // citcpp_ipog by exec_handle_ipog_impl definition.
+    class exec_handle_ipog_impl;
+
     /**
      * This class provides an implementation of the IPOG algorithm.
      */
-    class citcpp_ipog : public citcpp_algo_if
+    class citcpp_ipog
     {
     public:
       citcpp_ipog (const input_model &input_model);
@@ -44,7 +42,7 @@ namespace citcpp
        * This is the entry point to be called by a thread.
        */
       void
-      entry_point (exec_handle_impl &exec_handle);
+      entry_point (exec_handle_ipog_impl &exec_handle);
 
     private:
       const citcpp::input_model input_model_;

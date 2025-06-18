@@ -102,7 +102,7 @@ namespace citcpp
 	    list_intrusive_iterator&
 	    operator++ ()
 	    {
-	      node_ = node_->m_next_node;
+	      node_ = node_->next_node_;
 	      return *this;
 	    }
 
@@ -112,7 +112,7 @@ namespace citcpp
 	    operator++ (int)
 	    {
 	      list_intrusive_iterator tmp (*this);
-	      node_ = node_->m_next_node;
+	      node_ = node_->next_node_;
 	      return tmp;
 	    }
 
@@ -280,7 +280,7 @@ namespace citcpp
 	void
 	push_front (reference entry)
 	{
-	  entry.m_next_node = dummy_.next_node_;
+	  entry.next_node_ = dummy_.next_node_;
 	  dummy_.next_node_ = &entry;
 	  if (p_tail_ == &dummy_)
 	    {
@@ -292,7 +292,7 @@ namespace citcpp
 	void
 	push_front (pointer entry)
 	{
-	  entry->m_next_node = dummy_.next_node_;
+	  entry->next_node_ = dummy_.next_node_;
 	  dummy_.next_node_ = entry;
 	  if (p_tail_ == &dummy_)
 	    {
@@ -304,7 +304,7 @@ namespace citcpp
 	void
 	push_back (reference entry)
 	{
-	  entry.m_next_node = nullptr;
+	  entry.next_node_ = nullptr;
 	  p_tail_->next_node_ = &entry;
 	  p_tail_ = &entry;
 	  ++size_;
@@ -313,7 +313,7 @@ namespace citcpp
 	void
 	push_back (pointer entry)
 	{
-	  entry->m_next_node = nullptr;
+	  entry->next_node_ = nullptr;
 	  p_tail_->next_node_ = entry;
 	  p_tail_ = entry;
 	  ++size_;

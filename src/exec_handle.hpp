@@ -30,8 +30,7 @@ namespace citcpp
 
     /**
      * Returns the number of combinations to cover based on the given
-     * input model and desired interaction strength. The returned number
-     * is constant throughout the whole execution.
+     * input model and desired interaction strength.
      */
     virtual unsigned long long
     get_number_of_combinations_to_cover () const = 0;

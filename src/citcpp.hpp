@@ -3,29 +3,19 @@
 
 #include <memory>
 
-#include "exec_handle.hpp"
+#include "exec_handle_ipog.hpp"
 #include "input_model.hpp"
 
 namespace citcpp
 {
-  /**
-   * This enumeration defines the supported algorithms for computation of
-   * a covering test set.
-   */
-  enum class algorithm
-  {
-    IPOG
-  };
-
   /**
    * Triggers execution of the calculation of a covering test set.
    * This returns immediately to the caller with a handle object,
    * which can then be used to monitor the progress of the execution
    * or to terminate it, as well as to obtain the final results.
    */
-  std::unique_ptr<exec_handle>
-  compute_covering_test_set (input_model input_model, unsigned int t,
-			     algorithm alg);
+  std::unique_ptr<exec_handle_ipog>
+  compute_covering_test_set_ipog (input_model input_model, unsigned int t);
 }
 
 #endif /* CITCPP_HPP_ */

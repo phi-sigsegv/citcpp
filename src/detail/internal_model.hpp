@@ -40,9 +40,9 @@ namespace citcpp
        * Constructs and returns a test set based on the given internal test set
        * representation.
        */
-      ::citcpp::test_set
+      citcpp::test_set
       create_from_internal_test_set (
-	  const ::citcpp::detail::test_set &test_set) const;
+	  const citcpp::detail::test_set &test_set) const;
 
     private:
       void
