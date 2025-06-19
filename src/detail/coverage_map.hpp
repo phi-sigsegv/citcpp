@@ -21,6 +21,12 @@ namespace citcpp
      */
     class coverage_map
     {
+      typedef std::vector<bitset_uint64> first_level_type;
+      typedef bitset_uint64 second_level_type;
+
+    public:
+      typedef typename first_level_type::size_type size_type;
+
     public:
       /**
        * Creates a coverage map, which is able to keep track of tuple coverage
@@ -42,14 +48,14 @@ namespace citcpp
       void
       swap (coverage_map &other);
 
-      std::vector<bitset_uint64>&
+      first_level_type&
       get_coverage_map ();
 
-      const std::vector<bitset_uint64>&
+      const first_level_type&
       get_coverage_map () const;
 
     private:
-      std::vector<bitset_uint64> cov_map_;
+      first_level_type cov_map_;
     };
   }
 }

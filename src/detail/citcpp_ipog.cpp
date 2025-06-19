@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <chrono>
+#include <taskflow/taskflow.hpp>
 #include "citcpp_ipog.hpp"
 #include "exec_handle_ipog_impl.hpp"
 #include "citcpp_algo_common.hpp"
@@ -61,9 +62,13 @@ namespace
 	// Here is the main IPOG loop.
 	const binom_coeff_table binomial_coeffs (
 	    model.get_parameters ().size ());
+	const unsigned long long number_of_combinations_to_cover =
+	    exec_handle.get_number_of_combinations_to_cover ();
 	std::vector<unsigned int> parameter_index_map (
 	    model.get_parameters ().size ());
 	std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
+	unsigned long long number_of_covered_combinations =
+	    exec_handle.get_number_of_covered_combinations ();
 
 	for (unsigned int current_param_idx = strength;
 	    current_param_idx < model.get_parameters ().size ();
@@ -78,9 +83,16 @@ namespace
 				  binomial_coeffs);
 
 	    auto horizontal_ext_res = ipog_horizontal_extension (
-		current_param_idx, strength, model, parameter_index_map,
-		test_set, cov_map);
+		current_param_idx,
+		strength,
+		model,
+		parameter_index_map,
+		number_of_combinations_to_cover
+		    - number_of_covered_combinations,
+		binomial_coeffs, test_set, cov_map, nullptr);
 
+	    number_of_covered_combinations +=
+		horizontal_ext_res.num_new_covered_tuples;
 	    exec_handle.add_number_of_covered_combinations (
 		horizontal_ext_res.num_new_covered_tuples);
 

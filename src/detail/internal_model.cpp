@@ -68,7 +68,9 @@ namespace citcpp
 
       for (const test &test : test_set.get_list_of_tests ())
 	{
-	  ret.get_list_of_tests ().emplace_back ();
+	  ret.get_list_of_tests ().emplace_back (
+	      std::vector<parameter_value> (test.get_values ().size (),
+					    DONT_CARE_PARAMETER_VALUE));
 	  convert_test (test, ret.get_list_of_tests ().back ());
 	}
 
@@ -84,17 +86,17 @@ namespace citcpp
 	  int pv = src.get_values ().at (p);
 	  unsigned param_index_in_model = parameter_index_map_[p];
 
-	  const parameter &param = input_model_.get_parameters ().at (
-	      param_index_in_model);
+	  const parameter &param =
+	      input_model_.get_parameters ()[param_index_in_model];
 	  if (pv >= 0
 	      && (std::vector<parameter_value>::size_type) pv
 		  < param.get_values ().size ())
 	    {
-	      tgt.push_back (param.get_values ().at (pv));
+	      tgt[param_index_in_model] = param.get_values ()[pv];
 	    }
 	  else
 	    {
-	      tgt.push_back (DONT_CARE_PARAMETER_VALUE);
+	      tgt[param_index_in_model] = DONT_CARE_PARAMETER_VALUE;
 	    }
 	}
     }

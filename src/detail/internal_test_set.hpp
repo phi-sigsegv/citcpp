@@ -12,21 +12,21 @@ namespace citcpp
     class test : public sl_list_node_intrusive
     {
       typedef sl_list_node_intrusive base_type;
-      typedef std::vector<int> vector_type;
+      typedef std::vector<int> values_list_type;
 
     public:
-      typedef typename vector_type::value_type value_type;
-      typedef typename vector_type::allocator_type allocator_type;
-      typedef typename vector_type::size_type size_type;
-      typedef typename vector_type::difference_type difference_type;
-      typedef typename vector_type::reference reference;
-      typedef typename vector_type::const_reference const_reference;
-      typedef typename vector_type::pointer pointer;
-      typedef typename vector_type::const_pointer const_pointer;
-      typedef typename vector_type::iterator iterator;
-      typedef typename vector_type::const_iterator const_iterator;
-      typedef typename vector_type::reverse_iterator reverse_iterator;
-      typedef typename vector_type::const_reverse_iterator const_reverse_iterator;
+      typedef typename values_list_type::value_type value_type;
+      typedef typename values_list_type::allocator_type allocator_type;
+      typedef typename values_list_type::size_type size_type;
+      typedef typename values_list_type::difference_type difference_type;
+      typedef typename values_list_type::reference reference;
+      typedef typename values_list_type::const_reference const_reference;
+      typedef typename values_list_type::pointer pointer;
+      typedef typename values_list_type::const_pointer const_pointer;
+      typedef typename values_list_type::iterator iterator;
+      typedef typename values_list_type::const_iterator const_iterator;
+      typedef typename values_list_type::reverse_iterator reverse_iterator;
+      typedef typename values_list_type::const_reverse_iterator const_reverse_iterator;
 
     public:
       test () noexcept :
@@ -52,13 +52,14 @@ namespace citcpp
 	}
 
       test (const test &other) :
-	  base_type (other), values_ (other.values_), num_dont_care_values_ (0)
+	  base_type (other), values_ (other.values_), num_dont_care_values_ (
+	      other.num_dont_care_values_)
       {
       }
 
       test (test &&other) :
 	  base_type (std::move (other)), values_ (std::move (other.values_)), num_dont_care_values_ (
-	      0)
+	      other.num_dont_care_values_)
       {
       }
 
@@ -72,6 +73,7 @@ namespace citcpp
       {
 	base_type::operator= (other);
 	values_ = other.values_;
+	num_dont_care_values_ = other.num_dont_care_values_;
 
 	return *this;
       }
@@ -81,6 +83,7 @@ namespace citcpp
       {
 	base_type::operator= (std::move (other));
 	values_ = std::move (other.values_);
+	num_dont_care_values_ = other.num_dont_care_values_;
 
 	return *this;
       }
@@ -93,13 +96,13 @@ namespace citcpp
 	return *this;
       }
 
-      std::vector<int>&
+      values_list_type&
       get_values ()
       {
 	return values_;
       }
 
-      const std::vector<int>&
+      const values_list_type&
       get_values () const
       {
 	return values_;
@@ -118,7 +121,7 @@ namespace citcpp
       }
 
     private:
-      std::vector<int> values_;
+      values_list_type values_;
       unsigned int num_dont_care_values_;
     };
 

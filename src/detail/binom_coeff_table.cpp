@@ -54,6 +54,10 @@ namespace citcpp
     long long
     binom_coeff_table::get_coefficient (unsigned int n, unsigned int k) const
     {
+      if (k < 0 || k > n)
+	{
+	  return 0;
+	}
       return binom_coeffs_[n][k];
     }
 

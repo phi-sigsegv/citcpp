@@ -149,6 +149,33 @@ namespace citcpp
 	}
 
 	/**
+	 * Accesses the bit at the given position and sets it to the given
+	 * value. This method returns the previous value stored at the
+	 * position.
+	 * This method does no range checking. Passing an invalid position results in undefined behavior.
+	 */
+	bool
+	test_and_set (size_type bit_pos, bool value = true)
+	{
+	  const size_type storage_block_index = calculate_storage_block_index (
+	      bit_pos);
+	  const storage_type mask = bit_mask (bit_pos);
+
+	  const bool previous_value = (bits_[storage_block_index] & mask) != 0;
+
+	  if (value)
+	    {
+	      bits_[storage_block_index] |= mask;
+	    }
+	  else
+	    {
+	      bits_[storage_block_index] &= ~mask;
+	    }
+
+	  return previous_value;
+	}
+
+	/**
 	 * Returns the number of bits of this bitset.
 	 */
 	size_type
