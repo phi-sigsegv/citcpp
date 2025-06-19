@@ -96,10 +96,29 @@ namespace
 	    exec_handle.add_number_of_covered_combinations (
 		horizontal_ext_res.num_new_covered_tuples);
 
-	    if (exec_handle.is_job_aborted ())
+	    if (exec_handle.is_job_aborted ()
+		|| number_of_covered_combinations
+		    >= number_of_combinations_to_cover)
 	      {
+		exec_handle.set_number_of_processed_parameters (
+		    current_param_idx + 1);
 		return;
 	      }
+
+	    auto vertical_ext_res = ipog_vertical_extension (
+		current_param_idx,
+		strength,
+		model,
+		parameter_index_map,
+		number_of_combinations_to_cover
+		    - number_of_covered_combinations,
+		binomial_coeffs, horizontal_ext_res.value_to_row_mapping,
+		test_set, cov_map, nullptr);
+
+	    number_of_covered_combinations +=
+		vertical_ext_res.num_new_covered_tuples;
+	    exec_handle.add_number_of_covered_combinations (
+		vertical_ext_res.num_new_covered_tuples);
 
 	    exec_handle.set_number_of_processed_parameters (
 		current_param_idx + 1);

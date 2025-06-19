@@ -64,7 +64,7 @@ namespace
 	(const std::vector<unsigned int> &param_indices,
 	 coverage_map::size_type cov_map_first_level_index)
 	   {
-	     const bitset_uint64 & value_combinations = cov_map.get_coverage_map()[cov_map_first_level_index];
+	     const coverage_map::second_level_type & value_combinations = cov_map.get_coverage_map()[cov_map_first_level_index];
 	     if (value_combinations.size() == 0)
 	       {
 		 // The bitset tracking the value combinations has not been initialized yet, which
@@ -74,9 +74,10 @@ namespace
 		     ++gain;
 		   }
 	       }
-	     else
+	     else if (!value_combinations.all())
 	       {
-		 // We have a valid bitset. Thus we have to walk through it concerning all possible value
+		 // We have a valid bitset and we have uncovered value combinations left in it.
+		 // Thus we have to walk through it concerning all possible value
 		 // combinations.
 		 bitset_uint64::size_type base_index = 0;
 		 bool found_dont_care = false;
@@ -115,7 +116,8 @@ namespace
 		       }
 		   }
 	       }
-	   };
+	   }
+	 ;
 
     recursive_combine_with_cov_map_index (0, 0, current_param_idx, strength - 1,
 					  binomial_coeffs, param_indices, 0,
@@ -157,7 +159,7 @@ namespace
 	(const std::vector<unsigned int> &param_indices,
 	 coverage_map::size_type cov_map_first_level_index)
 	   {
-	     bitset_uint64 & value_combinations = cov_map.get_coverage_map()[cov_map_first_level_index];
+	     coverage_map::second_level_type & value_combinations = cov_map.get_coverage_map()[cov_map_first_level_index];
 	     if (value_combinations.size() == 0)
 	       {
 		 bitset_uint64::size_type bitset_size = 1;
@@ -169,7 +171,14 @@ namespace
 		     unsigned int real_param_idx = parameter_index_map[param_idx];
 		     bitset_size *= model.get_parameters ()[real_param_idx];
 		   }
-		 value_combinations = bitset_uint64(bitset_size);
+		 value_combinations = coverage_map::second_level_type (bitset_size);
+	       }
+
+	     if (value_combinations.all())
+	       {
+		 // We do not have any uncovered value combinations left. Thus, there is no point
+		 // in trying to possibly update its coverage.
+		 return;
 	       }
 
 	     bitset_uint64::size_type index = current_param_value;
@@ -277,7 +286,6 @@ namespace citcpp
 	coverage_map &cov_map, tf::Executor *executor)
     {
       // First initialize the result object.
-
       ipog_horizontal_extension_result result
 	{ std::vector<list_intrusive<test>> (
 	    model.get_parameters ()[parameter_index_map[current_param_idx]]), 0 };
@@ -288,8 +296,8 @@ namespace citcpp
 	      current_param_idx, strength, model, parameter_index_map,
 	      binomial_coeffs, t, cov_map, executor);
 
-	  // Now that we have selected the value with most coverage, we set it in the
-	  // test accordingly.
+// Now that we have selected the value with most coverage, we set it in the
+// test accordingly.
 	  t.get_values ()[parameter_index_map[current_param_idx]] =
 	      selected_value;
 
@@ -311,6 +319,23 @@ namespace citcpp
 	      break;
 	    }
 	}
+
+      return result;
+    }
+
+    ipog_vertical_extension_result
+    ipog_vertical_extension (
+	unsigned int current_param_idx, unsigned int strength,
+	const model &model,
+	const std::vector<unsigned int> &parameter_index_map,
+	const unsigned long long num_missing_combinations_to_cover,
+	const binom_coeff_table &binomial_coeffs,
+	std::vector<list_intrusive<test>> &value_to_row_mapping,
+	test_set &test_set, coverage_map &cov_map, tf::Executor *executor)
+    {
+      // First initialize the result object.
+      ipog_vertical_extension_result result =
+	{ 0 };
 
       return result;
     }

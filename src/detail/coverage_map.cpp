@@ -17,13 +17,13 @@ namespace citcpp
       std::swap (cov_map_, other.cov_map_);
     }
 
-    std::vector<bitset_uint64>&
+    coverage_map::first_level_type&
     coverage_map::get_coverage_map ()
     {
       return cov_map_;
     }
 
-    const std::vector<bitset_uint64>&
+    const coverage_map::first_level_type&
     coverage_map::get_coverage_map () const
     {
       return cov_map_;

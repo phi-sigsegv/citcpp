@@ -140,7 +140,7 @@ namespace citcpp
 	bool
 	at (size_type bit_pos) const
 	{
-	  if (bit_pos >= bits_)
+	  if (bit_pos >= size_)
 	    {
 	      throw std::out_of_range ("bitset::at out_of_range");
 	    }
@@ -149,13 +149,13 @@ namespace citcpp
 	}
 
 	/**
-	 * Accesses the bit at the given position and sets it to the given
-	 * value. This method returns the previous value stored at the
+	 * Accesses the bit at the given position and sets it to true.
+	 * This method returns the previous value stored at the
 	 * position.
 	 * This method does no range checking. Passing an invalid position results in undefined behavior.
 	 */
 	bool
-	test_and_set (size_type bit_pos, bool value = true)
+	test_and_set (size_type bit_pos)
 	{
 	  const size_type storage_block_index = calculate_storage_block_index (
 	      bit_pos);
@@ -163,14 +163,27 @@ namespace citcpp
 
 	  const bool previous_value = (bits_[storage_block_index] & mask) != 0;
 
-	  if (value)
-	    {
-	      bits_[storage_block_index] |= mask;
-	    }
-	  else
-	    {
-	      bits_[storage_block_index] &= ~mask;
-	    }
+	  bits_[storage_block_index] |= mask;
+
+	  return previous_value;
+	}
+
+	/**
+	 * Accesses the bit at the given position and sets it to false.
+	 * This method returns the previous value stored at the
+	 * position.
+	 * This method does no range checking. Passing an invalid position results in undefined behavior.
+	 */
+	bool
+	test_and_reset (size_type bit_pos)
+	{
+	  const size_type storage_block_index = calculate_storage_block_index (
+	      bit_pos);
+	  const storage_type mask = bit_mask (bit_pos);
+
+	  const bool previous_value = (bits_[storage_block_index] & mask) != 0;
+
+	  bits_[storage_block_index] &= ~mask;
 
 	  return previous_value;
 	}
@@ -297,25 +310,18 @@ namespace citcpp
 	}
 
 	/**
-	 * Sets the bit at the given position to the given value.
+	 * Sets the bit at the given position to true.
 	 *
 	 * @return *this
 	 */
 	bitset&
-	set (size_type bit_pos, bool value = true)
+	set (size_type bit_pos)
 	{
 	  const size_type storage_block_index = calculate_storage_block_index (
 	      bit_pos);
 	  const storage_type mask = bit_mask (bit_pos);
 
-	  if (value)
-	    {
-	      bits_[storage_block_index] |= mask;
-	    }
-	  else
-	    {
-	      bits_[storage_block_index] &= ~mask;
-	    }
+	  bits_[storage_block_index] |= mask;
 
 	  return *this;
 	}
