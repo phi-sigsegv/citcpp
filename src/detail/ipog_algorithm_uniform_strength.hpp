@@ -63,7 +63,7 @@ namespace citcpp
 	const unsigned long long num_missing_combinations_to_cover,
 	const binom_coeff_table &binomial_coeffs,
 	std::vector<list_intrusive<test>> &value_to_row_mapping,
-	test_set &test_set, coverage_map &cov_map, tf::Executor *executor);
+	test_set &test_set, coverage_map &cov_map);
   }
 }
 

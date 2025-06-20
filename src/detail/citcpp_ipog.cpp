@@ -113,7 +113,7 @@ namespace
 		number_of_combinations_to_cover
 		    - number_of_covered_combinations,
 		binomial_coeffs, horizontal_ext_res.value_to_row_mapping,
-		test_set, cov_map, nullptr);
+		test_set, cov_map);
 
 	    number_of_covered_combinations +=
 		vertical_ext_res.num_new_covered_tuples;

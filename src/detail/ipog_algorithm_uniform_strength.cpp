@@ -43,6 +43,69 @@ namespace
       }
   }
 
+  void
+  recursive_cross_product_with_bitset_index (
+      const citcpp::detail::model &model,
+      const std::vector<unsigned int> &parameter_index_map,
+      const std::vector<unsigned int> &param_indices,
+      const unsigned int current_param_idx,
+      unsigned int current_index,
+      std::vector<int> &values,
+      citcpp::detail::coverage_map::second_level_type::size_type cov_map_second_level_index,
+      const std::function<
+	  void
+	  (const std::vector<int>&,
+	   citcpp::detail::coverage_map::second_level_type::size_type)> &callback)
+  {
+    using namespace citcpp::detail;
+
+    const unsigned int num_current_param_values =
+	model.get_parameters ()[parameter_index_map[current_param_idx]];
+
+    if (current_index == param_indices.size ())
+      {
+	// We still have to iterate through all values of the current parameter,
+	// which we handle here.
+	unsigned int max_val =
+	    model.get_parameters ()[parameter_index_map[current_param_idx]];
+	for (unsigned int i = 0; i < max_val; ++i)
+	  {
+	    values[current_index] = i;
+	    callback (values, cov_map_second_level_index + i);
+	  }
+
+	return;
+      }
+
+    // The current range goes from 0 to max_value[current_index]
+    unsigned int max_val =
+	model.get_parameters ()[parameter_index_map[param_indices[current_index]]];
+
+    for (unsigned int i = 0; i < max_val; ++i)
+      {
+	values[current_index] = i;
+	// Here we compute an index into the bitset. To do so, we treat the number of values
+	// of each parameter as a kind of radix. Consider three parameters p_0, p_1, p_2.
+	// Now say that v_i is the number of values for p_i. If we now have values
+	// x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+	// In the recursion we just compute a base index. We just compute
+	// x_0 * v_1 * v_2 + x_1 * v_2.
+	coverage_map::second_level_type::size_type addend = i;
+	for (std::vector<unsigned int>::size_type j = i + 1;
+	    j < param_indices.size (); ++j)
+	  {
+	    addend *=
+		model.get_parameters ()[parameter_index_map[param_indices[j]]];
+	  }
+	addend *= num_current_param_values;
+
+	recursive_cross_product_with_bitset_index (
+	    model, parameter_index_map, param_indices, current_param_idx,
+	    current_index + 1, values, cov_map_second_level_index + addend,
+	    callback);
+      }
+  }
+
   unsigned int
   ipog_horizontal_select_best_value (
       unsigned int current_param_idx, unsigned int strength,
@@ -54,13 +117,16 @@ namespace
   {
     using namespace citcpp::detail;
 
+    const unsigned int num_current_param_values =
+	model.get_parameters ()[parameter_index_map[current_param_idx]];
     // This is an array containing the coverage gain per value of the current parameter.
     std::vector<unsigned long long> gain_per_value (
 	model.get_parameters ()[parameter_index_map[current_param_idx]]);
-    std::vector<unsigned int> param_indices (strength);
+    std::vector<unsigned int> param_indices (strength - 1);
 
     auto func_computing_gain_per_value =
-	[&model, &parameter_index_map, &test, &cov_map, &gain_per_value]
+	[&model, &parameter_index_map, &test, num_current_param_values,
+	 &cov_map, &gain_per_value]
 	(const std::vector<unsigned int> &param_indices,
 	 coverage_map::size_type cov_map_first_level_index)
 	   {
@@ -79,7 +145,15 @@ namespace
 		 // We have a valid bitset and we have uncovered value combinations left in it.
 		 // Thus we have to walk through it concerning all possible value
 		 // combinations.
-		 bitset_uint64::size_type base_index = 0;
+		 // Here we compute an index into the bitset. To do so, we treat the number of values
+		 // of each parameter as a kind of radix. Consider three parameters p_0, p_1, p_2.
+		 // The last parameter is always the current one processed by IPOG.
+		 // Now say that v_i is the number of values for p_i. If we now have values
+		 // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+		 // In the base index we just compute x_0 * v_1 * v_2 + x_1 * v_2, since
+		 // that expression is constant throughout all different values of p_2 whose
+		 // different coverage gains we want to assess.
+		 coverage_map::second_level_type::size_type base_index = 0;
 		 bool found_dont_care = false;
 		 for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size(); ++i)
 		   {
@@ -95,11 +169,12 @@ namespace
 			 break;
 		       }
 
-		     bitset_uint64::size_type addend = param_value;
-		     for (std::vector<unsigned int>::size_type j = 0; j <= i; ++j)
+		     coverage_map::second_level_type::size_type addend = param_value;
+		     for (std::vector<unsigned int>::size_type j = i + 1; j < param_indices.size(); ++j)
 		       {
-			 addend *= model.get_parameters ()[real_param_idx];
+			 addend *= model.get_parameters ()[parameter_index_map[param_indices[j]]];
 		       }
+		     addend *= num_current_param_values;
 		     base_index += addend;
 		   }
 
@@ -147,22 +222,24 @@ namespace
   {
     using namespace citcpp::detail;
 
-    int current_param_value =
+    const unsigned int num_current_param_values =
+	model.get_parameters ()[parameter_index_map[current_param_idx]];
+    const int current_param_value =
 	test.get_values ()[parameter_index_map[current_param_idx]];
 
-    std::vector<unsigned int> param_indices (strength);
+    std::vector<unsigned int> param_indices (strength - 1);
     unsigned long long num_new_covered_tuples = 0;
 
     auto func_updating_coverage =
-	[&model, &parameter_index_map, &test, current_param_value, &cov_map,
-	 &num_new_covered_tuples]
+	[&model, &parameter_index_map, &test, num_current_param_values,
+	 current_param_value, &cov_map, &num_new_covered_tuples]
 	(const std::vector<unsigned int> &param_indices,
 	 coverage_map::size_type cov_map_first_level_index)
 	   {
 	     coverage_map::second_level_type & value_combinations = cov_map.get_coverage_map()[cov_map_first_level_index];
 	     if (value_combinations.size() == 0)
 	       {
-		 bitset_uint64::size_type bitset_size = 1;
+		 coverage_map::second_level_type::size_type bitset_size = num_current_param_values;
 		 // The bitset tracking the value combinations has not been initialized yet, so
 		 // we do that now.
 		 for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size(); ++i)
@@ -181,7 +258,12 @@ namespace
 		 return;
 	       }
 
-	     bitset_uint64::size_type index = current_param_value;
+	     // Here we compute an index into the bitset. To do so, we treat the number of values
+	     // of each parameter as a kind of radix. Consider three parameters p_0, p_1, p_2.
+	     // The last parameter is always the current one processed by IPOG.
+	     // Now say that v_i is the number of values for p_i. If we now have values
+	     // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+	     coverage_map::second_level_type::size_type index = current_param_value;
 	     bool found_dont_care = false;
 	     for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size(); ++i)
 	       {
@@ -197,11 +279,12 @@ namespace
 		     break;
 		   }
 
-		 bitset_uint64::size_type addend = param_value;
-		 for (std::vector<unsigned int>::size_type j = 0; j <= i; ++j)
+		 coverage_map::second_level_type::size_type addend = param_value;
+		 for (std::vector<unsigned int>::size_type j = i + 1; j < param_indices.size(); ++j)
 		   {
-		     addend *= model.get_parameters ()[real_param_idx];
+		     addend *= model.get_parameters ()[parameter_index_map[param_indices[j]]];
 		   }
+		 addend *= num_current_param_values;
 		 index += addend;
 	       }
 
@@ -296,8 +379,8 @@ namespace citcpp
 	      current_param_idx, strength, model, parameter_index_map,
 	      binomial_coeffs, t, cov_map, executor);
 
-// Now that we have selected the value with most coverage, we set it in the
-// test accordingly.
+	  // Now that we have selected the value with most coverage, we set it in the
+	  // test accordingly.
 	  t.get_values ()[parameter_index_map[current_param_idx]] =
 	      selected_value;
 
@@ -331,11 +414,73 @@ namespace citcpp
 	const unsigned long long num_missing_combinations_to_cover,
 	const binom_coeff_table &binomial_coeffs,
 	std::vector<list_intrusive<test>> &value_to_row_mapping,
-	test_set &test_set, coverage_map &cov_map, tf::Executor *executor)
+	test_set &test_set, coverage_map &cov_map)
     {
       // First initialize the result object.
       ipog_vertical_extension_result result =
 	{ 0 };
+
+      const int num_current_param_values =
+	  model.get_parameters ()[parameter_index_map[current_param_idx]];
+
+      std::vector<unsigned int> param_indices (strength - 1);
+      unsigned long long num_new_covered_tuples = 0;
+      std::vector<int> values (strength);
+
+      auto func_find_suitable_row_and_extend =
+	  [&model, &parameter_index_map, &value_to_row_mapping, &test_set,
+	   current_param_idx, num_current_param_values, &cov_map,
+	   &num_new_covered_tuples, &values]
+	  (const std::vector<unsigned int> &param_indices,
+	   coverage_map::size_type cov_map_first_level_index)
+	     {
+	       coverage_map::second_level_type & value_combinations = cov_map.get_coverage_map()[cov_map_first_level_index];
+//	       if (value_combinations.size() == 0)
+//		 {
+//		   coverage_map::second_level_type::size_type bitset_size = num_current_param_values;
+//		   // The bitset tracking the value combinations has not been initialized yet, so
+//		   // we do that now.
+//		   for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size(); ++i)
+//		     {
+//		       unsigned int param_idx = param_indices[i];
+//		       unsigned int real_param_idx = parameter_index_map[param_idx];
+//		       bitset_size *= model.get_parameters ()[real_param_idx];
+//		     }
+//		   value_combinations = coverage_map::second_level_type (bitset_size);
+//		 }
+
+	       if (value_combinations.all())
+		 {
+		   // We do not have any uncovered value combinations left. Thus, there is no point
+		   // in trying to match any test for the parameter combination.
+		   return;
+		 }
+
+	       auto nested_func = [&value_to_row_mapping, &test_set, &value_combinations, &num_new_covered_tuples](const std::vector<int> &values, coverage_map::second_level_type::size_type cov_map_second_level_index)
+		 {
+		   // First we check whether the value combination is covered, because if it is not,
+		   // then there is no point try to fit it into some test.
+		   if (value_combinations.test(cov_map_second_level_index))
+		     {
+		       return;
+		     }
+
+		   // Now we iterate over all tests trying to fit the value combination.
+		   // However, we do not iterate over the entire test test, but instead
+		   // leverage upon its partition according to the value of the current
+		   // parameter as set by the horizontal extension.
+		   // We only have to check out these tests, since
+		 };
+
+	       recursive_cross_product_with_bitset_index(model, parameter_index_map, param_indices, current_param_idx, 0, values, 0, nested_func);
+	     };
+
+      recursive_combine_with_cov_map_index (0, 0, current_param_idx,
+					    strength - 1, binomial_coeffs,
+					    param_indices, 0,
+					    func_find_suitable_row_and_extend);
+
+      result.num_new_covered_tuples = num_new_covered_tuples;
 
       return result;
     }

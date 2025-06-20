@@ -12,6 +12,9 @@ namespace citcpp
     class bitset_with_num_ones : bitset_uint64
     {
     public:
+      typedef bitset_uint64::size_type size_type;
+
+    public:
       bitset_with_num_ones () :
 	  bitset_uint64 (0), num_ones_ (0)
       {
