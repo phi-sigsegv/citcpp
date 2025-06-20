@@ -25,27 +25,27 @@ namespace citcpp
       {
       public:
 	typedef T_FUNDAMENTAL_STORAGE_TYPE storage_type;
-	typedef std::size_t size_type;
+	typedef std::uint32_t size_type;
 
       public:
 	bitset () :
-	    size_ (0), bits_ (nullptr)
+	    bits_ (nullptr), size_ (0)
 	{
 	}
 
 	bitset (size_type num_bits) :
-	    size_ (num_bits), bits_ (
+	    bits_ (
 		new storage_type[calculate_num_storage_blocks_from_num_bits (
-		    size_)]
-		  { })
+		    num_bits)]
+		  { }), size_ (num_bits)
 	{
 	}
 
 	bitset (const bitset &other) :
-	    size_ (other.size_), bits_ (
+	    bits_ (
 		new storage_type[calculate_num_storage_blocks_from_num_bits (
-		    size_)]
-		  { })
+		    other.size_)]
+		  { }), size_ (other.size_)
 	{
 	  std::memcpy (
 	      bits_,
@@ -55,7 +55,7 @@ namespace citcpp
 	}
 
 	bitset (bitset &&other) :
-	    size_ (other.size_), bits_ (other.bits_)
+	    bits_ (other.bits_), size_ (other.size_)
 	{
 	  other.size_ = 0;
 	  other.bits_ = nullptr;
@@ -466,11 +466,11 @@ namespace citcpp
       private:
 	static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>, "The underlying type must be a fundamental type");
 
-	unsigned int size_;
 	storage_type *bits_;
+	size_type size_;
       };
 
-    using bitset_uint64 = bitset<uint_fast64_t>;
+    using bitset_uint64 = bitset<std::uint64_t>;
   }
 }
 

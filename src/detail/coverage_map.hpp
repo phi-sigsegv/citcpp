@@ -233,9 +233,8 @@ namespace citcpp
       }
 
     private:
-      bitset_uint64::size_type num_ones_;
-    }
-    ;
+      size_type num_ones_;
+    };
 
     /**
      * This is a quite central data structure in combinatorial testing tools.
