@@ -11,6 +11,7 @@ namespace
       unsigned int current_count,
       const unsigned int current_param_idx,
       const unsigned int strength,
+      const std::vector<unsigned int> &parameter_index_map,
       const citcpp::detail::binom_coeff_table &binomial_coeffs,
       std::vector<unsigned int> &param_indices,
       citcpp::detail::coverage_map::size_type cov_map_first_level_index,
@@ -29,12 +30,13 @@ namespace
 
     for (unsigned int j = start_idx_for_next; j < current_param_idx; ++j)
       {
-	param_indices[current_count] = j;
+	param_indices[current_count] = parameter_index_map[j];
 	recursive_combine_with_cov_map_index (
 	    j + 1,
 	    current_count + 1,
 	    current_param_idx,
 	    strength,
+	    parameter_index_map,
 	    binomial_coeffs,
 	    param_indices,
 	    cov_map_first_level_index
@@ -46,9 +48,8 @@ namespace
   void
   recursive_cross_product_with_bitset_index (
       const citcpp::detail::model &model,
-      const std::vector<unsigned int> &parameter_index_map,
       const std::vector<unsigned int> &param_indices,
-      const unsigned int current_param_idx,
+      const unsigned int num_current_param_values,
       unsigned int current_index,
       std::vector<int> &values,
       citcpp::detail::coverage_map::second_level_type::size_type cov_map_second_level_index,
@@ -59,16 +60,11 @@ namespace
   {
     using namespace citcpp::detail;
 
-    const unsigned int num_current_param_values =
-	model.get_parameters ()[parameter_index_map[current_param_idx]];
-
     if (current_index == param_indices.size ())
       {
 	// We still have to iterate through all values of the current parameter,
 	// which we handle here.
-	unsigned int max_val =
-	    model.get_parameters ()[parameter_index_map[current_param_idx]];
-	for (unsigned int i = 0; i < max_val; ++i)
+	for (unsigned int i = 0; i < num_current_param_values; ++i)
 	  {
 	    values[current_index] = i;
 	    callback (values, cov_map_second_level_index + i);
@@ -78,8 +74,7 @@ namespace
       }
 
     // The current range goes from 0 to max_value[current_index]
-    unsigned int max_val =
-	model.get_parameters ()[parameter_index_map[param_indices[current_index]]];
+    unsigned int max_val = model.get_parameters ()[param_indices[current_index]];
 
     for (unsigned int i = 0; i < max_val; ++i)
       {
@@ -94,15 +89,13 @@ namespace
 	for (std::vector<unsigned int>::size_type j = i + 1;
 	    j < param_indices.size (); ++j)
 	  {
-	    addend *=
-		model.get_parameters ()[parameter_index_map[param_indices[j]]];
+	    addend *= model.get_parameters ()[param_indices[j]];
 	  }
 	addend *= num_current_param_values;
 
 	recursive_cross_product_with_bitset_index (
-	    model, parameter_index_map, param_indices, current_param_idx,
-	    current_index + 1, values, cov_map_second_level_index + addend,
-	    callback);
+	    model, param_indices, num_current_param_values, current_index + 1,
+	    values, cov_map_second_level_index + addend, callback);
       }
   }
 
@@ -125,8 +118,7 @@ namespace
     std::vector<unsigned int> param_indices (strength - 1);
 
     auto func_computing_gain_per_value =
-	[&model, &parameter_index_map, &test, num_current_param_values,
-	 &cov_map, &gain_per_value]
+	[&model, &test, num_current_param_values, &cov_map, &gain_per_value]
 	(const std::vector<unsigned int> &param_indices,
 	 coverage_map::size_type cov_map_first_level_index)
 	   {
@@ -158,8 +150,7 @@ namespace
 		 for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size(); ++i)
 		   {
 		     const unsigned int param_idx = param_indices[i];
-		     const unsigned int real_param_idx = parameter_index_map[param_idx];
-		     const int param_value = test.get_values()[real_param_idx];
+		     const int param_value = test.get_values()[param_idx];
 
 		     if (param_value < 0)
 		       {
@@ -172,7 +163,7 @@ namespace
 		     coverage_map::second_level_type::size_type addend = param_value;
 		     for (std::vector<unsigned int>::size_type j = i + 1; j < param_indices.size(); ++j)
 		       {
-			 addend *= model.get_parameters ()[parameter_index_map[param_indices[j]]];
+			 addend *= model.get_parameters ()[param_indices[j]];
 		       }
 		     addend *= num_current_param_values;
 		     base_index += addend;
@@ -195,7 +186,8 @@ namespace
 	 ;
 
     recursive_combine_with_cov_map_index (0, 0, current_param_idx, strength - 1,
-					  binomial_coeffs, param_indices, 0,
+					  parameter_index_map, binomial_coeffs,
+					  param_indices, 0,
 					  func_computing_gain_per_value);
 
     unsigned int value_with_max_gain = 0;
@@ -231,8 +223,8 @@ namespace
     unsigned long long num_new_covered_tuples = 0;
 
     auto func_updating_coverage =
-	[&model, &parameter_index_map, &test, num_current_param_values,
-	 current_param_value, &cov_map, &num_new_covered_tuples]
+	[&model, &test, num_current_param_values, current_param_value, &cov_map,
+	 &num_new_covered_tuples]
 	(const std::vector<unsigned int> &param_indices,
 	 coverage_map::size_type cov_map_first_level_index)
 	   {
@@ -245,8 +237,7 @@ namespace
 		 for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size(); ++i)
 		   {
 		     unsigned int param_idx = param_indices[i];
-		     unsigned int real_param_idx = parameter_index_map[param_idx];
-		     bitset_size *= model.get_parameters ()[real_param_idx];
+		     bitset_size *= model.get_parameters ()[param_idx];
 		   }
 		 value_combinations = coverage_map::second_level_type (bitset_size);
 	       }
@@ -268,8 +259,7 @@ namespace
 	     for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size(); ++i)
 	       {
 		 const unsigned int param_idx = param_indices[i];
-		 const unsigned int real_param_idx = parameter_index_map[param_idx];
-		 const int param_value = test.get_values()[real_param_idx];
+		 const int param_value = test.get_values()[param_idx];
 
 		 if (param_value < 0)
 		   {
@@ -282,7 +272,7 @@ namespace
 		 coverage_map::second_level_type::size_type addend = param_value;
 		 for (std::vector<unsigned int>::size_type j = i + 1; j < param_indices.size(); ++j)
 		   {
-		     addend *= model.get_parameters ()[parameter_index_map[param_indices[j]]];
+		     addend *= model.get_parameters ()[param_indices[j]];
 		   }
 		 addend *= num_current_param_values;
 		 index += addend;
@@ -301,7 +291,8 @@ namespace
 	   };
 
     recursive_combine_with_cov_map_index (0, 0, current_param_idx, strength - 1,
-					  binomial_coeffs, param_indices, 0,
+					  parameter_index_map, binomial_coeffs,
+					  param_indices, 0,
 					  func_updating_coverage);
 
     return num_new_covered_tuples;
@@ -428,9 +419,8 @@ namespace citcpp
       std::vector<int> values (strength);
 
       auto func_find_suitable_row_and_extend =
-	  [&model, &parameter_index_map, &value_to_row_mapping, &test_set,
-	   current_param_idx, num_current_param_values, &cov_map,
-	   &num_new_covered_tuples, &values]
+	  [&model, &value_to_row_mapping, &test_set, num_current_param_values,
+	   &cov_map, &num_new_covered_tuples, &values]
 	  (const std::vector<unsigned int> &param_indices,
 	   coverage_map::size_type cov_map_first_level_index)
 	     {
@@ -443,8 +433,7 @@ namespace citcpp
 //		   for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size(); ++i)
 //		     {
 //		       unsigned int param_idx = param_indices[i];
-//		       unsigned int real_param_idx = parameter_index_map[param_idx];
-//		       bitset_size *= model.get_parameters ()[real_param_idx];
+//		       bitset_size *= model.get_parameters ()[param_idx];
 //		     }
 //		   value_combinations = coverage_map::second_level_type (bitset_size);
 //		 }
@@ -456,7 +445,7 @@ namespace citcpp
 		   return;
 		 }
 
-	       auto nested_func = [&value_to_row_mapping, &test_set, &value_combinations, &num_new_covered_tuples](const std::vector<int> &values, coverage_map::second_level_type::size_type cov_map_second_level_index)
+	       auto nested_func = [&param_indices, &value_to_row_mapping, &test_set, &value_combinations, &num_new_covered_tuples](const std::vector<int> &values, coverage_map::second_level_type::size_type cov_map_second_level_index)
 		 {
 		   // First we check whether the value combination is covered, because if it is not,
 		   // then there is no point try to fit it into some test.
@@ -472,12 +461,12 @@ namespace citcpp
 		   // We only have to check out these tests, since
 		 };
 
-	       recursive_cross_product_with_bitset_index(model, parameter_index_map, param_indices, current_param_idx, 0, values, 0, nested_func);
+	       recursive_cross_product_with_bitset_index(model, param_indices, num_current_param_values, 0, values, 0, nested_func);
 	     };
 
       recursive_combine_with_cov_map_index (0, 0, current_param_idx,
-					    strength - 1, binomial_coeffs,
-					    param_indices, 0,
+					    strength - 1, parameter_index_map,
+					    binomial_coeffs, param_indices, 0,
 					    func_find_suitable_row_and_extend);
 
       result.num_new_covered_tuples = num_new_covered_tuples;
