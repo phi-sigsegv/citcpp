@@ -206,7 +206,7 @@ namespace citcpp
 	iterator
 	begin ()
 	{
-	  return const_iterator (dummy_.next_node_);
+	  return iterator (dummy_.next_node_);
 	}
 
 	const_iterator
@@ -224,7 +224,7 @@ namespace citcpp
 	iterator
 	end ()
 	{
-	  return const_iterator (0);
+	  return iterator (0);
 	}
 
 	const_iterator
