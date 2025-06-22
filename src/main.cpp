@@ -192,8 +192,11 @@ main (int argc, char *argv[])
   input_model model (create_pict_example_model ());
 
   std::cout << "Starting execution" << std::endl;
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_test_set_ipog (
-      model, 2);
+  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog (
+      model,
+      2,
+      covering_array_computation_config ().with_replace_dont_care_values (
+	  false));
 
   std::cout << "Number of combinations to cover: "
       << handle->get_number_of_combinations_to_cover () << std::endl;

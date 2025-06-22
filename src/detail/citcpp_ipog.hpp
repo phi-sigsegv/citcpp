@@ -2,6 +2,8 @@
 #define DETAIL_CITCPP_IPOG_HPP_
 
 #include "internal_model.hpp"
+#include "../input_model.hpp"
+#include "../citcpp_config.hpp"
 #include "internal_test_set.hpp"
 
 namespace citcpp
@@ -18,8 +20,10 @@ namespace citcpp
     class citcpp_ipog
     {
     public:
-      citcpp_ipog (const input_model &input_model);
-      citcpp_ipog (input_model &&input_model);
+      citcpp_ipog (const input_model &input_model,
+		   const covering_array_computation_config &config);
+      citcpp_ipog (input_model &&input_model,
+		   const covering_array_computation_config &config);
 
       /**
        * Too lazy to implement/ensuring that it is well-defined.
@@ -45,6 +49,7 @@ namespace citcpp
       entry_point (exec_handle_ipog_impl &exec_handle);
 
     private:
+      const citcpp::covering_array_computation_config config_;
       const citcpp::input_model input_model_;
       const model model_;
       unsigned int strength_;

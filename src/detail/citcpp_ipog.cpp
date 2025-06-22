@@ -125,22 +125,45 @@ namespace
 	  }
       }
   }
+
+  void
+  replace_dont_care_values (citcpp::detail::test_set &test_set,
+			    const citcpp::detail::model &model)
+  {
+    using namespace citcpp::detail;
+
+    for (test &t : test_set.get_list_of_tests ())
+      {
+	for (unsigned int i = 0; i < t.get_values ().size (); ++i)
+	  {
+	    int &value = t.get_values ()[i];
+	    if (value < 0)
+	      {
+		// Found don't care value. We simply replace it with the
+		// first value of the respective parameter.
+		value = 0;
+	      }
+	  }
+      }
+  }
 }
 
 namespace citcpp
 {
   namespace detail
   {
-    citcpp_ipog::citcpp_ipog (const input_model &input_model) :
-	input_model_ (input_model), model_ (
+    citcpp_ipog::citcpp_ipog (const input_model &input_model,
+			      const covering_array_computation_config &config) :
+	config_ (config), input_model_ (input_model), model_ (
 	    input_model_,
 	    get_parameters_sorted_by_number_of_values_desc (
 		input_model_.get_parameters ())), strength_ (1), test_set_ ()
     {
     }
 
-    citcpp_ipog::citcpp_ipog (input_model &&input_model) :
-	input_model_ (std::move (input_model)), model_ (
+    citcpp_ipog::citcpp_ipog (input_model &&input_model,
+			      const covering_array_computation_config &config) :
+	config_ (config), input_model_ (std::move (input_model)), model_ (
 	    input_model_,
 	    get_parameters_sorted_by_number_of_values_desc (
 		input_model_.get_parameters ())), strength_ (1), test_set_ ()
@@ -159,6 +182,10 @@ namespace citcpp
       const auto t_start = std::chrono::high_resolution_clock::now ();
 
       main_ipog_loop (model_, strength_, test_set_, exec_handle);
+      if (config_.replace_dont_care_values ())
+	{
+	  replace_dont_care_values (test_set_, model_);
+	}
       ::citcpp::test_set ts (model_.create_from_internal_test_set (test_set_));
 
       const auto t_end = std::chrono::high_resolution_clock::now ();

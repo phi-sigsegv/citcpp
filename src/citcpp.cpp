@@ -5,10 +5,11 @@
 namespace citcpp
 {
   std::unique_ptr<exec_handle_ipog>
-  compute_covering_test_set_ipog (input_model input_model, unsigned int t)
+  compute_covering_array_ipog (input_model input_model, unsigned int t,
+			       const covering_array_computation_config &config)
   {
     auto ipog_algo = std::make_unique<detail::citcpp_ipog> (
-	std::move (input_model));
+	std::move (input_model), config);
 
     ipog_algo->set_interaction_strength (t);
 
@@ -16,5 +17,12 @@ namespace citcpp
 	new detail::exec_handle_ipog_impl ();
     handle->set_runnable (std::move (ipog_algo));
     return std::unique_ptr<exec_handle_ipog> (handle);
+  }
+
+  std::unique_ptr<exec_handle_ipog>
+  compute_covering_array_ipog (input_model input_model, unsigned int t)
+  {
+    return compute_covering_array_ipog (input_model, t,
+					covering_array_computation_config ());
   }
 }
