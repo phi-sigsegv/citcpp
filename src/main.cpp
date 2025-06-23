@@ -217,7 +217,8 @@ main (int argc, char *argv[])
   std::cout << "Covered combinations: "
       << handle->get_number_of_covered_combinations () << std::endl;
 
-  std::cout << "test set is:\n";
+  std::cout << "test set has the following " << t.get_list_of_tests ().size ()
+      << " rows:\n";
   std::cout << t << std::endl;
 
   const auto duration_seconds = std::chrono::duration<double> (
