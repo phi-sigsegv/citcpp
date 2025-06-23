@@ -115,7 +115,7 @@ namespace citcpp
     bool
     operator== (const parameter &other) const
     {
-      return values_ == other.values_;
+      return name_ == other.name_ && values_ == other.values_;
     }
 
   private:
