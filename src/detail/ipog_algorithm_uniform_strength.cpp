@@ -106,7 +106,8 @@ namespace
       const std::vector<unsigned int> &parameter_index_map,
       const citcpp::detail::binom_coeff_table &binomial_coeffs,
       const citcpp::detail::test &test,
-      const citcpp::detail::coverage_map &cov_map, tf::Executor *executor)
+      const citcpp::detail::coverage_map &cov_map,
+      std::vector<unsigned int> &value_to_num_picked, tf::Executor *executor)
   {
     using namespace citcpp::detail;
 
@@ -198,7 +199,20 @@ namespace
 	    value_with_max_gain = value;
 	    max_gain = gain_per_value[value];
 	  }
+	else if (gain_per_value[value] == max_gain)
+	  {
+	    // We use a simple tie breaking strategy: We do not favor one value over the
+	    // other. If two values have the same gain, then we pick the one which we
+	    // have picked less so far.
+	    if (value_to_num_picked[value]
+		< value_to_num_picked[value_with_max_gain])
+	      {
+		value_with_max_gain = value;
+	      }
+	  }
       }
+
+    value_to_num_picked[value_with_max_gain]++;
 
     return value_with_max_gain;
   }
@@ -358,16 +372,22 @@ namespace citcpp
 	const binom_coeff_table &binomial_coeffs, test_set &test_set,
 	coverage_map &cov_map, tf::Executor *executor)
     {
+      const unsigned int real_current_param_idx =
+	  parameter_index_map[current_param_idx];
+      const int num_current_param_values =
+	  model.get_parameters ()[real_current_param_idx];
+
       // First initialize the result object.
       ipog_horizontal_extension_result result
-	{ std::vector<list_intrusive<test>> (
-	    model.get_parameters ()[parameter_index_map[current_param_idx]]), 0 };
+	{ std::vector<list_intrusive<test>> (num_current_param_values), 0 };
+
+      std::vector<unsigned int> value_to_num_picked (num_current_param_values);
 
       for (test &t : test_set.get_list_of_tests ())
 	{
 	  unsigned int selected_value = ipog_horizontal_select_best_value (
 	      current_param_idx, strength, model, parameter_index_map,
-	      binomial_coeffs, t, cov_map, executor);
+	      binomial_coeffs, t, cov_map, value_to_num_picked, executor);
 
 	  // Now that we have selected the value with most coverage, we set it in the
 	  // test accordingly.
