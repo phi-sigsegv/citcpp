@@ -86,7 +86,7 @@ namespace
 	// In the recursion we just compute a base index. We just compute
 	// x_0 * v_1 * v_2 + x_1 * v_2.
 	coverage_map::second_level_type::size_type addend = i;
-	for (std::vector<unsigned int>::size_type j = i + 1;
+	for (std::vector<unsigned int>::size_type j = current_index + 1;
 	    j < param_indices.size (); ++j)
 	  {
 	    addend *= model.get_parameters ()[param_indices[j]];
@@ -113,12 +113,11 @@ namespace
     const unsigned int num_current_param_values =
 	model.get_parameters ()[parameter_index_map[current_param_idx]];
     // This is an array containing the coverage gain per value of the current parameter.
-    std::vector<unsigned long long> gain_per_value (
-	model.get_parameters ()[parameter_index_map[current_param_idx]]);
+    std::vector<unsigned long long> gain_per_value (num_current_param_values);
     std::vector<unsigned int> param_indices (strength - 1);
 
     auto func_computing_gain_per_value =
-	[&model, &test, num_current_param_values, &cov_map, &gain_per_value]
+	[&model, &test, &cov_map, num_current_param_values, &gain_per_value]
 	(const std::vector<unsigned int> &param_indices,
 	 coverage_map::size_type cov_map_first_level_index)
 	   {
@@ -223,7 +222,7 @@ namespace
     unsigned long long num_new_covered_tuples = 0;
 
     auto func_updating_coverage =
-	[&model, &test, num_current_param_values, current_param_value, &cov_map,
+	[&model, &test, &cov_map, num_current_param_values, current_param_value,
 	 &num_new_covered_tuples]
 	(const std::vector<unsigned int> &param_indices,
 	 coverage_map::size_type cov_map_first_level_index)
@@ -421,9 +420,9 @@ namespace citcpp
       std::vector<int> values (strength);
 
       auto func_find_suitable_row_and_extend =
-	  [&model, &value_to_row_mapping, &test_set, current_param_idx,
-	   real_current_param_idx, num_current_param_values, &cov_map,
-	   &num_new_covered_tuples, &values]
+	  [current_param_idx, &model, num_missing_combinations_to_cover,
+	   &value_to_row_mapping, &test_set, &cov_map, real_current_param_idx,
+	   num_current_param_values, &num_new_covered_tuples, &values]
 	  (const std::vector<unsigned int> &param_indices,
 	   coverage_map::size_type cov_map_first_level_index)
 	     {
@@ -436,7 +435,7 @@ namespace citcpp
 		   return;
 		 }
 
-	       auto nested_func = [&model, current_param_idx, real_current_param_idx, &param_indices, &value_to_row_mapping, &test_set, &value_combinations, &num_new_covered_tuples]
+	       auto nested_func = [current_param_idx, &model, num_missing_combinations_to_cover, &value_to_row_mapping, &test_set, real_current_param_idx, &num_new_covered_tuples, &param_indices, &value_combinations]
 	       (const std::vector<int> &values_to_cover, coverage_map::second_level_type::size_type cov_map_second_level_index)
 		 {
 		   // First we check whether the value combination is covered, because if it is not,
