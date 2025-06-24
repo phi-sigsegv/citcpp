@@ -138,6 +138,26 @@ create_large_model ()
 }
 
 citcpp::input_model
+create_medium_model ()
+{
+  using namespace citcpp;
+
+  input_model model;
+
+  for (int p_idx = 0; p_idx < 100; ++p_idx)
+    {
+      parameter p;
+      for (int v = 1; v <= 2; ++v)
+	{
+	  p.get_values ().push_back (std::to_string (v));
+	}
+      model.get_parameters ().push_back (p);
+    }
+
+  return model;
+}
+
+citcpp::input_model
 create_pict_example_model ()
 {
   using namespace citcpp;
