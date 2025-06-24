@@ -353,6 +353,113 @@ namespace
   }
 
   void
+  ipog_vertical_extension_func (
+      const unsigned int current_param_idx,
+      const unsigned int real_current_param_idx,
+      const citcpp::detail::model &model,
+      const unsigned long long num_missing_combinations_to_cover,
+      citcpp::detail::test_set &test_set,
+      std::vector<citcpp::detail::list_intrusive<citcpp::detail::test>> &value_to_row_mapping,
+      std::vector<unsigned int> &param_indices,
+      const std::vector<int> &values_to_cover,
+      citcpp::detail::coverage_map::second_level_type &value_combinations,
+      citcpp::detail::coverage_map::second_level_type::size_type cov_map_second_level_index,
+      unsigned long long &num_new_covered_tuples)
+  {
+    using namespace citcpp::detail;
+
+    // First we check whether the value combination is covered, because if it is not,
+    // then there is no point try to fit it into some test.
+    if (value_combinations.test_and_set (cov_map_second_level_index))
+      {
+	return;
+      }
+
+    ++num_new_covered_tuples;
+
+    // Now we iterate over all tests trying to fit the value combination.
+    // However, we do not iterate over the entire test test, but instead
+    // leverage upon its partition according to the value of the current
+    // parameter as set by the horizontal extension for a test.
+    // For that parameter, after horizontal extension, the value is guaranteed
+    // to not be a don't care.
+    // First we determine the value of the current parameter in the value
+    // combination we want to cover.
+    const int current_param_value_to_cover = values_to_cover.back ();
+
+    // Iterative over the tests we have to check
+    for (test &t : value_to_row_mapping[current_param_value_to_cover])
+      {
+	// We also skip tests which do not have at least one don't care
+	// value.
+	if (t.get_num_dont_care_values () == 0)
+	  {
+	    continue;
+	  }
+
+	bool can_inject_value_combination = true;
+	int overwritten_dont_cares = 0;
+	for (unsigned int i = 0; i < param_indices.size (); ++i)
+	  {
+	    const unsigned int param_idx = param_indices[i];
+	    const int param_value_to_cover = values_to_cover[i];
+	    const int param_value_in_test = t.get_values ()[param_idx];
+
+	    if (param_value_in_test >= 0
+		&& param_value_to_cover != param_value_in_test)
+	      {
+		// Cannot inject value combination in this test, moving on to the next
+		// one.
+		can_inject_value_combination = false;
+		break;
+	      }
+
+	    if (param_value_in_test < 0)
+	      {
+		++overwritten_dont_cares;
+	      }
+	  }
+
+	if (can_inject_value_combination)
+	  {
+	    for (unsigned int i = 0; i < param_indices.size (); ++i)
+	      {
+		const unsigned int param_idx = param_indices[i];
+		const int param_value_to_cover = values_to_cover[i];
+		t.get_values ()[param_idx] = param_value_to_cover;
+	      }
+
+	    t.set_num_dont_care_values (
+		t.get_num_dont_care_values () - overwritten_dont_cares);
+
+	    // Return, since we have found a test and injected the value combination.
+	    return;
+	  }
+      }
+
+    // If we have reached this point, then we did not find a matching test.
+    // Thus, we have to add a new one with the value combination.
+    // Initialize all values of the test with don't care.
+    test t (model.get_parameters ().size (), -1);
+    t.set_num_dont_care_values (
+	(current_param_idx + 1) - (param_indices.size () + 1));
+
+    for (unsigned int i = 0; i < param_indices.size (); ++i)
+      {
+	const unsigned int param_idx = param_indices[i];
+	const int param_value_to_cover = values_to_cover[i];
+	t.get_values ()[param_idx] = param_value_to_cover;
+      }
+    t.get_values ()[real_current_param_idx] = current_param_value_to_cover;
+
+    test_set.get_list_of_tests ().push_back (std::move (t));
+
+    // Update the mapping from values of the current parameter to the tests.
+    value_to_row_mapping[current_param_value_to_cover].push_back (
+	test_set.get_list_of_tests ().back ());
+  }
+
+  void
   ipog_vertical_extension_recursion (
       unsigned int start_idx_for_next,
       unsigned int current_count,
@@ -391,91 +498,7 @@ namespace
 	    (const std::vector<int> &values_to_cover,
 	     coverage_map::second_level_type::size_type cov_map_second_level_index)
 	       {
-		 // First we check whether the value combination is covered, because if it is not,
-		 // then there is no point try to fit it into some test.
-		 if (value_combinations.test_and_set(cov_map_second_level_index))
-		   {
-		     return;
-		   }
-
-		 ++num_new_covered_tuples;
-
-		 // Now we iterate over all tests trying to fit the value combination.
-		 // However, we do not iterate over the entire test test, but instead
-		 // leverage upon its partition according to the value of the current
-		 // parameter as set by the horizontal extension for a test.
-		 // For that parameter, after horizontal extension, the value is guaranteed
-		 // to not be a don't care.
-		 // First we determine the value of the current parameter in the value
-		 // combination we want to cover.
-		 const int current_param_value_to_cover = values_to_cover.back();
-
-		 // Iterative over the tests we have to check
-		 for (test & t : value_to_row_mapping[current_param_value_to_cover])
-		   {
-		     // We also skip tests which do not have at least one don't care
-		     // value.
-		     if (t.get_num_dont_care_values() == 0)
-		       {
-			 continue;
-		       }
-
-		     bool can_inject_value_combination = true;
-		     int overwritten_dont_cares = 0;
-		     for (unsigned int i = 0; i < param_indices.size(); ++i)
-		       {
-			 const unsigned int param_idx = param_indices[i];
-			 const int param_value_to_cover = values_to_cover[i];
-			 const int param_value_in_test = t.get_values()[param_idx];
-
-			 if (param_value_in_test >= 0 && param_value_to_cover != param_value_in_test)
-			   {
-			     // Cannot inject value combination in this test, moving on to the next
-			     // one.
-			     can_inject_value_combination = false;
-			     break;
-			   }
-
-			 if (param_value_in_test < 0 )
-			   {
-			     ++overwritten_dont_cares;
-			   }
-		       }
-
-		     if (can_inject_value_combination)
-		       {
-			 for (unsigned int i = 0; i < param_indices.size(); ++i)
-			   {
-			     const unsigned int param_idx = param_indices[i];
-			     const int param_value_to_cover = values_to_cover[i];
-			     t.get_values()[param_idx] = param_value_to_cover;
-			   }
-
-			 t.set_num_dont_care_values(t.get_num_dont_care_values() - overwritten_dont_cares);
-
-			 // Return, since we have found a test and injected the value combination.
-			 return;
-		       }
-		   }
-
-		 // If we have reached this point, then we did not find a matching test.
-		 // Thus, we have to add a new one with the value combination.
-		 // Initialize all values of the test with don't care.
-		 test t(model.get_parameters().size(), -1);
-		 t.set_num_dont_care_values((current_param_idx + 1) - (param_indices.size() + 1));
-
-		 for (unsigned int i = 0; i < param_indices.size(); ++i)
-		   {
-		     const unsigned int param_idx = param_indices[i];
-		     const int param_value_to_cover = values_to_cover[i];
-		     t.get_values()[param_idx] = param_value_to_cover;
-		   }
-		 t.get_values()[real_current_param_idx] = current_param_value_to_cover;
-
-		 test_set.get_list_of_tests().push_back(std::move(t));
-
-		 // Update the mapping from values of the current parameter to the tests.
-		 value_to_row_mapping[current_param_value_to_cover].push_back (test_set.get_list_of_tests().back());
+		 ipog_vertical_extension_func(current_param_idx, real_current_param_idx, model, num_missing_combinations_to_cover, test_set, value_to_row_mapping, param_indices, values_to_cover, value_combinations, cov_map_second_level_index, num_new_covered_tuples);
 	       };
 
 	recursive_cross_product_with_bitset_index (model, param_indices,
