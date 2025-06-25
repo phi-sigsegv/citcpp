@@ -1,51 +1,9 @@
 #include <ranges>
-#include <functional>
 #include "ipog_algorithm_uniform_strength.hpp"
 #include "for_each_cross_product_elem.hpp"
 
 namespace
 {
-  void
-  recursive_cross_product_with_bitset_index (
-      const citcpp::detail::model &model,
-      const std::vector<unsigned int> &param_indices,
-      const unsigned int num_current_param_values,
-      unsigned int current_index,
-      std::vector<int> &values,
-      citcpp::detail::coverage_map::second_level_type::size_type &cov_map_second_level_index,
-      const std::function<
-	  void
-	  (const std::vector<int>&,
-	   citcpp::detail::coverage_map::second_level_type::size_type)> &callback)
-  {
-    using namespace citcpp::detail;
-
-    if (current_index == values.size ())
-      {
-	callback (values, cov_map_second_level_index);
-	++cov_map_second_level_index;
-
-	return;
-      }
-
-    // The current range goes from 0 to max_value[current_index]
-    unsigned int max_val =
-	current_index < param_indices.size () ?
-	    model.get_parameters ()[param_indices[current_index]] :
-	    num_current_param_values;
-
-    for (unsigned int i = 0; i < max_val; ++i)
-      {
-	values[current_index] = i;
-
-	recursive_cross_product_with_bitset_index (model, param_indices,
-						   num_current_param_values,
-						   current_index + 1, values,
-						   cov_map_second_level_index,
-						   callback);
-      }
-  }
-
   void
   ipog_horizontal_select_best_value_recursion (
       unsigned int start_idx_for_next, unsigned int current_count,
@@ -447,6 +405,57 @@ namespace
   }
 
   void
+  ipog_vertical_extension_recursion_level2 (
+      const unsigned int current_param_idx,
+      const unsigned int real_current_param_idx,
+      const citcpp::detail::model &model,
+      const unsigned long long num_missing_combinations_to_cover,
+      citcpp::detail::test_set &test_set,
+      std::vector<citcpp::detail::list_intrusive<citcpp::detail::test>> &value_to_row_mapping,
+      std::vector<unsigned int> &param_indices,
+      const unsigned int num_current_param_values,
+      unsigned int current_index,
+      std::vector<int> &values_to_cover,
+      citcpp::detail::coverage_map::second_level_type &value_combinations,
+      citcpp::detail::coverage_map::second_level_type::size_type &cov_map_second_level_index,
+      unsigned long long &num_new_covered_tuples)
+  {
+    using namespace citcpp::detail;
+
+    if (current_index == values_to_cover.size ())
+      {
+	ipog_vertical_extension_func (current_param_idx, real_current_param_idx,
+				      model, num_missing_combinations_to_cover,
+				      test_set, value_to_row_mapping,
+				      param_indices, values_to_cover,
+				      value_combinations,
+				      cov_map_second_level_index,
+				      num_new_covered_tuples);
+	++cov_map_second_level_index;
+
+	return;
+      }
+
+    // The current range goes from 0 to max_value[current_index]
+    unsigned int max_val =
+	current_index < param_indices.size () ?
+	    model.get_parameters ()[param_indices[current_index]] :
+	    num_current_param_values;
+
+    for (unsigned int i = 0; i < max_val; ++i)
+      {
+	values_to_cover[current_index] = i;
+
+	ipog_vertical_extension_recursion_level2 (
+	    current_param_idx, real_current_param_idx, model,
+	    num_missing_combinations_to_cover, test_set, value_to_row_mapping,
+	    param_indices, num_current_param_values, current_index + 1,
+	    values_to_cover, value_combinations, cov_map_second_level_index,
+	    num_new_covered_tuples);
+      }
+  }
+
+  void
   ipog_vertical_extension_recursion (
       unsigned int start_idx_for_next,
       unsigned int current_count,
@@ -478,66 +487,15 @@ namespace
 	    return;
 	  }
 
-//	coverage_map::second_level_type::size_type cov_map_second_level_index =
-//	    0;
-//	while (true)
-//	  {
-//	    ipog_vertical_extension_func (current_param_idx,
-//					  real_current_param_idx, model,
-//					  num_missing_combinations_to_cover,
-//					  test_set, value_to_row_mapping,
-//					  param_indices, values,
-//					  value_combinations,
-//					  cov_map_second_level_index,
-//					  num_new_covered_tuples);
-//
-//	    // Advance to the next element of the cross product of values.
-//	    // This is similar to incrementing a number with variable bases.
-//	    int i = values.size () - 1; // Start from the rightmost value range (least significant "digit")
-//
-//	    // Find the rightmost index that can be incremented
-//	    while (i >= 0
-//		&& values[i]
-//		    == (int) (
-//			i < (int) param_indices.size () ?
-//			    model.get_parameters ()[param_indices[i]] :
-//			    num_current_param_values) - 1)
-//	      {
-//		// This value range's index has reached its limit, reset it to 0
-//		// and carry over to the next (left) range.
-//		values[i] = 0;
-//		i--; // Move to the next range to the left
-//	      }
-//
-//	    // If 'i' becomes negative, it means all indices have wrapped around,
-//	    // and we have exhausted all combinations in the cross product.
-//	    if (i < 0)
-//	      {
-//		break; // All combinations generated, exit the loop
-//	      }
-//
-//	    // Increment the found index (the one that hasn't reached its limit)
-//	    values[i]++;
-//	    ++cov_map_second_level_index;
-//	  }
-
-	auto nested_func =
-	    [current_param_idx, &model, num_missing_combinations_to_cover,
-	     &value_to_row_mapping, &test_set, real_current_param_idx,
-	     &num_new_covered_tuples, &param_indices, &value_combinations]
-	    (const std::vector<int> &values_to_cover,
-	     coverage_map::second_level_type::size_type cov_map_second_level_index)
-	       {
-		 ipog_vertical_extension_func(current_param_idx, real_current_param_idx, model, num_missing_combinations_to_cover, test_set, value_to_row_mapping, param_indices, values_to_cover, value_combinations, cov_map_second_level_index, num_new_covered_tuples);
-	       };
-
 	citcpp::detail::coverage_map::second_level_type::size_type cov_map_second_level_index =
 	    0;
-	recursive_cross_product_with_bitset_index (model, param_indices,
-						   num_current_param_values, 0,
-						   values,
-						   cov_map_second_level_index,
-						   nested_func);
+
+	ipog_vertical_extension_recursion_level2 (
+	    current_param_idx, real_current_param_idx, model,
+	    num_missing_combinations_to_cover, test_set, value_to_row_mapping,
+	    param_indices, num_current_param_values, 0, values,
+	    value_combinations, cov_map_second_level_index,
+	    num_new_covered_tuples);
 
 	return;
       }
