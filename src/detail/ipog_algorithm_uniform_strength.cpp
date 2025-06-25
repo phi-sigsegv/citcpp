@@ -20,22 +20,19 @@ namespace
   {
     using namespace citcpp::detail;
 
-    if (current_index == param_indices.size ())
+    if (current_index == values.size ())
       {
-	// We still have to iterate through all values of the current parameter,
-	// which we handle here.
-	for (unsigned int i = 0; i < num_current_param_values; ++i)
-	  {
-	    values[current_index] = i;
-	    callback (values, cov_map_second_level_index);
-	    ++cov_map_second_level_index;
-	  }
+	callback (values, cov_map_second_level_index);
+	++cov_map_second_level_index;
 
 	return;
       }
 
     // The current range goes from 0 to max_value[current_index]
-    unsigned int max_val = model.get_parameters ()[param_indices[current_index]];
+    unsigned int max_val =
+	current_index < param_indices.size () ?
+	    model.get_parameters ()[param_indices[current_index]] :
+	    num_current_param_values;
 
     for (unsigned int i = 0; i < max_val; ++i)
       {
