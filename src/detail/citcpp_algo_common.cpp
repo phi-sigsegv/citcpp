@@ -1,11 +1,6 @@
-#include <thread>
-#include <ranges>
 #include <taskflow/taskflow.hpp>
 #include <taskflow/algorithm/for_each.hpp>
 #include "citcpp_algo_common.hpp"
-
-#include "for_each_combination.hpp"
-#include "index_combinator.hpp"
 
 namespace
 {
@@ -30,6 +25,7 @@ namespace
 	    j + 1, current_count + 1, current_prod_val * factorLevels[j], t,
 	    numFactors, factorLevels);
       }
+
     return partial_sum;
   }
 }
