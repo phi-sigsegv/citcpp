@@ -12,7 +12,7 @@ namespace
       const unsigned int num_current_param_values,
       unsigned int current_index,
       std::vector<int> &values,
-      citcpp::detail::coverage_map::second_level_type::size_type cov_map_second_level_index,
+      citcpp::detail::coverage_map::second_level_type::size_type &cov_map_second_level_index,
       const std::function<
 	  void
 	  (const std::vector<int>&,
@@ -27,7 +27,8 @@ namespace
 	for (unsigned int i = 0; i < num_current_param_values; ++i)
 	  {
 	    values[current_index] = i;
-	    callback (values, cov_map_second_level_index + i);
+	    callback (values, cov_map_second_level_index);
+	    ++cov_map_second_level_index;
 	  }
 
 	return;
@@ -39,23 +40,12 @@ namespace
     for (unsigned int i = 0; i < max_val; ++i)
       {
 	values[current_index] = i;
-	// Here we compute an index into the bitset. To do so, we treat the number of values
-	// of each parameter as a kind of radix. Consider three parameters p_0, p_1, p_2.
-	// Now say that v_i is the number of values for p_i. If we now have values
-	// x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-	// In the recursion we just compute a base index. We just compute
-	// x_0 * v_1 * v_2 + x_1 * v_2.
-	coverage_map::second_level_type::size_type addend = i;
-	for (std::vector<unsigned int>::size_type j = current_index + 1;
-	    j < param_indices.size (); ++j)
-	  {
-	    addend *= model.get_parameters ()[param_indices[j]];
-	  }
-	addend *= num_current_param_values;
 
-	recursive_cross_product_with_bitset_index (
-	    model, param_indices, num_current_param_values, current_index + 1,
-	    values, cov_map_second_level_index + addend, callback);
+	recursive_cross_product_with_bitset_index (model, param_indices,
+						   num_current_param_values,
+						   current_index + 1, values,
+						   cov_map_second_level_index,
+						   callback);
       }
   }
 
@@ -491,6 +481,49 @@ namespace
 	    return;
 	  }
 
+//	coverage_map::second_level_type::size_type cov_map_second_level_index =
+//	    0;
+//	while (true)
+//	  {
+//	    ipog_vertical_extension_func (current_param_idx,
+//					  real_current_param_idx, model,
+//					  num_missing_combinations_to_cover,
+//					  test_set, value_to_row_mapping,
+//					  param_indices, values,
+//					  value_combinations,
+//					  cov_map_second_level_index,
+//					  num_new_covered_tuples);
+//
+//	    // Advance to the next element of the cross product of values.
+//	    // This is similar to incrementing a number with variable bases.
+//	    int i = values.size () - 1; // Start from the rightmost value range (least significant "digit")
+//
+//	    // Find the rightmost index that can be incremented
+//	    while (i >= 0
+//		&& values[i]
+//		    == (int) (
+//			i < (int) param_indices.size () ?
+//			    model.get_parameters ()[param_indices[i]] :
+//			    num_current_param_values) - 1)
+//	      {
+//		// This value range's index has reached its limit, reset it to 0
+//		// and carry over to the next (left) range.
+//		values[i] = 0;
+//		i--; // Move to the next range to the left
+//	      }
+//
+//	    // If 'i' becomes negative, it means all indices have wrapped around,
+//	    // and we have exhausted all combinations in the cross product.
+//	    if (i < 0)
+//	      {
+//		break; // All combinations generated, exit the loop
+//	      }
+//
+//	    // Increment the found index (the one that hasn't reached its limit)
+//	    values[i]++;
+//	    ++cov_map_second_level_index;
+//	  }
+
 	auto nested_func =
 	    [current_param_idx, &model, num_missing_combinations_to_cover,
 	     &value_to_row_mapping, &test_set, real_current_param_idx,
@@ -501,9 +534,13 @@ namespace
 		 ipog_vertical_extension_func(current_param_idx, real_current_param_idx, model, num_missing_combinations_to_cover, test_set, value_to_row_mapping, param_indices, values_to_cover, value_combinations, cov_map_second_level_index, num_new_covered_tuples);
 	       };
 
+	citcpp::detail::coverage_map::second_level_type::size_type cov_map_second_level_index =
+	    0;
 	recursive_cross_product_with_bitset_index (model, param_indices,
 						   num_current_param_values, 0,
-						   values, 0, nested_func);
+						   values,
+						   cov_map_second_level_index,
+						   nested_func);
 
 	return;
       }
