@@ -41,6 +41,13 @@ namespace citcpp
       unsigned long long num_new_covered_tuples;
     };
 
+    unsigned long long
+    ipog_loop_init (const unsigned int current_param_idx,
+		    const unsigned int strength, const model &model,
+		    const std::vector<unsigned int> &parameter_index_map,
+		    const binom_coeff_table &binomial_coeffs,
+		    coverage_map &cov_map, tf::Executor *executor);
+
     ipog_horizontal_extension_result
     ipog_horizontal_extension (
 	const unsigned int current_param_idx, const unsigned int strength,

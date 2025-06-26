@@ -4,6 +4,46 @@
 
 namespace
 {
+  unsigned long long
+  ipog_loop_init_recursion (
+      unsigned int start_idx_for_next, unsigned int current_count,
+      unsigned long long current_prod_val, const unsigned int current_param_idx,
+      const unsigned int strength, const citcpp::detail::model &model,
+      const std::vector<unsigned int> &parameter_index_map,
+      const citcpp::detail::binom_coeff_table &binomial_coeffs,
+      citcpp::detail::coverage_map &cov_map,
+      citcpp::detail::coverage_map::size_type cov_map_first_level_index)
+  {
+    using namespace citcpp::detail;
+
+    if (current_count == strength)
+      {
+//	cov_map.get_coverage_map ()[cov_map_first_level_index] =
+//	    coverage_map::second_level_type (current_prod_val);
+
+	return current_prod_val;
+      }
+
+    unsigned long long partial_sum = 0;
+    for (unsigned int j = start_idx_for_next; j < current_param_idx; ++j)
+      {
+	partial_sum += ipog_loop_init_recursion (
+	    j + 1,
+	    current_count + 1,
+	    current_prod_val * model.get_parameters ()[parameter_index_map[j]],
+	    current_param_idx,
+	    strength,
+	    model,
+	    parameter_index_map,
+	    binomial_coeffs,
+	    cov_map,
+	    cov_map_first_level_index
+		+ binomial_coeffs.get_coefficient (j, current_count + 1));
+      }
+
+    return partial_sum;
+  }
+
   void
   ipog_horizontal_select_best_value_recursion (
       unsigned int start_idx_for_next, unsigned int current_count,
@@ -574,6 +614,27 @@ namespace citcpp
 	    });
 
       return result;
+    }
+
+    unsigned long long
+    ipog_loop_init (const unsigned int current_param_idx,
+		    const unsigned int strength, const model &model,
+		    const std::vector<unsigned int> &parameter_index_map,
+		    const binom_coeff_table &binomial_coeffs,
+		    coverage_map &cov_map, tf::Executor *executor)
+    {
+      const unsigned int real_current_param_idx =
+	  parameter_index_map[current_param_idx];
+      const int num_current_param_values =
+	  model.get_parameters ()[real_current_param_idx];
+
+      const unsigned long long num_combinations_to_cover =
+	  ipog_loop_init_recursion (0, 0, num_current_param_values,
+				    current_param_idx, strength - 1, model,
+				    parameter_index_map, binomial_coeffs,
+				    cov_map, 0);
+
+      return num_combinations_to_cover;
     }
 
     ipog_horizontal_extension_result

@@ -36,10 +36,9 @@ namespace
     tf::Executor executor;
 
     // First we compute the number of combination we have to cover.
-    unsigned long long number_of_combination_to_cover =
+    unsigned long long number_combos_to_cover =
 	number_of_combinations_to_cover (executor, model, strength);
-    exec_handle.set_number_of_combinations_to_cover (
-	number_of_combination_to_cover);
+    exec_handle.set_number_of_combinations_to_cover (number_combos_to_cover);
 
     if (exec_handle.is_job_aborted ())
       {
@@ -62,13 +61,9 @@ namespace
 	// Here is the main IPOG loop.
 	const binom_coeff_table binomial_coeffs (
 	    model.get_parameters ().size ());
-	const unsigned long long number_of_combinations_to_cover =
-	    exec_handle.get_number_of_combinations_to_cover ();
 	std::vector<unsigned int> parameter_index_map (
 	    model.get_parameters ().size ());
 	std::iota (parameter_index_map.begin (), parameter_index_map.end (), 0);
-	unsigned long long number_of_covered_combinations =
-	    exec_handle.get_number_of_covered_combinations ();
 
 	for (unsigned int current_param_idx = strength;
 	    current_param_idx < model.get_parameters ().size ();
@@ -82,43 +77,38 @@ namespace
 	    coverage_map cov_map (current_param_idx, strength - 1,
 				  binomial_coeffs);
 
-	    auto horizontal_ext_res = ipog_horizontal_extension (
-		current_param_idx,
-		strength,
-		model,
-		parameter_index_map,
-		number_of_combinations_to_cover
-		    - number_of_covered_combinations,
-		binomial_coeffs, test_set, cov_map, nullptr);
+	    unsigned long long number_combos_to_cover = ipog_loop_init (
+		current_param_idx, strength, model, parameter_index_map,
+		binomial_coeffs, cov_map, nullptr);
 
-	    number_of_covered_combinations +=
-		horizontal_ext_res.num_new_covered_tuples;
+	    auto horizontal_ext_res = ipog_horizontal_extension (
+		current_param_idx, strength, model, parameter_index_map,
+		number_combos_to_cover, binomial_coeffs, test_set, cov_map,
+		nullptr);
+
+	    number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
 	    exec_handle.add_number_of_covered_combinations (
 		horizontal_ext_res.num_new_covered_tuples);
 
-	    if (exec_handle.is_job_aborted ()
-		|| number_of_covered_combinations
-		    >= number_of_combinations_to_cover)
+	    if (exec_handle.is_job_aborted ())
 	      {
 		exec_handle.set_number_of_processed_parameters (
 		    current_param_idx + 1);
 		return;
 	      }
 
-	    auto vertical_ext_res = ipog_vertical_extension (
-		current_param_idx,
-		strength,
-		model,
-		parameter_index_map,
-		number_of_combinations_to_cover
-		    - number_of_covered_combinations,
-		binomial_coeffs, horizontal_ext_res.value_to_row_mapping,
-		test_set, cov_map);
+	    if (number_combos_to_cover > 0)
+	      {
+		auto vertical_ext_res = ipog_vertical_extension (
+		    current_param_idx, strength, model, parameter_index_map,
+		    number_combos_to_cover, binomial_coeffs,
+		    horizontal_ext_res.value_to_row_mapping, test_set, cov_map);
 
-	    number_of_covered_combinations +=
-		vertical_ext_res.num_new_covered_tuples;
-	    exec_handle.add_number_of_covered_combinations (
-		vertical_ext_res.num_new_covered_tuples);
+		number_combos_to_cover -=
+		    vertical_ext_res.num_new_covered_tuples;
+		exec_handle.add_number_of_covered_combinations (
+		    vertical_ext_res.num_new_covered_tuples);
+	      }
 
 	    exec_handle.set_number_of_processed_parameters (
 		current_param_idx + 1);
