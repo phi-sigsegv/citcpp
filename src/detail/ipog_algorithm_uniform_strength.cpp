@@ -449,6 +449,11 @@ namespace
 
     for (unsigned int i = 0; i < max_val; ++i)
       {
+	if (num_new_covered_tuples >= num_missing_combinations_to_cover)
+	  {
+	    return;
+	  }
+
 	values_to_cover[current_index] = i;
 
 	ipog_vertical_extension_recursion_level2 (
@@ -509,6 +514,11 @@ namespace
 
     for (unsigned int j = start_idx_for_next; j < current_param_idx; ++j)
       {
+	if (num_new_covered_tuples >= num_missing_combinations_to_cover)
+	  {
+	    return;
+	  }
+
 	param_indices[current_count] = parameter_index_map[j];
 	ipog_vertical_extension_recursion (j + 1, current_count + 1,
 					   current_param_idx,
