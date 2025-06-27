@@ -18,8 +18,8 @@ namespace
 
     if (current_count == strength)
       {
-//	cov_map.get_coverage_map ()[cov_map_first_level_index] =
-//	    coverage_map::second_level_type (current_prod_val);
+	cov_map.get_coverage_map ()[cov_map_first_level_index] =
+	    coverage_map::second_level_type (current_prod_val);
 
 	++cov_map_first_level_index;
 
@@ -61,18 +61,9 @@ namespace
 
 	++cov_map_first_level_index;
 
-	if (value_combinations.size () == 0)
+	if (!value_combinations.all ())
 	  {
-	    // The bitset tracking the value combinations has not been initialized yet, which
-	    // means the coverage gain is 1 for each of the values of the parameter.
-	    for (unsigned long long &gain : gain_per_value)
-	      {
-		++gain;
-	      }
-	  }
-	else if (!value_combinations.all ())
-	  {
-	    // We have a valid bitset and we have uncovered value combinations left in it.
+	    // We have a bitset and we have uncovered value combinations left in it.
 	    // Thus we have to walk through it concerning all possible value
 	    // combinations.
 	    // Here we compute an index into the bitset. To do so, we treat the number of values
@@ -215,21 +206,6 @@ namespace
 	    cov_map.get_coverage_map ()[cov_map_first_level_index];
 
 	++cov_map_first_level_index;
-
-	if (value_combinations.size () == 0)
-	  {
-	    coverage_map::second_level_type::size_type bitset_size =
-		num_current_param_values;
-	    // The bitset tracking the value combinations has not been initialized yet, so
-	    // we do that now.
-	    for (std::vector<unsigned int>::size_type i = 0;
-		i < param_indices.size (); ++i)
-	      {
-		unsigned int param_idx = param_indices[i];
-		bitset_size *= model.get_parameters ()[param_idx];
-	      }
-	    value_combinations = coverage_map::second_level_type (bitset_size);
-	  }
 
 	if (value_combinations.all ())
 	  {
@@ -642,11 +618,21 @@ namespace citcpp
 
       std::vector<unsigned int> value_to_num_picked (num_current_param_values);
 
+      bool is_first_test = true;
       for (test &t : test_set.get_list_of_tests ())
 	{
-	  unsigned int selected_value = ipog_horizontal_select_best_value (
-	      current_param_idx, strength, model, parameter_index_map,
-	      binomial_coeffs, t, cov_map, value_to_num_picked, executor);
+	  // For the first test calling the algorithm is pointless, since it will
+	  // pick the first value anyway, as all values have equal coverage gain.
+	  unsigned int selected_value =
+	      is_first_test ?
+		  0 :
+		  ipog_horizontal_select_best_value (current_param_idx,
+						     strength, model,
+						     parameter_index_map,
+						     binomial_coeffs, t,
+						     cov_map,
+						     value_to_num_picked,
+						     executor);
 
 	  // Now that we have selected the value with most coverage, we set it in the
 	  // test accordingly.
@@ -664,6 +650,8 @@ namespace citcpp
 
 	  // Maintain a mapping from values of the current parameter to the tests.
 	  result.value_to_row_mapping[selected_value].push_back (t);
+
+	  is_first_test = false;
 
 	  if (result.num_new_covered_tuples
 	      >= num_missing_combinations_to_cover)
