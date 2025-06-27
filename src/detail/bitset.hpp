@@ -21,77 +21,44 @@ namespace citcpp
       };
 
     template<typename T_FUNDAMENTAL_STORAGE_TYPE>
-      class bitset
+      class non_owning_bitset
       {
       public:
 	typedef T_FUNDAMENTAL_STORAGE_TYPE storage_type;
 	typedef std::uint32_t size_type;
 
       public:
-	bitset () :
+	non_owning_bitset () :
 	    bits_ (nullptr), size_ (0)
 	{
 	}
 
-	bitset (size_type num_bits) :
-	    bits_ (
-		new storage_type[calculate_num_storage_blocks_from_num_bits (
-		    num_bits)]
-		  { }), size_ (num_bits)
+	non_owning_bitset (storage_type *bits, size_type num_bits) :
+	    bits_ (bits), size_ (num_bits)
 	{
 	}
 
-	bitset (const bitset &other) :
-	    bits_ (
-		new storage_type[calculate_num_storage_blocks_from_num_bits (
-		    other.size_)]
-		  { }), size_ (other.size_)
-	{
-	  std::memcpy (
-	      bits_,
-	      other.bits_,
-	      calculate_num_storage_blocks_from_num_bits (size_)
-		  * sizeof(storage_type));
-	}
+	non_owning_bitset (const non_owning_bitset &other) = delete;
 
-	bitset (bitset &&other) :
+	non_owning_bitset (non_owning_bitset &&other) :
 	    bits_ (other.bits_), size_ (other.size_)
 	{
 	  other.size_ = 0;
 	  other.bits_ = nullptr;
 	}
 
-	~bitset ()
+	~non_owning_bitset ()
 	{
-	  delete[] bits_;
 	}
 
-	bitset&
-	operator= (const bitset &other)
+	non_owning_bitset&
+	operator= (const non_owning_bitset &other) = delete;
+
+	non_owning_bitset&
+	operator= (non_owning_bitset &&other)
 	{
 	  if (&other != this)
 	    {
-	      delete[] bits_;
-	      size_ = other.size_;
-	      bits_ =
-		  new storage_type[calculate_num_storage_blocks_from_num_bits (
-		      size_)];
-	      std::memcpy (
-		  bits_,
-		  other.bits_,
-		  calculate_num_storage_blocks_from_num_bits (size_)
-		      * sizeof(storage_type));
-	    }
-
-	  return *this;
-	}
-
-	bitset&
-	operator= (bitset &&other)
-	{
-	  if (&other != this)
-	    {
-	      delete[] bits_;
 	      size_ = other.size_;
 	      bits_ = other.bits_;
 	      other.size_ = 0;
@@ -105,7 +72,7 @@ namespace citcpp
 	 * Swaps this and the given other bitset.
 	 */
 	void
-	swap (bitset &other)
+	swap (non_owning_bitset &other)
 	{
 	  std::swap (size_, other.size_);
 	  std::swap (bits_, other.bits_);
@@ -311,10 +278,8 @@ namespace citcpp
 
 	/**
 	 * Sets the bit at the given position to true.
-	 *
-	 * @return *this
 	 */
-	bitset&
+	void
 	set (size_type bit_pos)
 	{
 	  const size_type storage_block_index = calculate_storage_block_index (
@@ -322,16 +287,12 @@ namespace citcpp
 	  const storage_type mask = bit_mask (bit_pos);
 
 	  bits_[storage_block_index] |= mask;
-
-	  return *this;
 	}
 
 	/**
 	 * Sets all bits to true.
-	 *
-	 * @return *this
 	 */
-	bitset&
+	void
 	set ()
 	{
 	  const storage_type all_ones = all_ones_tmpl<storage_type>::value;
@@ -344,29 +305,21 @@ namespace citcpp
 	    }
 
 	  set_unused_bits_to_zero (number_of_storage_blocks);
-
-	  return *this;
 	}
 
 	/**
 	 * Sets the bit at the given position to false.
-	 *
-	 * @return *this
 	 */
-	bitset&
+	void
 	reset (size_type bit_pos)
 	{
 	  bits_[calculate_storage_block_index (bit_pos)] &= ~bit_mask (bit_pos);
-
-	  return *this;
 	}
 
 	/**
 	 * Sets all bits to false.
-	 *
-	 * @return *this
 	 */
-	bitset&
+	void
 	reset ()
 	{
 	  const size_type number_of_storage_blocks =
@@ -377,29 +330,21 @@ namespace citcpp
 	    {
 	      bits_[i] = all_zeros;
 	    }
-
-	  return *this;
 	}
 
 	/**
 	 * Flips the bit at the given position.
-	 *
-	 * @return *this
 	 */
-	bitset&
+	void
 	flip (size_type bit_pos)
 	{
 	  bits_[calculate_storage_block_index (bit_pos)] ^= bit_mask (bit_pos);
-
-	  return *this;
 	}
 
 	/**
 	 * Flips all bits (like operator~ but in place).
-	 *
-	 * @return *this
 	 */
-	bitset&
+	void
 	flip ()
 	{
 	  const size_type number_of_storage_blocks =
@@ -411,11 +356,9 @@ namespace citcpp
 	    }
 
 	  set_unused_bits_to_zero (number_of_storage_blocks);
-
-	  return *this;
 	}
 
-      private:
+      public:
 	static size_type
 	calculate_num_storage_blocks_from_num_bits (size_type num_bits)
 	{
@@ -424,6 +367,7 @@ namespace citcpp
 		  % std::numeric_limits<storage_type>::digits != 0);
 	}
 
+      private:
 	static size_type
 	calculate_storage_block_index (size_type bit_pos)
 	{
@@ -463,11 +407,93 @@ namespace citcpp
 	    }
 	}
 
-      private:
+      protected:
 	static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>, "The underlying type must be a fundamental type");
 
 	storage_type *bits_;
 	size_type size_;
+      };
+
+    template<typename T_FUNDAMENTAL_STORAGE_TYPE>
+      class bitset : public non_owning_bitset<T_FUNDAMENTAL_STORAGE_TYPE>
+      {
+      private:
+	typedef non_owning_bitset<T_FUNDAMENTAL_STORAGE_TYPE> base_type;
+
+      public:
+	typedef typename base_type::storage_type storage_type;
+	typedef typename base_type::size_type size_type;
+
+      public:
+	bitset () :
+	    base_type ()
+	{
+	}
+
+	bitset (size_type num_bits) :
+	    base_type (
+		new storage_type[base_type::calculate_num_storage_blocks_from_num_bits (
+		    num_bits)]
+		  { },
+		num_bits)
+	{
+	}
+
+	bitset (const bitset &other) :
+	    base_type (
+		new storage_type[base_type::calculate_num_storage_blocks_from_num_bits (
+		    other.size_)]
+		  { },
+		other.size_)
+	{
+	  std::memcpy (
+	      this->bits_,
+	      other.bits_,
+	      base_type::calculate_num_storage_blocks_from_num_bits (
+		  this->size_) * sizeof(storage_type));
+	}
+
+	bitset (bitset &&other) :
+	    base_type (std::move (other))
+	{
+	}
+
+	~bitset ()
+	{
+	  delete[] this->bits_;
+	}
+
+	bitset&
+	operator= (const bitset &other)
+	{
+	  if (&other != this)
+	    {
+	      delete[] this->bits_;
+	      this->size_ = other.size_;
+	      this->bits_ =
+		  new storage_type[base_type::calculate_num_storage_blocks_from_num_bits (
+		      this->size_)];
+	      std::memcpy (
+		  this->bits_,
+		  other.bits_,
+		  base_type::calculate_num_storage_blocks_from_num_bits (
+		      this->size_) * sizeof(storage_type));
+	    }
+
+	  return *this;
+	}
+
+	bitset&
+	operator= (bitset &&other)
+	{
+	  if (&other != this)
+	    {
+	      delete[] this->bits_;
+	    }
+	  base_type::operator = (std::move (other));
+
+	  return *this;
+	}
       };
 
     using bitset_uint64 = bitset<std::uint64_t>;

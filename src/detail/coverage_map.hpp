@@ -183,56 +183,40 @@ namespace citcpp
 
       /**
        * Sets the bit at the given position to true.
-       *
-       * @return *this
        */
-      bitset_with_num_ones&
+      void
       set (size_type bit_pos)
       {
 	test_and_set (bit_pos);
-
-	return *this;
       }
 
       /**
        * Sets all bits to true.
-       *
-       * @return *this
        */
-      bitset_with_num_ones&
+      void
       set ()
       {
 	bitset_uint64::set ();
 	num_ones_ = size ();
-
-	return *this;
       }
 
       /**
        * Sets the bit at the given position to false.
-       *
-       * @return *this
        */
-      bitset&
+      void
       reset (size_type bit_pos)
       {
 	test_and_reset (bit_pos);
-
-	return *this;
       }
 
       /**
        * Sets all bits to false.
-       *
-       * @return *this
        */
-      bitset&
+      void
       reset ()
       {
 	bitset_uint64::reset ();
 	num_ones_ = 0;
-
-	return *this;
       }
 
     private:
