@@ -22,6 +22,25 @@ namespace citcpp
     unsigned long long
     number_of_combinations_to_cover (tf::Executor &executor, const model &model,
 				     unsigned int t);
+
+    /**
+     * Returns the number of tuple combinations to cover for the given model and
+     * interaction strength.
+     */
+    unsigned long long
+    number_of_combinations_to_cover (
+	unsigned int current_param_idx, const model &model,
+	const std::vector<unsigned int> &parameter_index_map, unsigned int t);
+
+    /**
+     * Returns the number of tuple combinations to cover for the given model and
+     * interaction strength.
+     */
+    unsigned long long
+    number_of_combinations_to_cover (
+	tf::Executor &executor, unsigned int current_param_idx,
+	const model &model,
+	const std::vector<unsigned int> &parameter_index_map, unsigned int t);
   }
 }
 

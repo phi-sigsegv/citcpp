@@ -74,40 +74,65 @@ namespace
 		return;
 	      }
 
-	    coverage_map cov_map (current_param_idx, strength - 1,
-				  binomial_coeffs);
-
-	    unsigned long long number_combos_to_cover = ipog_loop_init (
-		current_param_idx, strength, model, parameter_index_map,
-		binomial_coeffs, cov_map, nullptr);
-
-	    auto horizontal_ext_res = ipog_horizontal_extension (
-		current_param_idx, strength, model, parameter_index_map,
-		number_combos_to_cover, binomial_coeffs, test_set, cov_map,
-		nullptr);
-
-	    number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
-	    exec_handle.add_number_of_covered_combinations (
-		horizontal_ext_res.num_new_covered_tuples);
-
-	    if (exec_handle.is_job_aborted ())
+	    if (model.get_parameters ()[parameter_index_map[current_param_idx]]
+		<= 1)
 	      {
-		exec_handle.set_number_of_processed_parameters (
-		    current_param_idx + 1);
-		return;
+		// If the current parameter only has only value, then
+		// we can treat this situation much simpler: We just have
+		// to add that particular value to each test and update
+		// the number of covered combinations.
+		for (test &t : test_set.get_list_of_tests ())
+		  {
+		    t.get_values ()[parameter_index_map[current_param_idx]] = 0;
+		  }
+
+		unsigned long long number_combos_to_cover =
+		    number_of_combinations_to_cover (executor,
+						     current_param_idx, model,
+						     parameter_index_map,
+						     strength - 1);
+		exec_handle.add_number_of_covered_combinations (
+		    number_combos_to_cover);
 	      }
-
-	    if (number_combos_to_cover > 0)
+	    else
 	      {
-		auto vertical_ext_res = ipog_vertical_extension (
+		coverage_map cov_map (current_param_idx, strength - 1,
+				      binomial_coeffs);
+
+		unsigned long long number_combos_to_cover = ipog_loop_init (
 		    current_param_idx, strength, model, parameter_index_map,
-		    number_combos_to_cover, binomial_coeffs,
-		    horizontal_ext_res.value_to_row_mapping, test_set, cov_map);
+		    binomial_coeffs, cov_map, nullptr);
+
+		auto horizontal_ext_res = ipog_horizontal_extension (
+		    current_param_idx, strength, model, parameter_index_map,
+		    number_combos_to_cover, binomial_coeffs, test_set, cov_map,
+		    nullptr);
 
 		number_combos_to_cover -=
-		    vertical_ext_res.num_new_covered_tuples;
+		    horizontal_ext_res.num_new_covered_tuples;
 		exec_handle.add_number_of_covered_combinations (
-		    vertical_ext_res.num_new_covered_tuples);
+		    horizontal_ext_res.num_new_covered_tuples);
+
+		if (exec_handle.is_job_aborted ())
+		  {
+		    exec_handle.set_number_of_processed_parameters (
+			current_param_idx + 1);
+		    return;
+		  }
+
+		if (number_combos_to_cover > 0)
+		  {
+		    auto vertical_ext_res = ipog_vertical_extension (
+			current_param_idx, strength, model, parameter_index_map,
+			number_combos_to_cover, binomial_coeffs,
+			horizontal_ext_res.value_to_row_mapping, test_set,
+			cov_map);
+
+		    number_combos_to_cover -=
+			vertical_ext_res.num_new_covered_tuples;
+		    exec_handle.add_number_of_covered_combinations (
+			vertical_ext_res.num_new_covered_tuples);
+		  }
 	      }
 
 	    exec_handle.set_number_of_processed_parameters (

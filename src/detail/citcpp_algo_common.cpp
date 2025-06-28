@@ -28,6 +28,30 @@ namespace
 
     return partial_sum;
   }
+
+  unsigned long long
+  recursive_combine_and_sum (
+      unsigned int start_idx_for_next, unsigned int current_count,
+      unsigned long long current_prod_val, unsigned int t,
+      unsigned int numFactors, const std::vector<unsigned int> &factorLevels,
+      const std::vector<unsigned int> &parameter_index_map)
+  {
+    if (current_count == t)
+      {
+	return current_prod_val;
+      }
+
+    unsigned long long partial_sum = 0;
+    for (unsigned int j = start_idx_for_next; j < numFactors; ++j)
+      {
+	partial_sum += recursive_combine_and_sum (
+	    j + 1, current_count + 1,
+	    current_prod_val * factorLevels[parameter_index_map[j]], t,
+	    numFactors, factorLevels, parameter_index_map);
+      }
+
+    return partial_sum;
+  }
 }
 
 namespace citcpp
@@ -62,6 +86,45 @@ namespace citcpp
 	    {
 	      unsigned long long chunk_num_combos = recursive_combine_and_sum (i+1, 1, model.get_parameters ()[i], t, numFactors,
 		  model.get_parameters ());
+	      num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
+	    });
+
+      executor.run (taskflow).wait ();
+
+      return num_combinations;
+    }
+
+    unsigned long long
+    number_of_combinations_to_cover (
+	unsigned int current_param_idx, const model &model,
+	const std::vector<unsigned int> &parameter_index_map, unsigned int t)
+    {
+      return recursive_combine_and_sum (0, 0, 1, t, current_param_idx,
+					model.get_parameters (),
+					parameter_index_map);
+    }
+
+    unsigned long long
+    number_of_combinations_to_cover (
+	tf::Executor &executor, unsigned int current_param_idx,
+	const model &model,
+	const std::vector<unsigned int> &parameter_index_map, unsigned int t)
+    {
+      // Distribute the initial choices among threads
+      // Each thread will compute a partial sum which we aggregate.
+      std::atomic_ullong num_combinations = 0;
+
+      tf::Taskflow taskflow;
+      taskflow.for_each_index (
+	  0u,
+	  current_param_idx,
+	  1u,
+	  [current_param_idx, &model, &parameter_index_map, t,
+	   &num_combinations]
+	  (unsigned int i)
+	    {
+	      unsigned long long chunk_num_combos = recursive_combine_and_sum (i+1, 1, model.get_parameters ()[parameter_index_map[i]], t, current_param_idx,
+		  model.get_parameters (), parameter_index_map);
 	      num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
 	    });
 
