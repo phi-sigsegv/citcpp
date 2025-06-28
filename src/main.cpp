@@ -211,31 +211,30 @@ main (int argc, char *argv[])
 
   input_model model (create_pict_example_model ());
 
-  std::cout << "Starting execution" << std::endl;
+  std::cout << "Starting execution\n" << std::endl;
   std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog (
       model,
       2,
       covering_array_computation_config ().with_replace_dont_care_values (
 	  false));
 
-  std::cout << "Number of combinations to cover: "
-      << handle->get_number_of_combinations_to_cover () << std::endl;
-
-  std::cout << "Retrieving result, waiting for at most 10s" << std::endl;
   auto f = handle->get_test_set ();
-  if (f.wait_for (10s) == std::future_status::timeout)
+  while (f.wait_for (1s) == std::future_status::timeout)
     {
-      std::cout << "Timeout. Aborting execution" << std::endl;
-      handle->abort ();
+      std::cout << "\r";
+      std::cout << "combos: (" << handle->get_number_of_covered_combinations ()
+	  << " / " << handle->get_number_of_combinations_to_cover ()
+	  << "), params: (" << handle->get_number_of_processed_parameters ()
+	  << " / " << model.get_parameters ().size () << ")" << std::flush;
     }
 
+  std::cout << "\r";
+  std::cout << "combos: (" << handle->get_number_of_covered_combinations ()
+      << " / " << handle->get_number_of_combinations_to_cover ()
+      << "), params: (" << handle->get_number_of_processed_parameters ()
+      << " / " << model.get_parameters ().size () << ")\n" << std::endl;
+
   test_set t (f.get ());
-
-  std::cout << "Again fetching number of combinations to cover: "
-      << handle->get_number_of_combinations_to_cover () << std::endl;
-
-  std::cout << "Covered combinations: "
-      << handle->get_number_of_covered_combinations () << std::endl;
 
   std::cout << "test set has the following " << t.get_list_of_tests ().size ()
       << " rows:\n";
