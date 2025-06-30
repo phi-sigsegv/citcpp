@@ -219,13 +219,19 @@ main (int argc, char *argv[])
 	  false));
 
   auto f = handle->get_test_set ();
+  unsigned long long previous_num_covered_combos = 0;
   while (f.wait_for (1s) == std::future_status::timeout)
     {
+      unsigned long long num_covered_combos =
+	  handle->get_number_of_covered_combinations ();
       std::cout << "\r";
-      std::cout << "combos: (" << handle->get_number_of_covered_combinations ()
-	  << " / " << handle->get_number_of_combinations_to_cover ()
-	  << "), params: (" << handle->get_number_of_processed_parameters ()
-	  << " / " << model.get_parameters ().size () << ")" << std::flush;
+      std::cout << "combos: (" << num_covered_combos << " / "
+	  << handle->get_number_of_combinations_to_cover () << " , "
+	  << num_covered_combos - previous_num_covered_combos
+	  << " per sec), params: ("
+	  << handle->get_number_of_processed_parameters () << " / "
+	  << model.get_parameters ().size () << ")" << std::flush;
+      previous_num_covered_combos = num_covered_combos;
     }
 
   std::cout << "\r";
