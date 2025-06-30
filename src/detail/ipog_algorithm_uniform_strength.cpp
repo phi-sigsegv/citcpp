@@ -1,4 +1,6 @@
 #include <ranges>
+#include <taskflow/taskflow.hpp>
+#include <taskflow/algorithm/for_each.hpp>
 #include "ipog_algorithm_uniform_strength.hpp"
 #include "for_each_cross_product_elem.hpp"
 
@@ -147,43 +149,152 @@ namespace
 
     const unsigned int num_current_param_values =
 	model.get_parameters ()[parameter_index_map[current_param_idx]];
-    // This is an array containing the coverage gain per value of the current parameter.
-    std::vector<unsigned long long> gain_per_value (num_current_param_values);
-    std::vector<unsigned int> param_indices (strength - 1);
-    coverage_map::size_type cov_map_first_level_index = 0;
 
-    ipog_horizontal_select_best_value_recursion (0, 0, current_param_idx, model,
-						 parameter_index_map,
-						 binomial_coeffs, test, cov_map,
-						 num_current_param_values,
-						 gain_per_value, param_indices,
-						 cov_map_first_level_index);
-
-    unsigned int value_with_max_gain = 0;
-    unsigned long long max_gain = 0;
-    for (unsigned int value = 0; value < gain_per_value.size (); ++value)
+    if (!executor)
       {
-	if (gain_per_value[value] > max_gain)
+	// This is an array containing the coverage gain per value of the current parameter.
+	std::vector<unsigned long long> gain_per_value (
+	    num_current_param_values);
+	std::vector<unsigned int> param_indices (strength - 1);
+	coverage_map::size_type cov_map_first_level_index = 0;
+
+	ipog_horizontal_select_best_value_recursion (0, 0, current_param_idx,
+						     model, parameter_index_map,
+						     binomial_coeffs, test,
+						     cov_map,
+						     num_current_param_values,
+						     gain_per_value,
+						     param_indices,
+						     cov_map_first_level_index);
+
+	unsigned int value_with_max_gain = 0;
+	unsigned long long max_gain = 0;
+	for (unsigned int value = 0; value < gain_per_value.size (); ++value)
 	  {
-	    value_with_max_gain = value;
-	    max_gain = gain_per_value[value];
-	  }
-	else if (gain_per_value[value] == max_gain)
-	  {
-	    // We use a simple tie breaking strategy: We do not favor one value over the
-	    // other. If two values have the same gain, then we pick the one which we
-	    // have picked less so far.
-	    if (value_to_num_picked[value]
-		< value_to_num_picked[value_with_max_gain])
+	    if (gain_per_value[value] > max_gain)
 	      {
 		value_with_max_gain = value;
+		max_gain = gain_per_value[value];
+	      }
+	    else if (gain_per_value[value] == max_gain)
+	      {
+		// We use a simple tie breaking strategy: We do not favor one value over the
+		// other. If two values have the same gain, then we pick the one which we
+		// have picked less so far.
+		if (value_to_num_picked[value]
+		    < value_to_num_picked[value_with_max_gain])
+		  {
+		    value_with_max_gain = value;
+		  }
 	      }
 	  }
+
+	value_to_num_picked[value_with_max_gain]++;
+
+	return value_with_max_gain;
       }
+    else
+      {
+	// This is an array containing the coverage gain per value of the current parameter.
+	std::vector<std::atomic_ullong> gain_per_value (
+	    num_current_param_values);
 
-    value_to_num_picked[value_with_max_gain]++;
+	// In the sequential case, we iterate over C(current_param_idx, strength - 1)
+	// combinations, since we have to choose strength - 1 parameters among parameters
+	// less than the current one (we index parameters beginning at 0).
+	// In the parallel case, we loop over fixations of the first selected parameter. Each
+	// fixed first parameter constitutes a job that can be executed concurrently.
+	// However, for each such job, we need an offset into the first-level array
+	// of the coverage map. This index is the number of parameter combinations
+	// processed by the selection with a lower index of the first parameter,
+	// since combinations are stored in lexicographic oder.
+	// For first param index = 0, we have an offset 0. For first param index = 1,
+	// we have an offset of C(current_param_idx - 1, strength - 2),
+	// since strength - 2 is the number of choices left to be made (since we have fixed
+	// the first parameter), and we can only choose these from (current_param_idx - 1) parameters
+	// if the have fixed the first parameter index to be 0.
+	// For first param index = 2, we have an offset of
+	// C(current_param_idx - 1, strength - 2) + C(current_param_idx - 2, strength - 2),
+	// since strength - 2 is the number of choices left to be made (since we have fixed
+	// the first parameter), and we can only choose these from (current_param_idx - 2)
+	// parameters if we have fixed the first parameter index to be 1.
+	// In addition, we have to add the offset of the job where the first param
+	// index was fixed to 1. This continues in this way. So for the job with first param
+	// index = i, we need the following offset: sum over j from 1 to i of C(current_param_idx - j, strength - 2).
+	//
+	// Now while we could compute this in a loop, there is a formula for computing
+	// the sum over n from k to n_max of C(n, k),
+	// which is called Hockey-stick Identity.
+	// This sum is given by C(n_max + 1 , k + 1).
+	// We can leverage upon that. What we need to compute is:
+	// sum over n from (strength - 2) to (current_param_idx - 1) of C(n, strength - 2) -
+	// sum over n from (strength - 2) to (current_param_idx - 1 - i) of C(n , strength - 2)
+	// According to the formula, this is given by:
+	// C(current_param_idx, strength - 1) - C(current_param_idx - i, strength - 1)
+	const unsigned long long first_level_array_offset_part1 =
+	    binomial_coeffs.get_coefficient (current_param_idx, strength - 1);
 
-    return value_with_max_gain;
+	tf::Taskflow taskflow;
+	taskflow.for_each_index (
+	    0u,
+	    current_param_idx,
+	    1u,
+	    [current_param_idx, strength, &model, &parameter_index_map,
+	     &binomial_coeffs, &test, &cov_map, &gain_per_value,
+	     num_current_param_values, first_level_array_offset_part1]
+	    (unsigned int i)
+	      {
+		std::vector<unsigned long long> local_gain_per_value (
+		    num_current_param_values);
+		std::vector<unsigned int> param_indices (strength - 1);
+		param_indices[0] = parameter_index_map[i];
+		coverage_map::size_type cov_map_first_level_index = first_level_array_offset_part1 -
+		binomial_coeffs.get_coefficient (current_param_idx - i,
+		    strength - 1);
+
+		ipog_horizontal_select_best_value_recursion (i + 1, 1, current_param_idx,
+		    model, parameter_index_map,
+		    binomial_coeffs, test,
+		    cov_map,
+		    num_current_param_values,
+		    local_gain_per_value,
+		    param_indices,
+		    cov_map_first_level_index);
+
+		for (unsigned int j = 0; j < local_gain_per_value.size(); ++j)
+		  {
+		    gain_per_value[j].fetch_add(local_gain_per_value[j], std::memory_order_acq_rel);
+		  }
+	      });
+
+	executor->run (taskflow).wait ();
+
+	unsigned int value_with_max_gain = 0;
+	unsigned long long max_gain = 0;
+	for (unsigned int value = 0; value < gain_per_value.size (); ++value)
+	  {
+	    if (gain_per_value[value] > max_gain)
+	      {
+		value_with_max_gain = value;
+		max_gain = gain_per_value[value];
+	      }
+	    else if (gain_per_value[value] == max_gain)
+	      {
+		// We use a simple tie breaking strategy: We do not favor one value over the
+		// other. If two values have the same gain, then we pick the one which we
+		// have picked less so far.
+		if (value_to_num_picked[value]
+		    < value_to_num_picked[value_with_max_gain])
+		  {
+		    value_with_max_gain = value;
+		  }
+	      }
+	  }
+
+	value_to_num_picked[value_with_max_gain]++;
+
+	return value_with_max_gain;
+      }
   }
 
   void
@@ -276,7 +387,8 @@ namespace
       const citcpp::detail::model &model,
       const std::vector<unsigned int> &parameter_index_map,
       const citcpp::detail::binom_coeff_table &binomial_coeffs,
-      const citcpp::detail::test &test, citcpp::detail::coverage_map &cov_map)
+      const citcpp::detail::test &test, citcpp::detail::coverage_map &cov_map,
+      tf::Executor *executor)
   {
     using namespace citcpp::detail;
 
@@ -285,21 +397,90 @@ namespace
     const int current_param_value =
 	test.get_values ()[parameter_index_map[current_param_idx]];
 
-    std::vector<unsigned int> param_indices (strength - 1);
-    coverage_map::size_type cov_map_first_level_index = 0;
-    unsigned long long num_new_covered_tuples = 0;
+    if (!executor)
+      {
+	std::vector<unsigned int> param_indices (strength - 1);
+	coverage_map::size_type cov_map_first_level_index = 0;
+	unsigned long long num_new_covered_tuples = 0;
 
-    ipog_horizontal_update_coverage_map_recursion (0, 0, current_param_idx,
-						   model, parameter_index_map,
-						   binomial_coeffs, test,
-						   cov_map,
-						   num_current_param_values,
-						   current_param_value,
-						   param_indices,
-						   cov_map_first_level_index,
-						   num_new_covered_tuples);
+	ipog_horizontal_update_coverage_map_recursion (
+	    0, 0, current_param_idx, model, parameter_index_map,
+	    binomial_coeffs, test, cov_map, num_current_param_values,
+	    current_param_value, param_indices, cov_map_first_level_index,
+	    num_new_covered_tuples);
 
-    return num_new_covered_tuples;
+	return num_new_covered_tuples;
+      }
+    else
+      {
+	std::atomic_ullong num_new_covered_tuples;
+
+	// In the sequential case, we iterate over C(current_param_idx, strength - 1)
+	// combinations, since we have to choose strength - 1 parameters among parameters
+	// less than the current one (we index parameters beginning at 0).
+	// In the parallel case, we loop over fixations of the first selected parameter. Each
+	// fixed first parameter constitutes a job that can be executed concurrently.
+	// However, for each such job, we need an offset into the first-level array
+	// of the coverage map. This index is the number of parameter combinations
+	// processed by the selection with a lower index of the first parameter,
+	// since combinations are stored in lexicographic oder.
+	// For first param index = 0, we have an offset 0. For first param index = 1,
+	// we have an offset of C(current_param_idx - 1, strength - 2),
+	// since strength - 2 is the number of choices left to be made (since we have fixed
+	// the first parameter), and we can only choose these from (current_param_idx - 1) parameters
+	// if the have fixed the first parameter index to be 0.
+	// For first param index = 2, we have an offset of
+	// C(current_param_idx - 1, strength - 2) + C(current_param_idx - 2, strength - 2),
+	// since strength - 2 is the number of choices left to be made (since we have fixed
+	// the first parameter), and we can only choose these from (current_param_idx - 2)
+	// parameters if we have fixed the first parameter index to be 1.
+	// In addition, we have to add the offset of the job where the first param
+	// index was fixed to 1. This continues in this way. So for the job with first param
+	// index = i, we need the following offset: sum over j from 1 to i of C(current_param_idx - j, strength - 2).
+	//
+	// Now while we could compute this in a loop, there is a formula for computing
+	// the sum over n from k to n_max of C(n, k),
+	// which is called Hockey-stick Identity.
+	// This sum is given by C(n_max + 1 , k + 1).
+	// We can leverage upon that. What we need to compute is:
+	// sum over n from (strength - 2) to (current_param_idx - 1) of C(n, strength - 2) -
+	// sum over n from (strength - 2) to (current_param_idx - 1 - i) of C(n , strength - 2)
+	// According to the formula, this is given by:
+	// C(current_param_idx, strength - 1) - C(current_param_idx - i, strength - 1)
+	const unsigned long long first_level_array_offset_part1 =
+	    binomial_coeffs.get_coefficient (current_param_idx, strength - 1);
+
+	tf::Taskflow taskflow;
+	taskflow.for_each_index (
+	    0u,
+	    current_param_idx,
+	    1u,
+	    [current_param_idx, strength, &model, &parameter_index_map,
+	     &binomial_coeffs, &test, &cov_map, num_current_param_values,
+	     current_param_value, &num_new_covered_tuples,
+	     first_level_array_offset_part1]
+	    (unsigned int i)
+	      {
+		unsigned long long local_num_new_covered_tuples = 0;
+		std::vector<unsigned int> param_indices (strength - 1);
+		param_indices[0] = parameter_index_map[i];
+		coverage_map::size_type cov_map_first_level_index = first_level_array_offset_part1 -
+		binomial_coeffs.get_coefficient (current_param_idx - i,
+		    strength - 1);
+
+		ipog_horizontal_update_coverage_map_recursion (
+		    i + 1, 1, current_param_idx, model, parameter_index_map,
+		    binomial_coeffs, test, cov_map, num_current_param_values,
+		    current_param_value, param_indices, cov_map_first_level_index,
+		    local_num_new_covered_tuples);
+
+		num_new_covered_tuples.fetch_add(local_num_new_covered_tuples, std::memory_order_acq_rel);
+	      });
+
+	executor->run (taskflow).wait ();
+
+	return num_new_covered_tuples;
+      }
   }
 
   void
@@ -653,7 +834,8 @@ namespace citcpp
 	  unsigned long long num_new_covered_tuples =
 	      ipog_horizontal_update_coverage_map (current_param_idx, strength,
 						   model, parameter_index_map,
-						   binomial_coeffs, t, cov_map);
+						   binomial_coeffs, t, cov_map,
+						   executor);
 
 	  // Keep track of how many tuples we have covered in addition.
 	  result.num_new_covered_tuples += num_new_covered_tuples;
