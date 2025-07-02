@@ -106,7 +106,7 @@ namespace
 		auto horizontal_ext_res = ipog_horizontal_extension (
 		    current_param_idx, strength, model, parameter_index_map,
 		    number_combos_to_cover, binomial_coeffs, test_set, cov_map,
-		    &executor);
+		    nullptr);
 
 		number_combos_to_cover -=
 		    horizontal_ext_res.num_new_covered_tuples;

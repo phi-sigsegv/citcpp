@@ -3,6 +3,7 @@
 #include <taskflow/algorithm/for_each.hpp>
 #include "ipog_algorithm_uniform_strength.hpp"
 #include "for_each_cross_product_elem.hpp"
+#include "compile_time_selected_datatypes.hpp"
 
 namespace
 {
@@ -51,7 +52,7 @@ namespace
       const citcpp::detail::coverage_map &cov_map,
       const unsigned int num_current_param_values,
       std::vector<unsigned long long> &gain_per_value,
-      std::vector<unsigned int> &param_indices,
+      citcpp::detail::strength_vector<unsigned int> &param_indices,
       citcpp::detail::coverage_map::size_type &cov_map_first_level_index)
   {
     using namespace citcpp::detail;
@@ -155,7 +156,7 @@ namespace
 	// This is an array containing the coverage gain per value of the current parameter.
 	std::vector<unsigned long long> gain_per_value (
 	    num_current_param_values);
-	std::vector<unsigned int> param_indices (strength - 1);
+	strength_vector<unsigned int> param_indices (strength - 1);
 	coverage_map::size_type cov_map_first_level_index = 0;
 
 	ipog_horizontal_select_best_value_recursion (0, 0, current_param_idx,
@@ -246,7 +247,7 @@ namespace
 	      {
 		std::vector<unsigned long long> local_gain_per_value (
 		    num_current_param_values);
-		std::vector<unsigned int> param_indices (strength - 1);
+		strength_vector<unsigned int> param_indices (strength - 1);
 		param_indices[0] = parameter_index_map[i];
 		coverage_map::size_type cov_map_first_level_index = first_level_array_offset_part1 -
 		binomial_coeffs.get_coefficient (current_param_idx - i,
@@ -305,7 +306,8 @@ namespace
       const citcpp::detail::binom_coeff_table &binomial_coeffs,
       const citcpp::detail::test &test, citcpp::detail::coverage_map &cov_map,
       const unsigned int num_current_param_values,
-      const int current_param_value, std::vector<unsigned int> &param_indices,
+      const int current_param_value,
+      citcpp::detail::strength_vector<unsigned int> &param_indices,
       citcpp::detail::coverage_map::size_type &cov_map_first_level_index,
       unsigned long long &num_new_covered_tuples)
   {
@@ -399,7 +401,7 @@ namespace
 
     if (!executor)
       {
-	std::vector<unsigned int> param_indices (strength - 1);
+	strength_vector<unsigned int> param_indices (strength - 1);
 	coverage_map::size_type cov_map_first_level_index = 0;
 	unsigned long long num_new_covered_tuples = 0;
 
@@ -462,7 +464,7 @@ namespace
 	    (unsigned int i)
 	      {
 		unsigned long long local_num_new_covered_tuples = 0;
-		std::vector<unsigned int> param_indices (strength - 1);
+		strength_vector<unsigned int> param_indices (strength - 1);
 		param_indices[0] = parameter_index_map[i];
 		coverage_map::size_type cov_map_first_level_index = first_level_array_offset_part1 -
 		binomial_coeffs.get_coefficient (current_param_idx - i,
@@ -491,8 +493,8 @@ namespace
       const unsigned long long num_missing_combinations_to_cover,
       citcpp::detail::test_set &test_set,
       std::vector<citcpp::detail::list_intrusive<citcpp::detail::test>> &value_to_row_mapping,
-      std::vector<unsigned int> &param_indices,
-      const std::vector<int> &values_to_cover,
+      const citcpp::detail::strength_vector<unsigned int> &param_indices,
+      const citcpp::detail::strength_vector<int> &values_to_cover,
       citcpp::detail::coverage_map::second_level_type &value_combinations,
       citcpp::detail::coverage_map::second_level_type::size_type cov_map_second_level_index,
       unsigned long long &num_new_covered_tuples)
@@ -598,10 +600,10 @@ namespace
       const unsigned long long num_missing_combinations_to_cover,
       citcpp::detail::test_set &test_set,
       std::vector<citcpp::detail::list_intrusive<citcpp::detail::test>> &value_to_row_mapping,
-      std::vector<unsigned int> &param_indices,
+      const citcpp::detail::strength_vector<unsigned int> &param_indices,
       const unsigned int num_current_param_values,
       unsigned int current_index,
-      std::vector<int> &values_to_cover,
+      citcpp::detail::strength_vector<int> &values_to_cover,
       citcpp::detail::coverage_map::second_level_type &value_combinations,
       citcpp::detail::coverage_map::second_level_type::size_type &cov_map_second_level_index,
       unsigned long long &num_new_covered_tuples)
@@ -660,7 +662,8 @@ namespace
       std::vector<citcpp::detail::list_intrusive<citcpp::detail::test>> &value_to_row_mapping,
       const unsigned int num_current_param_values,
       const unsigned long long num_missing_combinations_to_cover,
-      std::vector<unsigned int> &param_indices, std::vector<int> &values,
+      citcpp::detail::strength_vector<unsigned int> &param_indices,
+      citcpp::detail::strength_vector<int> &values,
       citcpp::detail::coverage_map::size_type &cov_map_first_level_index,
       unsigned long long &num_new_covered_tuples)
   {
@@ -874,9 +877,9 @@ namespace citcpp
       const int num_current_param_values =
 	  model.get_parameters ()[real_current_param_idx];
 
-      std::vector<unsigned int> param_indices (strength - 1);
+      strength_vector<unsigned int> param_indices (strength - 1);
       unsigned long long num_new_covered_tuples = 0;
-      std::vector<int> values (strength);
+      strength_vector<int> values (strength);
       coverage_map::size_type cov_map_first_level_index = 0;
 
       ipog_vertical_extension_recursion (0, 0, current_param_idx,
