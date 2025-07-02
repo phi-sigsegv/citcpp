@@ -144,6 +144,7 @@ namespace
       const citcpp::detail::binom_coeff_table &binomial_coeffs,
       const citcpp::detail::test &test,
       const citcpp::detail::coverage_map &cov_map,
+      citcpp::detail::strength_vector<unsigned int> &param_indices,
       std::vector<unsigned int> &value_to_num_picked, tf::Executor *executor)
   {
     using namespace citcpp::detail;
@@ -156,7 +157,6 @@ namespace
 	// This is an array containing the coverage gain per value of the current parameter.
 	std::vector<unsigned long long> gain_per_value (
 	    num_current_param_values);
-	strength_vector<unsigned int> param_indices (strength - 1);
 	coverage_map::size_type cov_map_first_level_index = 0;
 
 	ipog_horizontal_select_best_value_recursion (0, 0, current_param_idx,
@@ -390,6 +390,7 @@ namespace
       const std::vector<unsigned int> &parameter_index_map,
       const citcpp::detail::binom_coeff_table &binomial_coeffs,
       const citcpp::detail::test &test, citcpp::detail::coverage_map &cov_map,
+      citcpp::detail::strength_vector<unsigned int> &param_indices,
       tf::Executor *executor)
   {
     using namespace citcpp::detail;
@@ -401,7 +402,6 @@ namespace
 
     if (!executor)
       {
-	strength_vector<unsigned int> param_indices (strength - 1);
 	coverage_map::size_type cov_map_first_level_index = 0;
 	unsigned long long num_new_covered_tuples = 0;
 
@@ -810,6 +810,7 @@ namespace citcpp
       ipog_horizontal_extension_result result
 	{ std::vector<list_intrusive<test>> (num_current_param_values), 0 };
 
+      strength_vector<unsigned int> param_indices (strength - 1);
       std::vector<unsigned int> value_to_num_picked (num_current_param_values);
 
       bool is_first_test = true;
@@ -824,7 +825,7 @@ namespace citcpp
 						     strength, model,
 						     parameter_index_map,
 						     binomial_coeffs, t,
-						     cov_map,
+						     cov_map, param_indices,
 						     value_to_num_picked,
 						     executor);
 
@@ -838,7 +839,7 @@ namespace citcpp
 	      ipog_horizontal_update_coverage_map (current_param_idx, strength,
 						   model, parameter_index_map,
 						   binomial_coeffs, t, cov_map,
-						   executor);
+						   param_indices, executor);
 
 	  // Keep track of how many tuples we have covered in addition.
 	  result.num_new_covered_tuples += num_new_covered_tuples;
