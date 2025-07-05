@@ -3,7 +3,7 @@
 #include <taskflow/algorithm/for_each.hpp>
 #include "ipog_algorithm_uniform_strength.hpp"
 #include "for_each_cross_product_elem.hpp"
-#include "compile_time_selected_datatypes.hpp"
+#include "datatypes_config.hpp"
 
 namespace
 {

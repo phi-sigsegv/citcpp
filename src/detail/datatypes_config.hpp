@@ -6,6 +6,7 @@
  */
 #include <vector>
 #include "small_vector.hpp"
+#include "threading_lib.hpp"
 
 #ifndef DETAIL_COMPILE_TIME_SELECTED_DATATYPES_HPP_
 #define DETAIL_COMPILE_TIME_SELECTED_DATATYPES_HPP_
@@ -16,7 +17,11 @@ namespace citcpp
   {
     template<class T>
       using strength_vector = std::vector<T>;
-  // using strength_vector = SmallVector<T, 6>;
+    // using strength_vector = SmallVector<T, 6>;
+
+    using thread_pool = threads::WorkStealingThreadPool<32, 64>;
+    using task_group = thread_pool::TaskGroup;
+    using task = thread_pool::NonOwningFuncTaskNoTaskAccess;
   }
 }
 
