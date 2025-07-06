@@ -11,6 +11,7 @@ namespace citcpp
   {
     struct sl_list_node_intrusive
     {
+      sl_list_node_intrusive *prev_node_;
       sl_list_node_intrusive *next_node_;
     };
 
@@ -37,11 +38,14 @@ namespace citcpp
 	    // to convert a non-const iterator into a const iterator,
 	    // while keeping members private.
 	    friend class list_intrusive_iterator<true> ;
+	    // Give the intrusive list access to the node of this iterator.
+	    friend class list_intrusive<T_VALUE> ;
 
 	    typedef list_intrusive<T_VALUE> list_intrusive_type;
 	    typedef typename std::conditional<is_const,
 		const typename list_intrusive::node_type,
 		typename list_intrusive::node_type>::type node_base_type;
+
 	    node_base_type *node_;
 
 	  public:
@@ -79,6 +83,7 @@ namespace citcpp
 	    {
 	      return *static_cast<pointer> (node_);
 	    }
+
 	    pointer
 	    value_ptr () const
 	    {
@@ -116,6 +121,25 @@ namespace citcpp
 	      return tmp;
 	    }
 
+	    // This is the overload of the prefix decrement
+	    // operator.
+	    list_intrusive_iterator&
+	    operator-- ()
+	    {
+	      node_ = node_->prev_node_;
+	      return *this;
+	    }
+
+	    // This is the overload of the postfix decrement
+	    // operator.
+	    list_intrusive_iterator
+	    operator-- (int)
+	    {
+	      list_intrusive_iterator tmp (*this);
+	      node_ = node_->prev_node_;
+	      return tmp;
+	    }
+
 	    friend bool
 	    operator== (const list_intrusive_iterator &lhs,
 			const list_intrusive_iterator &rhs)
@@ -128,6 +152,13 @@ namespace citcpp
 			const list_intrusive_iterator &rhs)
 	    {
 	      return lhs.node_ != rhs.node_;
+	    }
+
+	  private:
+	    node_base_type*
+	    get_node ()
+	    {
+	      return node_;
 	    }
 	  };
 
@@ -144,6 +175,7 @@ namespace citcpp
 	list_intrusive () :
 	    dummy_ (), p_tail_ (&dummy_), size_ (0)
 	{
+	  dummy_.prev_node_ = nullptr;
 	  dummy_.next_node_ = nullptr;
 	}
 
@@ -280,7 +312,12 @@ namespace citcpp
 	void
 	push_front (reference entry)
 	{
+	  entry.prev_node = &dummy_;
 	  entry.next_node_ = dummy_.next_node_;
+	  if (entry.next_node_)
+	    {
+	      entry.next_node_->prev_node_ = &entry;
+	    }
 	  dummy_.next_node_ = &entry;
 	  if (p_tail_ == &dummy_)
 	    {
@@ -292,18 +329,13 @@ namespace citcpp
 	void
 	push_front (pointer entry)
 	{
-	  entry->next_node_ = dummy_.next_node_;
-	  dummy_.next_node_ = entry;
-	  if (p_tail_ == &dummy_)
-	    {
-	      p_tail_ = entry;
-	    }
-	  ++size_;
+	  push_front (*entry);
 	}
 
 	void
 	push_back (reference entry)
 	{
+	  entry.prev_node_ = p_tail_;
 	  entry.next_node_ = nullptr;
 	  p_tail_->next_node_ = &entry;
 	  p_tail_ = &entry;
@@ -313,21 +345,29 @@ namespace citcpp
 	void
 	push_back (pointer entry)
 	{
-	  entry->next_node_ = nullptr;
-	  p_tail_->next_node_ = entry;
-	  p_tail_ = entry;
-	  ++size_;
+	  push_back (*entry);
 	}
 
 	void
 	pop_front ()
 	{
-	  --size_;
-	  if (p_tail_ == dummy_.next_node_)
-	    {
-	      p_tail_ = &dummy_;
-	    }
-	  dummy_.next_node_ = dummy_.next_node_->next_node_;
+	  erase_after (&dummy_);
+	}
+
+	void
+	pop_back ()
+	{
+	  erase_after (p_tail_->prev_node_);
+	}
+
+	iterator
+	erase (iterator pos)
+	{
+	  node_type *node = pos.get_node ();
+	  node_type *prev_node = node->prev_node_;
+	  erase_after (prev_node);
+
+	  return iterator (prev_node->next_node_);
 	}
 
 	size_type
@@ -337,6 +377,21 @@ namespace citcpp
 	}
 
       private:
+	void
+	erase_after (node_type *node)
+	{
+	  --size_;
+	  if (p_tail_ == node->next_node_)
+	    {
+	      p_tail_ = node;
+	    }
+	  node->next_node_ = node->next_node_->next_node_;
+	  if (node->next_node_)
+	    {
+	      node->next_node_->prev_node_ = node;
+	    }
+	}
+
 	node_type dummy_;
 	node_type *p_tail_;
 	size_type size_;

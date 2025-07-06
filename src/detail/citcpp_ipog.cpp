@@ -125,8 +125,7 @@ namespace
 		    auto vertical_ext_res = ipog_vertical_extension (
 			current_param_idx, strength, model, parameter_index_map,
 			number_combos_to_cover, binomial_coeffs,
-			horizontal_ext_res.value_to_row_mapping, test_set,
-			cov_map);
+			horizontal_ext_res, test_set, cov_map);
 
 		    number_combos_to_cover -=
 			vertical_ext_res.num_new_covered_tuples;

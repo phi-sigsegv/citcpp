@@ -38,6 +38,7 @@ namespace citcpp
     struct ipog_horizontal_extension_result
     {
       std::vector<list_intrusive<test>> value_to_row_mapping;
+      list_intrusive<test> rows_with_current_parameter_dont_care_value;
       unsigned long long num_new_covered_tuples;
     };
 
@@ -64,12 +65,13 @@ namespace citcpp
 
     ipog_vertical_extension_result
     ipog_vertical_extension (
-	const unsigned int current_param_idx, const unsigned int strength,
+	const unsigned int current_param_idx,
+	const unsigned int strength,
 	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
 	const binom_coeff_table &binomial_coeffs,
-	std::vector<list_intrusive<test>> &value_to_row_mapping,
+	ipog_horizontal_extension_result &partitioning_of_tests_according_to_current_values,
 	test_set &test_set, coverage_map &cov_map);
   }
 }

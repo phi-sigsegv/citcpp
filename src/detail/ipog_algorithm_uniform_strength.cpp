@@ -136,7 +136,7 @@ namespace
       }
   }
 
-  unsigned int
+  int
   ipog_horizontal_select_best_value (
       unsigned int current_param_idx, unsigned int strength,
       const citcpp::detail::model &model,
@@ -145,6 +145,7 @@ namespace
       const citcpp::detail::test &test,
       const citcpp::detail::coverage_map &cov_map,
       citcpp::detail::strength_vector<unsigned int> &param_indices,
+      unsigned int &last_picked_value,
       std::vector<unsigned int> &value_to_num_picked, tf::Executor *executor)
   {
     using namespace citcpp::detail;
@@ -168,10 +169,13 @@ namespace
 						     param_indices,
 						     cov_map_first_level_index);
 
-	unsigned int value_with_max_gain = 0;
+	int value_with_max_gain = -1;
 	unsigned long long max_gain = 0;
-	for (unsigned int value = 0; value < gain_per_value.size (); ++value)
+	for (unsigned int v_index = 0; v_index < gain_per_value.size ();
+	    ++v_index)
 	  {
+	    unsigned int value = (v_index + last_picked_value + 1)
+		% gain_per_value.size ();
 	    if (gain_per_value[value] > max_gain)
 	      {
 		value_with_max_gain = value;
@@ -182,15 +186,23 @@ namespace
 		// We use a simple tie breaking strategy: We do not favor one value over the
 		// other. If two values have the same gain, then we pick the one which we
 		// have picked less so far.
-		if (value_to_num_picked[value]
-		    < value_to_num_picked[value_with_max_gain])
+		// Since also this could be a tie (we have picked the value the same number
+		// of times, we remember the value we have picked before, and choose
+		// the next one in this case.
+		if (value_with_max_gain >= 0
+		    && value_to_num_picked[value]
+			< value_to_num_picked[value_with_max_gain])
 		  {
 		    value_with_max_gain = value;
 		  }
 	      }
 	  }
 
-	value_to_num_picked[value_with_max_gain]++;
+	if (value_with_max_gain >= 0)
+	  {
+	    last_picked_value = value_with_max_gain;
+	    value_to_num_picked[value_with_max_gain]++;
+	  }
 
 	return value_with_max_gain;
       }
@@ -270,10 +282,13 @@ namespace
 
 	executor->run (taskflow).wait ();
 
-	unsigned int value_with_max_gain = 0;
+	int value_with_max_gain = -1;
 	unsigned long long max_gain = 0;
-	for (unsigned int value = 0; value < gain_per_value.size (); ++value)
+	for (unsigned int v_index = 0; v_index < gain_per_value.size ();
+	    ++v_index)
 	  {
+	    unsigned int value = (v_index + last_picked_value + 1)
+		% gain_per_value.size ();
 	    if (gain_per_value[value] > max_gain)
 	      {
 		value_with_max_gain = value;
@@ -284,15 +299,23 @@ namespace
 		// We use a simple tie breaking strategy: We do not favor one value over the
 		// other. If two values have the same gain, then we pick the one which we
 		// have picked less so far.
-		if (value_to_num_picked[value]
-		    < value_to_num_picked[value_with_max_gain])
+		// Since also this could be a tie (we have picked the value the same number
+		// of times, we remember the value we have picked before, and choose
+		// the next one in this case.
+		if (value_with_max_gain >= 0
+		    && value_to_num_picked[value]
+			< value_to_num_picked[value_with_max_gain])
 		  {
 		    value_with_max_gain = value;
 		  }
 	      }
 	  }
 
-	value_to_num_picked[value_with_max_gain]++;
+	if (value_with_max_gain >= 0)
+	  {
+	    last_picked_value = value_with_max_gain;
+	    value_to_num_picked[value_with_max_gain]++;
+	  }
 
 	return value_with_max_gain;
       }
@@ -485,6 +508,60 @@ namespace
       }
   }
 
+  bool
+  ipog_vertical_extension_try_inject_value_combo (
+      const unsigned int real_current_param_idx,
+      const int current_param_value_to_cover, citcpp::detail::test &t,
+      const citcpp::detail::strength_vector<unsigned int> &param_indices,
+      const citcpp::detail::strength_vector<int> &values_to_cover)
+  {
+    bool can_inject_value_combination = true;
+    int overwritten_dont_cares = 0;
+    for (unsigned int i = 0; i < param_indices.size (); ++i)
+      {
+	const unsigned int param_idx = param_indices[i];
+	const int param_value_to_cover = values_to_cover[i];
+	const int param_value_in_test = t.get_values ()[param_idx];
+
+	if (param_value_in_test >= 0
+	    && param_value_to_cover != param_value_in_test)
+	  {
+	    // Cannot inject value combination in this test, moving on to the next
+	    // one.
+	    can_inject_value_combination = false;
+	    break;
+	  }
+
+	if (param_value_in_test < 0)
+	  {
+	    ++overwritten_dont_cares;
+	  }
+      }
+
+    if (can_inject_value_combination)
+      {
+	for (unsigned int i = 0; i < param_indices.size (); ++i)
+	  {
+	    const unsigned int param_idx = param_indices[i];
+	    const int param_value_to_cover = values_to_cover[i];
+	    t.get_values ()[param_idx] = param_value_to_cover;
+	  }
+
+	if (t.get_values ()[real_current_param_idx] < 0)
+	  {
+	    ++overwritten_dont_cares;
+	  }
+	t.get_values ()[real_current_param_idx] = current_param_value_to_cover;
+
+	t.set_num_dont_care_values (
+	    t.get_num_dont_care_values () - overwritten_dont_cares);
+
+	return true;
+      }
+
+    return false;
+  }
+
   void
   ipog_vertical_extension_func (
       const unsigned int current_param_idx,
@@ -492,7 +569,7 @@ namespace
       const citcpp::detail::model &model,
       const unsigned long long num_missing_combinations_to_cover,
       citcpp::detail::test_set &test_set,
-      std::vector<citcpp::detail::list_intrusive<citcpp::detail::test>> &value_to_row_mapping,
+      citcpp::detail::ipog_horizontal_extension_result &partitioning_of_tests_according_to_current_values,
       const citcpp::detail::strength_vector<unsigned int> &param_indices,
       const citcpp::detail::strength_vector<int> &values_to_cover,
       citcpp::detail::coverage_map::second_level_type &value_combinations,
@@ -520,8 +597,9 @@ namespace
     // combination we want to cover.
     const int current_param_value_to_cover = values_to_cover.back ();
 
-    // Iterative over the tests we have to check
-    for (test &t : value_to_row_mapping[current_param_value_to_cover])
+    // Iterate over the tests with the same value for the current parameter value
+    // we have to cover.
+    for (test &t : partitioning_of_tests_according_to_current_values.value_to_row_mapping[current_param_value_to_cover])
       {
 	// We also skip tests which do not have at least one don't care
 	// value.
@@ -530,40 +608,36 @@ namespace
 	    continue;
 	  }
 
-	bool can_inject_value_combination = true;
-	int overwritten_dont_cares = 0;
-	for (unsigned int i = 0; i < param_indices.size (); ++i)
+	if (ipog_vertical_extension_try_inject_value_combo (
+	    real_current_param_idx, current_param_value_to_cover, t,
+	    param_indices, values_to_cover))
 	  {
-	    const unsigned int param_idx = param_indices[i];
-	    const int param_value_to_cover = values_to_cover[i];
-	    const int param_value_in_test = t.get_values ()[param_idx];
-
-	    if (param_value_in_test >= 0
-		&& param_value_to_cover != param_value_in_test)
-	      {
-		// Cannot inject value combination in this test, moving on to the next
-		// one.
-		can_inject_value_combination = false;
-		break;
-	      }
-
-	    if (param_value_in_test < 0)
-	      {
-		++overwritten_dont_cares;
-	      }
+	    // Return, since we have found a test and injected the value combination.
+	    return;
 	  }
+      }
 
-	if (can_inject_value_combination)
+    // Now we iterate over the tests with a don't care value for the current parameter.
+    for (auto it =
+	partitioning_of_tests_according_to_current_values.rows_with_current_parameter_dont_care_value.begin ();
+	it
+	    != partitioning_of_tests_according_to_current_values.rows_with_current_parameter_dont_care_value.end ();
+	++it)
+      {
+	test &t = *it;
+
+	if (ipog_vertical_extension_try_inject_value_combo (
+	    real_current_param_idx, current_param_value_to_cover, t,
+	    param_indices, values_to_cover))
 	  {
-	    for (unsigned int i = 0; i < param_indices.size (); ++i)
-	      {
-		const unsigned int param_idx = param_indices[i];
-		const int param_value_to_cover = values_to_cover[i];
-		t.get_values ()[param_idx] = param_value_to_cover;
-	      }
-
-	    t.set_num_dont_care_values (
-		t.get_num_dont_care_values () - overwritten_dont_cares);
+	    // Since we have successfully injected the combination, the test must be
+	    // moved to a different partition for looking it up when trying
+	    // to inject other combinations with the same value for the current
+	    // parameter.
+	    partitioning_of_tests_according_to_current_values.rows_with_current_parameter_dont_care_value.erase (
+		it);
+	    partitioning_of_tests_according_to_current_values.value_to_row_mapping[current_param_value_to_cover].push_back (
+		t);
 
 	    // Return, since we have found a test and injected the value combination.
 	    return;
@@ -588,7 +662,7 @@ namespace
     test_set.get_list_of_tests ().push_back (std::move (t));
 
     // Update the mapping from values of the current parameter to the tests.
-    value_to_row_mapping[current_param_value_to_cover].push_back (
+    partitioning_of_tests_according_to_current_values.value_to_row_mapping[current_param_value_to_cover].push_back (
 	test_set.get_list_of_tests ().back ());
   }
 
@@ -599,7 +673,7 @@ namespace
       const citcpp::detail::model &model,
       const unsigned long long num_missing_combinations_to_cover,
       citcpp::detail::test_set &test_set,
-      std::vector<citcpp::detail::list_intrusive<citcpp::detail::test>> &value_to_row_mapping,
+      citcpp::detail::ipog_horizontal_extension_result &partitioning_of_tests_according_to_current_values,
       const citcpp::detail::strength_vector<unsigned int> &param_indices,
       const unsigned int num_current_param_values,
       unsigned int current_index,
@@ -612,13 +686,12 @@ namespace
 
     if (current_index == values_to_cover.size ())
       {
-	ipog_vertical_extension_func (current_param_idx, real_current_param_idx,
-				      model, num_missing_combinations_to_cover,
-				      test_set, value_to_row_mapping,
-				      param_indices, values_to_cover,
-				      value_combinations,
-				      cov_map_second_level_index,
-				      num_new_covered_tuples);
+	ipog_vertical_extension_func (
+	    current_param_idx, real_current_param_idx, model,
+	    num_missing_combinations_to_cover, test_set,
+	    partitioning_of_tests_according_to_current_values, param_indices,
+	    values_to_cover, value_combinations, cov_map_second_level_index,
+	    num_new_covered_tuples);
 	++cov_map_second_level_index;
 
 	return;
@@ -641,9 +714,10 @@ namespace
 
 	ipog_vertical_extension_recursion_level2 (
 	    current_param_idx, real_current_param_idx, model,
-	    num_missing_combinations_to_cover, test_set, value_to_row_mapping,
-	    param_indices, num_current_param_values, current_index + 1,
-	    values_to_cover, value_combinations, cov_map_second_level_index,
+	    num_missing_combinations_to_cover, test_set,
+	    partitioning_of_tests_according_to_current_values, param_indices,
+	    num_current_param_values, current_index + 1, values_to_cover,
+	    value_combinations, cov_map_second_level_index,
 	    num_new_covered_tuples);
       }
   }
@@ -659,7 +733,7 @@ namespace
       const citcpp::detail::binom_coeff_table &binomial_coeffs,
       citcpp::detail::test_set &test_set,
       citcpp::detail::coverage_map &cov_map,
-      std::vector<citcpp::detail::list_intrusive<citcpp::detail::test>> &value_to_row_mapping,
+      citcpp::detail::ipog_horizontal_extension_result &partitioning_of_tests_according_to_current_values,
       const unsigned int num_current_param_values,
       const unsigned long long num_missing_combinations_to_cover,
       citcpp::detail::strength_vector<unsigned int> &param_indices,
@@ -688,10 +762,10 @@ namespace
 
 	ipog_vertical_extension_recursion_level2 (
 	    current_param_idx, real_current_param_idx, model,
-	    num_missing_combinations_to_cover, test_set, value_to_row_mapping,
-	    param_indices, num_current_param_values, 0, values,
-	    value_combinations, cov_map_second_level_index,
-	    num_new_covered_tuples);
+	    num_missing_combinations_to_cover, test_set,
+	    partitioning_of_tests_according_to_current_values, param_indices,
+	    num_current_param_values, 0, values, value_combinations,
+	    cov_map_second_level_index, num_new_covered_tuples);
 
 	return;
       }
@@ -704,17 +778,13 @@ namespace
 	  }
 
 	param_indices[current_count] = parameter_index_map[j];
-	ipog_vertical_extension_recursion (j + 1, current_count + 1,
-					   current_param_idx,
-					   real_current_param_idx, model,
-					   parameter_index_map, binomial_coeffs,
-					   test_set, cov_map,
-					   value_to_row_mapping,
-					   num_current_param_values,
-					   num_missing_combinations_to_cover,
-					   param_indices, values,
-					   cov_map_first_level_index,
-					   num_new_covered_tuples);
+	ipog_vertical_extension_recursion (
+	    j + 1, current_count + 1, current_param_idx, real_current_param_idx,
+	    model, parameter_index_map, binomial_coeffs, test_set, cov_map,
+	    partitioning_of_tests_according_to_current_values,
+	    num_current_param_values, num_missing_combinations_to_cover,
+	    param_indices, values, cov_map_first_level_index,
+	    num_new_covered_tuples);
       }
   }
 }
@@ -808,46 +878,55 @@ namespace citcpp
 
       // First initialize the result object.
       ipog_horizontal_extension_result result
-	{ std::vector<list_intrusive<test>> (num_current_param_values), 0 };
+	{ std::vector<list_intrusive<test>> (num_current_param_values),
+	    list_intrusive<test> (), 0 };
 
       strength_vector<unsigned int> param_indices (strength - 1);
+      unsigned int last_picked_value = 0;
       std::vector<unsigned int> value_to_num_picked (num_current_param_values);
 
-      bool is_first_test = true;
       for (test &t : test_set.get_list_of_tests ())
 	{
-	  // For the first test calling the algorithm is pointless, since it will
-	  // pick the first value anyway, as all values have equal coverage gain.
-	  unsigned int selected_value =
-	      is_first_test ?
-		  0 :
-		  ipog_horizontal_select_best_value (current_param_idx,
-						     strength, model,
-						     parameter_index_map,
-						     binomial_coeffs, t,
-						     cov_map, param_indices,
-						     value_to_num_picked,
-						     executor);
+	  int selected_value = ipog_horizontal_select_best_value (
+	      current_param_idx, strength, model, parameter_index_map,
+	      binomial_coeffs, t, cov_map, param_indices, last_picked_value,
+	      value_to_num_picked, executor);
 
-	  // Now that we have selected the value with most coverage, we set it in the
-	  // test accordingly.
-	  t.get_values ()[parameter_index_map[current_param_idx]] =
-	      selected_value;
+	  if (selected_value >= 0)
+	    {
+	      // We might not have selected any value. This can happen, if no matter
+	      // which value we would pick, the coverage gain would be 0.
+	      // If so, our best option is to keep it as don't care, in order for
+	      // later vertical extension steps to exploit that don't care value.
+	      // If we have selected a value however with most coverage, then we set it in the
+	      // test accordingly.
+	      t.get_values ()[parameter_index_map[current_param_idx]] =
+		  selected_value;
+	    }
 
 	  // The last step consists in updating the coverage map.
 	  unsigned long long num_new_covered_tuples =
-	      ipog_horizontal_update_coverage_map (current_param_idx, strength,
-						   model, parameter_index_map,
-						   binomial_coeffs, t, cov_map,
-						   param_indices, executor);
+	      selected_value >= 0 ?
+		  ipog_horizontal_update_coverage_map (current_param_idx,
+						       strength, model,
+						       parameter_index_map,
+						       binomial_coeffs, t,
+						       cov_map, param_indices,
+						       executor) :
+		  0;
 
 	  // Keep track of how many tuples we have covered in addition.
 	  result.num_new_covered_tuples += num_new_covered_tuples;
 
 	  // Maintain a mapping from values of the current parameter to the tests.
-	  result.value_to_row_mapping[selected_value].push_back (t);
-
-	  is_first_test = false;
+	  if (selected_value >= 0)
+	    {
+	      result.value_to_row_mapping[selected_value].push_back (t);
+	    }
+	  else
+	    {
+	      result.rows_with_current_parameter_dont_care_value.push_back (t);
+	    }
 
 	  if (result.num_new_covered_tuples
 	      >= num_missing_combinations_to_cover)
@@ -861,12 +940,13 @@ namespace citcpp
 
     ipog_vertical_extension_result
     ipog_vertical_extension (
-	const unsigned int current_param_idx, const unsigned int strength,
+	const unsigned int current_param_idx,
+	const unsigned int strength,
 	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
 	const binom_coeff_table &binomial_coeffs,
-	std::vector<list_intrusive<test>> &value_to_row_mapping,
+	ipog_horizontal_extension_result &partitioning_of_tests_according_to_current_values,
 	test_set &test_set, coverage_map &cov_map)
     {
       // First initialize the result object.
@@ -883,16 +963,13 @@ namespace citcpp
       strength_vector<int> values (strength);
       coverage_map::size_type cov_map_first_level_index = 0;
 
-      ipog_vertical_extension_recursion (0, 0, current_param_idx,
-					 real_current_param_idx, model,
-					 parameter_index_map, binomial_coeffs,
-					 test_set, cov_map,
-					 value_to_row_mapping,
-					 num_current_param_values,
-					 num_missing_combinations_to_cover,
-					 param_indices, values,
-					 cov_map_first_level_index,
-					 num_new_covered_tuples);
+      ipog_vertical_extension_recursion (
+	  0, 0, current_param_idx, real_current_param_idx, model,
+	  parameter_index_map, binomial_coeffs, test_set, cov_map,
+	  partitioning_of_tests_according_to_current_values,
+	  num_current_param_values, num_missing_combinations_to_cover,
+	  param_indices, values, cov_map_first_level_index,
+	  num_new_covered_tuples);
 
       result.num_new_covered_tuples = num_new_covered_tuples;
 
