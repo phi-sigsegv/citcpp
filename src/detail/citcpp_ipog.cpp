@@ -96,17 +96,16 @@ namespace
 	      }
 	    else
 	      {
-		coverage_map cov_map (current_param_idx, strength - 1,
-				      binomial_coeffs);
+		coverage_map_ipog cov_map (current_param_idx + 1, strength,
+					   model, parameter_index_map,
+					   binomial_coeffs);
 
-		unsigned long long number_combos_to_cover = ipog_loop_init (
-		    current_param_idx, strength, model, parameter_index_map,
-		    binomial_coeffs, cov_map, nullptr);
+		unsigned long long number_combos_to_cover =
+		    cov_map.get_total_number_of_tuples ();
 
 		auto horizontal_ext_res = ipog_horizontal_extension (
-		    current_param_idx, strength, model, parameter_index_map,
-		    number_combos_to_cover, binomial_coeffs, test_set, cov_map,
-		    nullptr);
+		    current_param_idx, model, parameter_index_map,
+		    number_combos_to_cover, test_set, cov_map, nullptr);
 
 		number_combos_to_cover -=
 		    horizontal_ext_res.num_new_covered_tuples;

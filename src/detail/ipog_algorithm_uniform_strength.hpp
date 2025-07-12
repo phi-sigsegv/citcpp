@@ -42,21 +42,12 @@ namespace citcpp
       unsigned long long num_new_covered_tuples;
     };
 
-    unsigned long long
-    ipog_loop_init (const unsigned int current_param_idx,
-		    const unsigned int strength, const model &model,
-		    const std::vector<unsigned int> &parameter_index_map,
-		    const binom_coeff_table &binomial_coeffs,
-		    coverage_map &cov_map, tf::Executor *executor);
-
     ipog_horizontal_extension_result
     ipog_horizontal_extension (
-	const unsigned int current_param_idx, const unsigned int strength,
-	const model &model,
+	const unsigned int current_param_idx, const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
-	const binom_coeff_table &binomial_coeffs, test_set &test_set,
-	coverage_map &cov_map, tf::Executor *executor);
+	test_set &test_set, coverage_map_ipog &cov_map, tf::Executor *executor);
 
     struct ipog_vertical_extension_result
     {
@@ -72,7 +63,7 @@ namespace citcpp
 	const unsigned long long num_missing_combinations_to_cover,
 	const binom_coeff_table &binomial_coeffs,
 	ipog_horizontal_extension_result &partitioning_of_tests_according_to_current_values,
-	test_set &test_set, coverage_map &cov_map);
+	test_set &test_set, coverage_map_ipog &cov_map);
   }
 }
 
