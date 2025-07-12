@@ -51,7 +51,7 @@ namespace citcpp
 	const binom_coeff_table &binomial_coeffs, bool fixed_last_parameter) :
 	size_ (
 	    fixed_last_parameter ?
-		binomial_coeffs.get_coefficient (n, t - 1) :
+		binomial_coeffs.get_coefficient (n - 1, t - 1) :
 		binomial_coeffs.get_coefficient (n, t)), model_ (model), parameter_index_map_ (
 	    parameter_index_map), n_ (n), t_ (t), cov_map_ (size_), total_num_tuples_ (
 	    0)

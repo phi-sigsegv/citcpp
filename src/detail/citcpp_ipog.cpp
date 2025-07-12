@@ -122,8 +122,7 @@ namespace
 		if (number_combos_to_cover > 0)
 		  {
 		    auto vertical_ext_res = ipog_vertical_extension (
-			current_param_idx, strength, model, parameter_index_map,
-			number_combos_to_cover, binomial_coeffs,
+			current_param_idx, model, number_combos_to_cover,
 			horizontal_ext_res, test_set, cov_map);
 
 		    number_combos_to_cover -=
