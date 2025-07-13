@@ -397,7 +397,7 @@ namespace citcpp
 	      cov_map_it.bit_pos_ = 0;
 
 	      return recursively_visit_all_value_combos_of_param_combo (
-		  cov_map_it, 0);
+		  cov_map_it, cov_map_it.value_indices_.size () - 1);
 	    }
 
 	  return true;
@@ -406,11 +406,11 @@ namespace citcpp
       private:
 	bool
 	recursively_visit_all_value_combos_of_param_combo (
-	    coverage_map_iterator_base &cov_map_it, unsigned int current_index)
+	    coverage_map_iterator_base &cov_map_it, int current_index)
 	{
 	  std::vector<int> &value_indices = cov_map_it.value_indices_;
 
-	  if (current_index == value_indices.size ())
+	  if (current_index < 0)
 	    {
 	      // We assume that the visitor is a functor accepting a reference to this iterator.
 	      // In addition
@@ -425,12 +425,12 @@ namespace citcpp
 	  unsigned int max_val =
 	      cov_map_it.cov_map_.get_model ().get_parameters ()[cov_map_it.param_indices_[current_index]];
 
-	  for (unsigned int i = 0; i < max_val; ++i)
+	  for (int i = max_val - 1; i >= 0; --i)
 	    {
 	      value_indices[current_index] = i;
 
 	      bool ret = recursively_visit_all_value_combos_of_param_combo (
-		  cov_map_it, current_index + 1);
+		  cov_map_it, current_index - 1);
 
 	      if (!ret)
 		{
