@@ -32,7 +32,7 @@ namespace citcpp
     create_all_value_combinations_result
     create_all_value_combinations (
 	unsigned int strength, const model &model,
-	const std::vector<unsigned int> &parameter_indices,
+	const std::vector<unsigned int> &parameter_index_map,
 	citcpp::detail::test_set &test_set);
 
     struct ipog_horizontal_extension_result

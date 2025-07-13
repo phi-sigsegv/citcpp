@@ -610,12 +610,12 @@ namespace citcpp
     create_all_value_combinations_result
     create_all_value_combinations (
 	unsigned int strength, const model &model,
-	const std::vector<unsigned int> &parameter_indices,
+	const std::vector<unsigned int> &parameter_index_map,
 	citcpp::detail::test_set &test_set)
     {
-      auto l_map_to_param_idx = [&parameter_indices]
+      auto l_map_to_param_idx = [&parameter_index_map]
       (int idx)
-	{ return parameter_indices[idx];};
+	{ return parameter_index_map[idx];};
 
       auto l_map_to_num_param_values = [&model]
       (unsigned int param_idx)
@@ -633,7 +633,7 @@ namespace citcpp
 
       for_each_cross_product_elem (
 	  param_num_values,
-	  [&model, &parameter_indices, &test_set, &result]
+	  [&model, &parameter_index_map, &test_set, &result]
 	  (const std::vector<unsigned int> &next_cross_product_elem)
 	    {
 	      // Initialize all values of the test with don't care.
@@ -643,7 +643,7 @@ namespace citcpp
 	      // Replace the first t elements with the cross product element.
 	      for (unsigned int index = 0; index < next_cross_product_elem.size(); ++index)
 		{
-		  t.get_values()[parameter_indices[index]] = next_cross_product_elem[index];
+		  t.get_values()[parameter_index_map[index]] = next_cross_product_elem[index];
 		}
 
 	      test_set.get_list_of_tests().push_back(std::move(t));
