@@ -656,7 +656,8 @@ namespace citcpp
 
     ipog_horizontal_extension_result
     ipog_horizontal_extension (
-	const unsigned int current_param_idx, const model &model,
+	const unsigned int current_param_idx, const unsigned int strength,
+	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
 	test_set &test_set, coverage_map_ipog &cov_map, tf::Executor *executor)
@@ -677,6 +678,11 @@ namespace citcpp
 
       for (test &t : test_set.get_list_of_tests ())
 	{
+	  if (strength > 2)
+	    {
+	      last_picked_value = num_current_param_values - 1;
+	    }
+
 	  int selected_value = ipog_horizontal_select_best_value (
 	      num_current_param_values, model, t, cov_map_it, last_picked_value,
 	      value_to_num_picked, executor);

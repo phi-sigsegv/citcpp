@@ -44,7 +44,8 @@ namespace citcpp
 
     ipog_horizontal_extension_result
     ipog_horizontal_extension (
-	const unsigned int current_param_idx, const model &model,
+	const unsigned int current_param_idx, const unsigned int strength,
+	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
 	test_set &test_set, coverage_map_ipog &cov_map, tf::Executor *executor);

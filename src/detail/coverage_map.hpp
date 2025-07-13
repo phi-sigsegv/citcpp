@@ -335,6 +335,41 @@ namespace citcpp
       }
 
     protected:
+      template<class T_VISITOR>
+	bool
+	recursively_visit_all_parameter_combinations (
+	    int start_idx_for_param_select, int current_param_idx_to_select,
+	    T_VISITOR &visitor)
+	{
+	  if (current_param_idx_to_select < 0)
+	    {
+	      // We assume that the visitor is a functor accepting a reference to this iterator.
+	      bool ret = visitor (*this);
+
+	      ++bitset_index_;
+
+	      return ret;
+	    }
+
+	  for (int j = start_idx_for_param_select;
+	      j >= current_param_idx_to_select; --j)
+	    {
+	      param_indices_[current_param_idx_to_select] =
+		  cov_map_.parameter_index_map_[j];
+
+	      bool ret = recursively_visit_all_parameter_combinations (
+		  j - 1, current_param_idx_to_select - 1, visitor);
+
+	      if (!ret)
+		{
+		  return false;
+		}
+	    }
+
+	  return true;
+	}
+
+    protected:
       coverage_map_base &cov_map_;
       std::vector<unsigned int> param_indices_;
       std::vector<int> value_indices_;
@@ -438,10 +473,18 @@ namespace citcpp
 	  void
 	  visit_all_parameter_combinations (T_VISITOR &visitor)
 	  {
+	    for (int i = cov_map_.t_ - 1; i >= 0; --i)
+	      {
+		param_indices_[i] = cov_map_.parameter_index_map_[cov_map_.n_
+		    - cov_map_.t_ + i];
+	      }
+
 	    bitset_index_ = 0;
 	    bit_pos_ = 0;
 
-	    recursively_visit_all_parameter_combinations (0, 0, visitor);
+	    recursively_visit_all_parameter_combinations (cov_map_.n_ - 1,
+							  cov_map_.t_ - 1,
+							  visitor);
 	  }
 
 	template<class T_VISITOR>
@@ -449,50 +492,21 @@ namespace citcpp
 	  visit_all_tuples (bool skip_fully_covered_param_combo,
 			    T_VISITOR &visitor)
 	  {
+	    for (int i = cov_map_.t_ - 1; i >= 0; --i)
+	      {
+		param_indices_[i] = cov_map_.parameter_index_map_[cov_map_.n_
+		    - cov_map_.t_ + i];
+	      }
+
 	    bitset_index_ = 0;
 	    bit_pos_ = 0;
 
 	    value_combination_iterator<T_VISITOR> value_combo_it (
 		skip_fully_covered_param_combo, visitor);
 
-	    recursively_visit_all_parameter_combinations (0, 0, value_combo_it);
-	  }
-
-      private:
-	template<class T_VISITOR>
-	  bool
-	  recursively_visit_all_parameter_combinations (
-	      unsigned int start_idx_for_param_select,
-	      unsigned int current_param_idx_to_select, T_VISITOR &visitor)
-	  {
-	    const int k = param_indices_.size ();
-
-	    if (current_param_idx_to_select == k)
-	      {
-		// We assume that the visitor is a functor accepting a reference to this iterator.
-		bool ret = visitor (*this);
-
-		++bitset_index_;
-
-		return ret;
-	      }
-
-	    for (unsigned int j = start_idx_for_param_select;
-		j <= cov_map_.n_ - k + current_param_idx_to_select; ++j)
-	      {
-		param_indices_[current_param_idx_to_select] =
-		    cov_map_.parameter_index_map_[j];
-
-		bool ret = recursively_visit_all_parameter_combinations (
-		    j + 1, current_param_idx_to_select + 1, visitor);
-
-		if (!ret)
-		  {
-		    return false;
-		  }
-	      }
-
-	    return true;
+	    recursively_visit_all_parameter_combinations (cov_map_.n_ - 1,
+							  cov_map_.t_ - 1,
+							  value_combo_it);
 	  }
       };
 
@@ -525,13 +539,18 @@ namespace citcpp
 	  void
 	  visit_all_parameter_combinations (T_VISITOR &visitor)
 	  {
-	    param_indices_[cov_map_.t_ - 1] =
-		cov_map_.parameter_index_map_[cov_map_.n_ - 1];
+	    for (int i = cov_map_.t_ - 1; i >= 0; --i)
+	      {
+		param_indices_[i] = cov_map_.parameter_index_map_[cov_map_.n_
+		    - cov_map_.t_ + i];
+	      }
 
 	    bitset_index_ = 0;
 	    bit_pos_ = 0;
 
-	    recursively_visit_all_parameter_combinations (0, 0, visitor);
+	    recursively_visit_all_parameter_combinations (cov_map_.n_ - 2,
+							  cov_map_.t_ - 2,
+							  visitor);
 	  }
 
 	template<class T_VISITOR>
@@ -539,8 +558,11 @@ namespace citcpp
 	  visit_all_tuples (bool skip_fully_covered_param_combo,
 			    T_VISITOR &visitor)
 	  {
-	    param_indices_[cov_map_.t_ - 1] =
-		cov_map_.parameter_index_map_[cov_map_.n_ - 1];
+	    for (int i = cov_map_.t_ - 1; i >= 0; --i)
+	      {
+		param_indices_[i] = cov_map_.parameter_index_map_[cov_map_.n_
+		    - cov_map_.t_ + i];
+	      }
 
 	    bitset_index_ = 0;
 	    bit_pos_ = 0;
@@ -548,44 +570,9 @@ namespace citcpp
 	    value_combination_iterator<T_VISITOR> value_combo_it (
 		skip_fully_covered_param_combo, visitor);
 
-	    recursively_visit_all_parameter_combinations (0, 0, value_combo_it);
-	  }
-
-      private:
-	template<class T_VISITOR>
-	  bool
-	  recursively_visit_all_parameter_combinations (
-	      unsigned int start_idx_for_param_select,
-	      unsigned int current_param_idx_to_select, T_VISITOR &visitor)
-	  {
-	    const unsigned int k = param_indices_.size () - 1;
-
-	    if (current_param_idx_to_select == k)
-	      {
-		// We assume that the visitor is a functor accepting a reference to this iterator.
-		bool ret = visitor (*this);
-
-		++bitset_index_;
-
-		return ret;
-	      }
-
-	    for (unsigned int j = start_idx_for_param_select;
-		j <= cov_map_.n_ - k + current_param_idx_to_select - 1; ++j)
-	      {
-		param_indices_[current_param_idx_to_select] =
-		    cov_map_.parameter_index_map_[j];
-
-		bool ret = recursively_visit_all_parameter_combinations (
-		    j + 1, current_param_idx_to_select + 1, visitor);
-
-		if (!ret)
-		  {
-		    return false;
-		  }
-	      }
-
-	    return true;
+	    recursively_visit_all_parameter_combinations (cov_map_.n_ - 2,
+							  cov_map_.t_ - 2,
+							  value_combo_it);
 	  }
       };
 

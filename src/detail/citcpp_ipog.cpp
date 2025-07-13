@@ -104,7 +104,7 @@ namespace
 		    cov_map.get_total_number_of_tuples ();
 
 		auto horizontal_ext_res = ipog_horizontal_extension (
-		    current_param_idx, model, parameter_index_map,
+		    current_param_idx, strength, model, parameter_index_map,
 		    number_combos_to_cover, test_set, cov_map, nullptr);
 
 		number_combos_to_cover -=

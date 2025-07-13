@@ -5,17 +5,16 @@ namespace
 {
   unsigned long long
   recursively_initialize_coverage_map (
-      unsigned int start_idx_for_next, unsigned int current_level,
+      int start_idx_for_next, int current_level,
       unsigned long long num_value_combinations,
       citcpp::detail::coverage_map_base &cov_map,
       const citcpp::detail::model &model,
       const std::vector<unsigned int> &parameter_index_map,
-      const unsigned int n, const unsigned int k,
       citcpp::detail::coverage_map_base::size_type &cov_map_first_level_index)
   {
     using namespace citcpp::detail;
 
-    if (current_level == k)
+    if (current_level < 0)
       {
 	cov_map.get_coverage_map ()[cov_map_first_level_index] =
 	    coverage_map_base::second_level_type (num_value_combinations);
@@ -26,15 +25,14 @@ namespace
       }
 
     unsigned long long partial_sum = 0;
-    for (unsigned int j = start_idx_for_next; j <= n - k + current_level; ++j)
+    for (int j = start_idx_for_next; j >= current_level; --j)
       {
 	partial_sum += recursively_initialize_coverage_map (
-	    j + 1,
-	    current_level + 1,
+	    j - 1,
+	    current_level - 1,
 	    num_value_combinations
 		* model.get_parameters ()[parameter_index_map[j]],
-	    cov_map, model, parameter_index_map, n, k,
-	    cov_map_first_level_index);
+	    cov_map, model, parameter_index_map, cov_map_first_level_index);
       }
 
     return partial_sum;
@@ -65,13 +63,13 @@ namespace citcpp
 	      model.get_parameters ()[real_last_param_idx];
 
 	  total_num_tuples_ = recursively_initialize_coverage_map (
-	      0, 0, num_last_param_values, *this, model, parameter_index_map,
-	      n_ - 1, t_ - 1, cov_map_first_level_index);
+	      n_ - 2, t_ - 2, num_last_param_values, *this, model,
+	      parameter_index_map, cov_map_first_level_index);
 	}
       else
 	{
 	  total_num_tuples_ = recursively_initialize_coverage_map (
-	      0, 0, 1, *this, model, parameter_index_map, n_, t_,
+	      n_ - 1, t_ - 1, 1, *this, model, parameter_index_map,
 	      cov_map_first_level_index);
 	}
     }
