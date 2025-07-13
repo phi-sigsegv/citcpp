@@ -1,9 +1,7 @@
 #include <ranges>
 #include <taskflow/taskflow.hpp>
-#include <taskflow/algorithm/for_each.hpp>
 #include "ipog_algorithm_uniform_strength.hpp"
 #include "for_each_cross_product_elem.hpp"
-#include "datatypes_config.hpp"
 
 namespace
 {
@@ -22,7 +20,7 @@ namespace
     {
       using namespace citcpp::detail;
 
-      const std::vector<unsigned int> &param_indices =
+      const strength_vector<unsigned int> &param_indices =
 	  cov_map_it.get_parameter_indices ();
       const coverage_map_ipog::second_level_type &value_combinations =
 	  cov_map_it.get_bitset ();
@@ -274,7 +272,7 @@ namespace
     {
       using namespace citcpp::detail;
 
-      const std::vector<unsigned int> &param_indices =
+      const strength_vector<unsigned int> &param_indices =
 	  cov_map_it.get_parameter_indices ();
       coverage_map_ipog::second_level_type &value_combinations =
 	  cov_map_it.get_bitset ();
@@ -469,9 +467,10 @@ namespace
       // then there is no point try to fit it into some test.
       coverage_map_ipog::second_level_type &value_combinations =
 	  cov_map_it.get_bitset ();
-      const std::vector<unsigned int> &param_indices =
+      const strength_vector<unsigned int> &param_indices =
 	  cov_map_it.get_parameter_indices ();
-      const std::vector<int> &value_indices = cov_map_it.get_value_indices ();
+      const strength_vector<int> &value_indices =
+	  cov_map_it.get_value_indices ();
 
       if (value_combinations.test_and_set (cov_map_it.get_bitpos ()))
 	{
@@ -556,8 +555,9 @@ namespace
 
     bool
     ipog_vertical_extension_try_inject_value_combo (
-	const std::vector<unsigned int> &param_indices,
-	const std::vector<int> &value_indices, citcpp::detail::test &t)
+	const citcpp::detail::strength_vector<unsigned int> &param_indices,
+	const citcpp::detail::strength_vector<int> &value_indices,
+	citcpp::detail::test &t)
     {
       int overwritten_dont_cares = 0;
       for (unsigned int i = 0; i < param_indices.size (); ++i)

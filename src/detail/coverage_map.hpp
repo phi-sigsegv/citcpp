@@ -5,6 +5,7 @@
 #include "bitset.hpp"
 #include "binom_coeff_table.hpp"
 #include "internal_model.hpp"
+#include "datatypes_config.hpp"
 
 namespace citcpp
 {
@@ -304,7 +305,7 @@ namespace citcpp
       coverage_map_iterator_base&
       operator= (coverage_map_iterator_base &&other) = default;
 
-      const std::vector<unsigned int>&
+      const strength_vector<unsigned int>&
       get_parameter_indices () const
       {
 	return param_indices_;
@@ -322,7 +323,7 @@ namespace citcpp
 	return cov_map_.cov_map_[bitset_index_];
       }
 
-      const std::vector<int>&
+      const strength_vector<int>&
       get_value_indices () const
       {
 	return value_indices_;
@@ -371,8 +372,8 @@ namespace citcpp
 
     protected:
       coverage_map_base &cov_map_;
-      std::vector<unsigned int> param_indices_;
-      std::vector<int> value_indices_;
+      strength_vector<unsigned int> param_indices_;
+      strength_vector<int> value_indices_;
       size_type bitset_index_;
       size_type bit_pos_;
     };
@@ -408,7 +409,7 @@ namespace citcpp
 	recursively_visit_all_value_combos_of_param_combo (
 	    coverage_map_iterator_base &cov_map_it, int current_index)
 	{
-	  std::vector<int> &value_indices = cov_map_it.value_indices_;
+	  strength_vector<int> &value_indices = cov_map_it.value_indices_;
 
 	  if (current_index < 0)
 	    {
