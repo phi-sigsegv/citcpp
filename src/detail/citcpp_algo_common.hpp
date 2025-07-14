@@ -1,7 +1,7 @@
 #ifndef DETAIL_CITCPP_ALGO_COMMON_HPP_
 #define DETAIL_CITCPP_ALGO_COMMON_HPP_
 
-#include <taskflow/taskflow.hpp>
+#include "datatypes_config.hpp"
 #include "internal_model.hpp"
 
 namespace citcpp
@@ -20,7 +20,7 @@ namespace citcpp
      * interaction strength.
      */
     unsigned long long
-    number_of_combinations_to_cover (tf::Executor &executor, const model &model,
+    number_of_combinations_to_cover (thread_pool &tp, const model &model,
 				     unsigned int t);
 
     /**
@@ -38,8 +38,7 @@ namespace citcpp
      */
     unsigned long long
     number_of_combinations_to_cover (
-	tf::Executor &executor, unsigned int current_param_idx,
-	const model &model,
+	thread_pool &tp, unsigned int current_param_idx, const model &model,
 	const std::vector<unsigned int> &parameter_index_map, unsigned int t);
   }
 }

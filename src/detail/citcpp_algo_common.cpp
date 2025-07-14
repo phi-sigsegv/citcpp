@@ -1,5 +1,3 @@
-#include <taskflow/taskflow.hpp>
-#include <taskflow/algorithm/for_each.hpp>
 #include "citcpp_algo_common.hpp"
 
 namespace
@@ -55,6 +53,116 @@ namespace
 
     return partial_sum;
   }
+
+  class compute_partial_sum_task : public citcpp::detail::thread_pool::Task
+  {
+    typedef compute_partial_sum_task this_type;
+
+  public:
+    compute_partial_sum_task () :
+	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (0), current_level_ (
+	    0), factorLevels_ (nullptr), num_combinations_ (0)
+    {
+    }
+
+    compute_partial_sum_task (int start_idx_for_next, int current_level,
+			      const std::vector<unsigned int> *factorLevels,
+			      std::atomic_ullong *num_combinations) :
+	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (
+	    start_idx_for_next), current_level_ (current_level), factorLevels_ (
+	    factorLevels), num_combinations_ (num_combinations)
+    {
+    }
+
+    compute_partial_sum_task (const this_type&) = default;
+    compute_partial_sum_task (this_type&&) = default;
+
+    virtual
+    ~compute_partial_sum_task ()
+    {
+    }
+
+    this_type&
+    operator= (const this_type&) = default;
+    this_type&
+    operator= (this_type&&) = default;
+
+    citcpp::detail::thread_pool::Task*
+    execute ()
+    {
+      unsigned long long chunk_num_combos = recursive_combine_and_sum (
+	  start_idx_for_next_ - 1, current_level_ - 1,
+	  (*factorLevels_)[start_idx_for_next_], *factorLevels_);
+      num_combinations_->fetch_add (chunk_num_combos,
+				    std::memory_order_acq_rel);
+
+      return nullptr;
+    }
+
+  private:
+    int start_idx_for_next_;
+    int current_level_;
+    const std::vector<unsigned int> *factorLevels_;
+    std::atomic_ullong *num_combinations_;
+  };
+
+  class compute_partial_sum_with_parameter_map_task : public citcpp::detail::thread_pool::Task
+  {
+    typedef compute_partial_sum_with_parameter_map_task this_type;
+
+  public:
+    compute_partial_sum_with_parameter_map_task () :
+	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (0), current_level_ (
+	    0), factorLevels_ (nullptr), parameter_index_map_ (nullptr), num_combinations_ (
+	    0)
+    {
+    }
+
+    compute_partial_sum_with_parameter_map_task (
+	int start_idx_for_next, int current_level,
+	const std::vector<unsigned int> *factorLevels,
+	const std::vector<unsigned int> *parameter_index_map,
+	std::atomic_ullong *num_combinations) :
+	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (
+	    start_idx_for_next), current_level_ (current_level), factorLevels_ (
+	    factorLevels), parameter_index_map_ (parameter_index_map), num_combinations_ (
+	    num_combinations)
+    {
+    }
+
+    compute_partial_sum_with_parameter_map_task (const this_type&) = default;
+    compute_partial_sum_with_parameter_map_task (this_type&&) = default;
+
+    virtual
+    ~compute_partial_sum_with_parameter_map_task ()
+    {
+    }
+
+    this_type&
+    operator= (const this_type&) = default;
+    this_type&
+    operator= (this_type&&) = default;
+
+    citcpp::detail::thread_pool::Task*
+    execute ()
+    {
+      unsigned long long chunk_num_combos = recursive_combine_and_sum (
+	  start_idx_for_next_ - 1, current_level_ - 1,
+	  (*factorLevels_)[start_idx_for_next_], *factorLevels_,
+	  *parameter_index_map_);
+      num_combinations_->fetch_add (chunk_num_combos,
+				    std::memory_order_acq_rel);
+
+      return nullptr;
+    }
+
+  private:
+    int start_idx_for_next_;
+    int current_level_;
+    const std::vector<unsigned int> *factorLevels_;
+    const std::vector<unsigned int> *parameter_index_map_;
+    std::atomic_ullong *num_combinations_;
+  };
 }
 
 namespace citcpp
@@ -69,7 +177,7 @@ namespace citcpp
     }
 
     unsigned long long
-    number_of_combinations_to_cover (tf::Executor &executor, const model &model,
+    number_of_combinations_to_cover (thread_pool &tp, const model &model,
 				     unsigned int t)
     {
       if (t < 2)
@@ -83,19 +191,16 @@ namespace citcpp
       // Each thread will compute a partial sum which we aggregate.
       std::atomic_ullong num_combinations = 0;
 
-      tf::Taskflow taskflow;
-      taskflow.for_each_index (
-	  t - 1,
-	  numFactors,
-	  1,
-	  [&model, t, &num_combinations]
-	  (int i)
-	    {
-	      unsigned long long chunk_num_combos = recursive_combine_and_sum (i - 1, t - 2, model.get_parameters ()[i], model.get_parameters ());
-	      num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
-	    });
+      task_group tg (tp.createTaskGroup ());
 
-      executor.run (taskflow).wait ();
+      std::vector<compute_partial_sum_task> tasks (numFactors - (t - 1));
+      for (unsigned int i = numFactors - 1; i >= (t - 1); --i)
+	{
+	  tasks.emplace_back (i, t - 1, &model.get_parameters (),
+			      &num_combinations);
+	  tg.spawn (i, &tasks.back ());
+	}
+      tg.wait ();
 
       return num_combinations;
     }
@@ -112,8 +217,7 @@ namespace citcpp
 
     unsigned long long
     number_of_combinations_to_cover (
-	tf::Executor &executor, unsigned int current_param_idx,
-	const model &model,
+	thread_pool &tp, unsigned int current_param_idx, const model &model,
 	const std::vector<unsigned int> &parameter_index_map, unsigned int t)
     {
       if (t < 2)
@@ -122,23 +226,23 @@ namespace citcpp
 						  parameter_index_map, t);
 	}
 
+      const unsigned int numFactors = current_param_idx;
+
       // Distribute the initial choices among threads
       // Each thread will compute a partial sum which we aggregate.
       std::atomic_ullong num_combinations = 0;
 
-      tf::Taskflow taskflow;
-      taskflow.for_each_index (
-	  t - 1,
-	  current_param_idx,
-	  1,
-	  [&model, &parameter_index_map, t, &num_combinations]
-	  (int i)
-	    {
-	      unsigned long long chunk_num_combos = recursive_combine_and_sum (i - 1, t - 2, model.get_parameters ()[parameter_index_map[i]], model.get_parameters (), parameter_index_map);
-	      num_combinations.fetch_add(chunk_num_combos, std::memory_order_acq_rel);
-	    });
+      task_group tg (tp.createTaskGroup ());
 
-      executor.run (taskflow).wait ();
+      std::vector<compute_partial_sum_with_parameter_map_task> tasks (
+	  numFactors - (t - 1));
+      for (unsigned int i = numFactors - 1; i >= (t - 1); --i)
+	{
+	  tasks.emplace_back (i, t - 1, &model.get_parameters (),
+			      &parameter_index_map, &num_combinations);
+	  tg.spawn (i, &tasks.back ());
+	}
+      tg.wait ();
 
       return num_combinations;
     }

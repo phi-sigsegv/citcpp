@@ -1493,7 +1493,7 @@ class StructuredTaskGroup
         for ( T_TASK & task : task_list )
         {
           m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
-          task->m_waiting_refcount = &m_waiting_refcount;
+          task.m_waiting_refcount = &m_waiting_refcount;
         }
       }
 

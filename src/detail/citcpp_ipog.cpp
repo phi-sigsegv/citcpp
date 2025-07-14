@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <chrono>
-#include <taskflow/taskflow.hpp>
+#include <thread>
 #include "citcpp_ipog.hpp"
 #include "exec_handle_ipog_impl.hpp"
 #include "citcpp_algo_common.hpp"
@@ -8,6 +8,7 @@
 #include "coverage_map.hpp"
 #include "binom_coeff_table.hpp"
 #include "ipog_algorithm_uniform_strength.hpp"
+#include "datatypes_config.hpp"
 
 namespace
 {
@@ -33,11 +34,20 @@ namespace
   {
     using namespace citcpp::detail;
 
-    tf::Executor executor;
+    unsigned int num_threads = std::thread::hardware_concurrency ();
+    if (num_threads == 0)
+      {
+	num_threads = 4;
+      }
+    // We use one thread less, since the main thread (the one executing this method) will
+    // not block, but helps in getting the work done.
+    --num_threads;
+
+    thread_pool tp (num_threads);
 
     // First we compute the number of combination we have to cover.
     unsigned long long number_combos_to_cover =
-	number_of_combinations_to_cover (executor, model, strength);
+	number_of_combinations_to_cover (tp, model, strength);
     exec_handle.set_number_of_combinations_to_cover (number_combos_to_cover);
 
     if (exec_handle.is_job_aborted ())
@@ -87,9 +97,8 @@ namespace
 		  }
 
 		unsigned long long number_combos_to_cover =
-		    number_of_combinations_to_cover (executor,
-						     current_param_idx, model,
-						     parameter_index_map,
+		    number_of_combinations_to_cover (tp, current_param_idx,
+						     model, parameter_index_map,
 						     strength - 1);
 		exec_handle.add_number_of_covered_combinations (
 		    number_combos_to_cover);
