@@ -342,24 +342,26 @@ namespace citcpp
 	    int start_idx_for_param_select, int current_param_idx_to_select,
 	    T_VISITOR &visitor)
 	{
-	  if (current_param_idx_to_select < 0)
-	    {
-	      // We assume that the visitor is a functor accepting a reference to this iterator.
-	      bool ret = visitor (*this);
-
-	      ++bitset_index_;
-
-	      return ret;
-	    }
-
 	  for (int j = start_idx_for_param_select;
 	      j >= current_param_idx_to_select; --j)
 	    {
 	      param_indices_[current_param_idx_to_select] =
 		  cov_map_.parameter_index_map_[j];
 
-	      bool ret = recursively_visit_all_parameter_combinations (
-		  j - 1, current_param_idx_to_select - 1, visitor);
+	      bool ret = true;
+
+	      if (current_param_idx_to_select == 0)
+		{
+		  // We assume that the visitor is a functor accepting a reference to this iterator.
+		  ret = visitor (*this);
+
+		  ++bitset_index_;
+		}
+	      else
+		{
+		  ret = recursively_visit_all_parameter_combinations (
+		      j - 1, current_param_idx_to_select - 1, visitor);
+		}
 
 	      if (!ret)
 		{
@@ -411,17 +413,6 @@ namespace citcpp
 	{
 	  strength_vector<int> &value_indices = cov_map_it.value_indices_;
 
-	  if (current_index < 0)
-	    {
-	      // We assume that the visitor is a functor accepting a reference to this iterator.
-	      // In addition
-	      bool ret = visitor_ (cov_map_it);
-
-	      ++cov_map_it.bit_pos_;
-
-	      return ret;
-	    }
-
 	  // The current range goes from 0 to max_value[current_index]
 	  unsigned int max_val =
 	      cov_map_it.cov_map_.get_model ().get_parameters ()[cov_map_it.param_indices_[current_index]];
@@ -430,8 +421,21 @@ namespace citcpp
 	    {
 	      value_indices[current_index] = i;
 
-	      bool ret = recursively_visit_all_value_combos_of_param_combo (
-		  cov_map_it, current_index - 1);
+	      bool ret = true;
+
+	      if (current_index == 0)
+		{
+		  // We assume that the visitor is a functor accepting a reference to this iterator.
+		  // In addition
+		  ret = visitor_ (cov_map_it);
+
+		  ++cov_map_it.bit_pos_;
+		}
+	      else
+		{
+		  ret = recursively_visit_all_value_combos_of_param_combo (
+		      cov_map_it, current_index - 1);
+		}
 
 	      if (!ret)
 		{

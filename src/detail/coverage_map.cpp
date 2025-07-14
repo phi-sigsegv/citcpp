@@ -14,25 +14,31 @@ namespace
   {
     using namespace citcpp::detail;
 
-    if (current_level < 0)
-      {
-	cov_map.get_coverage_map ()[cov_map_first_level_index] =
-	    coverage_map_base::second_level_type (num_value_combinations);
-
-	++cov_map_first_level_index;
-
-	return num_value_combinations;
-      }
-
     unsigned long long partial_sum = 0;
     for (int j = start_idx_for_next; j >= current_level; --j)
       {
-	partial_sum += recursively_initialize_coverage_map (
-	    j - 1,
-	    current_level - 1,
-	    num_value_combinations
-		* model.get_parameters ()[parameter_index_map[j]],
-	    cov_map, model, parameter_index_map, cov_map_first_level_index);
+	if (current_level == 0)
+	  {
+	    unsigned long long final_num_value_combinations =
+		num_value_combinations
+		    * model.get_parameters ()[parameter_index_map[j]];
+	    partial_sum += final_num_value_combinations;
+
+	    cov_map.get_coverage_map ()[cov_map_first_level_index] =
+		coverage_map_base::second_level_type (
+		    final_num_value_combinations);
+
+	    ++cov_map_first_level_index;
+	  }
+	else
+	  {
+	    partial_sum += recursively_initialize_coverage_map (
+		j - 1,
+		current_level - 1,
+		num_value_combinations
+		    * model.get_parameters ()[parameter_index_map[j]],
+		cov_map, model, parameter_index_map, cov_map_first_level_index);
+	  }
       }
 
     return partial_sum;
