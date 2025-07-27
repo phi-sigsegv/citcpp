@@ -39,9 +39,6 @@ namespace
       {
 	num_threads = 4;
       }
-    // We use one thread less, since the main thread (the one executing this method) will
-    // not block, but helps in getting the work done.
-    --num_threads;
 
     thread_pool tp (num_threads);
 

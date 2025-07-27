@@ -2013,6 +2013,18 @@ class StructuredWorkStealingThreadPool
       return false;
     }
 
+    unsigned int
+    get_num_workers () const
+    {
+      return m_num_threads;
+    }
+
+    unsigned int
+    get_worker_id () const
+    {
+      return ThreadContext::getThreadId();
+    }
+
   private:
     void startWorkers()
     {
@@ -3157,9 +3169,34 @@ class WorkStealingThreadPool
      */
     template< class T_CALLABLE >
     Task
-    makeTask( T_CALLABLE & callable )
+    makeTask( T_CALLABLE & callable ) const
     {
       return { callable };
+    }
+
+    /**
+     * Returns the number of workers of this thread pool.
+     *
+     * @return the number of workers of this thread pool
+     */
+    unsigned int
+    get_num_workers () const
+    {
+      return m_pool_impl.get_num_workers();
+    }
+
+    /**
+     * Returns the ID of the calling worker thread.
+     * Each thread of a thread pool is assigned a unique ID.
+     * These IDs form a contiguous range starting from 0.
+     * This allows using them as indexes of an array.
+     *
+     * @return the ID of the calling worker thread
+     */
+    unsigned int
+    get_worker_id () const
+    {
+      return m_pool_impl.get_worker_id();
     }
 
   private:
