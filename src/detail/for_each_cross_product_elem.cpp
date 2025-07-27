@@ -49,34 +49,5 @@ namespace citcpp
       std::vector<unsigned int> callback_data (max_values.size ());
       recursive_cross_product (max_values, 0, callback_data, callback);
     }
-
-    /**
-     * Iterates over all combinations of size k
-     * chosen from a range of [0, ... , n - 1] in lexicographical order.
-     * For each combination the given callback is executed.
-     * The iteration may be parallelized if using this overload. The parallelization works by
-     * partitioning the number of combinations according to the first element in lexicographical order.
-     * Combinations starting with [0, ... , n - 1] are each executed as a separated
-     * task, meaning the first element in the combination passed to the callback can be used
-     * in order to avoid data races.
-     */
-    void
-    for_each_cross_product_elem (const std::vector<unsigned int> &max_values,
-				 tf::Executor &executor,
-				 const std::function<void
-				 (const std::vector<unsigned int>&)> &callback)
-    {
-      tf::Taskflow taskflow;
-      taskflow.for_each_index (
-	  0u, max_values[max_values.size () - 1], 1u, [&max_values, &callback]
-	  (unsigned int i)
-	    {
-	      std::vector<unsigned int> callback_data (max_values.size ());
-	      callback_data[0] = i;
-	      recursive_cross_product (max_values, 1, callback_data, callback);
-	    });
-
-      executor.run (taskflow).wait ();
-    }
   }
 }
