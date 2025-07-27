@@ -19,7 +19,7 @@ namespace citcpp
       //  using strength_vector = std::vector<T>;
       using strength_vector = SmallVector<T, 6>;
 
-    using thread_pool = threads::WorkStealingThreadPool<32, 64>;
+    using thread_pool = threads::WorkStealingThreadPool<32>;
     using task_group = thread_pool::TaskGroup;
   }
 }

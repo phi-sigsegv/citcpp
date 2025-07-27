@@ -10,6 +10,7 @@
 #include <memory>
 #include <tuple>
 #include <utility>
+#include <new>
 
 #ifdef _MSC_VER
 #define NOMINMAX
@@ -27,6 +28,13 @@ namespace threads {
 
 
 namespace detail {
+
+
+
+struct false_sharing_avoidance_alignment
+{
+  static constexpr size_t value = std::hardware_destructive_interference_size;
+};
 
 
 
@@ -206,24 +214,22 @@ class hybrid_backoff
 
 /**
  * This template provides something similar to std::array.
- * However, it can be configured to store its items in an
- * over-aligned way, making it possible to avoid false-sharing
- * if the alignment is chosen greater than or equal to the
- * size of a cache line. In addition this template also
+ * However, it is setup to store its items in an
+ * over-aligned way, in order to avoid false-sharing.
+ * In addition this template also
  * allows to initialize all members with a single value
  * passed to its constructor.
  */
 template< typename T_VALUE,
-          std::size_t N,
-          std::size_t T_ALIGNMENT >
+          std::size_t N >
 class array_fixed_size
 {
   private:
-    struct alignas( T_ALIGNMENT ) aligned_value
+    struct alignas( false_sharing_avoidance_alignment::value ) aligned_value
     {
       T_VALUE m_value;
     };
-    typedef array_fixed_size< T_VALUE, N, T_ALIGNMENT > this_type;
+    typedef array_fixed_size< T_VALUE, N > this_type;
 
   public:
     template< bool is_const = false >
@@ -349,17 +355,16 @@ class array_fixed_size
     friend bool operator!=( const this_type & lhs, const this_type & rhs ) { return !( lhs == rhs ); }
 
   private:
-    alignas( T_ALIGNMENT ) aligned_value m_array[N];
+    alignas( false_sharing_avoidance_alignment::value ) aligned_value m_array[N];
 };
 
 
 
-template< typename T_VALUE,
-          std::size_t T_ALIGNMENT >
-class array_fixed_size< T_VALUE, 0, T_ALIGNMENT >
+template< typename T_VALUE >
+class array_fixed_size< T_VALUE, 0 >
 {
   private:
-    typedef array_fixed_size< T_VALUE, 0, T_ALIGNMENT > this_type;
+    typedef array_fixed_size< T_VALUE, 0 > this_type;
 
   public:
     typedef T_VALUE value_type;
@@ -560,8 +565,7 @@ class SpinLock
 
 class concurrent_queue_intrusive_node
 {
-  template< typename T_VALUE,
-            unsigned int T_CACHE_LINE_SIZE >
+  template< typename T_VALUE >
   friend class concurrent_queue_intrusive;
 
   template< typename T_TASK >
@@ -602,12 +606,11 @@ class concurrent_queue_intrusive_node
 
 
 
-template< typename T_VALUE,
-          unsigned int T_CACHE_LINE_SIZE >
-class alignas( T_CACHE_LINE_SIZE ) concurrent_queue_intrusive
+template< typename T_VALUE >
+class alignas( false_sharing_avoidance_alignment::value ) concurrent_queue_intrusive
 {
   typedef concurrent_queue_intrusive_node node_type;
-  typedef concurrent_queue_intrusive< T_VALUE, T_CACHE_LINE_SIZE > this_type;
+  typedef concurrent_queue_intrusive< T_VALUE > this_type;
 
   public:
     typedef T_VALUE value_type;
@@ -973,25 +976,22 @@ class alignas( T_CACHE_LINE_SIZE ) concurrent_queue_intrusive
     }
 
   private:
-    alignas( T_CACHE_LINE_SIZE ) SpinLock m_lock;
-    alignas( T_CACHE_LINE_SIZE ) node_type m_dummy;
-    alignas( T_CACHE_LINE_SIZE ) std::atomic< node_type * > m_head;
-    alignas( T_CACHE_LINE_SIZE ) std::atomic< node_type * > m_tail;
+    alignas( false_sharing_avoidance_alignment::value ) SpinLock m_lock;
+    alignas( false_sharing_avoidance_alignment::value ) node_type m_dummy;
+    alignas( false_sharing_avoidance_alignment::value ) std::atomic< node_type * > m_head;
+    alignas( false_sharing_avoidance_alignment::value ) std::atomic< node_type * > m_tail;
 };
 
 
 
 template< typename T_VALUE,
-          std::size_t MAX_NUM_QUEUES,
-          std::size_t T_CACHE_LINE_SIZE >
-class alignas( T_CACHE_LINE_SIZE ) distributed_queue_intrusive
+          std::size_t MAX_NUM_QUEUES >
+class alignas( false_sharing_avoidance_alignment::value ) distributed_queue_intrusive
 {
-  typedef array_fixed_size< concurrent_queue_intrusive< T_VALUE, T_CACHE_LINE_SIZE >,
-                            MAX_NUM_QUEUES,
-                            T_CACHE_LINE_SIZE > array_type;
+  typedef array_fixed_size< concurrent_queue_intrusive< T_VALUE >,
+                            MAX_NUM_QUEUES > array_type;
   typedef distributed_queue_intrusive< T_VALUE,
-                                       MAX_NUM_QUEUES,
-                                       T_CACHE_LINE_SIZE > this_type;
+                                       MAX_NUM_QUEUES > this_type;
 
   public:
     typedef T_VALUE value_type;
@@ -1595,7 +1595,6 @@ class StructuredTask : public concurrent_queue_intrusive_node
   friend class StructuredWorkStealingThreadPoolWorker;
 
   template< std::size_t X_MAX_NUM_THREADS,
-            unsigned int X_CACHE_LINE_SIZE,
             typename X_TASK >
   friend class StructuredWorkStealingThreadPool;
 
@@ -1872,18 +1871,15 @@ class StructuredWorkStealingThreadPoolWorker
 
 
 template< std::size_t MAX_NUM_THREADS,
-          unsigned int T_CACHE_LINE_SIZE,
           typename T_TASK >
 class StructuredWorkStealingThreadPool
 {
   public:
     typedef StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                              T_CACHE_LINE_SIZE,
                                               T_TASK > this_type;
     typedef T_TASK task_type;
     typedef distributed_queue_intrusive< task_type,
-                                         MAX_NUM_THREADS,
-                                         T_CACHE_LINE_SIZE > task_queue_type;
+                                         MAX_NUM_THREADS > task_queue_type;
     typedef StructuredWorkStealingThreadPoolWorker< task_queue_type,
                                                     task_type > worker_type;
 
@@ -2033,11 +2029,9 @@ class StructuredWorkStealingThreadPool
     task_queue_type m_task_queue;
     const std::size_t m_num_threads;
     array_fixed_size< task_type,
-                      MAX_NUM_THREADS,
-                      T_CACHE_LINE_SIZE > m_termination_tasks;
+                      MAX_NUM_THREADS > m_termination_tasks;
     array_fixed_size< worker_type,
-                      MAX_NUM_THREADS - 1,
-                      T_CACHE_LINE_SIZE > m_workers;
+                      MAX_NUM_THREADS - 1 > m_workers;
     std::atomic_flag m_workers_started;
 };
 
@@ -2198,22 +2192,16 @@ class ThreadContext
  * value of the calling thread. This allows the threads to modify
  * their local values without any synchronization. Later on the
  * values can be aggregated by iterating over them.
- *
- * The template parameter T_CACHE_LINE_SIZE can be used to
- * configure the way the thread-local values are stored.
  */
 template< typename T_VALUE,
-          unsigned int T_MAX_NUM_THREADS,
-          std::size_t T_CACHE_LINE_SIZE = 64 >
+          unsigned int T_MAX_NUM_THREADS >
 class ThreadSpecificValueArray
 {
   private:
     typedef detail::array_fixed_size< T_VALUE,
-                                      T_MAX_NUM_THREADS,
-                                      T_CACHE_LINE_SIZE > array_type;
+                                      T_MAX_NUM_THREADS > array_type;
     typedef ThreadSpecificValueArray< T_VALUE,
-                                      T_MAX_NUM_THREADS,
-                                      T_CACHE_LINE_SIZE > this_type;
+                                      T_MAX_NUM_THREADS > this_type;
 
   public:
     using value_type = typename array_type::value_type;
@@ -2298,12 +2286,7 @@ class ThreadSpecificValueArray
  * classes Task, TaskGroup and Future illustrate these features.
  *
  * The parameters of this template allow to control the maximum
- * number of threads that can be spawned by the thread pool
- * and to configure the size of a cache line of the target
- * CPU. The size of a cache line is often 64 bytes on modern
- * CPUs. The purpose of this template parameter is to avoid
- * false sharing by forcing thread-local data of two different
- * threads to never be placed in the same cache line.
+ * number of threads that can be spawned by the thread pool.
  *
  * Note that the worker threads created by this template do
  * busy waiting, polling the task queue for new tasks to be
@@ -2341,12 +2324,10 @@ class ThreadSpecificValueArray
  * different threads having the same ID access the same data, which
  * leads to race conditions.
  */
-template< std::size_t MAX_NUM_THREADS,
-          unsigned int T_CACHE_LINE_SIZE = 64 >
+template< std::size_t MAX_NUM_THREADS >
 class WorkStealingThreadPool
 {
-  typedef WorkStealingThreadPool< MAX_NUM_THREADS,
-                                  T_CACHE_LINE_SIZE > pool_this_type;
+  typedef WorkStealingThreadPool< MAX_NUM_THREADS > pool_this_type;
 
   public:
     // Forward declaration.
@@ -2381,7 +2362,6 @@ class WorkStealingThreadPool
 
       public:
         TaskGroup( detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                                             T_CACHE_LINE_SIZE,
                                                              Task > * pool )
             : m_impl( pool )
         {}
@@ -2576,7 +2556,6 @@ class WorkStealingThreadPool
 
       private:
         detail::StructuredTaskGroup< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                                                               T_CACHE_LINE_SIZE,
                                                                                Task >,
                                      Task > m_impl;
     };
@@ -2763,12 +2742,10 @@ class WorkStealingThreadPool
      * one could also just let tg go out of scope. This has the same effect.
      */
     class Task : public detail::StructuredTask< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                                                                          T_CACHE_LINE_SIZE,
                                                                                           Task >,
                                                 Task >
     {
       typedef detail::StructuredTask< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                                                                T_CACHE_LINE_SIZE,
                                                                                 Task >,
                                       Task > base_type;
       typedef Task this_type;
@@ -3187,7 +3164,6 @@ class WorkStealingThreadPool
 
   private:
     detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                              T_CACHE_LINE_SIZE,
                                               Task > m_pool_impl;
 };
 
