@@ -21,7 +21,6 @@ namespace citcpp
 
     using thread_pool = threads::WorkStealingThreadPool<32, 64>;
     using task_group = thread_pool::TaskGroup;
-    using task = thread_pool::NonOwningFuncTaskNoTaskAccess;
   }
 }
 

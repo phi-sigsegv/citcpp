@@ -63,6 +63,7 @@ namespace
 	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (0), current_level_ (
 	    0), factorLevels_ (nullptr), num_combinations_ (0)
     {
+      setCallable (*this);
     }
 
     compute_partial_sum_task (int start_idx_for_next, int current_level,
@@ -72,6 +73,7 @@ namespace
 	    start_idx_for_next), current_level_ (current_level), factorLevels_ (
 	    factorLevels), num_combinations_ (num_combinations)
     {
+      setCallable (*this);
     }
 
     compute_partial_sum_task (const this_type&) = default;
@@ -87,16 +89,14 @@ namespace
     this_type&
     operator= (this_type&&) = default;
 
-    citcpp::detail::thread_pool::Task*
-    execute ()
+    void
+    operator () ()
     {
       unsigned long long chunk_num_combos = recursive_combine_and_sum (
 	  start_idx_for_next_ - 1, current_level_ - 1,
 	  (*factorLevels_)[start_idx_for_next_], *factorLevels_);
       num_combinations_->fetch_add (chunk_num_combos,
 				    std::memory_order_acq_rel);
-
-      return nullptr;
     }
 
   private:
@@ -116,6 +116,7 @@ namespace
 	    0), factorLevels_ (nullptr), parameter_index_map_ (nullptr), num_combinations_ (
 	    0)
     {
+      setCallable (*this);
     }
 
     compute_partial_sum_with_parameter_map_task (
@@ -128,6 +129,7 @@ namespace
 	    factorLevels), parameter_index_map_ (parameter_index_map), num_combinations_ (
 	    num_combinations)
     {
+      setCallable (*this);
     }
 
     compute_partial_sum_with_parameter_map_task (const this_type&) = default;
@@ -143,8 +145,8 @@ namespace
     this_type&
     operator= (this_type&&) = default;
 
-    citcpp::detail::thread_pool::Task*
-    execute ()
+    void
+    operator () ()
     {
       unsigned long long chunk_num_combos = recursive_combine_and_sum (
 	  start_idx_for_next_ - 1, current_level_ - 1,
@@ -152,8 +154,6 @@ namespace
 	  *parameter_index_map_);
       num_combinations_->fetch_add (chunk_num_combos,
 				    std::memory_order_acq_rel);
-
-      return nullptr;
     }
 
   private:

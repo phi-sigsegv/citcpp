@@ -1543,32 +1543,21 @@ class StructuredTaskGroup
       do
       {
         task->m_pool_ptr = m_pool_ptr;
-        T_TASK * next_task = task->execute();
+        task->execute();
 
+        T_TASK * next_task = nullptr;
         if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
         {
           // The successor task is ready to be executed.
-          // We check whether task has returned another job for
-          // us. If not, we take the successor task as our next
-          // task to execute. Otherwise, we push the successor
-          // task to the task queue, such that it is executed by
-          // an arbitrary worker thread.
-          if ( next_task )
-          {
-            m_pool_ptr->enqueueTask( task->m_successor_task );
-          }
-          else
-          {
-            next_task = task->m_successor_task;
-          }
+          // We take the successor task as our next
+          // task to execute.
+          next_task = task->m_successor_task;
         }
 
         if ( task->m_waiting_refcount )
         {
           task->m_waiting_refcount->fetch_sub( 1, std::memory_order_acq_rel );
         }
-
-        T_TASK::callFinCallBack( task );
 
         task = next_task;
       } while( task );
@@ -1593,124 +1582,6 @@ class StructuredTaskGroup
 
 
 
-template< typename T_VALUE,
-          typename T_TASK >
-class StructuredWorkStealingThreadPoolFuture
-{
-  typedef StructuredWorkStealingThreadPoolFuture< T_VALUE,
-                                                  T_TASK > this_type;
-
-  class executor_task : public T_TASK
-  {
-    public:
-      executor_task( this_type & future )
-          : m_future( future )
-          , m_func_ref()
-      {}
-
-      virtual ~executor_task() {}
-
-      T_TASK * execute()
-      {
-        m_future.set( std::move( m_func_ref() ) );
-
-        return nullptr;
-      }
-
-      void setFunc( function_ref< T_VALUE() > func_ref )
-      {
-        m_func_ref = func_ref;
-      }
-
-    private:
-      this_type & m_future;
-      function_ref< T_VALUE() > m_func_ref;
-  };
-
-  public:
-    StructuredWorkStealingThreadPoolFuture()
-        : m_value()
-        , m_executor_task( *this )
-        , m_waiting_refcount( 0 )
-        , m_executed( false )
-    {
-      m_executor_task.m_waiting_refcount = &m_waiting_refcount;
-    }
-
-    StructuredWorkStealingThreadPoolFuture( const this_type & ) = delete;
-    StructuredWorkStealingThreadPoolFuture( this_type && ) = delete;
-
-    ~StructuredWorkStealingThreadPoolFuture()
-    {
-      wait();
-    }
-
-    this_type & operator=( const this_type & ) = delete;
-    this_type & operator=( this_type && ) = delete;
-
-    void set( T_VALUE && value )
-    {
-      m_value = std::move( value );
-    }
-
-    void set( const T_VALUE & value )
-    {
-      m_value = value;
-    }
-
-    T_VALUE & get()
-    {
-      wait();
-
-      return m_value;
-    }
-
-    executor_task & executorTask()
-    {
-      return m_executor_task;
-    }
-
-    std::atomic_int & waitingRefcount()
-    {
-      return m_waiting_refcount;
-    }
-
-    bool & hasExecuted()
-    {
-      return m_executed;
-    }
-
-  private:
-    void wait()
-    {
-      if ( m_executed )
-      {
-        m_executed = false;
-
-        hybrid_backoff bkoff;
-        while ( m_waiting_refcount.load( std::memory_order_acquire ) > 0 )
-        {
-          if ( m_executor_task.m_pool_ptr->stealTask() )
-          {
-            bkoff.reset();
-          }
-          else
-          {
-            bkoff.backoff();
-          }
-        }
-      }
-    }
-
-  private:
-    T_VALUE m_value;
-    executor_task m_executor_task;
-    std::atomic_int m_waiting_refcount;
-    bool m_executed;
-};
-
-
-
 template< typename T_THREAD_POOL,
           typename T_DERIVED >
 class StructuredTask : public concurrent_queue_intrusive_node
@@ -1718,10 +1589,6 @@ class StructuredTask : public concurrent_queue_intrusive_node
   template< typename X_THREAD_POOL,
             typename X_TASK >
   friend class StructuredTaskGroup;
-
-  template< typename X_VALUE,
-            typename X_TASK >
-  friend class StructuredWorkStealingThreadPoolFuture;
 
   template< typename X_QUEUE,
             typename X_TASK >
@@ -1745,7 +1612,15 @@ class StructuredTask : public concurrent_queue_intrusive_node
         , m_refcount( 0 )
         , m_successor_task( nullptr )
         , m_waiting_refcount( nullptr )
+        , m_func_ref()
     {}
+
+    template< class T_CALLABLE >
+    StructuredTask( T_CALLABLE & callable )
+        : StructuredTask()
+    {
+      setCallable( callable );
+    }
 
     StructuredTask( const this_type & other )
         : m_pool_ptr( other.m_pool_ptr )
@@ -1753,6 +1628,7 @@ class StructuredTask : public concurrent_queue_intrusive_node
         , m_refcount( other.m_refcount.load( std::memory_order_relaxed ) )
         , m_successor_task( other.m_successor_task )
         , m_waiting_refcount( other.m_waiting_refcount )
+        , m_func_ref( other.m_func_ref )
     {}
 
     StructuredTask( this_type && other )
@@ -1761,6 +1637,7 @@ class StructuredTask : public concurrent_queue_intrusive_node
         , m_refcount( other.m_refcount.load( std::memory_order_relaxed ) )
         , m_successor_task( other.m_successor_task )
         , m_waiting_refcount( other.m_waiting_refcount )
+        , m_func_ref( std::move( other.m_func_ref ) )
     {}
 
     virtual ~StructuredTask() {}
@@ -1772,6 +1649,7 @@ class StructuredTask : public concurrent_queue_intrusive_node
       m_refcount.store( other.m_refcount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
       m_successor_task = other.m_successor_task;
       m_waiting_refcount = other.m_waiting_refcount;
+      m_func_ref = other.m_func_ref;
 
       return *this;
     }
@@ -1783,11 +1661,10 @@ class StructuredTask : public concurrent_queue_intrusive_node
       m_refcount.store( other.m_refcount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
       m_successor_task = other.m_successor_task;
       m_waiting_refcount = other.m_waiting_refcount;
+      m_func_ref = std::move( other.m_func_ref );
 
       return *this;
     }
-
-    virtual T_DERIVED * execute() = 0;
 
     void spawn( T_DERIVED * task ) const
     {
@@ -1855,6 +1732,12 @@ class StructuredTask : public concurrent_queue_intrusive_node
       m_waiting_refcount = nullptr;
     }
 
+    template< class T_CALLABLE >
+    void setCallable( T_CALLABLE & callable )
+    {
+      setCallableImpl( callable );
+    }
+
   protected:
     int decrementRefCount()
     {
@@ -1866,12 +1749,25 @@ class StructuredTask : public concurrent_queue_intrusive_node
       return m_refcount.fetch_add( count, std::memory_order_acq_rel ) + count;
     }
 
+  private:
+    void execute()
+    {
+      m_func_ref();
+    }
+
+    template< class T_CALLABLE >
+    void setCallableImpl( T_CALLABLE & callable )
+    {
+      m_func_ref = detail::function_ref< void() >( std::forward< T_CALLABLE >( callable ) );
+    }
+
   protected:
     mutable pool_type * m_pool_ptr;
     T_STATUS_MASK_TYPE m_task_status;
     std::atomic_int m_refcount;
     T_DERIVED * m_successor_task;
     std::atomic_int * m_waiting_refcount;
+    detail::function_ref< void() > m_func_ref;
 };
 
 
@@ -1944,29 +1840,15 @@ class StructuredWorkStealingThreadPoolWorker
         {
           do
           {
-            task_type * next_task = task->execute();
+            task->execute();
 
+            task_type * next_task = nullptr;
             if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
             {
               // The successor task is ready to be executed.
-              // We check whether task has returned another job for
-              // us. If not, we take the successor task as our next
-              // task to execute. Otherwise, we push the successor
-              // task to the task queue, such that it is executed by
-              // an arbitrary worker thread.
-              if ( next_task )
-              {
-                task->m_successor_task->m_pool_ptr = task->m_pool_ptr;
-                m_queue->push( task->m_successor_task );
-              }
-              else
-              {
-                next_task = task->m_successor_task;
-              }
-            }
-
-            if ( next_task )
-            {
+              // We take the successor task as our next
+              // task to execute.
+              next_task = task->m_successor_task;
               next_task->m_pool_ptr = task->m_pool_ptr;
             }
 
@@ -1974,8 +1856,6 @@ class StructuredWorkStealingThreadPoolWorker
             {
               task->m_waiting_refcount->fetch_sub( 1, std::memory_order_acq_rel );
             }
-
-            task_type::callFinCallBack( task );
 
             task = next_task;
           } while( task );
@@ -2006,13 +1886,6 @@ class StructuredWorkStealingThreadPool
                                          T_CACHE_LINE_SIZE > task_queue_type;
     typedef StructuredWorkStealingThreadPoolWorker< task_queue_type,
                                                     task_type > worker_type;
-
-    class empty_task : public task_type
-    {
-      public:
-        virtual ~empty_task() {}
-        task_type * execute() { return nullptr; }
-    };
 
   public:
     StructuredWorkStealingThreadPool( std::size_t num_threads )
@@ -2117,28 +1990,15 @@ class StructuredWorkStealingThreadPool
         {
           do
           {
-            task_type * next_task = task->execute();
+            task->execute();
 
+            task_type * next_task = nullptr;
             if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
             {
               // The successor task is ready to be executed.
-              // We check whether task has returned another job for
-              // us. If not, we take the successor task as our next
-              // task to execute. Otherwise, we push the successor
-              // task to the task queue, such that it is executed by
-              // an arbitrary worker thread.
-              if ( next_task )
-              {
-                enqueueTask( task->m_successor_task );
-              }
-              else
-              {
-                next_task = task->m_successor_task;
-              }
-            }
-
-            if ( next_task )
-            {
+              // We take the successor task as our next
+              // task to execute.
+              next_task = task->m_successor_task;
               next_task->m_pool_ptr = task->m_pool_ptr;
             }
 
@@ -2146,8 +2006,6 @@ class StructuredWorkStealingThreadPool
             {
               task->m_waiting_refcount->fetch_sub( 1, std::memory_order_acq_rel );
             }
-
-            task_type::callFinCallBack( task );
 
             task = next_task;
           } while( task );
@@ -2157,22 +2015,6 @@ class StructuredWorkStealingThreadPool
       }
 
       return false;
-    }
-
-    template< class T_VALUE >
-    void async( function_ref< T_VALUE() > func_ref,
-                StructuredWorkStealingThreadPoolFuture< T_VALUE, task_type > & future )
-    {
-      if ( future.hasExecuted() )
-      {
-        return;
-      }
-
-      future.executorTask().setFunc( func_ref );
-      future.waitingRefcount().fetch_add( 1, std::memory_order_acq_rel );
-      future.hasExecuted() = true;
-
-      enqueueTask( &future.executorTask() );
     }
 
   private:
@@ -2190,7 +2032,7 @@ class StructuredWorkStealingThreadPool
   private:
     task_queue_type m_task_queue;
     const std::size_t m_num_threads;
-    array_fixed_size< empty_task,
+    array_fixed_size< task_type,
                       MAX_NUM_THREADS,
                       T_CACHE_LINE_SIZE > m_termination_tasks;
     array_fixed_size< worker_type,
@@ -2446,9 +2288,9 @@ class ThreadSpecificValueArray
 
 /**
  * This class template provides a work stealing thread
- * pool. Tasks can be defined by deriving from the nested
- * class \a Task and implementing the purely virtual
- * execute() method. Such tasks can then be enqueued on
+ * pool. Tasks can be defined by creating objects of the nested
+ * class \a Task and setting some callable to be executed by them.
+ * Such tasks can then be enqueued on
  * this thread pool for execution by some of its threads.
  * This thread pool is in many ways similar to Intel TBBs
  * task scheduler and also provides means to synchronize
@@ -2511,97 +2353,6 @@ class WorkStealingThreadPool
     class Task;
 
     /**
-     * This class provides a future object that is used for
-     * implementing a similar functionality to std::async.
-     * The member #get() can be used to fetch the return value
-     * of the asynchronously executed function. If the function
-     * has not been executed yet, then the caller of #get()
-     * synchronizes and waits until the function has been executed,
-     * possibly stealing some work from the thread pool.
-     * You may also reuse a future object to call a different function
-     * (or the same function) of the same signature after having called
-     * #get().
-     * Note that the destructor also synchronizes, meaning destructing
-     * a future is similar to calling #get() before.
-     */
-    template< typename T_VALUE >
-    class Future
-    {
-      template< std::size_t X_MAX_NUM_THREADS,
-                unsigned int X_CACHE_LINE_SIZE >
-      friend class WorkStealingThreadPool;
-
-      friend class pool_this_type::Task;
-
-      typedef Future< T_VALUE > this_type;
-
-      public:
-        Future() = default;
-
-        Future( const this_type & ) = delete;
-        Future( this_type && ) = delete;
-
-        /**
-         * The caller of the destructor synchronizes, waiting until the
-         * function has been executed, if the asynchronous execution
-         * of a function has been spawned before.
-         */
-        ~Future()
-        {}
-
-        this_type & operator=( const this_type & ) = delete;
-        this_type & operator=( this_type && ) = delete;
-
-        /**
-         * This method sets the value stored by this future
-         * that can be retrieved by calling #get().
-         * WARNING: This method is not thread-safe. Thus, do not
-         * call it on a future, where a corresponding asynchronous
-         * function execution has been spawned before.
-         *
-         * @param value the new value stored by this future
-         */
-        void set( T_VALUE && value )
-        {
-          m_impl.set( std::move( value ) );
-        }
-
-        /**
-         * This method sets the value stored by this future
-         * that can be retrieved by calling #get().
-         * WARNING: This method is not thread-safe. Thus, do not
-         * call it on a future, where a corresponding asynchronous
-         * function execution has been spawned before.
-         *
-         * @param value the new value stored by this future
-         */
-        void set( const T_VALUE & value )
-        {
-          m_impl.set( value );
-        }
-
-        /**
-         * This method fetches the return value of the asynchonously
-         * executed function. If the function
-         * has not been executed yet, then the caller of #get()
-         * synchronizes and waits until the function has been executed,
-         * possibly stealing some work from the thread pool.
-         *
-         * @return the return value of the asynchronously executed function
-         */
-        T_VALUE & get()
-        {
-          return m_impl.get();
-        }
-
-      private:
-        detail::StructuredWorkStealingThreadPoolFuture< T_VALUE,
-                                                        Task > m_impl;
-    };
-
-
-
-    /**
      * A task group is a concept tracking the execution
      * state of a set of tasks spawned through it. It sole
      * purpose is to provide a similar functionality like
@@ -2627,8 +2378,6 @@ class WorkStealingThreadPool
       public:
         using Task = pool_this_type::Task;
         using TaskList = detail::TaskListTmpl< Task >;
-        template< typename T_VALUE >
-        using Future = pool_this_type::Future< T_VALUE >;
 
       public:
         TaskGroup( detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
@@ -2825,68 +2574,6 @@ class WorkStealingThreadPool
           m_impl.reset();
         }
 
-        /**
-         * This method takes a given function \a func and a compatible future
-         * object \a future and executes func asynchronously using the thread
-         * pool associated with this task group. This method returns immediately to
-         * the caller. The caller can synchronize later on by calling \a future.get(),
-         * which returns a reference to the value returned by the asynchronously executed
-         * function. If the function has not been executed yet, then the caller
-         * of \a future.get() synchronizes and waits until the function has been executed,
-         * possibly stealing some work from the thread pool.
-         * You may also reuse a future object to call a different function
-         * (or the same function) of the same signature after having called
-         * future.get(). Calling this method again with a \a future where
-         * \a future.get() has not been called yet, does nothing. Calling
-         * \a future.get() on a \a future, for which no call to this method
-         * has been made yet, returns a default constructed value. Note that it
-         * is safe to call \a future.get() multiple times. The future will
-         * remember that it already has fetched a result and will simply return
-         * that when \a future.get() is called again.
-         *
-         * Note that in contrast to std::async, this method does NOT store \a func
-         * in any way. That means, the caller of this method must ensure that
-         * the lifetime of \a func is at least as long as the lifetime of \a future.
-         * This is also the reason why func may not have any parameters. If
-         * you want to pass arguments to \a func, then consider wrapping it inside
-         * a function object and pass that one as \a func to this method.
-         *
-         * Calling this function is equivalent to
-         * calling async( func, future ) on the associated thread pool.
-         *
-         * The following provides a code example how this can be used:
-         * T_THREAD_POOL thread_pool( ... );
-         * T t( ... );
-         * T_THREAD_POOL::TaskGroup tg = thread_pool.createTaskGroup();
-         * tg.spawn( &t );
-         *
-         * int func1() { return 100; }
-         * auto func2 = []() -> int { return 200; };
-         * struct Functor { int operator()() { return 300; } };
-         * Functor func3;
-         * T_THREAD_POOL::Future< int > future1;
-         * T_THREAD_POOL::Future< int > future2;
-         * T_THREAD_POOL::Future< int > future3;
-         * tg.async( func1, future1 );
-         * tg.async( func2, future2 );
-         * tg.async( func3, future3 );
-         * ... do some other work ...
-         * int func1_result = future1.get();
-         * int func2_result = future2.get();
-         * int func3_result = future3.get();
-         *
-         * @param func the function to be executed asynchronously
-         * @param future the future where to store the returned value of func
-         */
-        template< class T_FUNC >
-        void async( T_FUNC & func,
-                    Future< typename std::result_of< typename std::decay< T_FUNC >::type() >::type > & future ) const
-        {
-          typedef typename std::result_of< typename std::decay< T_FUNC >::type() >::type T_RET;
-          detail::function_ref< T_RET() > func_ref( func );
-          m_impl.threadPool()->async( func_ref, future.m_impl );
-        }
-
       private:
         detail::StructuredTaskGroup< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
                                                                                T_CACHE_LINE_SIZE,
@@ -2916,39 +2603,27 @@ class WorkStealingThreadPool
      * TaskGroup tg and call tg.wait() afterwards, which will wait until
      * all tasks spawned through it have completed their execution.
      *
-     * If you want to put a task into the thread pool you have to derive
-     * from this class and implement the execute method, which will be
-     * called by a thread.
+     * A task carries a reference to some callable to be executed by
+     * it. You can pass a reference to that callable at task construction
+     * or later on. However, be aware that the task only has a reference
+     * to that callalbe and does not store it in any way. So it is your
+     * responsibility to ensure its proper lifetime.
      *
      * The next task to be executed by the thread that has executed
-     * a task is choosen according to the first applicable rule below:
-     * 1. The task returned by the execute method of this task.
-     * 2. The successor task of this task, if this task was the last
+     * a task is chosen according to the first applicable rule below:
+     * 1. The successor task of this task, if this task was the last
      *    completed predecessor.
-     * 3. A task from the queue of the worker thread.
-     * 4. A task from the queue of another worker thread.
-     * Rules 1 and 2 can be used to achieve a task execution ordering. In contrast
+     * 2. A task from the queue of the worker thread.
+     * 3. A task from the queue of another worker thread.
+     * Rules 1 can be used to achieve a task execution ordering. In contrast
      * there is no ordering guarantee for tasks put in the task queue
-     * of some worker thread. If a task A returns a task to be executed
-     * next, it is guaranteed that the thread that has executed A::execute,
-     * will also execute the task returned by A::execute. Note that in general
-     * there is no such guarantee for a successor task. However, if task \a A
-     * only has one successor and its execute method returns null, then the thread
-     * executing the successor will be the same as the one that has executed
-     * A::execute. If you want to ensure an execution ordering of tasks, then
-     * you want to make use of rule 1. This is because it is guaranteed to
-     * bypass the task queues of worker threads, and therefore the worker threads
-     * do not have to fight who gets to execute that task.
+     * of some worker thread.
      *
      * Note that in contrast to Intel TBB any aspects of memory allocation must
      * be done by the client of this library. That means, the client
      * is responsible for allocating memory for tasks, ensuring that they
      * have a proper lifetime and deallocating memory once tasks are not
-     * needed anymore. You may use the finalization callback in order to destroy
-     * a task upon its completion if you allocated it dynamically via new
-     * or similar means. Of course you may also allocate tasks on the stack,
-     * if you can guarantee that the scope containing it is not left until its
-     * execution completed.
+     * needed anymore.
      *
      *
      *
@@ -2961,33 +2636,34 @@ class WorkStealingThreadPool
      *
      * T_THREAD_POOL thread_pool( ... );
      * T t( ... );
+     * t.setCallable( t ):
      * T_THREAD_POOL::TaskGroup tg = thread_pool.createTaskGroup();
      * tg.spawn_and_wait( &t );
      *
      *
      *
      * Blocking style with k children.
-     * T_THREAD_POOL::Task * T::execute()
+     * void operator()()
      * {
      *   TaskGroup tg = createTaskGroup();
      *   U t_k( ... ); tg.spawn( &t_k );
      *   ...
      *   U t_2( ... ); tg.spawn( &t_2 );
      *   U t_1( ... ); tg.spawn_and_wait( &t_1 );
-     *   return nullptr;
      * }
-     * This pattern starts with the invocation of task t.
+     * This pattern starts with the invocation of task t, which has a function
+     * call operator.
      * Once executed, t creates a task group and creates a set of k tasks.
      * The call tg.spawn_and_wait( &t_1 ) combines spawning and waiting.
      * A slightly less efficient alternative would be to spawn all tasks
      * and call tg.wait() afterwards or simply let tg go out of scope,
      * which will automatically call wait() in its destructor.
-     * As the T::execute() synchronizes with the completion of t_1 - t_k,
-     * it is fine to allocate t_1 - t_k on the stack when T::execute() is called.
-     * Before T::execute() returns, at which point t_1 - t_k are destroyed, t_1 - t_k
+     * As the T::operator()() synchronizes with the completion of t_1 - t_k,
+     * it is fine to allocate t_1 - t_k on the stack when T::operator()() is called.
+     * Before T::operator()() returns, at which point t_1 - t_k are destroyed, t_1 - t_k
      * have been executed.
      * Note that it is critical to spawn the tasks through a TaskGroup, otherwise
-     * T::execute() will return before t_1 - t_k have been executed.
+     * T::operator()() will return before t_1 - t_k have been executed.
      * Note that it is also possible to create a task list containing t_1 - t_k
      * and then spawning that task list.
      *
@@ -3000,7 +2676,7 @@ class WorkStealingThreadPool
      *
      *
      * Creating a continuation task.
-     * T_THREAD_POOL::Task * T::execute()
+     * void operator()()
      * {
      *   // create the continuation task.
      *   C c = new C( ... );
@@ -3010,7 +2686,6 @@ class WorkStealingThreadPool
      *   ...
      *   U t_1 = new U( ... ); t_1->setSuccessorTask( c ); tl.push_front( t_1 );
      *   spawn( tl );
-     *   return nullptr;
      * }
      *
      * This pattern starts with the invocation of task t.
@@ -3025,11 +2700,11 @@ class WorkStealingThreadPool
      * execution of the continuation task c. In order to prevent this, a task list
      * is created instead, where each predecessor of task c is added to. Then that
      * list is spawned as a whole. Once all tasks t_1 - t_k are completed, task c gets executed.
-     * This can happen before or after t.execute() returns: It is not defined.
+     * This can happen before or after t.operator()() returns: It is not defined.
      * Moving the waiting condition of t to c causes the call
      * tg.spawn_and_wait( &t ) to wait until c has finished executing. If the
      * waiting condition would not be moved, then tg.spawn_and_wait( &t ) would
-     * return after t.execute() returns, independently of whether c has
+     * return after t.operator()() returns, independently of whether c has
      * been completed.
      *
      *
@@ -3043,7 +2718,7 @@ class WorkStealingThreadPool
      * do is the following: Instead of returning from t.execute() after having
      * updated the state of t, one can just compute the job that t_1 would
      * compute otherwise and then return. The following realizes this:
-     * T_THREAD_POOL::Task * T::execute()
+     * void operator()()
      * {
      *   // create the continuation task.
      *   C c = new C( ... );
@@ -3054,54 +2729,20 @@ class WorkStealingThreadPool
      *   U t_2 = new U( ... ); t_2->setSuccessorTask( c ); spawn( t_2 );
      *
      *   ... update state and execute what otherwise t_1 would compute ...
-     *   return nullptr;
      * }
      * This pattern starts with the invocation of task t.
      * Once executed, t creates a continuation task c, moves its own waiting condition
      * to c, sets c as its new successor and creates a set of k-1 tasks, setting
      * c as their successor task. The predecessor tasks can be spawned directly,
      * because t has set c as its successor BEFORE the other predecessors of
-     * c are spawned. Once all tasks t_2 - t_k are completed AND t.execute()
+     * c are spawned. Once all tasks t_2 - t_k are completed AND t.operator()()
      * has returned (which also executes something more after having spawned
      * t_2 - t_k), task c gets executed.
      * Moving the waiting condition of t to c causes the call
      * tg.spawn_and_wait( &t ) to wait until c has finished executing. If the
      * waiting condition would not be moved, then tg.spawn_and_wait( &t ) would
-     * return after t.execute() returns, independently of whether c has
+     * return after t.operator()() returns, independently of whether c has
      * been completed.
-     *
-     *
-     *
-     * Intel TBB supports a recycling style where the job of the continuation
-     * of t can be executed by t itself. In that style t is not deallocated
-     * once t.execute() returns. Instead the state of t is updated to reflect
-     * the job of the continuation. Then t.execute() returns and is re-entered
-     * once all of its predecessors have been completed. The following realizes
-     * this:
-     * T_THREAD_POOL::Task * T::execute()
-     * {
-     *   extendWaitingConditionToNextExecutionInstance();
-     *   U t_k = new U( ... ); t_k->setSuccessorTask( this );
-     *   ...
-     *   U t_2 = new U( ... ); t_2->setSuccessorTask( this ); spawn( t_2 );
-     *   U t_1 = new U( ... ); t_1->setSuccessorTask( this ); spawn( t_1 );
-     *   return t_k;
-     * }
-     * This pattern starts with the invocation of task t.
-     * Once executed, t extends the waiting condition associated with it
-     * to its next execution instance, creates a set of k tasks setting
-     * this as their successor task, spawns k-1 of these tasks and returns
-     * a pointer to the remaining predecessor task. The reason why not all of
-     * the k tasks are spawned right away, is that in this case t might be
-     * executed prematurely again by a different thread before the control flow
-     * leaves T::execute. Setting t as the successor of t_k, but not spawning it,
-     * guarantess that t is not executed prematurely. Once all tasks t_1 - t_k are
-     * completed, t is executed again. Extending the waiting condition of t to
-     * its next execution instance causes the call tg.spawn_and_wait( &t ) to
-     * wait until t has two times finished executing. If the waiting condition
-     * would not be extended, then tg.spawn_and_wait( &t ) would return after
-     * t.execute() returns the first time, independently of whether the
-     * continuation of that first execution has completed.
      *
      *
      *
@@ -3135,13 +2776,15 @@ class WorkStealingThreadPool
       public:
         using TaskGroup = pool_this_type::TaskGroup;
         using TaskList = detail::TaskListTmpl< this_type >;
-        template< typename T_VALUE >
-        using Future = pool_this_type::Future< T_VALUE >;
 
       public:
         Task()
             : base_type()
-            , m_fin_callback()
+        {}
+
+        template< class T_CALLABLE >
+        Task( T_CALLABLE & callable )
+            : Task( callable )
         {}
 
         Task( const this_type & ) = default;
@@ -3151,17 +2794,6 @@ class WorkStealingThreadPool
 
         this_type & operator=( const this_type & ) = default;
         this_type & operator=( this_type && ) = default;
-
-        /**
-         * You have to implement this pure virtual function. This
-         * constitutes the actual body of the task.
-         * Your implemented body may return a pointer to some other
-         * task (or this task) to be executed immediately after the
-         * execution of the body finishes, or null.
-         *
-         * @return a task to be executed after this method returns or null
-         */
-        virtual this_type * execute() = 0;
 
         /**
          * This method spawn \a task. That means \a task is inserted into
@@ -3322,28 +2954,6 @@ class WorkStealingThreadPool
         }
 
         /**
-         * This method sets the finalization callback of this task.
-         * Once this task has been executed and control has left
-         * the \a execute function, the executing thread invokes
-         * the callback function of the given \a fin_callback
-         * object. Passing \a nullptr as an argument for the
-         * \a fin_callback parameter disables the callback.
-         * Of course the caller must guarantee that \a fin_callback
-         * has the appropriate lifetime. Further, the callback function
-         * of \a fin_callback must be designed such that it can be
-         * called by a different thread than the one calling this
-         * function. As the signature of this function suggests,
-         * \a fin_callback can be any callable returning void and
-         * taking a pointer to this task.
-         *
-         * @param fin_callback the object to call back
-         */
-        void setFinCallback( detail::function_ref< void(this_type *) > fin_callback )
-        {
-          m_fin_callback = fin_callback;
-        }
-
-        /**
          * This method creates and returns a task group that uses
          * the same thread pool associated to this task. A task group
          * allows for waiting on the completion of all tasks spawned
@@ -3376,337 +2986,11 @@ class WorkStealingThreadPool
          */
         void reset()
         {
-          m_fin_callback = nullptr;
           base_type::reset();
         }
-
-        /**
-         * This method takes a given function \a func and a compatible future
-         * object \a future and executes func asynchronously using the thread
-         * pool associated with this task. This method returns immediately to
-         * the caller. The caller can synchronize later on by calling \a future.get(),
-         * which returns a reference to the value returned by the asynchronously executed
-         * function. If the function has not been executed yet, then the caller
-         * of \a future.get() synchronizes and waits until the function has been executed,
-         * possibly stealing some work from the thread pool.
-         * You may also reuse a future object to call a different function
-         * (or the same function) of the same signature after having called
-         * future.get(). Calling this method again with a \a future where
-         * \a future.get() has not been called yet, does nothing. Calling
-         * \a future.get() on a \a future, for which no call to this method
-         * has been made yet, returns a default constructed value. Note that it
-         * is safe to call \a future.get() multiple times. The future will
-         * remember that it already has fetched a result and will simply return
-         * that when \a future.get() is called again.
-         *
-         * Note that in contrast to std::async, this method does NOT store \a func
-         * in any way. That means, the caller of this method must ensure that
-         * the lifetime of \a func is at least as long as the lifetime of \a future.
-         * This is also the reason why func may not have any parameters. If
-         * you want to pass arguments to \a func, then consider wrapping it inside
-         * a function object and pass that one as \a func to this method.
-         *
-         * Calling this function is equivalent to
-         * calling async( func_ref, future ) on the associated thread pool.
-         * WARNING: Only call this method AFTER this task has been spawned.
-         * Otherwise calling this method results in undefined behavior,
-         * because this task does not know its associated thread pool, yet.
-         *
-         * The following provides a code example how this can be used:
-         * T_THREAD_POOL thread_pool( ... );
-         * T t( ... );
-         * T_THREAD_POOL::TaskGroup tg = thread_pool.createTaskGroup();
-         * tg.spawn_and_wait( &t );
-         *
-         * void T::execute()
-         *   int func1() { return 100; }
-         *   auto func2 = []() -> int { return 200; };
-         *   struct Functor { int operator()() { return 300; } };
-         *   Functor func3;
-         *   Future< int > future1;
-         *   Future< int > future2;
-         *   Future< int > future3;
-         *   async( func1, future1 );
-         *   async( func2, future2 );
-         *   async( func3, future3 );
-         *   ... do some other work ...
-         *   int func1_result = future1.get();
-         *   int func2_result = future2.get();
-         *   int func3_result = future3.get();
-         * }
-         *
-         * @param func the function to be executed asynchronously
-         * @param future the future where to store the returned value of func
-         */
-        template< class T_FUNC >
-        void async( T_FUNC & func,
-                    Future< typename std::result_of< typename std::decay< T_FUNC >::type() >::type > & future ) const
-        {
-          typedef typename std::result_of< typename std::decay< T_FUNC >::type() >::type T_RET;
-          detail::function_ref< T_RET() > func_ref( func );
-          this->m_pool_ptr->async( func_ref, future.m_impl );
-        }
-
-        /**
-         * This static method calls the finalization callback of the
-         * given task \a task, if some callback has been set for
-         * \a task. If no callback has been set, then this method
-         * does nothing.
-         * Only use this method if you really know what you are doing.
-         *
-         * @param task the task whose finalization callback to call
-         */
-        static void callFinCallBack( this_type * task )
-        {
-          if ( task->m_fin_callback )
-          {
-            task->m_fin_callback( task );
-          }
-        }
-
-      private:
-        detail::function_ref< void(this_type *) > m_fin_callback;
-    };
-
-
-
-    class EmptyTask : public Task
-    {
-      public:
-        virtual ~EmptyTask() {}
-        Task * execute() {}
     };
 
     typedef typename Task::TaskList TaskList;
-
-
-
-    /**
-     * This is a task class that holds a reference to any callable
-     * with one of the following two signatures: void() or void(Task *).
-     * The task will keep a reference to that callable and invokes
-     * it in its execute() method. Depending on the signature of the
-     * callable, this task is passed as argument to the callable.
-     * The idea behind this is to allow clients to execute any callable
-     * in the context of a thread pool without having to create custom
-     * task classes and implementing an execute method.
-     * The idea behind the additional optional parameter of the callable
-     * is to give the executed callable access to the Task that
-     * invokes it. Thus, the callable can e.g. modify the successor
-     * of the execuing task and/or it waiting condition. This allows
-     * e.g. creating continuations for the task or reusing the task
-     * as a continuation of itself and a set of other task.
-     * In order to support such use-cases, you may modify the callable
-     * executed by a task.
-     *
-     * TODO: Give a code example.
-     *
-     * Note that since the callable is not copied, you must
-     * ensure that the lifetime of the callable lasts as least
-     * as long until the task has executed it.
-     */
-    class NonOwningFuncTask : public Task
-    {
-      typedef NonOwningFuncTask this_type;
-
-      public:
-        /**
-         * Default constructor initializing the task, such that
-         * its execute method does nothing.
-         */
-        NonOwningFuncTask()
-            : m_func_ref()
-            , m_func_task_arg_ref()
-        {}
-
-        /**
-         * This constructor takes the given \a callable and
-         * stores a reference in the constructed task, such
-         * that its execute method invokes \a callable.
-         * Allowed signatures are: void() or void(Task *).
-         *
-         * @param callable the callable to be executed by the task
-         */
-        template< class T_CALLABLE >
-        NonOwningFuncTask( T_CALLABLE & callable )
-            : NonOwningFuncTask()
-        {
-          setCallable( callable );
-        }
-
-        NonOwningFuncTask( const this_type & ) = default;
-        NonOwningFuncTask( this_type && ) = default;
-
-        virtual ~NonOwningFuncTask() {}
-
-        this_type & operator=( const this_type & ) = default;
-        this_type & operator=( this_type && ) = default;
-
-        /**
-         * Invokes the callable this task is configured with.
-         *
-         * @return nullptr
-         */
-        Task * execute()
-        {
-          if ( m_func_task_arg_ref )
-          {
-            m_func_task_arg_ref( this );
-          }
-          else if ( m_func_ref )
-          {
-            m_func_ref();
-          }
-
-          return nullptr;
-        }
-
-        /**
-         * Set a new \a callable to be executed by the task
-         * in its execute method.
-         * Allowed signatures are: void() or void(Task *).
-         *
-         * @param callable the new callable to be executed by the task
-         */
-        template< class T_CALLABLE >
-        void setCallable( T_CALLABLE & callable )
-        {
-          setCallableImpl( callable );
-        }
-
-        /**
-         * Resets the task to a state as if it has just been constructed.
-         * The callable is NOT reset, meaning this task keeps the callable
-         * that has been passed to the constructor or has been set via
-         * setCallable( T_CALLABLE ).
-         */
-        void reset()
-        {
-          Task::reset();
-        }
-
-      private:
-        template< class T_CALLABLE,
-                  typename detail::enable_if_t< detail::TakesArgumentsHelper< T_CALLABLE, Task * >::value >* = nullptr >
-        void setCallableImpl( T_CALLABLE & callable )
-        {
-          m_func_ref = nullptr;
-          m_func_task_arg_ref = detail::function_ref< void(Task*) >( std::forward< T_CALLABLE >( callable ) );
-        }
-
-        template< class T_CALLABLE,
-                  typename detail::enable_if_t< !detail::TakesArgumentsHelper< T_CALLABLE, Task * >::value >* = nullptr >
-        void setCallableImpl( T_CALLABLE & callable )
-        {
-          m_func_ref = detail::function_ref< void() >( std::forward< T_CALLABLE >( callable ) );
-          m_func_task_arg_ref = nullptr;
-        }
-
-      private:
-        detail::function_ref< void() > m_func_ref;
-        detail::function_ref< void(Task *) > m_func_task_arg_ref;
-    };
-
-
-
-    /**
-     * This is a task class that holds a reference to any callable
-     * with the following signatures: void().
-     * The task will keep a reference to that callable and invokes
-     * it in its execute() method.
-     * The idea behind this is to allow clients to execute any callable
-     * in the context of a thread pool without having to create custom
-     * task classes and implementing an execute method.
-     * The callable executed by a task can be modified.
-     *
-     * TODO: Give a code example.
-     *
-     * Note that since the callable is not copied, you must
-     * ensure that the lifetime of the callable lasts as least
-     * as long until the task has executed it.
-     */
-    class NonOwningFuncTaskNoTaskAccess : public Task
-    {
-      typedef NonOwningFuncTaskNoTaskAccess this_type;
-
-      public:
-        /**
-         * Default constructor initializing the task, such that
-         * its execute method does nothing.
-         */
-        NonOwningFuncTaskNoTaskAccess()
-            : m_func_ref()
-        {}
-
-        /**
-         * This constructor takes the given \a callable and
-         * stores a reference in the constructed task, such
-         * that its execute method invokes \a callable.
-         * Allowed signature is: void().
-         *
-         * @param callable the callable to be executed by the task
-         */
-        template< class T_CALLABLE >
-        NonOwningFuncTaskNoTaskAccess( T_CALLABLE & callable )
-            : NonOwningFuncTaskNoTaskAccess()
-        {
-          setCallable( callable );
-        }
-
-        NonOwningFuncTaskNoTaskAccess( const this_type & ) = default;
-        NonOwningFuncTaskNoTaskAccess( this_type && ) = default;
-
-        virtual ~NonOwningFuncTaskNoTaskAccess() {}
-
-        this_type & operator=( const this_type & ) = default;
-        this_type & operator=( this_type && ) = default;
-
-        /**
-         * Invokes the callable this task is configured with.
-         *
-         * @return nullptr
-         */
-        Task * execute()
-        {
-          m_func_ref();
-
-          return nullptr;
-        }
-
-        /**
-         * Set a new \a callable to be executed by the task
-         * in its execute method.
-         * Allowed signatures are: void() or void(Task *).
-         *
-         * @param callable the new callable to be executed by the task
-         */
-        template< class T_CALLABLE >
-        void setCallable( T_CALLABLE & callable )
-        {
-          setCallableImpl( callable );
-        }
-
-        /**
-         * Resets the task to a state as if it has just been constructed.
-         * The callable is NOT reset, meaning this task keeps the callable
-         * that has been passed to the constructor or has been set via
-         * setCallable( T_CALLABLE ).
-         */
-        void reset()
-        {
-          Task::reset();
-        }
-
-      private:
-        template< class T_CALLABLE >
-        void setCallableImpl( T_CALLABLE & callable )
-        {
-          m_func_ref = detail::function_ref< void() >( std::forward< T_CALLABLE >( callable ) );
-        }
-
-      private:
-        detail::function_ref< void() > m_func_ref;
-    };
 
 
 
@@ -3889,93 +3173,16 @@ class WorkStealingThreadPool
     }
 
     /**
-     * TODO: Document.
+     * Creates a task that executes the given callable.
+     *
+     * @param callable the callable to execute by the task
+     * @return the created task
      */
     template< class T_CALLABLE >
-    NonOwningFuncTask
+    Task
     makeTask( T_CALLABLE & callable )
     {
       return { callable };
-    }
-
-    /**
-     * This method takes a given function \a func and a compatible future
-     * object \a future and executes func asynchronously using this thread
-     * pool. This method returns immediately to the caller. The caller
-     * can synchronize later on by calling \a future.get(), which returns
-     * a reference to the value returned by the asynchronously executed
-     * function. If the function has not been executed yet, then the caller
-     * of \a future.get() synchronizes and waits until the function has been executed,
-     * possibly stealing some work from the thread pool.
-     * You may also reuse a future object to call a different function
-     * (or the same function) of the same signature after having called
-     * future.get(). Calling this method again with a \a future where
-     * \a future.get() has not been called yet, does nothing. Calling
-     * \a future.get() on a \a future, for which no call to this method
-     * has been made yet, returns a default constructed value. Note that it
-     * is safe to call \a future.get() multiple times. The future will
-     * remember that it already has fetched a result and will simply return
-     * that when \a future.get() is called again.
-     *
-     * Note that in contrast to std::async, this method does NOT store \a func
-     * in any way. That means, the caller of this method must ensure that
-     * the lifetime of \a func is at least as long as the lifetime of \a future.
-     * This is also the reason why func may not have any parameters. If
-     * you want to pass arguments to \a func, then consider wrapping it inside
-     * a function object and pass that one as \a func to this method.
-     *
-     * The following provides a code example how this can be used.
-     * {
-     *   int func1() { return 100; }
-     *   auto func2 = []() -> int { return 200; };
-     *   struct Functor { int operator()() { return 300; } };
-     *   Functor func3;
-     *   T_THREAD_POOL thread_pool( ... );
-     *   T_THREAD_POOL::Future< int > future1;
-     *   T_THREAD_POOL::Future< int > future2;
-     *   T_THREAD_POOL::Future< int > future3;
-     *   thread_pool.async( func1, future1 );
-     *   thread_pool.async( func2, future2 );
-     *   thread_pool.async( func3, future3 );
-     *   ... do some other work ...
-     *   int func1_result = future1.get();
-     *   int func2_result = future2.get();
-     *   int func3_result = future3.get();
-     * }
-     *
-     * @param func the function to be executed asynchronously
-     * @param future the future where to store the returned value of func
-     */
-    template< class T_FUNC >
-    void async( T_FUNC & func,
-                Future< typename std::result_of< typename std::decay< T_FUNC >::type() >::type > & future )
-    {
-      typedef typename std::result_of< typename std::decay< T_FUNC >::type() >::type T_RET;
-      detail::function_ref< T_RET() > func_ref( func );
-      m_pool_impl.async( func_ref, future.m_impl );
-    }
-
-    /**
-     * This template function does the same as the corresponding template
-     * function from Intel TBB: It simply executes a list of callables
-     * in parallel. A callable might be a global function, a functor
-     * of a lambda expression.
-     * This template function executes the callable in parallel and
-     * returns once all of them have been completed.
-     */
-    template< typename... T_CALLABLE >
-    void parallel_invoke( T_CALLABLE && ...callables )
-    {
-      constexpr std::size_t num_tasks = sizeof...( T_CALLABLE );
-      NonOwningFuncTask task_array[num_tasks] = { callables... };
-
-      auto tg = createTaskGroup();
-
-      const std::size_t callingThreadId = ThreadContext::getThreadId();
-      for ( std::size_t i = 0; i < num_tasks; ++i )
-      {
-        tg.spawn( callingThreadId + i, &task_array[i] );
-      }
     }
 
   private:
