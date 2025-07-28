@@ -849,12 +849,7 @@ namespace citcpp
 	  typedef iterate_task this_type;
 
 	public:
-	  iterate_task () :
-	      base_type (), iterator_ (nullptr), max_param_to_select_from_ (0), bitset_start_index_ (
-		  0)
-	  {
-	    setCallable (*this);
-	  }
+	  iterate_task () = delete;
 
 	  iterate_task (iterator_type *iterator, int max_param_to_select_from,
 			unsigned long long bitset_start_index) :
@@ -865,13 +860,7 @@ namespace citcpp
 	    setCallable (*this);
 	  }
 
-	  iterate_task (const this_type &other) :
-	      base_type (other), iterator_ (other.iterator_), max_param_to_select_from_ (
-		  other.max_param_to_select_from_), bitset_start_index_ (
-		  other.bitset_start_index_)
-	  {
-	    setCallable (*this);
-	  }
+	  iterate_task (const this_type&) = delete;
 
 	  iterate_task (this_type &&other) :
 	      base_type (std::move (other)), iterator_ (other.iterator_), max_param_to_select_from_ (
@@ -887,34 +876,10 @@ namespace citcpp
 	  }
 
 	  this_type&
-	  operator= (const this_type &other)
-	  {
-	    if (this != &other)
-	      {
-		base_type::operator = (other);
-		setCallable (*this);
-		iterator_ = other.iterator_;
-		max_param_to_select_from_ = other.max_param_to_select_from_;
-		bitset_start_index_ = other.bitset_start_index_;
-	      }
-
-	    return *this;
-	  }
+	  operator= (const this_type&) = delete;
 
 	  this_type&
-	  operator= (this_type &&other)
-	  {
-	    if (this != &other)
-	      {
-		base_type::operator = (std::move (other));
-		setCallable (*this);
-		iterator_ = other.iterator_;
-		max_param_to_select_from_ = other.max_param_to_select_from_;
-		bitset_start_index_ = other.bitset_start_index_;
-	      }
-
-	    return *this;
-	  }
+	  operator= (this_type&&) = delete;
 
 	  void
 	  operator () ()
@@ -1102,12 +1067,7 @@ namespace citcpp
 	  typedef iterate_task this_type;
 
 	public:
-	  iterate_task () :
-	      base_type (), iterator_ (nullptr), max_param_to_select_from_ (0), bitset_start_index_ (
-		  0)
-	  {
-	    setCallable (*this);
-	  }
+	  iterate_task () = delete;
 
 	  iterate_task (iterator_type *iterator, int max_param_to_select_from,
 			unsigned long long bitset_start_index) :
@@ -1118,13 +1078,7 @@ namespace citcpp
 	    setCallable (*this);
 	  }
 
-	  iterate_task (const this_type &other) :
-	      base_type (other), iterator_ (other.iterator_), max_param_to_select_from_ (
-		  other.max_param_to_select_from_), bitset_start_index_ (
-		  other.bitset_start_index_)
-	  {
-	    setCallable (*this);
-	  }
+	  iterate_task (const this_type&) = delete;
 
 	  iterate_task (this_type &&other) :
 	      base_type (std::move (other)), iterator_ (other.iterator_), max_param_to_select_from_ (
@@ -1140,34 +1094,10 @@ namespace citcpp
 	  }
 
 	  this_type&
-	  operator= (const this_type &other)
-	  {
-	    if (this != &other)
-	      {
-		base_type::operator = (other);
-		setCallable (*this);
-		iterator_ = other.iterator_;
-		max_param_to_select_from_ = other.max_param_to_select_from_;
-		bitset_start_index_ = other.bitset_start_index_;
-	      }
-
-	    return *this;
-	  }
+	  operator= (const this_type&) = delete;
 
 	  this_type&
-	  operator= (this_type &&other)
-	  {
-	    if (this != &other)
-	      {
-		base_type::operator = (std::move (other));
-		setCallable (*this);
-		iterator_ = other.iterator_;
-		max_param_to_select_from_ = other.max_param_to_select_from_;
-		bitset_start_index_ = other.bitset_start_index_;
-	      }
-
-	    return *this;
-	  }
+	  operator= (this_type&&) = delete;
 
 	  void
 	  operator () ()

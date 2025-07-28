@@ -60,12 +60,7 @@ namespace
     typedef compute_partial_sum_task this_type;
 
   public:
-    compute_partial_sum_task () :
-	base_type (), start_idx_for_next_ (0), current_level_ (0), factorLevels_ (
-	    nullptr), num_combinations_ (0)
-    {
-      setCallable (*this);
-    }
+    compute_partial_sum_task () = delete;
 
     compute_partial_sum_task (int start_idx_for_next, int current_level,
 			      const std::vector<unsigned int> *factorLevels,
@@ -77,13 +72,7 @@ namespace
       setCallable (*this);
     }
 
-    compute_partial_sum_task (const this_type &other) :
-	base_type (other), start_idx_for_next_ (other.start_idx_for_next_), current_level_ (
-	    other.current_level_), factorLevels_ (other.factorLevels_), num_combinations_ (
-	    other.num_combinations_)
-    {
-      setCallable (*this);
-    }
+    compute_partial_sum_task (const this_type&) = delete;
 
     compute_partial_sum_task (this_type &&other) :
 	base_type (std::move (other)), start_idx_for_next_ (
@@ -99,35 +88,10 @@ namespace
     }
 
     this_type&
-    operator= (const this_type &other)
-    {
-      if (this != &other)
-	{
-	  base_type::operator = (other);
-	  setCallable (*this);
-	  start_idx_for_next_ = other.start_idx_for_next_;
-	  current_level_ = other.current_level_;
-	  factorLevels_ = other.factorLevels_;
-	  num_combinations_ = other.num_combinations_;
-	}
+    operator= (const this_type&) = delete;
 
-      return *this;
-    }
     this_type&
-    operator= (this_type &&other)
-    {
-      if (this != &other)
-	{
-	  base_type::operator = (std::move (other));
-	  setCallable (*this);
-	  start_idx_for_next_ = other.start_idx_for_next_;
-	  current_level_ = other.current_level_;
-	  factorLevels_ = other.factorLevels_;
-	  num_combinations_ = other.num_combinations_;
-	}
-
-      return *this;
-    }
+    operator= (this_type&&) = delete;
 
     void
     operator () ()
@@ -152,12 +116,7 @@ namespace
     typedef compute_partial_sum_with_parameter_map_task this_type;
 
   public:
-    compute_partial_sum_with_parameter_map_task () :
-	base_type (), start_idx_for_next_ (0), current_level_ (0), factorLevels_ (
-	    nullptr), parameter_index_map_ (nullptr), num_combinations_ (0)
-    {
-      setCallable (*this);
-    }
+    compute_partial_sum_with_parameter_map_task () = delete;
 
     compute_partial_sum_with_parameter_map_task (
 	int start_idx_for_next, int current_level,
@@ -171,14 +130,7 @@ namespace
       setCallable (*this);
     }
 
-    compute_partial_sum_with_parameter_map_task (const this_type &other) :
-	base_type (other), start_idx_for_next_ (other.start_idx_for_next_), current_level_ (
-	    other.current_level_), factorLevels_ (other.factorLevels_), parameter_index_map_ (
-	    other.parameter_index_map_), num_combinations_ (
-	    other.num_combinations_)
-    {
-      setCallable (*this);
-    }
+    compute_partial_sum_with_parameter_map_task (const this_type&) = delete;
 
     compute_partial_sum_with_parameter_map_task (this_type &&other) :
 	base_type (std::move (other)), start_idx_for_next_ (
@@ -196,38 +148,10 @@ namespace
     }
 
     this_type&
-    operator= (const this_type &other)
-    {
-      if (this != &other)
-	{
-	  base_type::operator = (other);
-	  setCallable (*this);
-	  start_idx_for_next_ = other.start_idx_for_next_;
-	  current_level_ = other.current_level_;
-	  factorLevels_ = other.factorLevels_;
-	  parameter_index_map_ = other.parameter_index_map_;
-	  num_combinations_ = other.num_combinations_;
-	}
-
-      return *this;
-    }
+    operator= (const this_type&) = delete;
 
     this_type&
-    operator= (this_type &&other)
-    {
-      if (this != &other)
-	{
-	  base_type::operator = (std::move (other));
-	  setCallable (*this);
-	  start_idx_for_next_ = other.start_idx_for_next_;
-	  current_level_ = other.current_level_;
-	  factorLevels_ = other.factorLevels_;
-	  parameter_index_map_ = other.parameter_index_map_;
-	  num_combinations_ = other.num_combinations_;
-	}
-
-      return *this;
-    }
+    operator= (this_type&&) = delete;
 
     void
     operator () ()
