@@ -483,6 +483,228 @@ namespace
     return per_param_combo_functor.get_num_new_covered_tuples ();
   }
 
+  struct new_covered_tuples_and_selected_value
+  {
+    unsigned long long num_new_covered_tuples_;
+    int selected_value_;
+  };
+
+  class ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor
+  {
+  public:
+    ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor (
+	const citcpp::detail::model &model,
+	const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
+	std::vector<unsigned long long> &gain_per_value,
+	const int current_param_selected_value_for_prev_test) :
+	model_ (model), prev_test_ (prev_test), test_ (test), gain_per_value_ (
+	    gain_per_value), current_param_selected_value_for_prev_test_ (
+	    current_param_selected_value_for_prev_test), num_new_covered_tuples_ (
+	    0)
+    {
+    }
+
+    bool
+    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    {
+      if (current_param_selected_value_for_prev_test_ >= 0)
+	{
+	  update_coverage (cov_map_it);
+	}
+      compute_gain_per_value (cov_map_it);
+
+      return true;
+    }
+
+    void
+    update_coverage (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    {
+      using namespace citcpp::detail;
+
+      const strength_vector<unsigned int> &param_indices =
+	  cov_map_it.get_parameter_indices ();
+      coverage_map_ipog::second_level_type &value_combinations =
+	  cov_map_it.get_bitset ();
+
+      if (!value_combinations.all ())
+	{
+	  // Here we compute an index into the bitset. To do so, we treat the number of values
+	  // of each parameter as a kind of radix. Consider three parameters p_0, p_1, p_2.
+	  // The last parameter is always the current one processed by IPOG.
+	  // Now say that v_i is the number of values for p_i. If we now have values
+	  // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+	  coverage_map_ipog::second_level_type::size_type index =
+	      current_param_selected_value_for_prev_test_;
+	  for (std::vector<unsigned int>::size_type i = 0;
+	      i < param_indices.size () - 1; ++i)
+	    {
+	      const unsigned int param_idx = param_indices[i];
+	      const int param_value = prev_test_.get_values ()[param_idx];
+
+	      if (param_value < 0)
+		{
+		  // We have found a don't care value for that combination in
+		  // the considered test in one of the [0, ... ,current_param_idx - 1]
+		  // parameters. There is nothing to be updated concerning the coverage.
+		  // This combination will be taken care of during the vertical extension step.
+		  return;
+		}
+
+	      coverage_map_ipog::second_level_type::size_type addend =
+		  param_value;
+	      for (std::vector<unsigned int>::size_type j = i + 1;
+		  j < param_indices.size (); ++j)
+		{
+		  addend *= model_.get_parameters ()[param_indices[j]];
+		}
+	      index += addend;
+	    }
+
+	  if (!value_combinations.test_and_set (index))
+	    {
+	      ++num_new_covered_tuples_;
+	    }
+	}
+    }
+
+    void
+    compute_gain_per_value (
+	const citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    {
+      using namespace citcpp::detail;
+
+      const strength_vector<unsigned int> &param_indices =
+	  cov_map_it.get_parameter_indices ();
+      const coverage_map_ipog::second_level_type &value_combinations =
+	  cov_map_it.get_bitset ();
+
+      if (!value_combinations.all ())
+	{
+	  // We have a bitset and we have uncovered value combinations left in it.
+	  // Thus we have to walk through it concerning all possible value
+	  // combinations.
+	  // Here we compute an index into the bitset. To do so, we treat the number of values
+	  // of each parameter as a kind of radix. Consider three parameters p_0, p_1, p_2.
+	  // The last parameter is always the current one processed by IPOG.
+	  // Now say that v_i is the number of values for p_i. If we now have values
+	  // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+	  // In the base index we just compute x_0 * v_1 * v_2 + x_1 * v_2, since
+	  // that expression is constant throughout all different values of p_2 whose
+	  // different coverage gains we want to assess.
+	  coverage_map_ipog::second_level_type::size_type base_index = 0;
+	  for (std::vector<unsigned int>::size_type i = 0;
+	      i < param_indices.size () - 1; ++i)
+	    {
+	      const unsigned int param_idx = param_indices[i];
+	      const int param_value = test_.get_values ()[param_idx];
+
+	      if (param_value < 0)
+		{
+		  // We have found a don't care value for that combination in
+		  // the considered test.
+		  return;
+		}
+
+	      coverage_map_ipog::second_level_type::size_type addend =
+		  param_value;
+	      for (std::vector<unsigned int>::size_type j = i + 1;
+		  j < param_indices.size (); ++j)
+		{
+		  addend *= model_.get_parameters ()[param_indices[j]];
+		}
+	      base_index += addend;
+	    }
+
+	  // If we have found a don't care value in one of the [0, ... ,current_param_idx - 1]
+	  // parameters, then we skip the combination in the coverage gain computation.
+	  for (unsigned int value = 0; value < gain_per_value_.size (); ++value)
+	    {
+	      if (!value_combinations.test (base_index + value))
+		{
+		  gain_per_value_[value] += 1;
+		}
+	    }
+	}
+    }
+
+    unsigned long long
+    get_num_new_covered_tuples () const
+    {
+      return num_new_covered_tuples_;
+    }
+
+  private:
+    const citcpp::detail::model &model_;
+    const citcpp::detail::test &prev_test_;
+    const citcpp::detail::test &test_;
+    std::vector<unsigned long long> &gain_per_value_;
+    const int current_param_selected_value_for_prev_test_;
+    unsigned long long num_new_covered_tuples_;
+  };
+
+  new_covered_tuples_and_selected_value
+  ipog_horizontal_update_coverage_map_and_select_best_value (
+      const unsigned int num_current_param_values,
+      const citcpp::detail::model &model, const citcpp::detail::test &prev_test,
+      const int current_param_selected_value_for_prev_test,
+      const citcpp::detail::test &test,
+      citcpp::detail::coverage_map_iterator<true> &cov_map_it,
+      unsigned int &last_picked_value,
+      std::vector<unsigned int> &value_to_num_picked)
+  {
+    using namespace citcpp::detail;
+
+    // This is an array containing the coverage gain per value of the current parameter.
+    std::vector<unsigned long long> gain_per_value (num_current_param_values);
+
+    ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor per_param_combo_functor (
+	model, prev_test, test, gain_per_value,
+	current_param_selected_value_for_prev_test);
+    cov_map_it.visit_all_parameter_combinations (per_param_combo_functor);
+
+    new_covered_tuples_and_selected_value res;
+    res.num_new_covered_tuples_ =
+	per_param_combo_functor.get_num_new_covered_tuples ();
+
+    int value_with_max_gain = -1;
+    unsigned long long max_gain = 0;
+    for (unsigned int v_index = 0; v_index < gain_per_value.size (); ++v_index)
+      {
+	unsigned int value = (v_index + last_picked_value + 1)
+	    % gain_per_value.size ();
+	if (gain_per_value[value] > max_gain)
+	  {
+	    value_with_max_gain = value;
+	    max_gain = gain_per_value[value];
+	  }
+	else if (gain_per_value[value] == max_gain)
+	  {
+	    // We use a simple tie breaking strategy: We do not favor one value over the
+	    // other. If two values have the same gain, then we pick the one which we
+	    // have picked less so far.
+	    // Since also this could be a tie (we have picked the value the same number
+	    // of times, we remember the value we have picked before, and choose
+	    // the next one in this case.
+	    if (value_with_max_gain >= 0
+		&& value_to_num_picked[value]
+		    < value_to_num_picked[value_with_max_gain])
+	      {
+		value_with_max_gain = value;
+	      }
+	  }
+      }
+
+    if (value_with_max_gain >= 0)
+      {
+	last_picked_value = value_with_max_gain;
+	value_to_num_picked[value_with_max_gain]++;
+      }
+
+    res.selected_value_ = value_with_max_gain;
+
+    return res;
+  }
+
   class ipog_vertical_extension_functor
   {
   public:
@@ -735,6 +957,8 @@ namespace citcpp
       std::vector<unsigned int> value_to_num_picked (num_current_param_values);
       coverage_map_iterator<true> cov_map_it = cov_map.create_iterator ();
 
+      test *previous_test = nullptr;
+      int selected_value = 0;
       for (test &t : test_set.get_list_of_tests ())
 	{
 	  if (strength > 2)
@@ -742,10 +966,62 @@ namespace citcpp
 	      last_picked_value = num_current_param_values - 1;
 	    }
 
-	  int selected_value = ipog_horizontal_select_best_value (
-	      num_current_param_values, model, t, cov_map_it, last_picked_value,
-	      value_to_num_picked);
+	  if (!previous_test)
+	    {
+	      selected_value = ipog_horizontal_select_best_value (
+		  num_current_param_values, model, t, cov_map_it,
+		  last_picked_value, value_to_num_picked);
+	    }
+	  else
+	    {
+	      if (selected_value >= 0)
+		{
+		  // We might not have selected any value. This can happen, if no matter
+		  // which value we would pick, the coverage gain would be 0.
+		  // If so, our best option is to keep it as don't care, in order for
+		  // later vertical extension steps to exploit that don't care value.
+		  // If we have selected a value however with most coverage, then we set it in the
+		  // test accordingly.
+		  previous_test->get_values ()[real_current_param_idx] =
+		      selected_value;
+		}
 
+	      // Maintain a mapping from values of the current parameter to the tests.
+	      if (selected_value >= 0)
+		{
+		  result.value_to_row_mapping[selected_value].push_back (
+		      previous_test);
+		}
+	      else
+		{
+		  result.rows_with_current_parameter_dont_care_value.push_back (
+		      previous_test);
+		}
+
+	      new_covered_tuples_and_selected_value res =
+		  ipog_horizontal_update_coverage_map_and_select_best_value (
+		      num_current_param_values, model, *previous_test,
+		      selected_value, t, cov_map_it, last_picked_value,
+		      value_to_num_picked);
+
+	      selected_value = res.selected_value_;
+
+	      // Keep track of how many tuples we have covered in addition.
+	      result.num_new_covered_tuples += res.num_new_covered_tuples_;
+
+	      if (result.num_new_covered_tuples
+		  >= num_missing_combinations_to_cover)
+		{
+		  return result;
+		}
+	    }
+
+	  previous_test = &t;
+	}
+
+      // Update coverage regarding the last test.
+      if (previous_test)
+	{
 	  if (selected_value >= 0)
 	    {
 	      // We might not have selected any value. This can happen, if no matter
@@ -754,34 +1030,31 @@ namespace citcpp
 	      // later vertical extension steps to exploit that don't care value.
 	      // If we have selected a value however with most coverage, then we set it in the
 	      // test accordingly.
-	      t.get_values ()[real_current_param_idx] = selected_value;
+	      previous_test->get_values ()[real_current_param_idx] =
+		  selected_value;
 	    }
 
-	  // The last step consists in updating the coverage map.
+	  // Maintain a mapping from values of the current parameter to the tests.
+	  if (selected_value >= 0)
+	    {
+	      result.value_to_row_mapping[selected_value].push_back (
+		  previous_test);
+	    }
+	  else
+	    {
+	      result.rows_with_current_parameter_dont_care_value.push_back (
+		  previous_test);
+	    }
+
 	  unsigned long long num_new_covered_tuples =
 	      selected_value >= 0 ?
-		  ipog_horizontal_update_coverage_map (model, t, selected_value,
+		  ipog_horizontal_update_coverage_map (model, *previous_test,
+						       selected_value,
 						       cov_map_it) :
 		  0;
 
 	  // Keep track of how many tuples we have covered in addition.
 	  result.num_new_covered_tuples += num_new_covered_tuples;
-
-	  // Maintain a mapping from values of the current parameter to the tests.
-	  if (selected_value >= 0)
-	    {
-	      result.value_to_row_mapping[selected_value].push_back (t);
-	    }
-	  else
-	    {
-	      result.rows_with_current_parameter_dont_care_value.push_back (t);
-	    }
-
-	  if (result.num_new_covered_tuples
-	      >= num_missing_combinations_to_cover)
-	    {
-	      break;
-	    }
 	}
 
       return result;
