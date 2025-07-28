@@ -11,6 +11,7 @@
 #include <tuple>
 #include <utility>
 #include <new>
+#include <semaphore>
 
 #ifdef _MSC_VER
 #define NOMINMAX
@@ -1254,6 +1255,15 @@ class TaskListTmpl
       other.clear();
     }
 
+    template< typename T_OTHER_TASK >
+    explicit TaskListTmpl( const TaskListTmpl< T_OTHER_TASK > & other )
+        : m_head()
+        , m_last( other.m_last )
+    {
+      m_head.m_next_node.store( other.m_head.m_next_node.load( std::memory_order_relaxed ),
+                                std::memory_order_relaxed );
+    }
+
     // Our task list is not copyable since
     // this is a dangerous operation.
     this_type & operator=( const this_type & ) = delete;
@@ -1434,172 +1444,24 @@ class TaskListTmpl
 
 
 
-template< typename T_THREAD_POOL,
-          typename T_TASK >
-class StructuredTaskGroup
+class StructuredWorkStealingThreadPoolBase
 {
-  typedef StructuredTaskGroup< T_THREAD_POOL, T_TASK > this_type;
-
-  public:
-    StructuredTaskGroup( T_THREAD_POOL * pool_ptr )
-        : m_waiting_refcount( 0 )
-        , m_pool_ptr( pool_ptr )
-    {}
-
-    /**
-     * Synchronization handles are not copy constructible.
-     */
-    StructuredTaskGroup( const this_type & ) = delete;
-    StructuredTaskGroup( this_type && other )
-        : m_waiting_refcount( 0 )
-        , m_pool_ptr( other.m_pool_ptr )
-    {}
-
-    ~StructuredTaskGroup()
-    {
-      wait();
-    }
-
-    /**
-     * Synchronization handles are not assignable
-     */
-    this_type & operator=( const this_type & ) = delete;
-    this_type & operator=( this_type && other )
-    {
-      m_waiting_refcount.store( 0, std::memory_order_release );
-      m_pool_ptr = other.m_pool_ptr;
-
-      return *this;
-    }
-
-    void spawn( T_TASK * task )
-    {
-      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
-      task->m_waiting_refcount = &m_waiting_refcount;
-      m_pool_ptr->enqueueTask( task );
-    }
-
-    void spawn( std::size_t queue_hint, T_TASK * task )
-    {
-      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
-      task->m_waiting_refcount = &m_waiting_refcount;
-      m_pool_ptr->enqueueTask( queue_hint, task );
-    }
-
-    void spawn( TaskListTmpl< T_TASK > & task_list )
-    {
-      if ( !task_list.empty() )
-      {
-        for ( T_TASK & task : task_list )
-        {
-          m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
-          task.m_waiting_refcount = &m_waiting_refcount;
-        }
-      }
-
-      m_pool_ptr->enqueueTaskList( task_list );
-    }
-
-    void spawn( std::size_t queue_hint, TaskListTmpl< T_TASK > & task_list )
-    {
-      if ( !task_list.empty() )
-      {
-        for ( T_TASK & task : task_list )
-        {
-          m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
-          task->m_waiting_refcount = &m_waiting_refcount;
-        }
-      }
-
-      m_pool_ptr->enqueueTaskList( queue_hint, task_list );
-    }
-
-    void wait()
-    {
-      hybrid_backoff bkoff;
-      while ( m_waiting_refcount.load( std::memory_order_acquire ) > 0 )
-      {
-        if ( m_pool_ptr->stealTask() )
-        {
-          bkoff.reset();
-        }
-        else
-        {
-          bkoff.backoff();
-        }
-      }
-    }
-
-    void incrementNumberOfAwaitedTaskCompletions( int num_addition_tasks )
-    {
-      m_waiting_refcount.fetch_add( num_addition_tasks, std::memory_order_acq_rel );
-    }
-
-    void spawn_and_wait( T_TASK * task )
-    {
-      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
-      task->m_waiting_refcount = &m_waiting_refcount;
-
-      do
-      {
-        task->m_pool_ptr = m_pool_ptr;
-        task->execute();
-
-        T_TASK * next_task = nullptr;
-        if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
-        {
-          // The successor task is ready to be executed.
-          // We take the successor task as our next
-          // task to execute.
-          next_task = task->m_successor_task;
-        }
-
-        if ( task->m_waiting_refcount )
-        {
-          task->m_waiting_refcount->fetch_sub( 1, std::memory_order_acq_rel );
-        }
-
-        task = next_task;
-      } while( task );
-
-      wait();
-    }
-
-    T_THREAD_POOL * threadPool() const
-    {
-      return m_pool_ptr;
-    }
-
-    void reset()
-    {
-      m_waiting_refcount.store( 0, std::memory_order_acq_rel );
-    }
-
-  private:
-    std::atomic_int m_waiting_refcount;
-    mutable T_THREAD_POOL * m_pool_ptr;
 };
 
 
 
-template< typename T_THREAD_POOL,
-          typename T_DERIVED >
 class StructuredTask : public concurrent_queue_intrusive_node
 {
-  template< typename X_THREAD_POOL,
-            typename X_TASK >
-  friend class StructuredTaskGroup;
-
-  template< typename X_QUEUE,
-            typename X_TASK >
+  template< typename X_QUEUE >
   friend class StructuredWorkStealingThreadPoolWorker;
 
-  template< std::size_t X_MAX_NUM_THREADS,
-            typename X_TASK >
+  template< std::size_t X_MAX_NUM_THREADS >
   friend class StructuredWorkStealingThreadPool;
 
-  typedef StructuredTask< T_THREAD_POOL, T_DERIVED > this_type;
-  typedef T_THREAD_POOL pool_type;
+  template< typename T_THREAD_POOL >
+  friend class StructuredTaskGroup;
+
+  typedef StructuredTask this_type;
   typedef unsigned int T_STATUS_MASK_TYPE;
 
   static const T_STATUS_MASK_TYPE TERMINATION_MASK = 1;
@@ -1632,58 +1494,44 @@ class StructuredTask : public concurrent_queue_intrusive_node
         , m_func_ref( std::move( other.m_func_ref ) )
     {}
 
-    virtual ~StructuredTask() {}
+    virtual ~StructuredTask() = default;
 
     this_type & operator=( const this_type & other )
     {
-      m_pool_ptr = other.m_pool_ptr;
-      m_task_status = other.m_task_status;
-      m_refcount.store( other.m_refcount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-      m_successor_task = other.m_successor_task;
-      m_waiting_refcount = other.m_waiting_refcount;
-      m_func_ref = other.m_func_ref;
+      if (this != &other)
+      {
+        m_pool_ptr = other.m_pool_ptr;
+        m_task_status = other.m_task_status;
+        m_refcount.store( other.m_refcount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+        m_successor_task = other.m_successor_task;
+        m_waiting_refcount = other.m_waiting_refcount;
+        m_func_ref = other.m_func_ref;
+      }
 
       return *this;
     }
 
     this_type & operator=( this_type && other )
     {
-      m_pool_ptr = other.m_pool_ptr;
-      m_task_status = other.m_task_status;
-      m_refcount.store( other.m_refcount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-      m_successor_task = other.m_successor_task;
-      m_waiting_refcount = other.m_waiting_refcount;
-      m_func_ref = std::move( other.m_func_ref );
+      if (this != &other)
+      {
+        m_pool_ptr = other.m_pool_ptr;
+        m_task_status = other.m_task_status;
+        m_refcount.store( other.m_refcount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+        m_successor_task = other.m_successor_task;
+        m_waiting_refcount = other.m_waiting_refcount;
+        m_func_ref = std::move( other.m_func_ref );
+      }
 
       return *this;
     }
 
-    void spawn( T_DERIVED * task ) const
-    {
-      m_pool_ptr->enqueueTask( task );
-    }
-
-    void spawn( std::size_t queue_hint, T_DERIVED * task ) const
-    {
-      m_pool_ptr->enqueueTask( queue_hint, task );
-    }
-
-    void spawn( TaskListTmpl< T_DERIVED > & task_list ) const
-    {
-      m_pool_ptr->enqueueTaskList( task_list );
-    }
-
-    void spawn( std::size_t queue_hint, TaskListTmpl< T_DERIVED > & task_list ) const
-    {
-      m_pool_ptr->enqueueTaskList( queue_hint, task_list );
-    }
-
-    T_DERIVED * getSuccessorTask() const
+    StructuredTask * getSuccessorTask() const
     {
       return m_successor_task;
     }
 
-    void setSuccessorTask( T_DERIVED * successor_task )
+    void setSuccessorTask( StructuredTask * successor_task )
     {
       if ( m_successor_task )
       {
@@ -1698,7 +1546,7 @@ class StructuredTask : public concurrent_queue_intrusive_node
       }
     }
 
-    void moveWaitingConditionTo( T_DERIVED * new_task_to_wait_for )
+    void moveWaitingConditionTo( StructuredTask * new_task_to_wait_for )
     {
       if ( new_task_to_wait_for != this )
       {
@@ -1717,7 +1565,6 @@ class StructuredTask : public concurrent_queue_intrusive_node
 
     void reset()
     {
-      m_pool_ptr = nullptr;
       m_task_status = 0;
       m_refcount.store( 0, std::memory_order_release );
       m_successor_task = nullptr;
@@ -1754,27 +1601,65 @@ class StructuredTask : public concurrent_queue_intrusive_node
     }
 
   protected:
-    mutable pool_type * m_pool_ptr;
+    mutable StructuredWorkStealingThreadPoolBase * m_pool_ptr;
     T_STATUS_MASK_TYPE m_task_status;
     std::atomic_int m_refcount;
-    T_DERIVED * m_successor_task;
+    StructuredTask * m_successor_task;
     std::atomic_int * m_waiting_refcount;
     detail::function_ref< void() > m_func_ref;
 };
 
 
 
-template< typename T_QUEUE,
-          typename T_TASK >
+class WorkerBlockingTask : public StructuredTask
+{
+  typedef StructuredTask base_type;
+  typedef WorkerBlockingTask this_type;
+
+public:
+  WorkerBlockingTask( std::counting_semaphore<> & sem )
+      : base_type()
+      , m_sem( &sem )
+  {
+    setCallable (*this);
+  }
+
+  WorkerBlockingTask ( const this_type & ) = delete;
+
+  WorkerBlockingTask ( this_type && other )
+      : base_type()
+      , m_sem( other.m_sem )
+  {
+    setCallable (*this);
+  }
+
+  virtual ~WorkerBlockingTask() = default;
+
+  this_type&
+  operator= ( const this_type & ) = delete;
+
+  this_type&
+  operator= ( this_type&& ) = delete;
+
+  void operator()()
+  {
+    m_sem->acquire();
+  }
+
+private:
+  std::counting_semaphore<> * m_sem;
+};
+
+
+
+template< typename T_QUEUE >
 class StructuredWorkStealingThreadPoolWorker
 {
-  typedef StructuredWorkStealingThreadPoolWorker< T_QUEUE,
-                                                  T_TASK > this_type;
+  typedef StructuredWorkStealingThreadPoolWorker< T_QUEUE > this_type;
   typedef T_QUEUE task_queue_type;
-  typedef T_TASK task_type;
 
   public:
-    StructuredWorkStealingThreadPoolWorker()
+    StructuredWorkStealingThreadPoolWorker( std::counting_semaphore<> & sem )
         : m_queue( nullptr )
         , m_thread_id( 0 )
         , m_thread()
@@ -1812,7 +1697,7 @@ class StructuredWorkStealingThreadPoolWorker
     {
       ThreadContext::setThreadId( m_thread_id );
 
-      task_type * task;
+      StructuredTask * task;
       hybrid_backoff bkoff;
 
       while ( true )
@@ -1823,7 +1708,7 @@ class StructuredWorkStealingThreadPoolWorker
           // Either the queue is empty or it was contended. Back-off before we retry.
           bkoff.backoff();
         }
-        if ( task->m_task_status & task_type::TERMINATION_MASK )
+        if ( task->m_task_status & StructuredTask::TERMINATION_MASK )
         {
           // We received a signal to terminate.
           return;
@@ -1834,7 +1719,7 @@ class StructuredWorkStealingThreadPoolWorker
           {
             task->execute();
 
-            task_type * next_task = nullptr;
+            StructuredTask * next_task = nullptr;
             if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
             {
               // The successor task is ready to be executed.
@@ -1863,26 +1748,23 @@ class StructuredWorkStealingThreadPoolWorker
 
 
 
-template< std::size_t MAX_NUM_THREADS,
-          typename T_TASK >
-class StructuredWorkStealingThreadPool
+template< std::size_t MAX_NUM_THREADS >
+class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPoolBase
 {
   public:
-    typedef StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                              T_TASK > this_type;
-    typedef T_TASK task_type;
-    typedef distributed_queue_intrusive< task_type,
+    typedef StructuredWorkStealingThreadPool< MAX_NUM_THREADS > this_type;
+    typedef distributed_queue_intrusive< StructuredTask,
                                          MAX_NUM_THREADS > task_queue_type;
-    typedef StructuredWorkStealingThreadPoolWorker< task_queue_type,
-                                                    task_type > worker_type;
+    typedef StructuredWorkStealingThreadPoolWorker< task_queue_type > worker_type;
 
   public:
     StructuredWorkStealingThreadPool( std::size_t num_threads )
         : m_task_queue( std::min( num_threads, MAX_NUM_THREADS ) )
         , m_num_threads( std::min( num_threads, MAX_NUM_THREADS ) )
-        , m_termination_tasks()
-        , m_workers()
         , m_workers_started()
+        , m_sem( 0 )
+        , m_termination_tasks()
+        , m_workers( m_sem )
     {
       m_workers_started.clear( std::memory_order_release );
       // Initialize the thread ID of the calling main thread.
@@ -1890,7 +1772,7 @@ class StructuredWorkStealingThreadPool
 
       for( std::size_t i = 0; i < MAX_NUM_THREADS; ++i )
       {
-        m_termination_tasks[i].m_task_status |= task_type::TERMINATION_MASK;
+        m_termination_tasks[i].m_task_status |= StructuredTask::TERMINATION_MASK;
       }
     }
 
@@ -1922,25 +1804,25 @@ class StructuredWorkStealingThreadPool
       m_workers_started.clear( std::memory_order_release );
     }
 
-    void enqueueTask( task_type * task )
+    void enqueueTask( StructuredTask * task )
     {
       task->m_pool_ptr = this;
       m_task_queue.push( task );
       startWorkers();
     }
 
-    void enqueueTask( std::size_t queue_hint, task_type * task )
+    void enqueueTask( std::size_t queue_hint, StructuredTask * task )
     {
       task->m_pool_ptr = this;
       m_task_queue.push( queue_hint, task );
       startWorkers();
     }
 
-    void enqueueTaskList( TaskListTmpl< task_type > & task_list )
+    void enqueueTaskList( TaskListTmpl< StructuredTask > & task_list )
     {
       if ( !task_list.empty() )
       {
-        for ( task_type & task : task_list )
+        for ( StructuredTask & task : task_list )
         {
           task.m_pool_ptr = this;
         }
@@ -1950,11 +1832,11 @@ class StructuredWorkStealingThreadPool
       }
     }
 
-    void enqueueTaskList( std::size_t queue_hint, TaskListTmpl< task_type > & task_list )
+    void enqueueTaskList( std::size_t queue_hint, TaskListTmpl< StructuredTask > & task_list )
     {
       if ( !task_list.empty() )
       {
-        for ( task_type & task : task_list )
+        for ( StructuredTask & task : task_list )
         {
           task.m_pool_ptr = this;
         }
@@ -1966,11 +1848,11 @@ class StructuredWorkStealingThreadPool
 
     bool stealTask()
     {
-      task_type * task;
+      StructuredTask * task;
 
       if ( m_task_queue.pop( task ) )
       {
-        if ( task->m_task_status & task_type::TERMINATION_MASK )
+        if ( task->m_task_status & StructuredTask::TERMINATION_MASK )
         {
           // We received a signal to terminate.
           return false;
@@ -1981,7 +1863,7 @@ class StructuredWorkStealingThreadPool
           {
             task->execute();
 
-            task_type * next_task = nullptr;
+            StructuredTask * next_task = nullptr;
             if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
             {
               // The successor task is ready to be executed.
@@ -2033,11 +1915,163 @@ class StructuredWorkStealingThreadPool
   private:
     task_queue_type m_task_queue;
     const std::size_t m_num_threads;
-    array_fixed_size< task_type,
+    std::atomic_flag m_workers_started;
+    std::counting_semaphore<> m_sem;
+    array_fixed_size< StructuredTask,
                       MAX_NUM_THREADS > m_termination_tasks;
     array_fixed_size< worker_type,
                       MAX_NUM_THREADS - 1 > m_workers;
-    std::atomic_flag m_workers_started;
+};
+
+
+
+template< typename T_THREAD_POOL >
+class StructuredTaskGroup
+{
+  typedef StructuredTaskGroup this_type;
+
+  public:
+    StructuredTaskGroup( T_THREAD_POOL * pool )
+        : m_waiting_refcount( 0 )
+        , m_pool_ptr( pool )
+    {}
+
+    StructuredTaskGroup( const this_type & ) = delete;
+
+    StructuredTaskGroup( this_type && other )
+        : m_waiting_refcount( 0 )
+        , m_pool_ptr( other.m_pool_ptr )
+    {}
+
+    /**
+     * The caller of the destructor synchronizes, waiting until
+     * all tasks spawed through the task group have been completed.
+     */
+    ~StructuredTaskGroup()
+    {
+      wait();
+    }
+
+    this_type & operator=( const this_type & ) = delete;
+
+    this_type & operator=( this_type && other )
+    {
+      if (this != &other)
+      {
+        m_waiting_refcount.store( 0, std::memory_order_release );
+        m_pool_ptr = other.m_pool_ptr;
+      }
+
+      return *this;
+    }
+
+    void spawn( StructuredTask * task )
+    {
+      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+      task->m_waiting_refcount = &m_waiting_refcount;
+      m_pool_ptr->enqueueTask( task );
+    }
+
+    void spawn( std::size_t queue_hint, StructuredTask * task )
+    {
+      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+      task->m_waiting_refcount = &m_waiting_refcount;
+      m_pool_ptr->enqueueTask( queue_hint, task );
+    }
+
+    void spawn( TaskListTmpl< StructuredTask > & task_list )
+    {
+      if ( !task_list.empty() )
+      {
+        for ( StructuredTask & task : task_list )
+        {
+          m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+          task.m_waiting_refcount = &m_waiting_refcount;
+        }
+      }
+
+      m_pool_ptr->enqueueTaskList( task_list );
+    }
+
+    void spawn( std::size_t queue_hint, TaskListTmpl< StructuredTask > & task_list )
+    {
+      if ( !task_list.empty() )
+      {
+        for ( StructuredTask & task : task_list )
+        {
+          m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+          task.m_waiting_refcount = &m_waiting_refcount;
+        }
+      }
+
+      m_pool_ptr->enqueueTaskList( queue_hint, task_list );
+    }
+
+    void wait()
+    {
+      hybrid_backoff bkoff;
+      while ( m_waiting_refcount.load( std::memory_order_acquire ) > 0 )
+      {
+        if ( m_pool_ptr->stealTask() )
+        {
+          bkoff.reset();
+        }
+        else
+        {
+          bkoff.backoff();
+        }
+      }
+    }
+
+    void incrementNumberOfAwaitedTaskCompletions( int num_addition_tasks )
+    {
+      m_waiting_refcount.fetch_add( num_addition_tasks, std::memory_order_acq_rel );
+    }
+
+    void spawn_and_wait( StructuredTask * task )
+    {
+      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+      task->m_waiting_refcount = &m_waiting_refcount;
+
+      do
+      {
+        task->m_pool_ptr = m_pool_ptr;
+        task->execute();
+
+        StructuredTask * next_task = nullptr;
+        if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
+        {
+          // The successor task is ready to be executed.
+          // We take the successor task as our next
+          // task to execute.
+          next_task = task->m_successor_task;
+        }
+
+        if ( task->m_waiting_refcount )
+        {
+          task->m_waiting_refcount->fetch_sub( 1, std::memory_order_acq_rel );
+        }
+
+        task = next_task;
+      } while( task );
+
+      wait();
+    }
+
+    void reset()
+    {
+      m_waiting_refcount.store( 0, std::memory_order_acq_rel );
+    }
+
+  protected:
+    T_THREAD_POOL * get_thread_pool() const
+    {
+      return m_pool_ptr;
+    }
+
+  private:
+    std::atomic_int m_waiting_refcount;
+    mutable T_THREAD_POOL * m_pool_ptr;
 };
 
 
@@ -2357,8 +2391,9 @@ class WorkStealingThreadPool
      * group upon its completion. That way task graphs with
      * continuation tasks can be designed.
      */
-    class TaskGroup
+    class TaskGroup : public detail::StructuredTaskGroup< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > >
     {
+      typedef detail::StructuredTaskGroup< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > > base_type;
       typedef TaskGroup this_type;
 
       public:
@@ -2366,29 +2401,9 @@ class WorkStealingThreadPool
         using TaskList = detail::TaskListTmpl< Task >;
 
       public:
-        TaskGroup( detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                                             Task > * pool )
-            : m_impl( pool )
+        TaskGroup( detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > * pool )
+            : base_type( pool )
         {}
-
-        TaskGroup( const this_type & ) = delete;
-        TaskGroup( this_type && other )
-            : m_impl( std::move( other.m_impl ) )
-        {}
-
-        /**
-         * The caller of the destructor synchronizes, waiting until
-         * all tasks spawed through the task group have been completed.
-         */
-        ~TaskGroup() {}
-
-        this_type & operator=( const this_type & ) = delete;
-        this_type & operator=( this_type && other )
-        {
-          m_impl = std::move( other.m_impl );
-
-          return *this;
-        }
 
         /**
          * This method spawn \a task. That means \a task is inserted into
@@ -2400,7 +2415,7 @@ class WorkStealingThreadPool
          */
         void spawn( Task * task )
         {
-          m_impl.spawn( task );
+          base_type::spawn( task );
         }
 
         /**
@@ -2425,7 +2440,7 @@ class WorkStealingThreadPool
          */
         void spawn( std::size_t queue_hint, Task * task )
         {
-          m_impl.spawn( queue_hint, task );
+          base_type::spawn( queue_hint, task );
         }
 
         /**
@@ -2439,7 +2454,7 @@ class WorkStealingThreadPool
          */
         void spawn( TaskList & task_list )
         {
-          m_impl.spawn( task_list );
+          base_type::spawn( TaskListTmpl< detail::StructuredTask >( task_list ) );
         }
 
         /**
@@ -2464,7 +2479,7 @@ class WorkStealingThreadPool
          */
         void spawn( std::size_t queue_hint, TaskList & task_list )
         {
-          m_impl.spawn( queue_hint, task_list );
+          base_type::spawn( queue_hint, TaskListTmpl< detail::StructuredTask >( task_list ) );
         }
 
         /**
@@ -2482,7 +2497,7 @@ class WorkStealingThreadPool
          */
         void wait()
         {
-          m_impl.wait();
+          base_type::wait();
         }
 
         /**
@@ -2502,7 +2517,7 @@ class WorkStealingThreadPool
          */
         void incrementNumberOfAwaitedTaskCompletions( int num_addition_tasks )
         {
-          m_impl.incrementNumberOfAwaitedTaskCompletions( num_addition_tasks );
+          base_type::incrementNumberOfAwaitedTaskCompletions( num_addition_tasks );
         }
 
         /**
@@ -2519,7 +2534,7 @@ class WorkStealingThreadPool
          */
         void spawn_and_wait( Task * task )
         {
-          m_impl.spawn_and_wait( task );
+          base_type::spawn_and_wait( task );
         }
 
         /**
@@ -2532,7 +2547,7 @@ class WorkStealingThreadPool
          */
         TaskGroup createTaskGroup() const
         {
-          return TaskGroup( m_impl.threadPool() );
+          return TaskGroup( this->get_thread_pool() );
         }
 
         /**
@@ -2556,13 +2571,8 @@ class WorkStealingThreadPool
          */
         void reset()
         {
-          m_impl.reset();
+          base_type::reset();
         }
-
-      private:
-        detail::StructuredTaskGroup< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                                                               Task >,
-                                     Task > m_impl;
     };
 
 
@@ -2746,13 +2756,9 @@ class WorkStealingThreadPool
      * waiting for t_1 - t_k to complete. Instead of calling tg.wait(),
      * one could also just let tg go out of scope. This has the same effect.
      */
-    class Task : public detail::StructuredTask< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                                                                          Task >,
-                                                Task >
+    class Task : public detail::StructuredTask
     {
-      typedef detail::StructuredTask< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                                                                Task >,
-                                      Task > base_type;
+      typedef detail::StructuredTask base_type;
       typedef Task this_type;
 
       public:
@@ -2760,17 +2766,7 @@ class WorkStealingThreadPool
         using TaskList = detail::TaskListTmpl< this_type >;
 
       public:
-        Task()
-            : base_type()
-        {}
-
-        Task( const this_type & ) = default;
-        Task( this_type && ) = default;
-
-        virtual ~Task() {}
-
-        this_type & operator=( const this_type & ) = default;
-        this_type & operator=( this_type && ) = default;
+        virtual ~Task() = default;
 
         /**
          * This method spawn \a task. That means \a task is inserted into
@@ -2786,7 +2782,7 @@ class WorkStealingThreadPool
          */
         void spawn( this_type * task ) const
         {
-          base_type::spawn( task );
+          get_thread_pool()->enqueueTask( task );
         }
 
         /**
@@ -2815,7 +2811,7 @@ class WorkStealingThreadPool
          */
         void spawn( std::size_t queue_hint, this_type * task ) const
         {
-          base_type::spawn( queue_hint, task );
+          get_thread_pool()->enqueueTask( queue_hint, task );
         }
 
         /**
@@ -2832,7 +2828,7 @@ class WorkStealingThreadPool
          */
         void spawn( TaskList & task_list ) const
         {
-          base_type::spawn( task_list );
+          get_thread_pool()->enqueueTaskList( TaskListTmpl< detail::StructuredTask >( task_list ) );
         }
 
         /**
@@ -2861,7 +2857,7 @@ class WorkStealingThreadPool
          */
         void spawn( std::size_t queue_hint, TaskList & task_list ) const
         {
-          base_type::spawn( queue_hint, task_list );
+          get_thread_pool()->enqueueTaskList( queue_hint, TaskListTmpl< detail::StructuredTask >( task_list ) );
         }
 
         /**
@@ -2873,7 +2869,7 @@ class WorkStealingThreadPool
          */
         this_type * getSuccessorTask() const
         {
-          return base_type::getSuccessorTask();
+          return static_cast< this_type * >( base_type::getSuccessorTask() );
         }
 
         /**
@@ -2940,7 +2936,7 @@ class WorkStealingThreadPool
          */
         TaskGroup createTaskGroup() const
         {
-          return TaskGroup( this->m_pool_ptr );
+          return TaskGroup( get_thread_pool() );
         }
 
         /**
@@ -2975,6 +2971,13 @@ class WorkStealingThreadPool
         void setCallable( T_CALLABLE & callable )
         {
           base_type::setCallable( callable );
+        }
+
+      private:
+        detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > *
+	get_thread_pool() const
+        {
+          return static_cast< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > * >( m_pool_ptr );
         }
     };
 
@@ -3199,8 +3202,7 @@ class WorkStealingThreadPool
     }
 
   private:
-    detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS,
-                                              Task > m_pool_impl;
+    detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > m_pool_impl;
 };
 
 
