@@ -1663,6 +1663,7 @@ class StructuredWorkStealingThreadPoolWorker
         : m_queue( nullptr )
         , m_thread_id( 0 )
         , m_thread()
+        , m_worker_blocking_task( sem )
     {}
 
     ~StructuredWorkStealingThreadPoolWorker()
@@ -1690,6 +1691,12 @@ class StructuredWorkStealingThreadPoolWorker
       {
         m_thread.join();
       }
+    }
+
+    WorkerBlockingTask &
+    get_worker_blocking_task()
+    {
+      return m_worker_blocking_task;
     }
 
   private:
@@ -1744,6 +1751,7 @@ class StructuredWorkStealingThreadPoolWorker
     task_queue_type * m_queue;
     std::size_t m_thread_id;
     std::thread m_thread;
+    WorkerBlockingTask m_worker_blocking_task;
 };
 
 
@@ -1766,13 +1774,22 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
         , m_termination_tasks()
         , m_workers( m_sem )
     {
-      m_workers_started.clear( std::memory_order_release );
+      m_workers_started.test_and_set( std::memory_order_acquire );
       // Initialize the thread ID of the calling main thread.
       ThreadContext::initMainThreadId();
 
       for( std::size_t i = 0; i < MAX_NUM_THREADS; ++i )
       {
         m_termination_tasks[i].m_task_status |= StructuredTask::TERMINATION_MASK;
+      }
+
+      // Enqueue tasks which will cause the workers to be blocked.
+      stop_workers();
+
+      // Fire up the worker threads.
+      for( std::size_t i = 0; i < m_num_threads - 1; ++i )
+      {
+        m_workers[i].startWorker( &m_task_queue, i + 1 );
       }
     }
 
@@ -1795,6 +1812,8 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
         m_task_queue.push( i, m_termination_tasks[i] );
       }
 
+      wake_workers();
+
       for( std::size_t i = 0; i < m_num_threads - 1; ++i )
       {
         m_workers[i].joinWithThread();
@@ -1808,14 +1827,14 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
     {
       task->m_pool_ptr = this;
       m_task_queue.push( task );
-      startWorkers();
+      wake_workers();
     }
 
     void enqueueTask( std::size_t queue_hint, StructuredTask * task )
     {
       task->m_pool_ptr = this;
       m_task_queue.push( queue_hint, task );
-      startWorkers();
+      wake_workers();
     }
 
     void enqueueTaskList( TaskListTmpl< StructuredTask > & task_list )
@@ -1828,7 +1847,7 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
         }
 
         m_task_queue.pushList( task_list.front(), task_list.back() );
-        startWorkers();
+        wake_workers();
       }
     }
 
@@ -1842,7 +1861,7 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
         }
 
         m_task_queue.pushList( queue_hint, task_list.front(), task_list.back() );
-        startWorkers();
+        wake_workers();
       }
     }
 
@@ -1900,15 +1919,25 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
       return ThreadContext::getThreadId();
     }
 
-  private:
-    void startWorkers()
+    void
+    stop_workers()
+    {
+      if ( m_workers_started.test( std::memory_order_acquire ) )
+      {
+	m_workers_started.clear( std::memory_order_release );
+        for( std::size_t i = 0; i < m_num_threads - 1; ++i )
+        {
+          m_task_queue.push( m_workers[i].get_worker_blocking_task() );
+        }
+      }
+    }
+
+    void
+    wake_workers()
     {
       if ( !m_workers_started.test_and_set( std::memory_order_acquire ) )
       {
-        for( std::size_t i = 0; i < m_num_threads - 1; ++i )
-        {
-          m_workers[i].startWorker( &m_task_queue, i + 1 );
-        }
+        m_sem.release( m_num_threads - 1 );
       }
     }
 
@@ -3199,6 +3228,26 @@ class WorkStealingThreadPool
     get_worker_id () const
     {
       return m_pool_impl.get_worker_id();
+    }
+
+    /**
+     * Calling this method causes the worker threads to stop
+     * trying to fetch new tasks until they are woken up again.
+     */
+    void
+    stop_workers()
+    {
+      m_pool_impl.stop_workers();
+    }
+
+    /**
+     * Calling this method wakes up the worker threads again, if they
+     * have been stopped before.
+     */
+    void
+    wake_workers()
+    {
+      m_pool_impl.wake_workers();
     }
 
   private:
