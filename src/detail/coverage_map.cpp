@@ -57,8 +57,8 @@ namespace citcpp
 	    fixed_last_parameter ?
 		binomial_coeffs.get_coefficient (n - 1, t - 1) :
 		binomial_coeffs.get_coefficient (n, t)), model_ (model), parameter_index_map_ (
-	    parameter_index_map), n_ (n), t_ (t), cov_map_ (size_), total_num_tuples_ (
-	    0)
+	    parameter_index_map), binomial_coeffs_ (binomial_coeffs), n_ (n), t_ (
+	    t), cov_map_ (size_), total_num_tuples_ (0)
     {
       coverage_map_base::size_type cov_map_first_level_index = 0;
 
@@ -78,30 +78,6 @@ namespace citcpp
 	      n_ - 1, t_ - 1, 1, *this, model, parameter_index_map,
 	      cov_map_first_level_index);
 	}
-    }
-
-    const model&
-    coverage_map_base::get_model () const
-    {
-      return model_;
-    }
-
-    std::vector<bitset_with_num_ones>&
-    coverage_map_base::get_coverage_map ()
-    {
-      return cov_map_;
-    }
-
-    const std::vector<bitset_with_num_ones>&
-    coverage_map_base::get_coverage_map () const
-    {
-      return cov_map_;
-    }
-
-    unsigned long long
-    coverage_map_base::get_total_number_of_tuples () const
-    {
-      return total_num_tuples_;
     }
   }
 }

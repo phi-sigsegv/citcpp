@@ -56,12 +56,13 @@ namespace
 
   class compute_partial_sum_task : public citcpp::detail::thread_pool::Task
   {
+    typedef citcpp::detail::thread_pool::Task base_type;
     typedef compute_partial_sum_task this_type;
 
   public:
     compute_partial_sum_task () :
-	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (0), current_level_ (
-	    0), factorLevels_ (nullptr), num_combinations_ (0)
+	base_type (), start_idx_for_next_ (0), current_level_ (0), factorLevels_ (
+	    nullptr), num_combinations_ (0)
     {
       setCallable (*this);
     }
@@ -69,15 +70,28 @@ namespace
     compute_partial_sum_task (int start_idx_for_next, int current_level,
 			      const std::vector<unsigned int> *factorLevels,
 			      std::atomic_ullong *num_combinations) :
-	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (
-	    start_idx_for_next), current_level_ (current_level), factorLevels_ (
-	    factorLevels), num_combinations_ (num_combinations)
+	base_type (), start_idx_for_next_ (start_idx_for_next), current_level_ (
+	    current_level), factorLevels_ (factorLevels), num_combinations_ (
+	    num_combinations)
     {
       setCallable (*this);
     }
 
-    compute_partial_sum_task (const this_type&) = default;
-    compute_partial_sum_task (this_type&&) = default;
+    compute_partial_sum_task (const this_type &other) :
+	base_type (other), start_idx_for_next_ (other.start_idx_for_next_), current_level_ (
+	    other.current_level_), factorLevels_ (other.factorLevels_), num_combinations_ (
+	    other.num_combinations_)
+    {
+      setCallable (*this);
+    }
+
+    compute_partial_sum_task (this_type &&other) :
+	base_type (std::move (other)), start_idx_for_next_ (
+	    other.start_idx_for_next_), current_level_ (other.current_level_), factorLevels_ (
+	    other.factorLevels_), num_combinations_ (other.num_combinations_)
+    {
+      setCallable (*this);
+    }
 
     virtual
     ~compute_partial_sum_task ()
@@ -85,9 +99,35 @@ namespace
     }
 
     this_type&
-    operator= (const this_type&) = default;
+    operator= (const this_type &other)
+    {
+      if (this != &other)
+	{
+	  base_type::operator = (other);
+	  setCallable (*this);
+	  start_idx_for_next_ = other.start_idx_for_next_;
+	  current_level_ = other.current_level_;
+	  factorLevels_ = other.factorLevels_;
+	  num_combinations_ = other.num_combinations_;
+	}
+
+      return *this;
+    }
     this_type&
-    operator= (this_type&&) = default;
+    operator= (this_type &&other)
+    {
+      if (this != &other)
+	{
+	  base_type::operator = (std::move (other));
+	  setCallable (*this);
+	  start_idx_for_next_ = other.start_idx_for_next_;
+	  current_level_ = other.current_level_;
+	  factorLevels_ = other.factorLevels_;
+	  num_combinations_ = other.num_combinations_;
+	}
+
+      return *this;
+    }
 
     void
     operator () ()
@@ -108,13 +148,13 @@ namespace
 
   class compute_partial_sum_with_parameter_map_task : public citcpp::detail::thread_pool::Task
   {
+    typedef citcpp::detail::thread_pool::Task base_type;
     typedef compute_partial_sum_with_parameter_map_task this_type;
 
   public:
     compute_partial_sum_with_parameter_map_task () :
-	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (0), current_level_ (
-	    0), factorLevels_ (nullptr), parameter_index_map_ (nullptr), num_combinations_ (
-	    0)
+	base_type (), start_idx_for_next_ (0), current_level_ (0), factorLevels_ (
+	    nullptr), parameter_index_map_ (nullptr), num_combinations_ (0)
     {
       setCallable (*this);
     }
@@ -124,16 +164,31 @@ namespace
 	const std::vector<unsigned int> *factorLevels,
 	const std::vector<unsigned int> *parameter_index_map,
 	std::atomic_ullong *num_combinations) :
-	citcpp::detail::thread_pool::Task (), start_idx_for_next_ (
-	    start_idx_for_next), current_level_ (current_level), factorLevels_ (
-	    factorLevels), parameter_index_map_ (parameter_index_map), num_combinations_ (
-	    num_combinations)
+	base_type (), start_idx_for_next_ (start_idx_for_next), current_level_ (
+	    current_level), factorLevels_ (factorLevels), parameter_index_map_ (
+	    parameter_index_map), num_combinations_ (num_combinations)
     {
       setCallable (*this);
     }
 
-    compute_partial_sum_with_parameter_map_task (const this_type&) = default;
-    compute_partial_sum_with_parameter_map_task (this_type&&) = default;
+    compute_partial_sum_with_parameter_map_task (const this_type &other) :
+	base_type (other), start_idx_for_next_ (other.start_idx_for_next_), current_level_ (
+	    other.current_level_), factorLevels_ (other.factorLevels_), parameter_index_map_ (
+	    other.parameter_index_map_), num_combinations_ (
+	    other.num_combinations_)
+    {
+      setCallable (*this);
+    }
+
+    compute_partial_sum_with_parameter_map_task (this_type &&other) :
+	base_type (std::move (other)), start_idx_for_next_ (
+	    other.start_idx_for_next_), current_level_ (other.current_level_), factorLevels_ (
+	    other.factorLevels_), parameter_index_map_ (
+	    other.parameter_index_map_), num_combinations_ (
+	    other.num_combinations_)
+    {
+      setCallable (*this);
+    }
 
     virtual
     ~compute_partial_sum_with_parameter_map_task ()
@@ -141,9 +196,38 @@ namespace
     }
 
     this_type&
-    operator= (const this_type&) = default;
+    operator= (const this_type &other)
+    {
+      if (this != &other)
+	{
+	  base_type::operator = (other);
+	  setCallable (*this);
+	  start_idx_for_next_ = other.start_idx_for_next_;
+	  current_level_ = other.current_level_;
+	  factorLevels_ = other.factorLevels_;
+	  parameter_index_map_ = other.parameter_index_map_;
+	  num_combinations_ = other.num_combinations_;
+	}
+
+      return *this;
+    }
+
     this_type&
-    operator= (this_type&&) = default;
+    operator= (this_type &&other)
+    {
+      if (this != &other)
+	{
+	  base_type::operator = (std::move (other));
+	  setCallable (*this);
+	  start_idx_for_next_ = other.start_idx_for_next_;
+	  current_level_ = other.current_level_;
+	  factorLevels_ = other.factorLevels_;
+	  parameter_index_map_ = other.parameter_index_map_;
+	  num_combinations_ = other.num_combinations_;
+	}
+
+      return *this;
+    }
 
     void
     operator () ()
@@ -193,7 +277,7 @@ namespace citcpp
 
       task_group tg (tp.createTaskGroup ());
 
-      std::vector<compute_partial_sum_task> tasks (numFactors - (t - 1));
+      std::vector<compute_partial_sum_task> tasks;
       for (unsigned int i = numFactors - 1; i >= (t - 1); --i)
 	{
 	  tasks.emplace_back (i, t - 1, &model.get_parameters (),
@@ -234,8 +318,7 @@ namespace citcpp
 
       task_group tg (tp.createTaskGroup ());
 
-      std::vector<compute_partial_sum_with_parameter_map_task> tasks (
-	  numFactors - (t - 1));
+      std::vector<compute_partial_sum_with_parameter_map_task> tasks;
       for (unsigned int i = numFactors - 1; i >= (t - 1); --i)
 	{
 	  tasks.emplace_back (i, t - 1, &model.get_parameters (),

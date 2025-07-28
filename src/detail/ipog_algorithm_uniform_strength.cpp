@@ -1,10 +1,15 @@
 #include <ranges>
-#include <taskflow/taskflow.hpp>
+#include <new>
 #include "ipog_algorithm_uniform_strength.hpp"
 #include "for_each_cross_product_elem.hpp"
 
 namespace
 {
+  struct alignas( std::hardware_destructive_interference_size ) aligned_ull_value
+  {
+    unsigned long long value;
+  };
+
   class ipog_horizontal_select_best_value_per_param_combo_functor
   {
   public:
@@ -16,7 +21,7 @@ namespace
     }
 
     bool
-    operator() (const citcpp::detail::coverage_map_iterator_base &cov_map_it)
+    operator() (const citcpp::detail::coverage_map_iterator_state &cov_map_it)
     {
       using namespace citcpp::detail;
 
@@ -82,178 +87,206 @@ namespace
     std::vector<unsigned long long> &gain_per_value_;
   };
 
+  class ipog_horizontal_select_best_value_per_param_combo_functor_parallel
+  {
+  public:
+    ipog_horizontal_select_best_value_per_param_combo_functor_parallel (
+	const citcpp::detail::model &model,
+	const citcpp::detail::test &test,
+	citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>> &gain_per_value,
+	const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it) :
+	model_ (model), test_ (test), gain_per_value_ (gain_per_value), cov_map_it_ (
+	    cov_map_it)
+    {
+    }
+
+    bool
+    operator() (const citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    {
+      using namespace citcpp::detail;
+
+      const strength_vector<unsigned int> &param_indices =
+	  cov_map_it.get_parameter_indices ();
+      const coverage_map_ipog::second_level_type &value_combinations =
+	  cov_map_it.get_bitset ();
+
+      if (!value_combinations.all ())
+	{
+	  // We have a bitset and we have uncovered value combinations left in it.
+	  // Thus we have to walk through it concerning all possible value
+	  // combinations.
+	  // Here we compute an index into the bitset. To do so, we treat the number of values
+	  // of each parameter as a kind of radix. Consider three parameters p_0, p_1, p_2.
+	  // The last parameter is always the current one processed by IPOG.
+	  // Now say that v_i is the number of values for p_i. If we now have values
+	  // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+	  // In the base index we just compute x_0 * v_1 * v_2 + x_1 * v_2, since
+	  // that expression is constant throughout all different values of p_2 whose
+	  // different coverage gains we want to assess.
+	  coverage_map_ipog::second_level_type::size_type base_index = 0;
+	  for (std::vector<unsigned int>::size_type i = 0;
+	      i < param_indices.size () - 1; ++i)
+	    {
+	      const unsigned int param_idx = param_indices[i];
+	      const int param_value = test_.get_values ()[param_idx];
+
+	      if (param_value < 0)
+		{
+		  // We have found a don't care value for that combination in
+		  // the considered test.
+		  return true;
+		}
+
+	      coverage_map_ipog::second_level_type::size_type addend =
+		  param_value;
+	      for (std::vector<unsigned int>::size_type j = i + 1;
+		  j < param_indices.size (); ++j)
+		{
+		  addend *= model_.get_parameters ()[param_indices[j]];
+		}
+	      base_index += addend;
+	    }
+
+	  // If we have found a don't care value in one of the [0, ... ,current_param_idx - 1]
+	  // parameters, then we skip the combination in the coverage gain computation.
+	  std::vector<aligned_ull_value> &thread_local_gain_per_value =
+	      gain_per_value_[cov_map_it_.get_worker_id ()];
+	  for (unsigned int value = 0;
+	      value < thread_local_gain_per_value.size (); ++value)
+	    {
+	      if (!value_combinations.test (base_index + value))
+		{
+		  thread_local_gain_per_value[value].value += 1;
+		}
+	    }
+	}
+
+      return true;
+    }
+
+  private:
+    const citcpp::detail::model &model_;
+    const citcpp::detail::test &test_;
+    citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>> &gain_per_value_;
+    const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it_;
+  };
+
   int
   ipog_horizontal_select_best_value (
       const unsigned int num_current_param_values,
       const citcpp::detail::model &model, const citcpp::detail::test &test,
       citcpp::detail::coverage_map_iterator<true> &cov_map_it,
       unsigned int &last_picked_value,
-      std::vector<unsigned int> &value_to_num_picked, tf::Executor *executor)
+      std::vector<unsigned int> &value_to_num_picked)
   {
     using namespace citcpp::detail;
 
-    if (!executor)
+    // This is an array containing the coverage gain per value of the current parameter.
+    std::vector<unsigned long long> gain_per_value (num_current_param_values);
+
+    ipog_horizontal_select_best_value_per_param_combo_functor per_param_combo_functor (
+	model, test, gain_per_value);
+    cov_map_it.visit_all_parameter_combinations (per_param_combo_functor);
+
+    int value_with_max_gain = -1;
+    unsigned long long max_gain = 0;
+    for (unsigned int v_index = 0; v_index < gain_per_value.size (); ++v_index)
       {
-	// This is an array containing the coverage gain per value of the current parameter.
-	std::vector<unsigned long long> gain_per_value (
-	    num_current_param_values);
-
-	ipog_horizontal_select_best_value_per_param_combo_functor per_param_combo_functor (
-	    model, test, gain_per_value);
-	cov_map_it.visit_all_parameter_combinations (per_param_combo_functor);
-
-	int value_with_max_gain = -1;
-	unsigned long long max_gain = 0;
-	for (unsigned int v_index = 0; v_index < gain_per_value.size ();
-	    ++v_index)
+	unsigned int value = (v_index + last_picked_value + 1)
+	    % gain_per_value.size ();
+	if (gain_per_value[value] > max_gain)
 	  {
-	    unsigned int value = (v_index + last_picked_value + 1)
-		% gain_per_value.size ();
-	    if (gain_per_value[value] > max_gain)
+	    value_with_max_gain = value;
+	    max_gain = gain_per_value[value];
+	  }
+	else if (gain_per_value[value] == max_gain)
+	  {
+	    // We use a simple tie breaking strategy: We do not favor one value over the
+	    // other. If two values have the same gain, then we pick the one which we
+	    // have picked less so far.
+	    // Since also this could be a tie (we have picked the value the same number
+	    // of times, we remember the value we have picked before, and choose
+	    // the next one in this case.
+	    if (value_with_max_gain >= 0
+		&& value_to_num_picked[value]
+		    < value_to_num_picked[value_with_max_gain])
 	      {
 		value_with_max_gain = value;
-		max_gain = gain_per_value[value];
-	      }
-	    else if (gain_per_value[value] == max_gain)
-	      {
-		// We use a simple tie breaking strategy: We do not favor one value over the
-		// other. If two values have the same gain, then we pick the one which we
-		// have picked less so far.
-		// Since also this could be a tie (we have picked the value the same number
-		// of times, we remember the value we have picked before, and choose
-		// the next one in this case.
-		if (value_with_max_gain >= 0
-		    && value_to_num_picked[value]
-			< value_to_num_picked[value_with_max_gain])
-		  {
-		    value_with_max_gain = value;
-		  }
 	      }
 	  }
-
-	if (value_with_max_gain >= 0)
-	  {
-	    last_picked_value = value_with_max_gain;
-	    value_to_num_picked[value_with_max_gain]++;
-	  }
-
-	return value_with_max_gain;
       }
-    else
+
+    if (value_with_max_gain >= 0)
       {
-	// This is an array containing the coverage gain per value of the current parameter.
-//	std::vector<std::atomic_ullong> gain_per_value (
-//	    num_current_param_values);
-
-	// In the sequential case, we iterate over C(current_param_idx, strength - 1)
-	// combinations, since we have to choose strength - 1 parameters among parameters
-	// less than the current one (we index parameters beginning at 0).
-	// In the parallel case, we loop over fixations of the first selected parameter. Each
-	// fixed first parameter constitutes a job that can be executed concurrently.
-	// However, for each such job, we need an offset into the first-level array
-	// of the coverage map. This index is the number of parameter combinations
-	// processed by the selection with a lower index of the first parameter,
-	// since combinations are stored in lexicographic oder.
-	// For first param index = 0, we have an offset 0. For first param index = 1,
-	// we have an offset of C(current_param_idx - 1, strength - 2),
-	// since strength - 2 is the number of choices left to be made (since we have fixed
-	// the first parameter), and we can only choose these from (current_param_idx - 1) parameters
-	// if the have fixed the first parameter index to be 0.
-	// For first param index = 2, we have an offset of
-	// C(current_param_idx - 1, strength - 2) + C(current_param_idx - 2, strength - 2),
-	// since strength - 2 is the number of choices left to be made (since we have fixed
-	// the first parameter), and we can only choose these from (current_param_idx - 2)
-	// parameters if we have fixed the first parameter index to be 1.
-	// In addition, we have to add the offset of the job where the first param
-	// index was fixed to 1. This continues in this way. So for the job with first param
-	// index = i, we need the following offset: sum over j from 1 to i of C(current_param_idx - j, strength - 2).
-	//
-	// Now while we could compute this in a loop, there is a formula for computing
-	// the sum over n from k to n_max of C(n, k),
-	// which is called Hockey-stick Identity.
-	// This sum is given by C(n_max + 1 , k + 1).
-	// We can leverage upon that. What we need to compute is:
-	// sum over n from (strength - 2) to (current_param_idx - 1) of C(n, strength - 2) -
-	// sum over n from (strength - 2) to (current_param_idx - 1 - i) of C(n , strength - 2)
-	// According to the formula, this is given by:
-	// C(current_param_idx, strength - 1) - C(current_param_idx - i, strength - 1)
-//	const unsigned long long first_level_array_offset_part1 =
-//	    binomial_coeffs.get_coefficient (current_param_idx, strength - 1);
-//
-//	tf::Taskflow taskflow;
-//	taskflow.for_each_index (
-//	    0u,
-//	    current_param_idx,
-//	    1u,
-//	    [current_param_idx, strength, &model, &parameter_index_map,
-//	     &binomial_coeffs, &test, &cov_map, &gain_per_value,
-//	     num_current_param_values, first_level_array_offset_part1]
-//	    (unsigned int i)
-//	      {
-//		std::vector<unsigned long long> local_gain_per_value (
-//		    num_current_param_values);
-//		strength_vector<unsigned int> param_indices (strength - 1);
-//		param_indices[0] = parameter_index_map[i];
-//		coverage_map_ipog::size_type cov_map_first_level_index = first_level_array_offset_part1 -
-//		binomial_coeffs.get_coefficient (current_param_idx - i,
-//		    strength - 1);
-//
-//		ipog_horizontal_select_best_value_recursion (i + 1, 1, current_param_idx,
-//		    model, parameter_index_map,
-//		    binomial_coeffs, test,
-//		    cov_map,
-//		    num_current_param_values,
-//		    local_gain_per_value,
-//		    param_indices,
-//		    cov_map_first_level_index);
-//
-//		for (unsigned int j = 0; j < local_gain_per_value.size(); ++j)
-//		  {
-//		    gain_per_value[j].fetch_add(local_gain_per_value[j], std::memory_order_acq_rel);
-//		  }
-//	      });
-//
-//	executor->run (taskflow).wait ();
-//
-//	int value_with_max_gain = -1;
-//	unsigned long long max_gain = 0;
-//	for (unsigned int v_index = 0; v_index < gain_per_value.size ();
-//	    ++v_index)
-//	  {
-//	    unsigned int value = (v_index + last_picked_value + 1)
-//		% gain_per_value.size ();
-//	    if (gain_per_value[value] > max_gain)
-//	      {
-//		value_with_max_gain = value;
-//		max_gain = gain_per_value[value];
-//	      }
-//	    else if (gain_per_value[value] == max_gain)
-//	      {
-//		// We use a simple tie breaking strategy: We do not favor one value over the
-//		// other. If two values have the same gain, then we pick the one which we
-//		// have picked less so far.
-//		// Since also this could be a tie (we have picked the value the same number
-//		// of times, we remember the value we have picked before, and choose
-//		// the next one in this case.
-//		if (value_with_max_gain >= 0
-//		    && value_to_num_picked[value]
-//			< value_to_num_picked[value_with_max_gain])
-//		  {
-//		    value_with_max_gain = value;
-//		  }
-//	      }
-//	  }
-//
-//	if (value_with_max_gain >= 0)
-//	  {
-//	    last_picked_value = value_with_max_gain;
-//	    value_to_num_picked[value_with_max_gain]++;
-//	  }
-//
-//	return value_with_max_gain;
-
-	return 0;
+	last_picked_value = value_with_max_gain;
+	value_to_num_picked[value_with_max_gain]++;
       }
+
+    return value_with_max_gain;
+  }
+
+  int
+  ipog_horizontal_select_best_value (
+      const unsigned int num_current_param_values,
+      const citcpp::detail::model &model, const citcpp::detail::test &test,
+      citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it,
+      unsigned int &last_picked_value,
+      std::vector<unsigned int> &value_to_num_picked)
+  {
+    using namespace citcpp::detail;
+
+    // This is an array containing the coverage gain per value of the current parameter.
+    thread_local_vector<std::vector<aligned_ull_value>> gain_per_value (
+	cov_map_it.get_num_workers (),
+	std::vector<aligned_ull_value> (num_current_param_values));
+
+    ipog_horizontal_select_best_value_per_param_combo_functor_parallel per_param_combo_functor (
+	model, test, gain_per_value, cov_map_it);
+    cov_map_it.visit_all_parameter_combinations (per_param_combo_functor);
+
+    int value_with_max_gain = -1;
+    unsigned long long max_gain = 0;
+    for (unsigned int v_index = 0; v_index < num_current_param_values;
+	++v_index)
+      {
+	unsigned int value = (v_index + last_picked_value + 1)
+	    % num_current_param_values;
+
+	unsigned long long value_gain = 0;
+	for (std::vector<aligned_ull_value> &thread_local_gain_per_value : gain_per_value)
+	  {
+	    value_gain += thread_local_gain_per_value[value].value;
+	  }
+
+	if (value_gain > max_gain)
+	  {
+	    value_with_max_gain = value;
+	    max_gain = value_gain;
+	  }
+	else if (value_gain == max_gain)
+	  {
+	    // We use a simple tie breaking strategy: We do not favor one value over the
+	    // other. If two values have the same gain, then we pick the one which we
+	    // have picked less so far.
+	    // Since also this could be a tie (we have picked the value the same number
+	    // of times, we remember the value we have picked before, and choose
+	    // the next one in this case.
+	    if (value_with_max_gain >= 0
+		&& value_to_num_picked[value]
+		    < value_to_num_picked[value_with_max_gain])
+	      {
+		value_with_max_gain = value;
+	      }
+	  }
+      }
+
+    if (value_with_max_gain >= 0)
+      {
+	last_picked_value = value_with_max_gain;
+	value_to_num_picked[value_with_max_gain]++;
+      }
+
+    return value_with_max_gain;
   }
 
   class ipog_horizontal_update_coverage_map_per_param_combo_functor
@@ -268,7 +301,7 @@ namespace
     }
 
     bool
-    operator() (citcpp::detail::coverage_map_iterator_base &cov_map_it)
+    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
     {
       using namespace citcpp::detail;
 
@@ -333,95 +366,121 @@ namespace
     unsigned long long num_new_covered_tuples_;
   };
 
+  class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel
+  {
+  public:
+    ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel (
+	const citcpp::detail::model &model, const citcpp::detail::test &test,
+	const int current_param_selected_value,
+	const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it) :
+	model_ (model), test_ (test), current_param_selected_value_ (
+	    current_param_selected_value), num_new_covered_tuples_ (
+	    cov_map_it.get_num_workers ()), cov_map_it_ (cov_map_it)
+    {
+    }
+
+    bool
+    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    {
+      using namespace citcpp::detail;
+
+      const strength_vector<unsigned int> &param_indices =
+	  cov_map_it.get_parameter_indices ();
+      coverage_map_ipog::second_level_type &value_combinations =
+	  cov_map_it.get_bitset ();
+
+      if (!value_combinations.all ())
+	{
+	  // Here we compute an index into the bitset. To do so, we treat the number of values
+	  // of each parameter as a kind of radix. Consider three parameters p_0, p_1, p_2.
+	  // The last parameter is always the current one processed by IPOG.
+	  // Now say that v_i is the number of values for p_i. If we now have values
+	  // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+	  coverage_map_ipog::second_level_type::size_type index =
+	      current_param_selected_value_;
+	  for (std::vector<unsigned int>::size_type i = 0;
+	      i < param_indices.size () - 1; ++i)
+	    {
+	      const unsigned int param_idx = param_indices[i];
+	      const int param_value = test_.get_values ()[param_idx];
+
+	      if (param_value < 0)
+		{
+		  // We have found a don't care value for that combination in
+		  // the considered test in one of the [0, ... ,current_param_idx - 1]
+		  // parameters. There is nothing to be updated concerning the coverage.
+		  // This combination will be taken care of during the vertical extension step.
+		  return true;
+		}
+
+	      coverage_map_ipog::second_level_type::size_type addend =
+		  param_value;
+	      for (std::vector<unsigned int>::size_type j = i + 1;
+		  j < param_indices.size (); ++j)
+		{
+		  addend *= model_.get_parameters ()[param_indices[j]];
+		}
+	      index += addend;
+	    }
+
+	  if (!value_combinations.test_and_set (index))
+	    {
+	      ++num_new_covered_tuples_[cov_map_it_.get_worker_id ()].value;
+	      // ++num_new_covered_tuples_;
+	    }
+	}
+
+      return true;
+    }
+
+    unsigned long long
+    get_num_new_covered_tuples () const
+    {
+      unsigned long long ret = 0;
+      for (const auto &i : num_new_covered_tuples_)
+	{
+	  ret += i.value;
+	}
+
+      return ret;
+    }
+
+  private:
+    const citcpp::detail::model &model_;
+    const citcpp::detail::test &test_;
+    const int current_param_selected_value_;
+    citcpp::detail::thread_local_vector<aligned_ull_value> num_new_covered_tuples_;
+    const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it_;
+  };
+
   unsigned long long
   ipog_horizontal_update_coverage_map (
       const citcpp::detail::model &model, const citcpp::detail::test &test,
       const int current_param_selected_value,
-      citcpp::detail::coverage_map_iterator<true> &cov_map_it,
-      tf::Executor *executor)
+      citcpp::detail::coverage_map_iterator<true> &cov_map_it)
   {
     using namespace citcpp::detail;
 
-    if (!executor)
-      {
-	ipog_horizontal_update_coverage_map_per_param_combo_functor per_param_combo_functor (
-	    model, test, current_param_selected_value);
-	cov_map_it.visit_all_parameter_combinations (per_param_combo_functor);
+    ipog_horizontal_update_coverage_map_per_param_combo_functor per_param_combo_functor (
+	model, test, current_param_selected_value);
+    cov_map_it.visit_all_parameter_combinations (per_param_combo_functor);
 
-	return per_param_combo_functor.get_num_new_covered_tuples ();
-      }
-    else
-      {
-//	std::atomic_ullong num_new_covered_tuples;
+    return per_param_combo_functor.get_num_new_covered_tuples ();
+  }
 
-	// In the sequential case, we iterate over C(current_param_idx, strength - 1)
-	// combinations, since we have to choose strength - 1 parameters among parameters
-	// less than the current one (we index parameters beginning at 0).
-	// In the parallel case, we loop over fixations of the first selected parameter. Each
-	// fixed first parameter constitutes a job that can be executed concurrently.
-	// However, for each such job, we need an offset into the first-level array
-	// of the coverage map. This index is the number of parameter combinations
-	// processed by the selection with a lower index of the first parameter,
-	// since combinations are stored in lexicographic oder.
-	// For first param index = 0, we have an offset 0. For first param index = 1,
-	// we have an offset of C(current_param_idx - 1, strength - 2),
-	// since strength - 2 is the number of choices left to be made (since we have fixed
-	// the first parameter), and we can only choose these from (current_param_idx - 1) parameters
-	// if the have fixed the first parameter index to be 0.
-	// For first param index = 2, we have an offset of
-	// C(current_param_idx - 1, strength - 2) + C(current_param_idx - 2, strength - 2),
-	// since strength - 2 is the number of choices left to be made (since we have fixed
-	// the first parameter), and we can only choose these from (current_param_idx - 2)
-	// parameters if we have fixed the first parameter index to be 1.
-	// In addition, we have to add the offset of the job where the first param
-	// index was fixed to 1. This continues in this way. So for the job with first param
-	// index = i, we need the following offset: sum over j from 1 to i of C(current_param_idx - j, strength - 2).
-	//
-	// Now while we could compute this in a loop, there is a formula for computing
-	// the sum over n from k to n_max of C(n, k),
-	// which is called Hockey-stick Identity.
-	// This sum is given by C(n_max + 1 , k + 1).
-	// We can leverage upon that. What we need to compute is:
-	// sum over n from (strength - 2) to (current_param_idx - 1) of C(n, strength - 2) -
-	// sum over n from (strength - 2) to (current_param_idx - 1 - i) of C(n , strength - 2)
-	// According to the formula, this is given by:
-	// C(current_param_idx, strength - 1) - C(current_param_idx - i, strength - 1)
-//	const unsigned long long first_level_array_offset_part1 =
-//	    binomial_coeffs.get_coefficient (current_param_idx, strength - 1);
-//
-//	tf::Taskflow taskflow;
-//	taskflow.for_each_index (
-//	    0u,
-//	    current_param_idx,
-//	    1u,
-//	    [current_param_idx, strength, &model, &parameter_index_map,
-//	     &binomial_coeffs, &test, &cov_map, num_current_param_values,
-//	     current_param_value, &num_new_covered_tuples,
-//	     first_level_array_offset_part1]
-//	    (unsigned int i)
-//	      {
-//		unsigned long long local_num_new_covered_tuples = 0;
-//		strength_vector<unsigned int> param_indices (strength - 1);
-//		param_indices[0] = parameter_index_map[i];
-//		coverage_map_ipog::size_type cov_map_first_level_index = first_level_array_offset_part1 -
-//		binomial_coeffs.get_coefficient (current_param_idx - i,
-//		    strength - 1);
-//
-//		ipog_horizontal_update_coverage_map_recursion (
-//		    i + 1, 1, current_param_idx, model, parameter_index_map,
-//		    binomial_coeffs, test, cov_map, num_current_param_values,
-//		    current_param_value, param_indices, cov_map_first_level_index,
-//		    local_num_new_covered_tuples);
-//
-//		num_new_covered_tuples.fetch_add(local_num_new_covered_tuples, std::memory_order_acq_rel);
-//	      });
-//
-//	executor->run (taskflow).wait ();
-//
-//	return num_new_covered_tuples;
+  unsigned long long
+  ipog_horizontal_update_coverage_map (
+      const citcpp::detail::model &model, const citcpp::detail::test &test,
+      const int current_param_selected_value,
+      citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it)
+  {
+    using namespace citcpp::detail;
 
-	return 0;
-      }
+    ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel per_param_combo_functor (
+	model, test, current_param_selected_value, cov_map_it);
+    cov_map_it.visit_all_parameter_combinations (per_param_combo_functor);
+
+    return per_param_combo_functor.get_num_new_covered_tuples ();
   }
 
   class ipog_vertical_extension_functor
@@ -441,7 +500,7 @@ namespace
     }
 
     bool
-    operator() (citcpp::detail::coverage_map_iterator_base &cov_map_it)
+    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
     {
       using namespace citcpp::detail;
 
@@ -459,7 +518,7 @@ namespace
   private:
     void
     ipog_vertical_extension_func (
-	citcpp::detail::coverage_map_iterator_base &cov_map_it)
+	citcpp::detail::coverage_map_iterator_state &cov_map_it)
     {
       using namespace citcpp::detail;
 
@@ -660,7 +719,7 @@ namespace citcpp
 	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
-	test_set &test_set, coverage_map_ipog &cov_map, tf::Executor *executor)
+	test_set &test_set, coverage_map_ipog &cov_map)
     {
       const unsigned int real_current_param_idx =
 	  parameter_index_map[current_param_idx];
@@ -685,7 +744,7 @@ namespace citcpp
 
 	  int selected_value = ipog_horizontal_select_best_value (
 	      num_current_param_values, model, t, cov_map_it, last_picked_value,
-	      value_to_num_picked, executor);
+	      value_to_num_picked);
 
 	  if (selected_value >= 0)
 	    {
@@ -702,7 +761,82 @@ namespace citcpp
 	  unsigned long long num_new_covered_tuples =
 	      selected_value >= 0 ?
 		  ipog_horizontal_update_coverage_map (model, t, selected_value,
-						       cov_map_it, executor) :
+						       cov_map_it) :
+		  0;
+
+	  // Keep track of how many tuples we have covered in addition.
+	  result.num_new_covered_tuples += num_new_covered_tuples;
+
+	  // Maintain a mapping from values of the current parameter to the tests.
+	  if (selected_value >= 0)
+	    {
+	      result.value_to_row_mapping[selected_value].push_back (t);
+	    }
+	  else
+	    {
+	      result.rows_with_current_parameter_dont_care_value.push_back (t);
+	    }
+
+	  if (result.num_new_covered_tuples
+	      >= num_missing_combinations_to_cover)
+	    {
+	      break;
+	    }
+	}
+
+      return result;
+    }
+
+    ipog_horizontal_extension_result
+    ipog_horizontal_extension (
+	const unsigned int current_param_idx, const unsigned int strength,
+	const model &model,
+	const std::vector<unsigned int> &parameter_index_map,
+	const unsigned long long num_missing_combinations_to_cover,
+	test_set &test_set, coverage_map_ipog &cov_map, thread_pool &tp)
+    {
+      const unsigned int real_current_param_idx =
+	  parameter_index_map[current_param_idx];
+      const int num_current_param_values =
+	  model.get_parameters ()[real_current_param_idx];
+
+      // First initialize the result object.
+      ipog_horizontal_extension_result result
+	{ std::vector<list_intrusive<test>> (num_current_param_values),
+	    list_intrusive<test> (), 0 };
+
+      unsigned int last_picked_value = 0;
+      std::vector<unsigned int> value_to_num_picked (num_current_param_values);
+      coverage_map_parallel_iterator<true> cov_map_it =
+	  cov_map.create_parallel_iterator (tp);
+
+      for (test &t : test_set.get_list_of_tests ())
+	{
+	  if (strength > 2)
+	    {
+	      last_picked_value = num_current_param_values - 1;
+	    }
+
+	  int selected_value = ipog_horizontal_select_best_value (
+	      num_current_param_values, model, t, cov_map_it, last_picked_value,
+	      value_to_num_picked);
+
+	  if (selected_value >= 0)
+	    {
+	      // We might not have selected any value. This can happen, if no matter
+	      // which value we would pick, the coverage gain would be 0.
+	      // If so, our best option is to keep it as don't care, in order for
+	      // later vertical extension steps to exploit that don't care value.
+	      // If we have selected a value however with most coverage, then we set it in the
+	      // test accordingly.
+	      t.get_values ()[real_current_param_idx] = selected_value;
+	    }
+
+	  // The last step consists in updating the coverage map.
+	  unsigned long long num_new_covered_tuples =
+	      selected_value >= 0 ?
+		  ipog_horizontal_update_coverage_map (model, t, selected_value,
+						       cov_map_it) :
 		  0;
 
 	  // Keep track of how many tuples we have covered in addition.

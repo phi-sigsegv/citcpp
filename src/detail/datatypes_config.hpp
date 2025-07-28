@@ -16,8 +16,12 @@ namespace citcpp
   namespace detail
   {
     template<class T>
-      //  using strength_vector = std::vector<T>;
+      // using strength_vector = std::vector<T>;
       using strength_vector = SmallVector<T, 6>;
+
+    template<class T>
+      // using thread_local_vector = std::vector<T>;
+      using thread_local_vector = SmallVector<T, 32>;
 
     using thread_pool = threads::WorkStealingThreadPool<32>;
     using task_group = thread_pool::TaskGroup;

@@ -1614,13 +1614,6 @@ class StructuredTask : public concurrent_queue_intrusive_node
         , m_func_ref()
     {}
 
-    template< class T_CALLABLE >
-    StructuredTask( T_CALLABLE & callable )
-        : StructuredTask()
-    {
-      setCallable( callable );
-    }
-
     StructuredTask( const this_type & other )
         : m_pool_ptr( other.m_pool_ptr )
         , m_task_status( other.m_task_status )
@@ -1726,7 +1719,7 @@ class StructuredTask : public concurrent_queue_intrusive_node
     {
       m_pool_ptr = nullptr;
       m_task_status = 0;
-      m_refcount.store( 0, std::memory_order_acq_rel );
+      m_refcount.store( 0, std::memory_order_release );
       m_successor_task = nullptr;
       m_waiting_refcount = nullptr;
     }
@@ -2771,11 +2764,6 @@ class WorkStealingThreadPool
             : base_type()
         {}
 
-        template< class T_CALLABLE >
-        Task( T_CALLABLE & callable )
-            : Task( callable )
-        {}
-
         Task( const this_type & ) = default;
         Task( this_type && ) = default;
 
@@ -2976,6 +2964,17 @@ class WorkStealingThreadPool
         void reset()
         {
           base_type::reset();
+        }
+
+        /**
+         * Sets the callable to execute by this task.
+         *
+         * @param callable the callable to execute by this task
+         */
+        template< class T_CALLABLE >
+        void setCallable( T_CALLABLE & callable )
+        {
+          base_type::setCallable( callable );
         }
     };
 

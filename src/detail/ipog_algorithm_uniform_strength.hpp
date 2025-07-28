@@ -1,7 +1,6 @@
 #ifndef DETAIL_IPOG_ALGORITHM_UNIFORM_STRENGTH_HPP_
 #define DETAIL_IPOG_ALGORITHM_UNIFORM_STRENGTH_HPP_
 
-#include <taskflow/taskflow.hpp>
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
 #include "coverage_map.hpp"
@@ -48,7 +47,15 @@ namespace citcpp
 	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
-	test_set &test_set, coverage_map_ipog &cov_map, tf::Executor *executor);
+	test_set &test_set, coverage_map_ipog &cov_map);
+
+    ipog_horizontal_extension_result
+    ipog_horizontal_extension (
+	const unsigned int current_param_idx, const unsigned int strength,
+	const model &model,
+	const std::vector<unsigned int> &parameter_index_map,
+	const unsigned long long num_missing_combinations_to_cover,
+	test_set &test_set, coverage_map_ipog &cov_map, thread_pool &tp);
 
     struct ipog_vertical_extension_result
     {
