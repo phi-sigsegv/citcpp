@@ -46,7 +46,7 @@ namespace
     // First we compute the number of combination we have to cover.
     unsigned long long number_combos_to_cover =
 	number_of_combinations_to_cover (tp, model, strength);
-    tp.stop_workers();
+    tp.stop_workers ();
     exec_handle.set_number_of_combinations_to_cover (number_combos_to_cover);
 
     if (exec_handle.is_job_aborted ())
@@ -99,7 +99,7 @@ namespace
 		    number_of_combinations_to_cover (tp, current_param_idx,
 						     model, parameter_index_map,
 						     strength - 1);
-		tp.stop_workers();
+		tp.stop_workers ();
 		exec_handle.add_number_of_covered_combinations (
 		    number_combos_to_cover);
 	      }
@@ -115,7 +115,7 @@ namespace
 		auto horizontal_ext_res = ipog_horizontal_extension (
 		    current_param_idx, strength, model, parameter_index_map,
 		    number_combos_to_cover, test_set, cov_map);
-		tp.stop_workers();
+		tp.stop_workers ();
 
 		number_combos_to_cover -=
 		    horizontal_ext_res.num_new_covered_tuples;
