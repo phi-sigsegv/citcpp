@@ -10,13 +10,16 @@ namespace
       citcpp::detail::coverage_map_base &cov_map,
       const citcpp::detail::model &model,
       const std::vector<unsigned int> &parameter_index_map,
-      citcpp::detail::coverage_map_base::size_type &cov_map_first_level_index)
+      citcpp::detail::coverage_map_base::size_type &cov_map_first_level_index,
+      citcpp::detail::param_vector &param_indices)
   {
     using namespace citcpp::detail;
 
     unsigned long long partial_sum = 0;
     for (int j = start_idx_for_next; j >= current_level; --j)
       {
+	param_indices[current_level] = parameter_index_map[j];
+
 	if (current_level == 0)
 	  {
 	    unsigned long long final_num_value_combinations =
@@ -26,7 +29,7 @@ namespace
 
 	    cov_map.get_coverage_map ()[cov_map_first_level_index] =
 		coverage_map_base::second_level_type (
-		    final_num_value_combinations);
+		    final_num_value_combinations, param_indices);
 
 	    ++cov_map_first_level_index;
 	  }
@@ -37,7 +40,8 @@ namespace
 		current_level - 1,
 		num_value_combinations
 		    * model.get_parameters ()[parameter_index_map[j]],
-		cov_map, model, parameter_index_map, cov_map_first_level_index);
+		cov_map, model, parameter_index_map, cov_map_first_level_index,
+		param_indices);
 	  }
       }
 
@@ -57,10 +61,11 @@ namespace citcpp
 	    fixed_last_parameter ?
 		binomial_coeffs.get_coefficient (n - 1, t - 1) :
 		binomial_coeffs.get_coefficient (n, t)), model_ (model), parameter_index_map_ (
-	    parameter_index_map), binomial_coeffs_ (binomial_coeffs), n_ (n), t_ (
-	    t), cov_map_ (size_), total_num_tuples_ (0)
+	    parameter_index_map), n_ (n), t_ (t), cov_map_ (size_), total_num_tuples_ (
+	    0)
     {
       coverage_map_base::size_type cov_map_first_level_index = 0;
+      param_vector param_indices (t);
 
       if (fixed_last_parameter)
 	{
@@ -68,15 +73,17 @@ namespace citcpp
 	  const int num_last_param_values =
 	      model.get_parameters ()[real_last_param_idx];
 
+	  param_indices[t - 1] = parameter_index_map[n - 1];
+
 	  total_num_tuples_ = recursively_initialize_coverage_map (
 	      n_ - 2, t_ - 2, num_last_param_values, *this, model,
-	      parameter_index_map, cov_map_first_level_index);
+	      parameter_index_map, cov_map_first_level_index, param_indices);
 	}
       else
 	{
 	  total_num_tuples_ = recursively_initialize_coverage_map (
 	      n_ - 1, t_ - 1, 1, *this, model, parameter_index_map,
-	      cov_map_first_level_index);
+	      cov_map_first_level_index, param_indices);
 	}
     }
   }

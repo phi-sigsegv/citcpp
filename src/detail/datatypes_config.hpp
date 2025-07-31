@@ -4,6 +4,7 @@
  *  Created on: Jul 2, 2025
  *      Author: philipp
  */
+#include <cstdint>
 #include <vector>
 #include "small_vector.hpp"
 #include "threading_lib.hpp"
@@ -15,9 +16,10 @@ namespace citcpp
 {
   namespace detail
   {
-    template<class T>
-      // using strength_vector = std::vector<T>;
-      using strength_vector = SmallVector<T, 6>;
+    typedef std::uint16_t param_index;
+
+    using param_vector = SmallVector<param_index, 6>;
+    using value_vector = SmallVector<int, 6>;
 
     template<class T>
       // using thread_local_vector = std::vector<T>;

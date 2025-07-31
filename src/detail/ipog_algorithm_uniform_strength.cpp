@@ -21,14 +21,13 @@ namespace
     }
 
     bool
-    operator() (const citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    operator() (
+	const citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       using namespace citcpp::detail;
 
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      const coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
       if (!value_combinations.all ())
 	{
@@ -43,7 +42,7 @@ namespace
 	  // In the base index we just compute x_0 * v_1 * v_2 + x_1 * v_2, since
 	  // that expression is constant throughout all different values of p_2 whose
 	  // different coverage gains we want to assess.
-	  coverage_map_ipog::second_level_type::size_type base_index = 0;
+	  coverage_map::second_level_type::size_type base_index = 0;
 	  for (std::vector<unsigned int>::size_type i = 0;
 	      i < param_indices.size () - 1; ++i)
 	    {
@@ -57,8 +56,7 @@ namespace
 		  return true;
 		}
 
-	      coverage_map_ipog::second_level_type::size_type addend =
-		  param_value;
+	      coverage_map::second_level_type::size_type addend = param_value;
 	      for (std::vector<unsigned int>::size_type j = i + 1;
 		  j < param_indices.size (); ++j)
 		{
@@ -94,21 +92,20 @@ namespace
 	const citcpp::detail::model &model,
 	const citcpp::detail::test &test,
 	citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>> &gain_per_value,
-	const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it) :
+	const citcpp::detail::coverage_map_parallel_iterator &cov_map_it) :
 	model_ (model), test_ (test), gain_per_value_ (gain_per_value), cov_map_it_ (
 	    cov_map_it)
     {
     }
 
     bool
-    operator() (const citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    operator() (
+	citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       using namespace citcpp::detail;
 
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      const coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
       if (!value_combinations.all ())
 	{
@@ -123,7 +120,7 @@ namespace
 	  // In the base index we just compute x_0 * v_1 * v_2 + x_1 * v_2, since
 	  // that expression is constant throughout all different values of p_2 whose
 	  // different coverage gains we want to assess.
-	  coverage_map_ipog::second_level_type::size_type base_index = 0;
+	  coverage_map::second_level_type::size_type base_index = 0;
 	  for (std::vector<unsigned int>::size_type i = 0;
 	      i < param_indices.size () - 1; ++i)
 	    {
@@ -137,8 +134,7 @@ namespace
 		  return true;
 		}
 
-	      coverage_map_ipog::second_level_type::size_type addend =
-		  param_value;
+	      coverage_map::second_level_type::size_type addend = param_value;
 	      for (std::vector<unsigned int>::size_type j = i + 1;
 		  j < param_indices.size (); ++j)
 		{
@@ -168,14 +164,14 @@ namespace
     const citcpp::detail::model &model_;
     const citcpp::detail::test &test_;
     citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>> &gain_per_value_;
-    const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it_;
+    const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
   };
 
   int
   ipog_horizontal_select_best_value (
       const unsigned int num_current_param_values,
       const citcpp::detail::model &model, const citcpp::detail::test &test,
-      citcpp::detail::coverage_map_iterator<true> &cov_map_it,
+      citcpp::detail::coverage_map_iterator &cov_map_it,
       unsigned int &last_picked_value,
       std::vector<unsigned int> &value_to_num_picked)
   {
@@ -230,7 +226,7 @@ namespace
   ipog_horizontal_select_best_value (
       const unsigned int num_current_param_values,
       const citcpp::detail::model &model, const citcpp::detail::test &test,
-      citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it,
+      citcpp::detail::coverage_map_parallel_iterator &cov_map_it,
       unsigned int &last_picked_value,
       std::vector<unsigned int> &value_to_num_picked)
   {
@@ -302,14 +298,13 @@ namespace
     }
 
     bool
-    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    operator() (
+	citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       using namespace citcpp::detail;
 
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
       if (!value_combinations.all ())
 	{
@@ -318,7 +313,7 @@ namespace
 	  // The last parameter is always the current one processed by IPOG.
 	  // Now say that v_i is the number of values for p_i. If we now have values
 	  // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-	  coverage_map_ipog::second_level_type::size_type index =
+	  coverage_map::second_level_type::size_type index =
 	      current_param_selected_value_;
 	  for (std::vector<unsigned int>::size_type i = 0;
 	      i < param_indices.size () - 1; ++i)
@@ -335,8 +330,7 @@ namespace
 		  return true;
 		}
 
-	      coverage_map_ipog::second_level_type::size_type addend =
-		  param_value;
+	      coverage_map::second_level_type::size_type addend = param_value;
 	      for (std::vector<unsigned int>::size_type j = i + 1;
 		  j < param_indices.size (); ++j)
 		{
@@ -373,7 +367,7 @@ namespace
     ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel (
 	const citcpp::detail::model &model, const citcpp::detail::test &test,
 	const int current_param_selected_value,
-	const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it) :
+	const citcpp::detail::coverage_map_parallel_iterator &cov_map_it) :
 	model_ (model), test_ (test), current_param_selected_value_ (
 	    current_param_selected_value), num_new_covered_tuples_ (
 	    cov_map_it.get_num_workers ()), cov_map_it_ (cov_map_it)
@@ -381,14 +375,13 @@ namespace
     }
 
     bool
-    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    operator() (
+	citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       using namespace citcpp::detail;
 
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
       if (!value_combinations.all ())
 	{
@@ -397,7 +390,7 @@ namespace
 	  // The last parameter is always the current one processed by IPOG.
 	  // Now say that v_i is the number of values for p_i. If we now have values
 	  // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-	  coverage_map_ipog::second_level_type::size_type index =
+	  coverage_map::second_level_type::size_type index =
 	      current_param_selected_value_;
 	  for (std::vector<unsigned int>::size_type i = 0;
 	      i < param_indices.size () - 1; ++i)
@@ -414,8 +407,7 @@ namespace
 		  return true;
 		}
 
-	      coverage_map_ipog::second_level_type::size_type addend =
-		  param_value;
+	      coverage_map::second_level_type::size_type addend = param_value;
 	      for (std::vector<unsigned int>::size_type j = i + 1;
 		  j < param_indices.size (); ++j)
 		{
@@ -450,14 +442,14 @@ namespace
     const citcpp::detail::test &test_;
     const int current_param_selected_value_;
     citcpp::detail::thread_local_vector<aligned_ull_value> num_new_covered_tuples_;
-    const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it_;
+    const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
   };
 
   unsigned long long
   ipog_horizontal_update_coverage_map (
       const citcpp::detail::model &model, const citcpp::detail::test &test,
       const int current_param_selected_value,
-      citcpp::detail::coverage_map_iterator<true> &cov_map_it)
+      citcpp::detail::coverage_map_iterator &cov_map_it)
   {
     using namespace citcpp::detail;
 
@@ -472,7 +464,7 @@ namespace
   ipog_horizontal_update_coverage_map (
       const citcpp::detail::model &model, const citcpp::detail::test &test,
       const int current_param_selected_value,
-      citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it)
+      citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
   {
     using namespace citcpp::detail;
 
@@ -505,26 +497,26 @@ namespace
     }
 
     bool
-    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    operator() (
+	citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       if (current_param_selected_value_for_prev_test_ >= 0)
 	{
-	  update_coverage (cov_map_it);
+	  update_coverage (value_combinations);
 	}
-      compute_gain_per_value (cov_map_it);
+      compute_gain_per_value (value_combinations);
 
       return true;
     }
 
     void
-    update_coverage (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    update_coverage (
+	citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       using namespace citcpp::detail;
 
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
       if (!value_combinations.all ())
 	{
@@ -533,7 +525,7 @@ namespace
 	  // The last parameter is always the current one processed by IPOG.
 	  // Now say that v_i is the number of values for p_i. If we now have values
 	  // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-	  coverage_map_ipog::second_level_type::size_type index =
+	  coverage_map::second_level_type::size_type index =
 	      current_param_selected_value_for_prev_test_;
 	  for (std::vector<unsigned int>::size_type i = 0;
 	      i < param_indices.size () - 1; ++i)
@@ -550,8 +542,7 @@ namespace
 		  return;
 		}
 
-	      coverage_map_ipog::second_level_type::size_type addend =
-		  param_value;
+	      coverage_map::second_level_type::size_type addend = param_value;
 	      for (std::vector<unsigned int>::size_type j = i + 1;
 		  j < param_indices.size (); ++j)
 		{
@@ -569,14 +560,12 @@ namespace
 
     void
     compute_gain_per_value (
-	const citcpp::detail::coverage_map_iterator_state &cov_map_it)
+	const citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       using namespace citcpp::detail;
 
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      const coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
       if (!value_combinations.all ())
 	{
@@ -591,7 +580,7 @@ namespace
 	  // In the base index we just compute x_0 * v_1 * v_2 + x_1 * v_2, since
 	  // that expression is constant throughout all different values of p_2 whose
 	  // different coverage gains we want to assess.
-	  coverage_map_ipog::second_level_type::size_type base_index = 0;
+	  coverage_map::second_level_type::size_type base_index = 0;
 	  for (std::vector<unsigned int>::size_type i = 0;
 	      i < param_indices.size () - 1; ++i)
 	    {
@@ -605,8 +594,7 @@ namespace
 		  return;
 		}
 
-	      coverage_map_ipog::second_level_type::size_type addend =
-		  param_value;
+	      coverage_map::second_level_type::size_type addend = param_value;
 	      for (std::vector<unsigned int>::size_type j = i + 1;
 		  j < param_indices.size (); ++j)
 		{
@@ -651,7 +639,7 @@ namespace
 	const citcpp::detail::test &test,
 	citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>> &gain_per_value,
 	const int current_param_selected_value_for_prev_test,
-	const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it) :
+	const citcpp::detail::coverage_map_parallel_iterator &cov_map_it) :
 	model_ (model), prev_test_ (prev_test), test_ (test), gain_per_value_ (
 	    gain_per_value), current_param_selected_value_for_prev_test_ (
 	    current_param_selected_value_for_prev_test), num_new_covered_tuples_ (
@@ -660,26 +648,26 @@ namespace
     }
 
     bool
-    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    operator() (
+	citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       if (current_param_selected_value_for_prev_test_ >= 0)
 	{
-	  update_coverage (cov_map_it);
+	  update_coverage (value_combinations);
 	}
-      compute_gain_per_value (cov_map_it);
+      compute_gain_per_value (value_combinations);
 
       return true;
     }
 
     void
-    update_coverage (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    update_coverage (
+	citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       using namespace citcpp::detail;
 
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
       if (!value_combinations.all ())
 	{
@@ -688,7 +676,7 @@ namespace
 	  // The last parameter is always the current one processed by IPOG.
 	  // Now say that v_i is the number of values for p_i. If we now have values
 	  // x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-	  coverage_map_ipog::second_level_type::size_type index =
+	  coverage_map::second_level_type::size_type index =
 	      current_param_selected_value_for_prev_test_;
 	  for (std::vector<unsigned int>::size_type i = 0;
 	      i < param_indices.size () - 1; ++i)
@@ -705,8 +693,7 @@ namespace
 		  return;
 		}
 
-	      coverage_map_ipog::second_level_type::size_type addend =
-		  param_value;
+	      coverage_map::second_level_type::size_type addend = param_value;
 	      for (std::vector<unsigned int>::size_type j = i + 1;
 		  j < param_indices.size (); ++j)
 		{
@@ -724,14 +711,12 @@ namespace
 
     void
     compute_gain_per_value (
-	const citcpp::detail::coverage_map_iterator_state &cov_map_it)
+	const citcpp::detail::coverage_map::second_level_type &value_combinations)
     {
       using namespace citcpp::detail;
 
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      const coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
       if (!value_combinations.all ())
 	{
@@ -746,7 +731,7 @@ namespace
 	  // In the base index we just compute x_0 * v_1 * v_2 + x_1 * v_2, since
 	  // that expression is constant throughout all different values of p_2 whose
 	  // different coverage gains we want to assess.
-	  coverage_map_ipog::second_level_type::size_type base_index = 0;
+	  coverage_map::second_level_type::size_type base_index = 0;
 	  for (std::vector<unsigned int>::size_type i = 0;
 	      i < param_indices.size () - 1; ++i)
 	    {
@@ -760,8 +745,7 @@ namespace
 		  return;
 		}
 
-	      coverage_map_ipog::second_level_type::size_type addend =
-		  param_value;
+	      coverage_map::second_level_type::size_type addend = param_value;
 	      for (std::vector<unsigned int>::size_type j = i + 1;
 		  j < param_indices.size (); ++j)
 		{
@@ -804,7 +788,7 @@ namespace
     citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>> &gain_per_value_;
     const int current_param_selected_value_for_prev_test_;
     citcpp::detail::thread_local_vector<aligned_ull_value> num_new_covered_tuples_;
-    const citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it_;
+    const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
   };
 
   new_covered_tuples_and_selected_value
@@ -813,7 +797,7 @@ namespace
       const citcpp::detail::model &model, const citcpp::detail::test &prev_test,
       const int current_param_selected_value_for_prev_test,
       const citcpp::detail::test &test,
-      citcpp::detail::coverage_map_iterator<true> &cov_map_it,
+      citcpp::detail::coverage_map_iterator &cov_map_it,
       unsigned int &last_picked_value,
       std::vector<unsigned int> &value_to_num_picked)
   {
@@ -877,7 +861,7 @@ namespace
       const citcpp::detail::model &model, const citcpp::detail::test &prev_test,
       const int current_param_selected_value_for_prev_test,
       const citcpp::detail::test &test,
-      citcpp::detail::coverage_map_parallel_iterator<true> &cov_map_it,
+      citcpp::detail::coverage_map_parallel_iterator &cov_map_it,
       unsigned int &last_picked_value,
       std::vector<unsigned int> &value_to_num_picked)
   {
@@ -961,11 +945,14 @@ namespace
     }
 
     bool
-    operator() (citcpp::detail::coverage_map_iterator_state &cov_map_it)
+    operator() (
+	citcpp::detail::coverage_map::second_level_type &value_combinations,
+	const citcpp::detail::value_vector &value_indices,
+	citcpp::detail::coverage_map_base::size_type bitpos)
     {
       using namespace citcpp::detail;
 
-      ipog_vertical_extension_func (cov_map_it);
+      ipog_vertical_extension_func (value_combinations, value_indices, bitpos);
 
       return num_new_covered_tuples_ < num_missing_combinations_to_cover_;
     }
@@ -979,20 +966,18 @@ namespace
   private:
     void
     ipog_vertical_extension_func (
-	citcpp::detail::coverage_map_iterator_state &cov_map_it)
+	citcpp::detail::coverage_map::second_level_type &value_combinations,
+	const citcpp::detail::value_vector &value_indices,
+	citcpp::detail::coverage_map_base::size_type bitpos)
     {
       using namespace citcpp::detail;
 
       // First we check whether the value combination is covered, because if it is not,
       // then there is no point try to fit it into some test.
-      coverage_map_ipog::second_level_type &value_combinations =
-	  cov_map_it.get_bitset ();
-      const strength_vector<unsigned int> &param_indices =
-	  cov_map_it.get_parameter_indices ();
-      const strength_vector<int> &value_indices =
-	  cov_map_it.get_value_indices ();
+      const param_vector &param_indices =
+	  value_combinations.get_parameter_indices ();
 
-      if (value_combinations.test_and_set (cov_map_it.get_bitpos ()))
+      if (value_combinations.test_and_set (bitpos))
 	{
 	  return;
 	}
@@ -1075,8 +1060,8 @@ namespace
 
     bool
     ipog_vertical_extension_try_inject_value_combo (
-	const citcpp::detail::strength_vector<unsigned int> &param_indices,
-	const citcpp::detail::strength_vector<int> &value_indices,
+	const citcpp::detail::param_vector &param_indices,
+	const citcpp::detail::value_vector &value_indices,
 	citcpp::detail::test &t)
     {
       int overwritten_dont_cares = 0;
@@ -1180,7 +1165,7 @@ namespace citcpp
 	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
-	test_set &test_set, coverage_map_ipog &cov_map)
+	test_set &test_set, coverage_map &cov_map)
     {
       const unsigned int real_current_param_idx =
 	  parameter_index_map[current_param_idx];
@@ -1194,7 +1179,7 @@ namespace citcpp
 
       unsigned int last_picked_value = 0;
       std::vector<unsigned int> value_to_num_picked (num_current_param_values);
-      coverage_map_iterator<true> cov_map_it = cov_map.create_iterator ();
+      coverage_map_iterator cov_map_it = cov_map.create_iterator ();
 
       test *previous_test = nullptr;
       int selected_value = 0;
@@ -1305,7 +1290,7 @@ namespace citcpp
 	const model &model,
 	const std::vector<unsigned int> &parameter_index_map,
 	const unsigned long long num_missing_combinations_to_cover,
-	test_set &test_set, coverage_map_ipog &cov_map, thread_pool &tp)
+	test_set &test_set, coverage_map &cov_map, thread_pool &tp)
     {
       const unsigned int real_current_param_idx =
 	  parameter_index_map[current_param_idx];
@@ -1319,7 +1304,7 @@ namespace citcpp
 
       unsigned int last_picked_value = 0;
       std::vector<unsigned int> value_to_num_picked (num_current_param_values);
-      coverage_map_parallel_iterator<true> cov_map_it =
+      coverage_map_parallel_iterator cov_map_it =
 	  cov_map.create_parallel_iterator (tp);
 
       test *previous_test = nullptr;
@@ -1431,13 +1416,13 @@ namespace citcpp
 	const model &model,
 	const unsigned long long num_missing_combinations_to_cover,
 	ipog_horizontal_extension_result &partitioning_of_tests_according_to_current_values,
-	test_set &test_set, coverage_map_ipog &cov_map)
+	test_set &test_set, coverage_map &cov_map)
     {
       // First initialize the result object.
       ipog_vertical_extension_result result =
 	{ 0 };
 
-      coverage_map_iterator<true> cov_map_it = cov_map.create_iterator ();
+      coverage_map_iterator cov_map_it = cov_map.create_iterator ();
       ipog_vertical_extension_functor functor (
 	  current_param_idx, model, test_set,
 	  partitioning_of_tests_according_to_current_values,

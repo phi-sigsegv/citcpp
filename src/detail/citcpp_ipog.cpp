@@ -105,9 +105,9 @@ namespace
 	      }
 	    else
 	      {
-		coverage_map_ipog cov_map (current_param_idx + 1, strength,
-					   model, parameter_index_map,
-					   binomial_coeffs);
+		coverage_map cov_map (current_param_idx + 1, strength, model,
+				      parameter_index_map, binomial_coeffs,
+				      true);
 
 		unsigned long long number_combos_to_cover =
 		    cov_map.get_total_number_of_tuples ();
