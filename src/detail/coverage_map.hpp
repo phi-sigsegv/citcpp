@@ -487,8 +487,10 @@ namespace citcpp
       {
 	const unsigned long long total_param_combos =
 	    cov_map.get_coverage_map ().size ();
-	const unsigned long long num_tasks = std::min (
-	    (unsigned long long) tp.get_num_workers () * 4, total_param_combos);
+	const unsigned long long num_tasks =
+	    std::min (
+		(unsigned long long) cov_map.get_number_of_parameters_to_select_from (),
+		total_param_combos);
 	const unsigned long long per_task_combos = total_param_combos
 	    / num_tasks;
 

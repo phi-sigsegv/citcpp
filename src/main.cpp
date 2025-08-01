@@ -1,6 +1,10 @@
 #include <thread>
 #include <iostream>
+#include <ios>
+#include <iomanip>
 #include <chrono>
+#include <csignal>
+#include <atomic>
 #include "citcpp.hpp"
 
 citcpp::input_model
@@ -203,6 +207,17 @@ create_pict_example_model ()
   return model;
 }
 
+namespace
+{
+  volatile std::sig_atomic_t g_signal_status;
+}
+
+void
+signal_handler (int signal)
+{
+  g_signal_status = signal;
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -219,23 +234,53 @@ main (int argc, char *argv[])
 	  covering_array_computation_config ().with_replace_dont_care_values (
 	      false).with_multithreading_enabled (false));
 
+  // Install a signal handler allowing to gracefully abort the computation using Ctrl+C.
+  std::signal (SIGINT, signal_handler);
+
+  const auto default_precision
+    { std::cout.precision () };
+  std::cout << std::setprecision (1);
+  std::cout << std::fixed;
+
   auto f = handle->get_test_set ();
   while (f.wait_for (1s) == std::future_status::timeout)
     {
       unsigned long long num_covered_combos =
 	  handle->get_number_of_covered_combinations ();
+      unsigned long long num_combos_to_cover =
+	  handle->get_number_of_combinations_to_cover ();
+      double precent_done = (double) num_covered_combos
+	  / (double) num_combos_to_cover * 100.0;
       std::cout << "\r";
       std::cout << "combos: (" << num_covered_combos << " / "
-	  << handle->get_number_of_combinations_to_cover () << "), params: ("
+	  << num_combos_to_cover << ") " << precent_done << "%, params: ("
 	  << handle->get_number_of_processed_parameters () << " / "
-	  << model.get_parameters ().size () << ")" << std::flush;
+	  << model.get_parameters ().size () << "), "
+	  << handle->get_testset_size () << " tests" << std::flush;
+
+      if (g_signal_status == SIGINT)
+	{
+	  handle->abort ();
+	}
     }
 
+  unsigned long long num_covered_combos =
+      handle->get_number_of_covered_combinations ();
+  unsigned long long num_combos_to_cover =
+      handle->get_number_of_combinations_to_cover ();
+  double precent_done = (double) num_covered_combos
+      / (double) num_combos_to_cover * 100.0;
+
   std::cout << "\r";
-  std::cout << "combos: (" << handle->get_number_of_covered_combinations ()
-      << " / " << handle->get_number_of_combinations_to_cover ()
-      << "), params: (" << handle->get_number_of_processed_parameters ()
-      << " / " << model.get_parameters ().size () << ")\n" << std::endl;
+  std::cout << "combos: (" << num_covered_combos << " / " << num_combos_to_cover
+      << ") " << precent_done << "%, params: ("
+      << handle->get_number_of_processed_parameters () << " / "
+      << model.get_parameters ().size () << "), " << handle->get_testset_size ()
+      << " tests\n" << std::endl;
+
+  // restore defaults in formatting.
+  std::cout << std::setprecision (default_precision);
+  std::cout << std::defaultfloat;
 
   test_set t (f.get ());
 

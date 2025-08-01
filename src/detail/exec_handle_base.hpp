@@ -16,7 +16,8 @@ namespace citcpp
     public:
       exec_handle_base () :
 	  exec_handle (), num_combinations_to_cover_ (0), covered_combinations_ (
-	      0), is_aborted_ (), test_set_ (), duration_msec_ (0), thread_ ()
+	      0), testset_size_ (0), is_aborted_ (), test_set_ (), duration_msec_ (
+	      0), thread_ ()
       {
       }
 
@@ -47,6 +48,12 @@ namespace citcpp
       get_number_of_covered_combinations () const
       {
 	return covered_combinations_;
+      }
+
+      unsigned int
+      get_testset_size () const
+      {
+	return testset_size_;
       }
 
       void
@@ -89,6 +96,18 @@ namespace citcpp
 					 std::memory_order_acq_rel);
       }
 
+      void
+      set_testset_size_ (unsigned int testset_size)
+      {
+	testset_size_ = testset_size;
+      }
+
+      void
+      add_testset_size_ (unsigned int testset_size)
+      {
+	testset_size_.fetch_add (testset_size, std::memory_order_acq_rel);
+      }
+
       bool
       is_job_aborted ()
       {
@@ -110,6 +129,7 @@ namespace citcpp
     public:
       std::atomic_ullong num_combinations_to_cover_;
       std::atomic_ullong covered_combinations_;
+      std::atomic_uint testset_size_;
       std::atomic_flag is_aborted_;
       std::promise<citcpp::test_set> test_set_;
       std::atomic_uint duration_msec_;

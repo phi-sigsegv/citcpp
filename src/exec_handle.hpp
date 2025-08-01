@@ -44,6 +44,14 @@ namespace citcpp
     get_number_of_covered_combinations () const = 0;
 
     /**
+     * Returns the current size of the testset. This number
+     * is frequently updated during the execution. So for instance
+     * this method can be used for showing the progress of the execution.
+     */
+    virtual unsigned int
+    get_testset_size () const = 0;
+
+    /**
      * Calling this method aborts the current execution. The call returns
      * once the partial test set has been constructed.
      */

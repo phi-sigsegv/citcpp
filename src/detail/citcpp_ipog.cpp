@@ -68,6 +68,7 @@ namespace
 	    strength, model, parameter_index_map, test_set);
 	exec_handle.add_number_of_covered_combinations (
 	    initial_step_res.num_created_combinations);
+	exec_handle.set_testset_size_ (test_set.get_list_of_tests ().size ());
 	exec_handle.set_number_of_processed_parameters (strength);
       }
 
@@ -139,6 +140,8 @@ namespace
 		    horizontal_ext_res.num_new_covered_tuples;
 		exec_handle.add_number_of_covered_combinations (
 		    horizontal_ext_res.num_new_covered_tuples);
+		exec_handle.set_testset_size_ (
+		    test_set.get_list_of_tests ().size ());
 
 		if (exec_handle.is_job_aborted ())
 		  {
@@ -157,6 +160,8 @@ namespace
 			vertical_ext_res.num_new_covered_tuples;
 		    exec_handle.add_number_of_covered_combinations (
 			vertical_ext_res.num_new_covered_tuples);
+		    exec_handle.set_testset_size_ (
+			test_set.get_list_of_tests ().size ());
 		  }
 	      }
 
