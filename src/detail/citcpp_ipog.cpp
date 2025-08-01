@@ -31,6 +31,7 @@ namespace
   void
   main_ipog_loop (const citcpp::detail::model &model, unsigned int strength,
 		  citcpp::detail::test_set &test_set,
+		  const citcpp::covering_array_computation_config config,
 		  citcpp::detail::exec_handle_ipog_impl &exec_handle)
   {
     using namespace citcpp::detail;
@@ -43,9 +44,13 @@ namespace
 
     thread_pool tp (num_threads);
 
+    const bool with_mt = config.multithreading_enabled ();
+
     // First we compute the number of combination we have to cover.
     unsigned long long number_combos_to_cover =
-	number_of_combinations_to_cover (tp, model, strength);
+	with_mt ?
+	    number_of_combinations_to_cover (tp, model, strength) :
+	    number_of_combinations_to_cover (model, strength);
     tp.stop_workers ();
     exec_handle.set_number_of_combinations_to_cover (number_combos_to_cover);
 
@@ -96,9 +101,15 @@ namespace
 		  }
 
 		unsigned long long number_combos_to_cover =
-		    number_of_combinations_to_cover (tp, current_param_idx,
-						     model, parameter_index_map,
-						     strength - 1);
+		    with_mt ?
+			number_of_combinations_to_cover (tp, current_param_idx,
+							 model,
+							 parameter_index_map,
+							 strength - 1) :
+			number_of_combinations_to_cover (current_param_idx,
+							 model,
+							 parameter_index_map,
+							 strength - 1);
 		tp.stop_workers ();
 		exec_handle.add_number_of_covered_combinations (
 		    number_combos_to_cover);
@@ -112,9 +123,16 @@ namespace
 		unsigned long long number_combos_to_cover =
 		    cov_map.get_total_number_of_tuples ();
 
-		auto horizontal_ext_res = ipog_horizontal_extension (
-		    current_param_idx, strength, model, parameter_index_map,
-		    number_combos_to_cover, test_set, cov_map);
+		auto horizontal_ext_res =
+		    with_mt ?
+			ipog_horizontal_extension (current_param_idx, strength,
+						   model, parameter_index_map,
+						   number_combos_to_cover,
+						   test_set, cov_map, tp) :
+			ipog_horizontal_extension (current_param_idx, strength,
+						   model, parameter_index_map,
+						   number_combos_to_cover,
+						   test_set, cov_map);
 		tp.stop_workers ();
 
 		number_combos_to_cover -=
@@ -203,7 +221,7 @@ namespace citcpp
     {
       const auto t_start = std::chrono::high_resolution_clock::now ();
 
-      main_ipog_loop (model_, strength_, test_set_, exec_handle);
+      main_ipog_loop (model_, strength_, test_set_, config_, exec_handle);
       if (config_.replace_dont_care_values ())
 	{
 	  replace_dont_care_values (test_set_, model_);

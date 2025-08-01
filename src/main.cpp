@@ -212,11 +212,12 @@ main (int argc, char *argv[])
   input_model model (create_pict_example_model ());
 
   std::cout << "Starting execution\n" << std::endl;
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog (
-      model,
-      2,
-      covering_array_computation_config ().with_replace_dont_care_values (
-	  false));
+  std::unique_ptr<exec_handle_ipog> handle =
+      compute_covering_array_ipog (
+	  model,
+	  2,
+	  covering_array_computation_config ().with_replace_dont_care_values (
+	      false).with_multithreading_enabled (false));
 
   auto f = handle->get_test_set ();
   while (f.wait_for (1s) == std::future_status::timeout)

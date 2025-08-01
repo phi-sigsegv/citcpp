@@ -7,26 +7,20 @@ namespace citcpp
   {
   public:
     covering_array_computation_config () :
-	replace_dont_care_values_ (true)
+	replace_dont_care_values_ (true), multithreading_enabled_ (true)
     {
     }
-
-    covering_array_computation_config (
-	const covering_array_computation_config &other) = default;
-
-    covering_array_computation_config (
-	covering_array_computation_config &&other) = default;
-
-    covering_array_computation_config&
-    operator= (const covering_array_computation_config &other) = default;
-
-    covering_array_computation_config&
-    operator= (covering_array_computation_config &&other) = default;
 
     bool
     replace_dont_care_values () const
     {
       return replace_dont_care_values_;
+    }
+
+    bool
+    multithreading_enabled () const
+    {
+      return multithreading_enabled_;
     }
 
     covering_array_computation_config&
@@ -37,8 +31,17 @@ namespace citcpp
       return *this;
     }
 
+    covering_array_computation_config&
+    with_multithreading_enabled (bool multithreading_enabled)
+    {
+      multithreading_enabled_ = multithreading_enabled;
+
+      return *this;
+    }
+
   private:
     bool replace_dont_care_values_;
+    bool multithreading_enabled_;
   };
 }
 
