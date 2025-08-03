@@ -2,7 +2,7 @@
 #define DETAIL_EXEC_HANDLE_IPOG_IMPL_CPP_
 
 #include <memory>
-#include "../exec_handle_ipog.hpp"
+#include <citcpp/exec_handle_ipog.hpp>
 #include "citcpp_ipog.hpp"
 #include "exec_handle_base.hpp"
 

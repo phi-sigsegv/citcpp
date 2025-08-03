@@ -4,8 +4,7 @@
 #include <atomic>
 #include <thread>
 #include <functional>
-
-#include "../exec_handle.hpp"
+#include <citcpp/exec_handle.hpp>
 
 namespace citcpp
 {

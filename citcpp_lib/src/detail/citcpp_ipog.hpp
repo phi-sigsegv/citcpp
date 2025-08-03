@@ -1,9 +1,9 @@
 #ifndef DETAIL_CITCPP_IPOG_HPP_
 #define DETAIL_CITCPP_IPOG_HPP_
 
+#include <citcpp/input_model.hpp>
+#include <citcpp/citcpp_config.hpp>
 #include "internal_model.hpp"
-#include "../input_model.hpp"
-#include "../citcpp_config.hpp"
 #include "internal_test_set.hpp"
 
 namespace citcpp

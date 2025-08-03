@@ -2,8 +2,8 @@
 #define MODEL_HPP_
 
 #include <vector>
-#include "../input_model.hpp"
-#include "../test_set.hpp"
+#include <citcpp/input_model.hpp>
+#include <citcpp/test_set.hpp>
 #include "internal_test_set.hpp"
 
 namespace citcpp

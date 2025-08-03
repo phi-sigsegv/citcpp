@@ -1,4 +1,4 @@
-#include "citcpp.hpp"
+#include <citcpp/citcpp.hpp>
 #include "detail/exec_handle_ipog_impl.hpp"
 #include "detail/citcpp_ipog.hpp"
 

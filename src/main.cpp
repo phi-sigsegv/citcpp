@@ -5,7 +5,7 @@
 #include <chrono>
 #include <csignal>
 #include <atomic>
-#include "citcpp.hpp"
+#include <citcpp/citcpp.hpp>
 
 citcpp::input_model
 create_large_model ()

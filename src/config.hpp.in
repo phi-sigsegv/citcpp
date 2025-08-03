@@ -1,0 +1,4 @@
+// The configured options and settings for citcpp
+#define CITCPP_VERSION_MAJOR @citcpp_VERSION_MAJOR@
+#define CITCPP_VERSION_MINOR @citcpp_VERSION_MINOR@
+#define CITCPP_VERSION_PATCH @citcpp_VERSION_PATCH@
