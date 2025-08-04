@@ -17,7 +17,6 @@ add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
 target_include_directories(citcpp_lib PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")
-
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

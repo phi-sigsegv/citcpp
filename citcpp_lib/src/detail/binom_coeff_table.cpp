@@ -58,7 +58,7 @@ long long binom_coeff_table::get_coefficient(unsigned int n,
 }
 
 unsigned int binom_coeff_table::get_max_n() const {
-  return binom_coeffs_.size();
+  return binom_coeffs_.size() - 1;
 }
 
 }  // namespace detail
