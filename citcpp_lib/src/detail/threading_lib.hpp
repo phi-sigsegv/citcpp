@@ -1,17 +1,16 @@
 #ifndef THREADS_LIBRARY_H
 #define THREADS_LIBRARY_H
 
-#include <cstddef>
-#include <thread>
-#include <chrono>
 #include <atomic>
-#include <type_traits>
-#include <utility>
+#include <chrono>
+#include <cstddef>
 #include <memory>
-#include <tuple>
-#include <utility>
 #include <new>
 #include <semaphore>
+#include <thread>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 #ifdef _MSC_VER
 #define NOMINMAX
@@ -22,48 +21,34 @@
 #include <pthread.h>
 #endif
 
-
-
 namespace threads {
-
-
 
 namespace detail {
 
-
-
-struct false_sharing_avoidance_alignment
-{
-  static constexpr size_t value = std::hardware_destructive_interference_size;
+struct false_sharing_avoidance_alignment {
+    static constexpr size_t value = std::hardware_destructive_interference_size;
 };
-
-
 
 /**
  * This template stores a tuple of indexes.
  */
-template< std::size_t... Indexes >
-struct indexes_tuple
-{
-  typedef indexes_tuple< Indexes..., sizeof...(Indexes) > next;
+template <std::size_t... Indexes>
+struct indexes_tuple {
+    typedef indexes_tuple<Indexes..., sizeof...(Indexes)> next;
 };
 
 /**
  * Builds an indexes_tuple< 0, 1, 2, ..., N-1 >.
  */
-template< std::size_t N >
-struct build_index_tuple
-{
-  typedef typename build_index_tuple< N - 1 >::type::next type;
+template <std::size_t N>
+struct build_index_tuple {
+    typedef typename build_index_tuple<N - 1>::type::next type;
 };
 
-template<>
-struct build_index_tuple< 0 >
-{
-  typedef indexes_tuple<> type;
+template <>
+struct build_index_tuple<0> {
+    typedef indexes_tuple<> type;
 };
-
-
 
 /**
  * This is a type copied from LLVM. It is an efficient, type-erasing, non-owning
@@ -91,47 +76,40 @@ struct build_index_tuple< 0 >
  * function_ref< int() > invoke_later( func );
  * auto val = invoke_later();
  */
-template< typename Fn >
+template <typename Fn>
 class function_ref;
 
-template< typename Ret, typename ...Params >
-class function_ref< Ret(Params...) >
-{
+template <typename Ret, typename... Params>
+class function_ref<Ret(Params...)> {
   private:
-    Ret (*callback)( intptr_t callable, Params ...params ) = nullptr;
+    Ret (*callback)(intptr_t callable, Params... params) = nullptr;
     intptr_t callable;
 
-    template< typename Callable >
-    static Ret callback_fn( intptr_t callable, Params ...params )
-    {
-      return ( *reinterpret_cast< Callable * >( callable ) )( std::forward< Params >( params )... );
+    template <typename Callable>
+    static Ret callback_fn(intptr_t callable, Params... params) {
+      return (*reinterpret_cast<Callable*>(callable))(
+          std::forward<Params>(params)...);
     }
 
   public:
     function_ref() = default;
-    function_ref( std::nullptr_t ) {}
+    function_ref(std::nullptr_t) {}
 
-    template< typename Callable >
-    function_ref( Callable && callable,
-                  typename std::enable_if< !std::is_same< typename std::remove_reference< Callable >::type,
-                                                          function_ref >::value
-                                         >::type * = nullptr )
-        : callback( callback_fn< typename std::remove_reference< Callable >::type > )
-        , callable( reinterpret_cast< intptr_t >( &callable ) )
-    {}
+    template <typename Callable>
+    function_ref(
+        Callable&& callable,
+        typename std::enable_if<
+            !std::is_same<typename std::remove_reference<Callable>::type,
+                          function_ref>::value>::type* = nullptr)
+        : callback(callback_fn<typename std::remove_reference<Callable>::type>),
+          callable(reinterpret_cast<intptr_t>(&callable)) {}
 
-    Ret operator()( Params ...params ) const
-    {
-      return callback( callable, std::forward< Params >( params )... );
+    Ret operator()(Params... params) const {
+      return callback(callable, std::forward<Params>(params)...);
     }
 
-    operator bool() const
-    {
-      return callback;
-    }
+    operator bool() const { return callback; }
 };
-
-
 
 /**
  * This back-off strategy is a mixture of different back-off
@@ -139,15 +117,12 @@ class function_ref< Ret(Params...) >
  * An instance of this class keeps track of the "back-off state",
  * which is advanced on each call to backoff().
  */
-class hybrid_backoff
-{
+class hybrid_backoff {
   public:
-    hybrid_backoff()
-        : m_count( 0 )
-    {}
+    hybrid_backoff() : m_count(0) {}
 
-    hybrid_backoff( const hybrid_backoff & ) = delete;
-    hybrid_backoff & operator=( const hybrid_backoff & ) = delete;
+    hybrid_backoff(const hybrid_backoff&) = delete;
+    hybrid_backoff& operator=(const hybrid_backoff&) = delete;
 
     /**
      * This method applies an incremental back-off strategy.
@@ -159,41 +134,30 @@ class hybrid_backoff
      * we let the thread sleep for 1ms, and finally
      * we let the thread sleep for 10ms.
      */
-    void backoff()
-    {
-      if ( m_count < 10 )
-      {
+    void backoff() {
+      if (m_count < 10) {
 #ifdef _MSC_VER
-        // Visual C++ does not support inline assembly for ARM and x64 Architectures.
-        // God knows why...
-        // However, the following method ultimately expands to the pause instruction.
+        // Visual C++ does not support inline assembly for ARM and x64
+        // Architectures. God knows why... However, the following method
+        // ultimately expands to the pause instruction.
         YieldProcessor();
 #else
         __asm__ __volatile__("pause;");
 #endif
-      }
-      else if ( m_count < 20 )
-      {
-        for ( int i = 0; i < 50; ++i )
-        {
+      } else if (m_count < 20) {
+        for (int i = 0; i < 50; ++i) {
 #ifdef _MSC_VER
           YieldProcessor();
 #else
           __asm__ __volatile__("pause;");
 #endif
         }
-      }
-      else if ( m_count < 22 )
-      {
+      } else if (m_count < 22) {
         std::this_thread::yield();
-      }
-      else if ( m_count < 26 )
-      {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-      }
-      else
-      {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+      } else if (m_count < 26) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
 
       ++m_count;
@@ -202,16 +166,11 @@ class hybrid_backoff
     /**
      * This method resets the state of this back-off object.
      */
-    void reset()
-    {
-      m_count = 0;
-    }
+    void reset() { m_count = 0; }
 
   private:
     int m_count;
 };
-
-
 
 /**
  * This template provides something similar to std::array.
@@ -221,107 +180,144 @@ class hybrid_backoff
  * allows to initialize all members with a single value
  * passed to its constructor.
  */
-template< typename T_VALUE,
-          std::size_t N >
-class array_fixed_size
-{
+template <typename T_VALUE, std::size_t N>
+class array_fixed_size {
   private:
-    struct alignas( false_sharing_avoidance_alignment::value ) aligned_value
-    {
-      T_VALUE m_value;
+    struct alignas(false_sharing_avoidance_alignment::value) aligned_value {
+        T_VALUE m_value;
     };
-    typedef array_fixed_size< T_VALUE, N > this_type;
+    typedef array_fixed_size<T_VALUE, N> this_type;
 
   public:
-    template< bool is_const = false >
-    class the_iterator
-    {
+    template <bool is_const = false>
+    class the_iterator {
         // This friend declaration is necessary in order to be able
         // to convert a non-const iterator into a const iterator,
         // while keeping members private.
-        friend class the_iterator< true >;
+        friend class the_iterator<true>;
 
-        typedef typename std::conditional< is_const,
-                                           const aligned_value *,
-                                           aligned_value * >::type ptr_type;
+        typedef typename std::conditional<is_const, const aligned_value*,
+                                          aligned_value*>::type ptr_type;
         ptr_type m_ptr;
 
       public:
         typedef T_VALUE value_type;
         typedef std::ptrdiff_t difference_type;
-        typedef typename std::conditional< is_const,
-                                           const T_VALUE *,
-                                           T_VALUE * >::type pointer;
-        typedef typename std::conditional< is_const,
-                                           const T_VALUE &,
-                                           T_VALUE & >::type reference;
+        typedef
+            typename std::conditional<is_const, const T_VALUE*, T_VALUE*>::type
+                pointer;
+        typedef
+            typename std::conditional<is_const, const T_VALUE&, T_VALUE&>::type
+                reference;
         typedef std::random_access_iterator_tag iterator_category;
 
-        the_iterator() : m_ptr( nullptr ) {}
-        the_iterator( ptr_type ptr ) : m_ptr( ptr ) {}
-        the_iterator( const the_iterator< false > & other ) : m_ptr( other.m_ptr ) {}
+        the_iterator() : m_ptr(nullptr) {}
+        the_iterator(ptr_type ptr) : m_ptr(ptr) {}
+        the_iterator(const the_iterator<false>& other) : m_ptr(other.m_ptr) {}
         reference value() const { return m_ptr->m_value; }
-        pointer value_ptr() const { return &( m_ptr->m_value ); }
+        pointer value_ptr() const { return &(m_ptr->m_value); }
         reference operator*() const { return value(); }
         pointer operator->() const { return value_ptr(); }
-        the_iterator & operator++() { ++m_ptr; return *this; }
-        the_iterator operator++( int ) { return the_iterator( m_ptr++ ); }
-        the_iterator & operator--() { --m_ptr; return *this; }
-        the_iterator operator--( int ) { return the_iterator( m_ptr-- ); }
-        the_iterator & operator+=( difference_type n ) { m_ptr += n; return *this; }
-        the_iterator & operator-=( difference_type n ) { m_ptr -= n; return *this; }
-        the_iterator operator+( difference_type n ) const { return the_iterator( m_ptr+n ); }
-        the_iterator operator-( difference_type n ) const { return the_iterator( m_ptr-n ); }
-        friend the_iterator operator+( difference_type n, const the_iterator & it ) { return the_iterator( it.m_ptr+n ); }
-        friend difference_type operator-( const the_iterator & lhs, const the_iterator & rhs ) { return lhs.m_ptr - rhs.m_ptr; }
-        reference operator[]( difference_type n ) const { return m_ptr[n].m_value; }
+        the_iterator& operator++() {
+          ++m_ptr;
+          return *this;
+        }
+        the_iterator operator++(int) { return the_iterator(m_ptr++); }
+        the_iterator& operator--() {
+          --m_ptr;
+          return *this;
+        }
+        the_iterator operator--(int) { return the_iterator(m_ptr--); }
+        the_iterator& operator+=(difference_type n) {
+          m_ptr += n;
+          return *this;
+        }
+        the_iterator& operator-=(difference_type n) {
+          m_ptr -= n;
+          return *this;
+        }
+        the_iterator operator+(difference_type n) const {
+          return the_iterator(m_ptr + n);
+        }
+        the_iterator operator-(difference_type n) const {
+          return the_iterator(m_ptr - n);
+        }
+        friend the_iterator operator+(difference_type n,
+                                      const the_iterator& it) {
+          return the_iterator(it.m_ptr + n);
+        }
+        friend difference_type operator-(const the_iterator& lhs,
+                                         const the_iterator& rhs) {
+          return lhs.m_ptr - rhs.m_ptr;
+        }
+        reference operator[](difference_type n) const {
+          return m_ptr[n].m_value;
+        }
 
-        friend bool operator==( const the_iterator & lhs, const the_iterator & rhs ) { return lhs.m_ptr == rhs.m_ptr; }
-        friend bool operator!=( const the_iterator & lhs, const the_iterator & rhs ) { return lhs.m_ptr != rhs.m_ptr; }
-        friend bool operator<( const the_iterator & lhs, const the_iterator & rhs ) { return lhs.m_ptr < rhs.m_ptr; }
-        friend bool operator>( const the_iterator & lhs, const the_iterator & rhs ) { return lhs.m_ptr > rhs.m_ptr; }
-        friend bool operator<=( const the_iterator & lhs, const the_iterator & rhs ) { return lhs.m_ptr <= rhs.m_ptr; }
-        friend bool operator>=( const the_iterator & lhs, const the_iterator & rhs ) { return lhs.m_ptr >= rhs.m_ptr; }
+        friend bool operator==(const the_iterator& lhs,
+                               const the_iterator& rhs) {
+          return lhs.m_ptr == rhs.m_ptr;
+        }
+        friend bool operator!=(const the_iterator& lhs,
+                               const the_iterator& rhs) {
+          return lhs.m_ptr != rhs.m_ptr;
+        }
+        friend bool operator<(const the_iterator& lhs,
+                              const the_iterator& rhs) {
+          return lhs.m_ptr < rhs.m_ptr;
+        }
+        friend bool operator>(const the_iterator& lhs,
+                              const the_iterator& rhs) {
+          return lhs.m_ptr > rhs.m_ptr;
+        }
+        friend bool operator<=(const the_iterator& lhs,
+                               const the_iterator& rhs) {
+          return lhs.m_ptr <= rhs.m_ptr;
+        }
+        friend bool operator>=(const the_iterator& lhs,
+                               const the_iterator& rhs) {
+          return lhs.m_ptr >= rhs.m_ptr;
+        }
     };
 
   public:
     typedef T_VALUE value_type;
     typedef std::size_t size_type;
     typedef std::ptrdiff_t difference_type;
-    typedef value_type & reference;
-    typedef const value_type & const_reference;
-    typedef value_type * pointer;
-    typedef const value_type * const_pointer;
-    typedef the_iterator< false > iterator;
-    typedef the_iterator< true > const_iterator;
-    typedef std::reverse_iterator< iterator > reverse_iterator;
-    typedef std::reverse_iterator< const_iterator > const_reverse_iterator;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
+    typedef the_iterator<false> iterator;
+    typedef the_iterator<true> const_iterator;
+    typedef std::reverse_iterator<iterator> reverse_iterator;
+    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
   public:
     array_fixed_size() = default;
-    array_fixed_size( const this_type & ) = default;
-    array_fixed_size( this_type && ) = default;
+    array_fixed_size(const this_type&) = default;
+    array_fixed_size(this_type&&) = default;
     ~array_fixed_size() = default;
-    this_type & operator=( const this_type & ) = default;
-    this_type & operator=( this_type&& ) = default;
+    this_type& operator=(const this_type&) = default;
+    this_type& operator=(this_type&&) = default;
 
     // Pass a single parameter down to all elements.
-    template< typename Arg >
-    array_fixed_size( Arg&& arg )
-        : array_fixed_size( std::forward< Arg >( arg ),
-                            typename build_index_tuple< N >::type{} )
-    {}
+    template <typename Arg>
+    array_fixed_size(Arg&& arg)
+        : array_fixed_size(std::forward<Arg>(arg),
+                           typename build_index_tuple<N>::type{}) {}
 
-    template< typename Arg, std::size_t... Indexes >
-    array_fixed_size( Arg&& arg, indexes_tuple< Indexes... > )
-        : m_array{{(static_cast< void >( Indexes ), std::forward< Arg >( arg ))}...}
-    {}
+    template <typename Arg, std::size_t... Indexes>
+    array_fixed_size(Arg&& arg, indexes_tuple<Indexes...>)
+        : m_array{{(static_cast<void>(Indexes), std::forward<Arg>(arg))}...} {}
 
     // Element access
-    reference at( size_type pos ) { return m_array[pos].m_value; }
-    const_reference at( size_type pos ) const { return m_array[pos].m_value; }
-    reference operator[]( size_type pos ) { return m_array[pos].m_value; }
-    const_reference operator[]( size_type pos ) const { return m_array[pos].m_value; }
+    reference at(size_type pos) { return m_array[pos].m_value; }
+    const_reference at(size_type pos) const { return m_array[pos].m_value; }
+    reference operator[](size_type pos) { return m_array[pos].m_value; }
+    const_reference operator[](size_type pos) const {
+      return m_array[pos].m_value;
+    }
     reference front() { return m_array[0].m_value; }
     const_reference front() const { return m_array[0].m_value; }
     reference back() { return m_array[N - 1].m_value; }
@@ -331,83 +327,90 @@ class array_fixed_size
     iterator begin() { return &m_array[0]; }
     const_iterator begin() const { return &m_array[0]; }
     const_iterator cbegin() const { return &m_array[0]; }
-    iterator end() { return ( &m_array[0] ) + N; }
-    const_iterator end() const { return ( &m_array[0] ) + N; }
-    const_iterator cend() const { return ( &m_array[0] ) + N; }
-    reverse_iterator rbegin() { return reverse_iterator( end() ); }
-    const_reverse_iterator rbegin() const { return const_reverse_iterator( end() ); }
-    const_reverse_iterator crbegin() const { return const_reverse_iterator( cend() ); }
-    reverse_iterator rend() { return reverse_iterator( begin() ); }
-    const_reverse_iterator rend() const { return const_reverse_iterator( begin() ); }
-    const_reverse_iterator crend() const { return const_reverse_iterator( cbegin() ); }
+    iterator end() { return (&m_array[0]) + N; }
+    const_iterator end() const { return (&m_array[0]) + N; }
+    const_iterator cend() const { return (&m_array[0]) + N; }
+    reverse_iterator rbegin() { return reverse_iterator(end()); }
+    const_reverse_iterator rbegin() const {
+      return const_reverse_iterator(end());
+    }
+    const_reverse_iterator crbegin() const {
+      return const_reverse_iterator(cend());
+    }
+    reverse_iterator rend() { return reverse_iterator(begin()); }
+    const_reverse_iterator rend() const {
+      return const_reverse_iterator(begin());
+    }
+    const_reverse_iterator crend() const {
+      return const_reverse_iterator(cbegin());
+    }
 
     constexpr bool empty() const noexcept { return size() != 0; }
     constexpr size_type size() const noexcept { return N; }
     constexpr size_type max_size() const noexcept { return N; }
 
-    friend bool operator==( const this_type & lhs, const this_type & rhs )
-    {
-      for ( size_type i = 0; i < lhs.size(); ++i )
-      {
-        if ( lhs.m_array[i].m_value != rhs.m_array[i].m_value ) return false;
+    friend bool operator==(const this_type& lhs, const this_type& rhs) {
+      for (size_type i = 0; i < lhs.size(); ++i) {
+        if (lhs.m_array[i].m_value != rhs.m_array[i].m_value) return false;
       }
       return true;
     }
-    friend bool operator!=( const this_type & lhs, const this_type & rhs ) { return !( lhs == rhs ); }
+    friend bool operator!=(const this_type& lhs, const this_type& rhs) {
+      return !(lhs == rhs);
+    }
 
   private:
-    alignas( false_sharing_avoidance_alignment::value ) aligned_value m_array[N];
+    alignas(false_sharing_avoidance_alignment::value) aligned_value m_array[N];
 };
 
-
-
-template< typename T_VALUE >
-class array_fixed_size< T_VALUE, 0 >
-{
+template <typename T_VALUE>
+class array_fixed_size<T_VALUE, 0> {
   private:
-    typedef array_fixed_size< T_VALUE, 0 > this_type;
+    typedef array_fixed_size<T_VALUE, 0> this_type;
 
   public:
     typedef T_VALUE value_type;
     typedef std::size_t size_type;
     typedef std::ptrdiff_t difference_type;
-    typedef value_type & reference;
-    typedef const value_type & const_reference;
-    typedef value_type * pointer;
-    typedef const value_type * const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
     typedef pointer iterator;
     typedef const_pointer const_iterator;
-    typedef std::reverse_iterator< iterator > reverse_iterator;
-    typedef std::reverse_iterator< const_iterator > const_reverse_iterator;
+    typedef std::reverse_iterator<iterator> reverse_iterator;
+    typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
   public:
     array_fixed_size() = default;
-    array_fixed_size( const this_type & ) = default;
-    array_fixed_size( this_type && ) = default;
+    array_fixed_size(const this_type&) = default;
+    array_fixed_size(this_type&&) = default;
     ~array_fixed_size() = default;
-    this_type & operator=( const this_type & ) = default;
-    this_type & operator=( this_type&& ) = default;
+    this_type& operator=(const this_type&) = default;
+    this_type& operator=(this_type&&) = default;
 
     // Pass a single parameter down to all elements.
-    template< typename Arg >
-    array_fixed_size( Arg&& arg )
-        : array_fixed_size( std::forward< Arg >( arg ),
-                            typename build_index_tuple< 0 >::type{} )
-    {}
+    template <typename Arg>
+    array_fixed_size(Arg&& arg)
+        : array_fixed_size(std::forward<Arg>(arg),
+                           typename build_index_tuple<0>::type{}) {}
 
-    template< typename Arg, std::size_t... Indexes >
-    array_fixed_size( Arg&&, indexes_tuple< Indexes... > )
-    {}
+    template <typename Arg, std::size_t... Indexes>
+    array_fixed_size(Arg&&, indexes_tuple<Indexes...>) {}
 
     // Element access
-    reference at( size_type ) { return *static_cast< T_VALUE * >( nullptr ); }
-    const_reference at( size_type ) const { return *static_cast< T_VALUE * >( nullptr ); }
-    reference operator[]( size_type ) { return *static_cast< T_VALUE * >( nullptr ); }
-    const_reference operator[]( size_type ) const { return *static_cast< T_VALUE * >( nullptr ); }
-    reference front() { return *static_cast< T_VALUE * >( nullptr ); }
-    const_reference front() const { return *static_cast< T_VALUE * >( nullptr ); }
-    reference back() { return *static_cast< T_VALUE * >( nullptr ); }
-    const_reference back() const { return *static_cast< T_VALUE * >( nullptr ); }
+    reference at(size_type) { return *static_cast<T_VALUE*>(nullptr); }
+    const_reference at(size_type) const {
+      return *static_cast<T_VALUE*>(nullptr);
+    }
+    reference operator[](size_type) { return *static_cast<T_VALUE*>(nullptr); }
+    const_reference operator[](size_type) const {
+      return *static_cast<T_VALUE*>(nullptr);
+    }
+    reference front() { return *static_cast<T_VALUE*>(nullptr); }
+    const_reference front() const { return *static_cast<T_VALUE*>(nullptr); }
+    reference back() { return *static_cast<T_VALUE*>(nullptr); }
+    const_reference back() const { return *static_cast<T_VALUE*>(nullptr); }
 
     // Iterators
     iterator begin() { return nullptr; }
@@ -416,22 +419,28 @@ class array_fixed_size< T_VALUE, 0 >
     iterator end() { return nullptr; }
     const_iterator end() const { return nullptr; }
     const_iterator cend() const { return nullptr; }
-    reverse_iterator rbegin() { return reverse_iterator( end() ); }
-    const_reverse_iterator rbegin() const { return const_reverse_iterator( end() ); }
-    const_reverse_iterator crbegin() const { return const_reverse_iterator( cend() ); }
-    reverse_iterator rend() { return reverse_iterator( begin() ); }
-    const_reverse_iterator rend() const { return const_reverse_iterator( begin() ); }
-    const_reverse_iterator crend() const { return const_reverse_iterator( cbegin() ); }
+    reverse_iterator rbegin() { return reverse_iterator(end()); }
+    const_reverse_iterator rbegin() const {
+      return const_reverse_iterator(end());
+    }
+    const_reverse_iterator crbegin() const {
+      return const_reverse_iterator(cend());
+    }
+    reverse_iterator rend() { return reverse_iterator(begin()); }
+    const_reverse_iterator rend() const {
+      return const_reverse_iterator(begin());
+    }
+    const_reverse_iterator crend() const {
+      return const_reverse_iterator(cbegin());
+    }
 
     constexpr bool empty() const noexcept { return true; }
     constexpr size_type size() const noexcept { return 0; }
     constexpr size_type max_size() const noexcept { return 0; }
 
-    friend bool operator==( const this_type &, const this_type & ) { return true; }
-    friend bool operator!=( const this_type &, const this_type & ) { return false; }
+    friend bool operator==(const this_type&, const this_type&) { return true; }
+    friend bool operator!=(const this_type&, const this_type&) { return false; }
 };
-
-
 
 #if defined(__APPLE__)
 /*
@@ -441,79 +450,59 @@ class array_fixed_size< T_VALUE, 0 >
  * So as a workaround, we use pthread-APIs to emulate
  * that functionality.
  */
-class ThreadContext
-{
+class ThreadContext {
   public:
-    static void initMainThreadId()
-    {
+    static void initMainThreadId() {
       static std::size_t main_thread_id = 0;
-      setThreadId( main_thread_id );
+      setThreadId(main_thread_id);
     }
 
-    static std::size_t getThreadId()
-    {
-      return *static_cast< std::size_t * >( pthread_getspecific( *threadIdPThreadKey() ) );
+    static std::size_t getThreadId() {
+      return *static_cast<std::size_t*>(
+          pthread_getspecific(*threadIdPThreadKey()));
     }
 
-    static void setThreadId( std::size_t & id )
-    {
-      pthread_setspecific( *threadIdPThreadKey(), &id );
+    static void setThreadId(std::size_t& id) {
+      pthread_setspecific(*threadIdPThreadKey(), &id);
     }
 
   private:
-    static pthread_once_t * pThreadKeyInitOnce()
-    {
+    static pthread_once_t* pThreadKeyInitOnce() {
       static pthread_once_t key_once = PTHREAD_ONCE_INIT;
       return &key_once;
     }
 
-    static pthread_key_t * pThreadKey()
-    {
+    static pthread_key_t* pThreadKey() {
       static pthread_key_t key;
       return &key;
     }
 
-    static void initPThreadKey()
-    {
-      pthread_key_create( pThreadKey(), NULL );
-    }
+    static void initPThreadKey() { pthread_key_create(pThreadKey(), NULL); }
 
-    static pthread_key_t * threadIdPThreadKey()
-    {
-      pthread_once( pThreadKeyInitOnce(), &ThreadContext::initPThreadKey );
+    static pthread_key_t* threadIdPThreadKey() {
+      pthread_once(pThreadKeyInitOnce(), &ThreadContext::initPThreadKey);
       return pThreadKey();
     }
 };
 #else
-class ThreadContext
-{
+class ThreadContext {
   public:
-    static void initMainThreadId()
-    {
+    static void initMainThreadId() {
       std::size_t main_thread_id = 0;
-      setThreadId( main_thread_id );
+      setThreadId(main_thread_id);
     }
 
-    static std::size_t getThreadId()
-    {
-      return getThreadIdRef();
-    }
+    static std::size_t getThreadId() { return getThreadIdRef(); }
 
-    static void setThreadId( std::size_t & id )
-    {
-      getThreadIdRef() = id;
-    }
+    static void setThreadId(std::size_t& id) { getThreadIdRef() = id; }
 
   private:
-    static std::size_t & getThreadIdRef()
-    {
+    static std::size_t& getThreadIdRef() {
       static thread_local std::size_t thread_id;
       return thread_id;
     }
 };
 #endif
-
-
 
 /**
  * This class provides a drop-in replacement for std::mutex.
@@ -522,358 +511,318 @@ class ThreadContext
  * The back-off strategy is incremental deferring the calling
  * task more and more until it finally gets the lock.
  */
-class SpinLock
-{
-  typedef SpinLock this_type;
+class SpinLock {
+    typedef SpinLock this_type;
 
   public:
-    SpinLock()
-        : m_locked()
-    {
-      m_locked.clear();
-    }
+    SpinLock() : m_locked() { m_locked.clear(); }
 
-    SpinLock( const this_type & ) = delete;
-    SpinLock( this_type && ) = delete;
-    this_type & operator=( const this_type & ) = delete;
-    this_type & operator=( this_type && ) = delete;
+    SpinLock(const this_type&) = delete;
+    SpinLock(this_type&&) = delete;
+    this_type& operator=(const this_type&) = delete;
+    this_type& operator=(this_type&&) = delete;
 
-    void lock()
-    {
+    void lock() {
       detail::hybrid_backoff bkoff;
-      while ( m_locked.test_and_set( std::memory_order_acquire ) )
-      {
+      while (m_locked.test_and_set(std::memory_order_acquire)) {
         // back-off before we retry.
         bkoff.backoff();
       }
     }
 
-    void unlock()
-    {
-      m_locked.clear( std::memory_order_release );
-    }
+    void unlock() { m_locked.clear(std::memory_order_release); }
 
-    bool try_lock()
-    {
-      return !m_locked.test_and_set( std::memory_order_acquire );
+    bool try_lock() {
+      return !m_locked.test_and_set(std::memory_order_acquire);
     }
 
   private:
     std::atomic_flag m_locked;
 };
 
+class concurrent_queue_intrusive_node {
+    template <typename T_VALUE>
+    friend class concurrent_queue_intrusive;
 
+    template <typename T_TASK>
+    friend class TaskListTmpl;
 
-class concurrent_queue_intrusive_node
-{
-  template< typename T_VALUE >
-  friend class concurrent_queue_intrusive;
-
-  template< typename T_TASK >
-  friend class TaskListTmpl;
-
-  typedef concurrent_queue_intrusive_node this_type;
+    typedef concurrent_queue_intrusive_node this_type;
 
   public:
-    concurrent_queue_intrusive_node()
-        : m_next_node( nullptr )
-    {}
+    concurrent_queue_intrusive_node() : m_next_node(nullptr) {}
 
-    concurrent_queue_intrusive_node( const this_type & other)
-        : m_next_node( other.m_next_node.load( std::memory_order_relaxed ) )
-    {}
+    concurrent_queue_intrusive_node(const this_type& other)
+        : m_next_node(other.m_next_node.load(std::memory_order_relaxed)) {}
 
-    concurrent_queue_intrusive_node( this_type && other )
-        : m_next_node( other.m_next_node.load( std::memory_order_relaxed ) )
-    {}
+    concurrent_queue_intrusive_node(this_type&& other)
+        : m_next_node(other.m_next_node.load(std::memory_order_relaxed)) {}
 
-    this_type & operator=( const this_type & other )
-    {
-      m_next_node.store( other.m_next_node.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+    this_type& operator=(const this_type& other) {
+      m_next_node.store(other.m_next_node.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
 
       return *this;
     }
 
-    this_type & operator=( this_type && other )
-    {
-      m_next_node.store( other.m_next_node.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+    this_type& operator=(this_type&& other) {
+      m_next_node.store(other.m_next_node.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
 
       return *this;
     }
 
   private:
-    std::atomic< concurrent_queue_intrusive_node * > m_next_node;
+    std::atomic<concurrent_queue_intrusive_node*> m_next_node;
 };
 
-
-
-template< typename T_VALUE >
-class alignas( false_sharing_avoidance_alignment::value ) concurrent_queue_intrusive
-{
-  typedef concurrent_queue_intrusive_node node_type;
-  typedef concurrent_queue_intrusive< T_VALUE > this_type;
+template <typename T_VALUE>
+class alignas(false_sharing_avoidance_alignment::value)
+    concurrent_queue_intrusive {
+    typedef concurrent_queue_intrusive_node node_type;
+    typedef concurrent_queue_intrusive<T_VALUE> this_type;
 
   public:
     typedef T_VALUE value_type;
-    typedef value_type & reference;
-    typedef const value_type & const_reference;
-    typedef value_type * pointer;
-    typedef const value_type * const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
     typedef std::ptrdiff_t difference_type;
 
   public:
     concurrent_queue_intrusive()
-        : m_lock()
-        , m_dummy()
-        , m_head( &m_dummy )
-        , m_tail( &m_dummy )
-    {
+        : m_lock(), m_dummy(), m_head(&m_dummy), m_tail(&m_dummy) {
       m_dummy.m_next_node = nullptr;
     }
 
     // Our instrusive containers are not copyable since
     // this is a dangerous operation.
-    concurrent_queue_intrusive( const this_type & ) = delete;
+    concurrent_queue_intrusive(const this_type&) = delete;
 
     /**
      * Warning: Moving is expensive. We may need to walk through the entire
      * linked list to guarantee that no node point to the dummy node
      * of \a other.
      */
-    concurrent_queue_intrusive( this_type && other )
-        : m_lock()
-        , m_dummy()
-        , m_head( other.m_head.load( std::memory_order_relaxed ) )
-        , m_tail( other.m_tail.load( std::memory_order_relaxed ) )
-    {
-      m_dummy.m_next_node.store( other.m_dummy.m_next_node.load( std::memory_order_relaxed ),
-                                 std::memory_order_relaxed );
+    concurrent_queue_intrusive(this_type&& other)
+        : m_lock(),
+          m_dummy(),
+          m_head(other.m_head.load(std::memory_order_relaxed)),
+          m_tail(other.m_tail.load(std::memory_order_relaxed)) {
+      m_dummy.m_next_node.store(
+          other.m_dummy.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
       other.clear();
 
       // head and/or tail might point to the dummy node.
       // If so, we let them point to our dummy node.
-      if ( m_head.load( std::memory_order_relaxed ) == &other.m_dummy )
-      {
-        m_head.store( &m_dummy, std::memory_order_relaxed );
+      if (m_head.load(std::memory_order_relaxed) == &other.m_dummy) {
+        m_head.store(&m_dummy, std::memory_order_relaxed);
       }
-      if ( m_tail.load( std::memory_order_relaxed ) == &other.m_dummy )
-      {
-        m_tail.store( &m_dummy, std::memory_order_relaxed );
+      if (m_tail.load(std::memory_order_relaxed) == &other.m_dummy) {
+        m_tail.store(&m_dummy, std::memory_order_relaxed);
       }
 
       // It might be the case that some node points to the
       // dummy node of other. If so, we need to re-direct its
       // next pointer to our dummy node.
       // This can only occur if head != dummy.
-      node_type * node = m_head.load( std::memory_order_relaxed );
-      if ( node != &m_dummy )
-      {
-        node_type * next_node = node->m_next_node.load( std::memory_order_relaxed );
-        while ( next_node != &other.m_dummy )
-        {
+      node_type* node = m_head.load(std::memory_order_relaxed);
+      if (node != &m_dummy) {
+        node_type* next_node =
+            node->m_next_node.load(std::memory_order_relaxed);
+        while (next_node != &other.m_dummy) {
           node = next_node;
-          next_node = node->m_next_node.load( std::memory_order_relaxed );
+          next_node = node->m_next_node.load(std::memory_order_relaxed);
         }
         // When the loop finishes, node points to the dummy of other.
         // So we re-direct the next-node pointer. The next-node pointer of
         // dummy itself has been re-directed above.
-        node->m_next_node.store( &m_dummy, std::memory_order_relaxed );
+        node->m_next_node.store(&m_dummy, std::memory_order_relaxed);
       }
     }
 
     // Our instrusive containers are not copyable since
     // this is a dangerous operation.
-    this_type & operator=( const this_type & ) = delete;
+    this_type& operator=(const this_type&) = delete;
 
     /**
      * Warning: Moving is expensive. We may need to walk through the entire
      * linked list to guarantee that no node point to the dummy node
      * of \a other.
      */
-    this_type & operator=( this_type && other )
-    {
-      m_dummy.m_next_node.store( other.m_dummy.m_next_node.load( std::memory_order_relaxed ),
-                                 std::memory_order_relaxed );
-      m_head.store( other.m_head.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-      m_tail.store( other.m_tail.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+    this_type& operator=(this_type&& other) {
+      m_dummy.m_next_node.store(
+          other.m_dummy.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
+      m_head.store(other.m_head.load(std::memory_order_relaxed),
+                   std::memory_order_relaxed);
+      m_tail.store(other.m_tail.load(std::memory_order_relaxed),
+                   std::memory_order_relaxed);
 
       other.clear();
 
       // head and/or tail might point to the dummy node.
       // If so, we let them point to our dummy node.
-      if ( m_head.load( std::memory_order_relaxed ) == &other.m_dummy )
-      {
-        m_head.store( &m_dummy, std::memory_order_relaxed );
+      if (m_head.load(std::memory_order_relaxed) == &other.m_dummy) {
+        m_head.store(&m_dummy, std::memory_order_relaxed);
       }
-      if ( m_tail.load( std::memory_order_relaxed ) == &other.m_dummy )
-      {
-        m_tail.store( &m_dummy, std::memory_order_relaxed );
+      if (m_tail.load(std::memory_order_relaxed) == &other.m_dummy) {
+        m_tail.store(&m_dummy, std::memory_order_relaxed);
       }
 
       // It might be the case that some node points to the
       // dummy node of other. If so, we need to re-direct its
       // next pointer to our dummy node.
       // This can only occur if head != dummy.
-      node_type * node = m_head.load( std::memory_order_relaxed );
-      if ( node != &m_dummy )
-      {
-        node_type * next_node = node->m_next_node.load( std::memory_order_relaxed );
-        while ( next_node != &other.m_dummy )
-        {
+      node_type* node = m_head.load(std::memory_order_relaxed);
+      if (node != &m_dummy) {
+        node_type* next_node =
+            node->m_next_node.load(std::memory_order_relaxed);
+        while (next_node != &other.m_dummy) {
           node = next_node;
-          next_node = node->m_next_node.load( std::memory_order_relaxed );
+          next_node = node->m_next_node.load(std::memory_order_relaxed);
         }
         // When the loop finishes, node points to the dummy of other.
         // So we re-direct the next-node pointer. The next-node pointer of
         // dummy itself has been re-directed above.
-        node->m_next_node.store( &m_dummy, std::memory_order_relaxed );
+        node->m_next_node.store(&m_dummy, std::memory_order_relaxed);
       }
 
       return *this;
     }
 
-    void swap( this_type & other )
-    {
-      node_type * tmp = m_dummy.m_next_node.load( std::memory_order_relaxed );
+    void swap(this_type& other) {
+      node_type* tmp = m_dummy.m_next_node.load(std::memory_order_relaxed);
 
-      m_dummy.m_next_node.store( other.m_dummy.m_next_node.load( std::memory_order_relaxed ),
-                                 std::memory_order_relaxed );
-      other.m_dummy.m_next_node.store( tmp, std::memory_order_relaxed );
+      m_dummy.m_next_node.store(
+          other.m_dummy.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
+      other.m_dummy.m_next_node.store(tmp, std::memory_order_relaxed);
 
-      tmp = m_head.load( std::memory_order_relaxed );
-      m_head.store( other.m_head.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-      other.m_head.store( tmp, std::memory_order_relaxed );
+      tmp = m_head.load(std::memory_order_relaxed);
+      m_head.store(other.m_head.load(std::memory_order_relaxed),
+                   std::memory_order_relaxed);
+      other.m_head.store(tmp, std::memory_order_relaxed);
 
-      tmp = m_tail.load( std::memory_order_relaxed );
-      m_tail.store( other.m_tail.load( std::memory_order_relaxed ), std::memory_order_relaxed );
-      other.m_tail.store( tmp, std::memory_order_relaxed );
+      tmp = m_tail.load(std::memory_order_relaxed);
+      m_tail.store(other.m_tail.load(std::memory_order_relaxed),
+                   std::memory_order_relaxed);
+      other.m_tail.store(tmp, std::memory_order_relaxed);
 
-      if ( m_head.load( std::memory_order_relaxed ) == &other.m_dummy )
-      {
-        m_head.store( &m_dummy, std::memory_order_relaxed );
+      if (m_head.load(std::memory_order_relaxed) == &other.m_dummy) {
+        m_head.store(&m_dummy, std::memory_order_relaxed);
       }
-      if ( other.m_head.load( std::memory_order_relaxed ) == &m_dummy )
-      {
-        other.m_head.store( &other.m_dummy, std::memory_order_relaxed );
+      if (other.m_head.load(std::memory_order_relaxed) == &m_dummy) {
+        other.m_head.store(&other.m_dummy, std::memory_order_relaxed);
       }
-      if ( m_tail.load( std::memory_order_relaxed ) == &other.m_dummy )
-      {
-        m_tail.store( &m_dummy, std::memory_order_relaxed );
+      if (m_tail.load(std::memory_order_relaxed) == &other.m_dummy) {
+        m_tail.store(&m_dummy, std::memory_order_relaxed);
       }
-      if ( other.m_tail.load( std::memory_order_relaxed ) == &m_dummy )
-      {
-        other.m_tail.store( &other.m_dummy, std::memory_order_relaxed );
+      if (other.m_tail.load(std::memory_order_relaxed) == &m_dummy) {
+        other.m_tail.store(&other.m_dummy, std::memory_order_relaxed);
       }
 
       // It might be the case that some node points to the
       // dummy node of other. If so, we need to re-direct its
       // next pointer to our dummy node.
       // This can only occur if head != dummy.
-      node_type * node = m_head.load( std::memory_order_relaxed );
-      if ( node != &m_dummy )
-      {
-        node_type * next_node = node->m_next_node.load( std::memory_order_relaxed );
-        while ( next_node != &other.m_dummy )
-        {
+      node_type* node = m_head.load(std::memory_order_relaxed);
+      if (node != &m_dummy) {
+        node_type* next_node =
+            node->m_next_node.load(std::memory_order_relaxed);
+        while (next_node != &other.m_dummy) {
           node = next_node;
-          next_node = node->m_next_node.load( std::memory_order_relaxed );
+          next_node = node->m_next_node.load(std::memory_order_relaxed);
         }
         // When the loop finishes, node points to the dummy of other.
         // So we re-direct the next-node pointer. The next-node pointer of
         // dummy itself has been re-directed above.
-        node->m_next_node.store( &m_dummy, std::memory_order_relaxed );
+        node->m_next_node.store(&m_dummy, std::memory_order_relaxed);
       }
 
-      node = other.m_head.load( std::memory_order_relaxed );
-      if ( node != &other.m_dummy )
-      {
-        node_type * next_node = node->m_next_node.load( std::memory_order_relaxed );
-        while ( next_node != &m_dummy )
-        {
+      node = other.m_head.load(std::memory_order_relaxed);
+      if (node != &other.m_dummy) {
+        node_type* next_node =
+            node->m_next_node.load(std::memory_order_relaxed);
+        while (next_node != &m_dummy) {
           node = next_node;
-          next_node = node->m_next_node.load( std::memory_order_relaxed );
+          next_node = node->m_next_node.load(std::memory_order_relaxed);
         }
         // When the loop finishes, node points to the dummy of other.
         // So we re-direct the next-node pointer. The next-node pointer of
         // dummy itself has been re-directed above.
-        node->m_next_node.store( &other.m_dummy, std::memory_order_relaxed );
+        node->m_next_node.store(&other.m_dummy, std::memory_order_relaxed);
       }
     }
 
-    void clear()
-    {
-      m_dummy.m_next_node.store( nullptr, std::memory_order_relaxed );
-      m_head.store( &m_dummy, std::memory_order_relaxed );
-      m_tail.store( &m_dummy, std::memory_order_relaxed );
+    void clear() {
+      m_dummy.m_next_node.store(nullptr, std::memory_order_relaxed);
+      m_head.store(&m_dummy, std::memory_order_relaxed);
+      m_tail.store(&m_dummy, std::memory_order_relaxed);
     }
 
-    bool empty() const
-    {
-      node_type * head = m_head.load( std::memory_order_relaxed );
-      return head == &m_dummy && !( head->m_next_node.load( std::memory_order_relaxed ) );
+    bool empty() const {
+      node_type* head = m_head.load(std::memory_order_relaxed);
+      return head == &m_dummy &&
+             !(head->m_next_node.load(std::memory_order_relaxed));
     }
 
-    void push( reference entry )
-    {
-      entry.m_next_node.store( nullptr, std::memory_order_relaxed );
-      node_type * prev_node = m_tail.exchange( &entry, std::memory_order_acq_rel );
-      prev_node->m_next_node.store( &entry, std::memory_order_release );
+    void push(reference entry) {
+      entry.m_next_node.store(nullptr, std::memory_order_relaxed);
+      node_type* prev_node = m_tail.exchange(&entry, std::memory_order_acq_rel);
+      prev_node->m_next_node.store(&entry, std::memory_order_release);
     }
 
-    void push( pointer entry )
-    {
-      entry->m_next_node.store( nullptr, std::memory_order_relaxed );
-      node_type * prev_node = m_tail.exchange( entry, std::memory_order_acq_rel );
-      prev_node->m_next_node.store( entry, std::memory_order_release );
+    void push(pointer entry) {
+      entry->m_next_node.store(nullptr, std::memory_order_relaxed);
+      node_type* prev_node = m_tail.exchange(entry, std::memory_order_acq_rel);
+      prev_node->m_next_node.store(entry, std::memory_order_release);
     }
 
-    void pushList( reference first_entry, reference last_entry )
-    {
-      last_entry.m_next_node.store( nullptr, std::memory_order_relaxed );
-      node_type * prev_node = m_tail.exchange( &last_entry, std::memory_order_acq_rel );
-      prev_node->m_next_node.store( &first_entry, std::memory_order_release );
+    void pushList(reference first_entry, reference last_entry) {
+      last_entry.m_next_node.store(nullptr, std::memory_order_relaxed);
+      node_type* prev_node =
+          m_tail.exchange(&last_entry, std::memory_order_acq_rel);
+      prev_node->m_next_node.store(&first_entry, std::memory_order_release);
     }
 
-    void pushList( pointer first_entry, pointer last_entry )
-    {
-      last_entry->m_next_node.store( nullptr, std::memory_order_relaxed );
-      node_type * prev_node = m_tail.exchange( last_entry, std::memory_order_acq_rel );
-      prev_node->m_next_node.store( first_entry, std::memory_order_release );
+    void pushList(pointer first_entry, pointer last_entry) {
+      last_entry->m_next_node.store(nullptr, std::memory_order_relaxed);
+      node_type* prev_node =
+          m_tail.exchange(last_entry, std::memory_order_acq_rel);
+      prev_node->m_next_node.store(first_entry, std::memory_order_release);
     }
 
-    bool pop( pointer & destination )
-    {
+    bool pop(pointer& destination) {
       m_lock.lock();
 
-      node_type * head = m_head.load( std::memory_order_relaxed );
-      node_type * next = head->m_next_node.load( std::memory_order_acquire );
+      node_type* head = m_head.load(std::memory_order_relaxed);
+      node_type* next = head->m_next_node.load(std::memory_order_acquire);
 
-      if ( head == &m_dummy )
-      {
-        if ( !next )
-        {
+      if (head == &m_dummy) {
+        if (!next) {
           // The queue is empty.
           m_lock.unlock();
 
           return false;
         }
-        m_head.store( next, std::memory_order_relaxed );
+        m_head.store(next, std::memory_order_relaxed);
         head = next;
-        next = next->m_next_node.load( std::memory_order_acquire );
+        next = next->m_next_node.load(std::memory_order_acquire);
       }
 
-      if ( next )
-      {
-        m_head.store( next, std::memory_order_relaxed );
-        destination = static_cast< pointer >( head );
+      if (next) {
+        m_head.store(next, std::memory_order_relaxed);
+        destination = static_cast<pointer>(head);
 
         m_lock.unlock();
 
         return true;
       }
 
-      if ( head != m_tail.load( std::memory_order_acquire ) )
-      {
+      if (head != m_tail.load(std::memory_order_acquire)) {
         // The queue is empty
         m_lock.unlock();
 
@@ -881,15 +830,15 @@ class alignas( false_sharing_avoidance_alignment::value ) concurrent_queue_intru
       }
 
       // We move the dummy node to the end of the queue.
-      m_dummy.m_next_node.store( nullptr, std::memory_order_relaxed );
-      node_type * prev_tail_node = m_tail.exchange( &m_dummy, std::memory_order_acq_rel );
-      prev_tail_node->m_next_node.store( &m_dummy, std::memory_order_release );
+      m_dummy.m_next_node.store(nullptr, std::memory_order_relaxed);
+      node_type* prev_tail_node =
+          m_tail.exchange(&m_dummy, std::memory_order_acq_rel);
+      prev_tail_node->m_next_node.store(&m_dummy, std::memory_order_release);
 
-      next = head->m_next_node.load( std::memory_order_acquire );
-      if ( next )
-      {
-        m_head.store( next, std::memory_order_relaxed );
-        destination = static_cast< pointer >( head );
+      next = head->m_next_node.load(std::memory_order_acquire);
+      if (next) {
+        m_head.store(next, std::memory_order_relaxed);
+        destination = static_cast<pointer>(head);
 
         m_lock.unlock();
 
@@ -902,47 +851,38 @@ class alignas( false_sharing_avoidance_alignment::value ) concurrent_queue_intru
       return false;
     }
 
-    bool pop( reference destination )
-    {
-      return pop( &destination );
-    }
+    bool pop(reference destination) { return pop(&destination); }
 
-    bool try_pop( pointer & destination )
-    {
-      if ( !m_lock.try_lock() )
-      {
+    bool try_pop(pointer& destination) {
+      if (!m_lock.try_lock()) {
         return false;
       }
 
-      node_type * head = m_head.load( std::memory_order_relaxed );
-      node_type * next = head->m_next_node.load( std::memory_order_acquire );
+      node_type* head = m_head.load(std::memory_order_relaxed);
+      node_type* next = head->m_next_node.load(std::memory_order_acquire);
 
-      if ( head == &m_dummy )
-      {
-        if ( !next )
-        {
+      if (head == &m_dummy) {
+        if (!next) {
           // The queue is empty.
           m_lock.unlock();
 
           return false;
         }
-        m_head.store( next, std::memory_order_relaxed );
+        m_head.store(next, std::memory_order_relaxed);
         head = next;
-        next = next->m_next_node.load( std::memory_order_acquire );
+        next = next->m_next_node.load(std::memory_order_acquire);
       }
 
-      if ( next )
-      {
-        m_head.store( next, std::memory_order_relaxed );
-        destination = static_cast< pointer >( head );
+      if (next) {
+        m_head.store(next, std::memory_order_relaxed);
+        destination = static_cast<pointer>(head);
 
         m_lock.unlock();
 
         return true;
       }
 
-      if ( head != m_tail.load( std::memory_order_acquire ) )
-      {
+      if (head != m_tail.load(std::memory_order_acquire)) {
         // The queue is empty
         m_lock.unlock();
 
@@ -950,15 +890,15 @@ class alignas( false_sharing_avoidance_alignment::value ) concurrent_queue_intru
       }
 
       // We move the dummy node to the end of the queue.
-      m_dummy.m_next_node.store( nullptr, std::memory_order_relaxed );
-      node_type * prev_tail_node = m_tail.exchange( &m_dummy, std::memory_order_acq_rel );
-      prev_tail_node->m_next_node.store( &m_dummy, std::memory_order_release );
+      m_dummy.m_next_node.store(nullptr, std::memory_order_relaxed);
+      node_type* prev_tail_node =
+          m_tail.exchange(&m_dummy, std::memory_order_acq_rel);
+      prev_tail_node->m_next_node.store(&m_dummy, std::memory_order_release);
 
-      next = head->m_next_node.load( std::memory_order_acquire );
-      if ( next )
-      {
-        m_head.store( next, std::memory_order_relaxed );
-        destination = static_cast< pointer >( head );
+      next = head->m_next_node.load(std::memory_order_acquire);
+      if (next) {
+        m_head.store(next, std::memory_order_relaxed);
+        destination = static_cast<pointer>(head);
 
         m_lock.unlock();
 
@@ -971,114 +911,99 @@ class alignas( false_sharing_avoidance_alignment::value ) concurrent_queue_intru
       return false;
     }
 
-    bool try_pop( reference destination )
-    {
-      return try_pop( &destination );
-    }
+    bool try_pop(reference destination) { return try_pop(&destination); }
 
   private:
-    alignas( false_sharing_avoidance_alignment::value ) SpinLock m_lock;
-    alignas( false_sharing_avoidance_alignment::value ) node_type m_dummy;
-    alignas( false_sharing_avoidance_alignment::value ) std::atomic< node_type * > m_head;
-    alignas( false_sharing_avoidance_alignment::value ) std::atomic< node_type * > m_tail;
+    alignas(false_sharing_avoidance_alignment::value) SpinLock m_lock;
+    alignas(false_sharing_avoidance_alignment::value) node_type m_dummy;
+    alignas(false_sharing_avoidance_alignment::value)
+        std::atomic<node_type*> m_head;
+    alignas(false_sharing_avoidance_alignment::value)
+        std::atomic<node_type*> m_tail;
 };
 
-
-
-template< typename T_VALUE,
-          std::size_t MAX_NUM_QUEUES >
-class alignas( false_sharing_avoidance_alignment::value ) distributed_queue_intrusive
-{
-  typedef array_fixed_size< concurrent_queue_intrusive< T_VALUE >,
-                            MAX_NUM_QUEUES > array_type;
-  typedef distributed_queue_intrusive< T_VALUE,
-                                       MAX_NUM_QUEUES > this_type;
+template <typename T_VALUE, std::size_t MAX_NUM_QUEUES>
+class alignas(false_sharing_avoidance_alignment::value)
+    distributed_queue_intrusive {
+    typedef array_fixed_size<concurrent_queue_intrusive<T_VALUE>,
+                             MAX_NUM_QUEUES>
+        array_type;
+    typedef distributed_queue_intrusive<T_VALUE, MAX_NUM_QUEUES> this_type;
 
   public:
     typedef T_VALUE value_type;
-    typedef value_type & reference;
-    typedef const value_type & const_reference;
-    typedef value_type * pointer;
-    typedef const value_type * const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
     typedef std::ptrdiff_t difference_type;
 
-    distributed_queue_intrusive( std::size_t num_queues = MAX_NUM_QUEUES )
-        : m_queues()
-        , m_num_queues( num_queues )
-    {}
+    distributed_queue_intrusive(std::size_t num_queues = MAX_NUM_QUEUES)
+        : m_queues(), m_num_queues(num_queues) {}
 
     // Our instrusive containers are not copyable since
     // this is a dangerous operation.
-    distributed_queue_intrusive( const this_type & ) = delete;
+    distributed_queue_intrusive(const this_type&) = delete;
 
-    distributed_queue_intrusive( this_type && ) = default;
+    distributed_queue_intrusive(this_type&&) = default;
 
     // Our instrusive containers are not copyable since
     // this is a dangerous operation.
-    this_type & operator=( const this_type & ) = delete;
+    this_type& operator=(const this_type&) = delete;
 
-    this_type & operator=( this_type && ) = default;
+    this_type& operator=(this_type&&) = default;
 
-    void swap( this_type & other )
-    {
+    void swap(this_type& other) {
       using std::swap;
-      for ( std::size_t i = 0; i < MAX_NUM_QUEUES; ++i )
-      {
-        swap( m_queues[i], other.m_queues[i] );
+      for (std::size_t i = 0; i < MAX_NUM_QUEUES; ++i) {
+        swap(m_queues[i], other.m_queues[i]);
       }
     }
 
-    void push( T_VALUE & value )
-    {
-      m_queues[ThreadContext::getThreadId() % m_num_queues].push( value );
+    void push(T_VALUE& value) {
+      m_queues[ThreadContext::getThreadId() % m_num_queues].push(value);
     }
 
-    void push( T_VALUE * value )
-    {
-      m_queues[ThreadContext::getThreadId() % m_num_queues].push( value );
+    void push(T_VALUE* value) {
+      m_queues[ThreadContext::getThreadId() % m_num_queues].push(value);
     }
 
-    void push( std::size_t queue_hint, T_VALUE & value )
-    {
-      m_queues[queue_hint % m_num_queues].push( value );
+    void push(std::size_t queue_hint, T_VALUE& value) {
+      m_queues[queue_hint % m_num_queues].push(value);
     }
 
-    void push( std::size_t queue_hint, T_VALUE * value )
-    {
-      m_queues[queue_hint % m_num_queues].push( value );
+    void push(std::size_t queue_hint, T_VALUE* value) {
+      m_queues[queue_hint % m_num_queues].push(value);
     }
 
-    void pushList( T_VALUE & first_value, T_VALUE & last_value )
-    {
-      m_queues[ThreadContext::getThreadId() % m_num_queues].pushList( first_value, last_value );
+    void pushList(T_VALUE& first_value, T_VALUE& last_value) {
+      m_queues[ThreadContext::getThreadId() % m_num_queues].pushList(
+          first_value, last_value);
     }
 
-    void pushList( T_VALUE * first_value, T_VALUE * last_value )
-    {
-      m_queues[ThreadContext::getThreadId() % m_num_queues].pushList( first_value, last_value );
+    void pushList(T_VALUE* first_value, T_VALUE* last_value) {
+      m_queues[ThreadContext::getThreadId() % m_num_queues].pushList(
+          first_value, last_value);
     }
 
-    void pushList( std::size_t queue_hint, T_VALUE & first_value, T_VALUE & last_value )
-    {
-      m_queues[queue_hint % m_num_queues].pushList( first_value, last_value );
+    void pushList(std::size_t queue_hint, T_VALUE& first_value,
+                  T_VALUE& last_value) {
+      m_queues[queue_hint % m_num_queues].pushList(first_value, last_value);
     }
 
-    void pushList( std::size_t queue_hint, T_VALUE * first_value, T_VALUE * last_value )
-    {
-      m_queues[queue_hint % m_num_queues].pushList( first_value, last_value );
+    void pushList(std::size_t queue_hint, T_VALUE* first_value,
+                  T_VALUE* last_value) {
+      m_queues[queue_hint % m_num_queues].pushList(first_value, last_value);
     }
 
-    bool pop( T_VALUE * & destination )
-    {
+    bool pop(T_VALUE*& destination) {
       std::size_t start = ThreadContext::getThreadId();
 
-      for ( std::size_t i = 0; i < m_num_queues; ++i )
-      {
-        std::size_t index = ( start + i ) % m_num_queues;
-        if ( m_queues[index].pop( destination ) )
-        {
-          // We have successfully executed the operation on a partial data structure.
-          // So we are done at this point.
+      for (std::size_t i = 0; i < m_num_queues; ++i) {
+        std::size_t index = (start + i) % m_num_queues;
+        if (m_queues[index].pop(destination)) {
+          // We have successfully executed the operation on a partial data
+          // structure. So we are done at this point.
           return true;
         }
       }
@@ -1088,22 +1013,16 @@ class alignas( false_sharing_avoidance_alignment::value ) distributed_queue_intr
       return false;
     }
 
-    bool pop( T_VALUE & destination )
-    {
-      return pop( &destination );
-    }
+    bool pop(T_VALUE& destination) { return pop(&destination); }
 
-    bool try_pop( T_VALUE * & destination )
-    {
+    bool try_pop(T_VALUE*& destination) {
       std::size_t start = ThreadContext::getThreadId();
 
-      for ( std::size_t i = 0; i < m_num_queues; ++i )
-      {
-        std::size_t index = ( start + i ) % m_num_queues;
-        if ( m_queues[index].try_pop( destination ) )
-        {
-          // We have successfully executed the operation on a partial data structure.
-          // So we are done at this point.
+      for (std::size_t i = 0; i < m_num_queues; ++i) {
+        std::size_t index = (start + i) % m_num_queues;
+        if (m_queues[index].try_pop(destination)) {
+          // We have successfully executed the operation on a partial data
+          // structure. So we are done at this point.
           return true;
         }
       }
@@ -1113,30 +1032,22 @@ class alignas( false_sharing_avoidance_alignment::value ) distributed_queue_intr
       return false;
     }
 
-    bool try_pop( T_VALUE & destination )
-    {
-      return try_pop( &destination );
-    }
+    bool try_pop(T_VALUE& destination) { return try_pop(&destination); }
 
-    bool empty() const
-    {
-      for ( std::size_t i = 0; i < m_num_queues; ++i )
-      {
-        if ( !m_queues[i].empty() )
-        {
+    bool empty() const {
+      for (std::size_t i = 0; i < m_num_queues; ++i) {
+        if (!m_queues[i].empty()) {
           return false;
         }
       }
 
-      // Once we reach this point, we have checked that all partial data structures
-      // are empty.
+      // Once we reach this point, we have checked that all partial data
+      // structures are empty.
       return true;
     }
 
-    void clear()
-    {
-      for ( std::size_t i = 0; i < m_num_queues; ++i )
-      {
+    void clear() {
+      for (std::size_t i = 0; i < m_num_queues; ++i) {
         m_queues[i].clear();
       }
     }
@@ -1146,8 +1057,6 @@ class alignas( false_sharing_avoidance_alignment::value ) distributed_queue_intr
     std::size_t m_num_queues;
 };
 
-
-
 /**
  * This class implements a list of tasks. This list
  * is intrusive, meaning no memory is allocated, but
@@ -1156,281 +1065,259 @@ class alignas( false_sharing_avoidance_alignment::value ) distributed_queue_intr
  * The idea of this task list is to provide a means to remember
  * a list of created task, which are then spawned all at once.
  */
-template< typename T_TASK >
-class TaskListTmpl
-{
-  typedef TaskListTmpl< T_TASK > this_type;
+template <typename T_TASK>
+class TaskListTmpl {
+    typedef TaskListTmpl<T_TASK> this_type;
 
   public:
-    template< bool is_const = false >
-    class TaskListIterator
-    {
+    template <bool is_const = false>
+    class TaskListIterator {
         // This friend declaration is necessary in order to be able
         // to convert a non-const iterator into a const iterator,
         // while keeping members private.
-        friend class TaskListIterator< true >;
+        friend class TaskListIterator<true>;
 
-        friend class TaskListTmpl< T_TASK >;
+        friend class TaskListTmpl<T_TASK>;
 
-        typedef typename std::conditional< is_const,
-                                           const concurrent_queue_intrusive_node,
-                                           concurrent_queue_intrusive_node >::type node_base_type;
-        typedef typename std::conditional< is_const,
-                                           const T_TASK,
-                                           T_TASK >::type node_type;
-        node_base_type * m_node;
+        typedef typename std::conditional<
+            is_const, const concurrent_queue_intrusive_node,
+            concurrent_queue_intrusive_node>::type node_base_type;
+        typedef typename std::conditional<is_const, const T_TASK, T_TASK>::type
+            node_type;
+        node_base_type* m_node;
 
       public:
         typedef T_TASK value_type;
         typedef std::ptrdiff_t difference_type;
-        typedef typename std::conditional< is_const,
-                                           const T_TASK *,
-                                           T_TASK * >::type pointer;
-        typedef typename std::conditional< is_const,
-                                           const T_TASK &,
-                                           T_TASK & >::type reference;
+        typedef
+            typename std::conditional<is_const, const T_TASK*, T_TASK*>::type
+                pointer;
+        typedef
+            typename std::conditional<is_const, const T_TASK&, T_TASK&>::type
+                reference;
         typedef std::forward_iterator_tag iterator_category;
 
-        TaskListIterator() : m_node( 0 ) {}
-        explicit TaskListIterator( node_base_type * node ) : m_node( node ) {}
-        TaskListIterator( const TaskListIterator< false > & other ) : m_node( other.m_node ) {}
-        bool valid() const { return ( !!m_node ); }
+        TaskListIterator() : m_node(0) {}
+        explicit TaskListIterator(node_base_type* node) : m_node(node) {}
+        TaskListIterator(const TaskListIterator<false>& other)
+            : m_node(other.m_node) {}
+        bool valid() const { return (!!m_node); }
         reference value() const { return *value_ptr(); }
-        pointer value_ptr() const { return static_cast< pointer >( m_node ); }
+        pointer value_ptr() const { return static_cast<pointer>(m_node); }
         reference operator*() const { return value(); }
         pointer operator->() const { return value_ptr(); }
         // This is the overload of the prefix increment
         // operator.
-        TaskListIterator & operator++()
-        {
-          m_node = m_node->m_next_node.load( std::memory_order_relaxed );
+        TaskListIterator& operator++() {
+          m_node = m_node->m_next_node.load(std::memory_order_relaxed);
           return *this;
         }
         // This is the overload of the postfix increment
         // operator.
-        TaskListIterator operator++( int )
-        {
-          TaskListIterator tmp( *this );
-          m_node = m_node->m_next_node.load( std::memory_order_relaxed );
+        TaskListIterator operator++(int) {
+          TaskListIterator tmp(*this);
+          m_node = m_node->m_next_node.load(std::memory_order_relaxed);
           return tmp;
         }
 
-        friend bool operator==( const TaskListIterator & lhs,
-                                const TaskListIterator & rhs )
-        { return lhs.m_node == rhs.m_node; }
-        friend bool operator!=( const TaskListIterator & lhs,
-                                const TaskListIterator & rhs )
-        { return lhs.m_node != rhs.m_node; }
+        friend bool operator==(const TaskListIterator& lhs,
+                               const TaskListIterator& rhs) {
+          return lhs.m_node == rhs.m_node;
+        }
+        friend bool operator!=(const TaskListIterator& lhs,
+                               const TaskListIterator& rhs) {
+          return lhs.m_node != rhs.m_node;
+        }
     };
 
     typedef T_TASK value_type;
     typedef unsigned int size_type;
     typedef std::ptrdiff_t difference_type;
-    typedef T_TASK & reference;
-    typedef const T_TASK & const_reference;
-    typedef T_TASK * pointer;
-    typedef const T_TASK * const_pointer;
-    typedef TaskListIterator< false > iterator;
-    typedef TaskListIterator< true > const_iterator;
+    typedef T_TASK& reference;
+    typedef const T_TASK& const_reference;
+    typedef T_TASK* pointer;
+    typedef const T_TASK* const_pointer;
+    typedef TaskListIterator<false> iterator;
+    typedef TaskListIterator<true> const_iterator;
 
   public:
-    TaskListTmpl()
-        : m_head()
-        , m_last( nullptr )
-    {
-      m_head.m_next_node.store( nullptr,
-                                std::memory_order_relaxed );
+    TaskListTmpl() : m_head(), m_last(nullptr) {
+      m_head.m_next_node.store(nullptr, std::memory_order_relaxed);
     }
 
     // Our task list is not copyable since
     // this is a dangerous operation.
-    TaskListTmpl( const this_type & ) = delete;
+    TaskListTmpl(const this_type&) = delete;
 
-    TaskListTmpl( this_type && other )
-        : m_head()
-        , m_last( other.m_last )
-    {
-      m_head.m_next_node.store( other.m_head.m_next_node.load( std::memory_order_relaxed ),
-                                std::memory_order_relaxed );
+    TaskListTmpl(this_type&& other) : m_head(), m_last(other.m_last) {
+      m_head.m_next_node.store(
+          other.m_head.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
       other.clear();
     }
 
-    template< typename T_OTHER_TASK >
-    explicit TaskListTmpl( const TaskListTmpl< T_OTHER_TASK > & other )
-        : m_head()
-        , m_last( other.m_last )
-    {
-      m_head.m_next_node.store( other.m_head.m_next_node.load( std::memory_order_relaxed ),
-                                std::memory_order_relaxed );
+    template <typename T_OTHER_TASK>
+    explicit TaskListTmpl(const TaskListTmpl<T_OTHER_TASK>& other)
+        : m_head(), m_last(other.m_last) {
+      m_head.m_next_node.store(
+          other.m_head.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
     }
 
     // Our task list is not copyable since
     // this is a dangerous operation.
-    this_type & operator=( const this_type & ) = delete;
+    this_type& operator=(const this_type&) = delete;
 
-    this_type & operator=( this_type && other )
-    {
-      m_head.m_next_node.store( other.m_head.m_next_node.load( std::memory_order_relaxed ),
-                                std::memory_order_relaxed );
+    this_type& operator=(this_type&& other) {
+      m_head.m_next_node.store(
+          other.m_head.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
       m_last = other.m_last;
       other.clear();
 
       return *this;
     }
 
-    void swap( this_type & other )
-    {
-      concurrent_queue_intrusive_node * tmp =
-          m_head.m_next_node.load( std::memory_order_relaxed );
-      m_head.m_next_node.store( other.m_head.m_next_node.load( std::memory_order_relaxed ),
-                                std::memory_order_relaxed );
-      other.m_head.m_next_node.store( tmp, std::memory_order_relaxed );
+    void swap(this_type& other) {
+      concurrent_queue_intrusive_node* tmp =
+          m_head.m_next_node.load(std::memory_order_relaxed);
+      m_head.m_next_node.store(
+          other.m_head.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
+      other.m_head.m_next_node.store(tmp, std::memory_order_relaxed);
 
-      T_TASK * tmp_last = m_last;
+      T_TASK* tmp_last = m_last;
       m_last = other.m_last;
       other.m_last = tmp_last;
     }
 
     // Iterators
-    iterator before_begin() { return iterator( &( m_head ) ); }
-    const_iterator before_begin() const { return const_iterator( &( m_head ) ); }
-    const_iterator cbefore_begin() const { return const_iterator( &( m_head ) ); }
-    iterator begin() { return iterator( m_head.m_next_node.load( std::memory_order_relaxed ) ); }
-    const_iterator begin() const { return const_iterator( m_head.m_next_node.load( std::memory_order_relaxed ) ); }
-    const_iterator cbegin() const { return const_iterator( m_head.m_next_node.load( std::memory_order_relaxed ) ); }
-    iterator end() { return iterator( 0 ); }
-    const_iterator end() const { return const_iterator( 0 ); }
-    const_iterator cend() const { return const_iterator( 0 ); }
+    iterator before_begin() { return iterator(&(m_head)); }
+    const_iterator before_begin() const { return const_iterator(&(m_head)); }
+    const_iterator cbefore_begin() const { return const_iterator(&(m_head)); }
+    iterator begin() {
+      return iterator(m_head.m_next_node.load(std::memory_order_relaxed));
+    }
+    const_iterator begin() const {
+      return const_iterator(m_head.m_next_node.load(std::memory_order_relaxed));
+    }
+    const_iterator cbegin() const {
+      return const_iterator(m_head.m_next_node.load(std::memory_order_relaxed));
+    }
+    iterator end() { return iterator(0); }
+    const_iterator end() const { return const_iterator(0); }
+    const_iterator cend() const { return const_iterator(0); }
 
     // Other functions
-    reference front() { return *static_cast< T_TASK * >( m_head.m_next_node.load( std::memory_order_relaxed ) ); }
-    const_reference front() const { return *static_cast< T_TASK * >( m_head.m_next_node.load( std::memory_order_relaxed ) ); }
+    reference front() {
+      return *static_cast<T_TASK*>(
+          m_head.m_next_node.load(std::memory_order_relaxed));
+    }
+    const_reference front() const {
+      return *static_cast<T_TASK*>(
+          m_head.m_next_node.load(std::memory_order_relaxed));
+    }
     reference back() { return *m_last; }
     const_reference back() const { return *m_last; }
-    bool empty() const { return m_head.m_next_node.load( std::memory_order_relaxed ) == nullptr; }
+    bool empty() const {
+      return m_head.m_next_node.load(std::memory_order_relaxed) == nullptr;
+    }
 
-    void clear()
-    {
-      m_head.m_next_node.store( nullptr, std::memory_order_relaxed );
+    void clear() {
+      m_head.m_next_node.store(nullptr, std::memory_order_relaxed);
       m_last = nullptr;
     }
 
-    iterator insert_after( const_iterator pos, reference value )
-    {
-      return iterator( insert_after_impl( pos.m_node, &value ) );
+    iterator insert_after(const_iterator pos, reference value) {
+      return iterator(insert_after_impl(pos.m_node, &value));
     }
 
-    iterator insert_after( const_iterator pos, pointer value )
-    {
-      return iterator( insert_after_impl( pos.m_node, value ) );
+    iterator insert_after(const_iterator pos, pointer value) {
+      return iterator(insert_after_impl(pos.m_node, value));
     }
 
-    iterator erase_after( const_iterator pos )
-    {
-      concurrent_queue_intrusive_node * i_non_const =
-          const_cast< concurrent_queue_intrusive_node * >( pos.m_node );
-      concurrent_queue_intrusive_node * next_node =
-          i_non_const->m_next_node.load( std::memory_order_relaxed );
-      concurrent_queue_intrusive_node * next_next_node =
-          next_node->m_next_node.load( std::memory_order_relaxed );
+    iterator erase_after(const_iterator pos) {
+      concurrent_queue_intrusive_node* i_non_const =
+          const_cast<concurrent_queue_intrusive_node*>(pos.m_node);
+      concurrent_queue_intrusive_node* next_node =
+          i_non_const->m_next_node.load(std::memory_order_relaxed);
+      concurrent_queue_intrusive_node* next_next_node =
+          next_node->m_next_node.load(std::memory_order_relaxed);
 
-      if ( !next_next_node )
-      {
-        if ( pos.m_node == &( m_head ) )
-        {
+      if (!next_next_node) {
+        if (pos.m_node == &(m_head)) {
           m_last = nullptr;
-        }
-        else
-        {
-          m_last = static_cast< T_TASK * >( i_non_const );
+        } else {
+          m_last = static_cast<T_TASK*>(i_non_const);
         }
       }
 
-      i_non_const->m_next_node.store( next_next_node,
-                                      std::memory_order_relaxed );
+      i_non_const->m_next_node.store(next_next_node, std::memory_order_relaxed);
 
-      return iterator( next_next_node );
+      return iterator(next_next_node);
     }
 
-    void splice_after( const_iterator pos, this_type && other )
-    {
-      if ( other.empty() )
-      {
+    void splice_after(const_iterator pos, this_type&& other) {
+      if (other.empty()) {
         return;
       }
 
-      concurrent_queue_intrusive_node * i_non_const =
-          const_cast< concurrent_queue_intrusive_node * >( pos.m_node );
-      concurrent_queue_intrusive_node * next_node =
-          i_non_const->m_next_node.load( std::memory_order_relaxed );
-      i_non_const->m_next_node.store( other.m_head.m_next_node.load( std::memory_order_relaxed ),
-                                      std::memory_order_relaxed );
+      concurrent_queue_intrusive_node* i_non_const =
+          const_cast<concurrent_queue_intrusive_node*>(pos.m_node);
+      concurrent_queue_intrusive_node* next_node =
+          i_non_const->m_next_node.load(std::memory_order_relaxed);
+      i_non_const->m_next_node.store(
+          other.m_head.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
 
-      if ( next_node )
-      {
-        while ( i_non_const->m_next_node.load( std::memory_order_relaxed ) )
-        {
-          i_non_const = i_non_const->m_next_node.load( std::memory_order_relaxed );
+      if (next_node) {
+        while (i_non_const->m_next_node.load(std::memory_order_relaxed)) {
+          i_non_const =
+              i_non_const->m_next_node.load(std::memory_order_relaxed);
         }
-        i_non_const->m_next_node.store( next_node, std::memory_order_relaxed );
-      }
-      else
-      {
+        i_non_const->m_next_node.store(next_node, std::memory_order_relaxed);
+      } else {
         m_last = other.m_last;
       }
 
       other.clear();
     }
 
-    void push_front( reference value )
-    {
-      insert_after_impl( &( m_head ), &value );
-    }
+    void push_front(reference value) { insert_after_impl(&(m_head), &value); }
 
-    void push_front( pointer value )
-    {
-      insert_after_impl( &( m_head ), value );
-    }
+    void push_front(pointer value) { insert_after_impl(&(m_head), value); }
 
-    void splice_back( this_type && other )
-    {
-      if ( other.empty() )
-      {
+    void splice_back(this_type&& other) {
+      if (other.empty()) {
         return;
       }
 
-      concurrent_queue_intrusive_node * node = m_last;
-      if ( empty() )
-      {
+      concurrent_queue_intrusive_node* node = m_last;
+      if (empty()) {
         node = &m_head;
       }
 
-      node->m_next_node.store( other.m_head.m_next_node.load( std::memory_order_relaxed ),
-                               std::memory_order_relaxed );
+      node->m_next_node.store(
+          other.m_head.m_next_node.load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
       m_last = other.m_last;
 
       other.clear();
     }
 
-    void pop_front()
-    {
-      erase_after( const_iterator( &( m_head ) ) );
-    }
+    void pop_front() { erase_after(const_iterator(&(m_head))); }
 
   private:
-    concurrent_queue_intrusive_node *
-    insert_after_impl( const concurrent_queue_intrusive_node * i, pointer value )
-    {
-      concurrent_queue_intrusive_node * i_non_const =
-          const_cast< concurrent_queue_intrusive_node * >( i );
-      concurrent_queue_intrusive_node * next_node =
-          i_non_const->m_next_node.load( std::memory_order_relaxed );
-      value->m_next_node.store( next_node,
-                                std::memory_order_relaxed );
-      i_non_const->m_next_node.store( value, std::memory_order_relaxed );
+    concurrent_queue_intrusive_node* insert_after_impl(
+        const concurrent_queue_intrusive_node* i, pointer value) {
+      concurrent_queue_intrusive_node* i_non_const =
+          const_cast<concurrent_queue_intrusive_node*>(i);
+      concurrent_queue_intrusive_node* next_node =
+          i_non_const->m_next_node.load(std::memory_order_relaxed);
+      value->m_next_node.store(next_node, std::memory_order_relaxed);
+      i_non_const->m_next_node.store(value, std::memory_order_relaxed);
 
-      if ( !next_node )
-      {
+      if (!next_node) {
         m_last = value;
       }
 
@@ -1439,70 +1326,59 @@ class TaskListTmpl
 
   private:
     concurrent_queue_intrusive_node m_head;
-    T_TASK * m_last;
+    T_TASK* m_last;
 };
 
+class StructuredWorkStealingThreadPoolBase {};
 
+class StructuredTask : public concurrent_queue_intrusive_node {
+    template <typename X_QUEUE>
+    friend class StructuredWorkStealingThreadPoolWorker;
 
-class StructuredWorkStealingThreadPoolBase
-{
-};
+    template <std::size_t X_MAX_NUM_THREADS>
+    friend class StructuredWorkStealingThreadPool;
 
+    template <typename T_THREAD_POOL>
+    friend class StructuredTaskGroup;
 
+    typedef StructuredTask this_type;
+    typedef unsigned int T_STATUS_MASK_TYPE;
 
-class StructuredTask : public concurrent_queue_intrusive_node
-{
-  template< typename X_QUEUE >
-  friend class StructuredWorkStealingThreadPoolWorker;
-
-  template< std::size_t X_MAX_NUM_THREADS >
-  friend class StructuredWorkStealingThreadPool;
-
-  template< typename T_THREAD_POOL >
-  friend class StructuredTaskGroup;
-
-  typedef StructuredTask this_type;
-  typedef unsigned int T_STATUS_MASK_TYPE;
-
-  static const T_STATUS_MASK_TYPE TERMINATION_MASK = 1;
+    static const T_STATUS_MASK_TYPE TERMINATION_MASK = 1;
 
   public:
     StructuredTask()
-        : m_pool_ptr( nullptr )
-        , m_task_status( 0 )
-        , m_refcount( 0 )
-        , m_successor_task( nullptr )
-        , m_waiting_refcount( nullptr )
-        , m_func_ref()
-    {}
+        : m_pool_ptr(nullptr),
+          m_task_status(0),
+          m_refcount(0),
+          m_successor_task(nullptr),
+          m_waiting_refcount(nullptr),
+          m_func_ref() {}
 
-    StructuredTask( const this_type & other )
-        : m_pool_ptr( other.m_pool_ptr )
-        , m_task_status( other.m_task_status )
-        , m_refcount( other.m_refcount.load( std::memory_order_relaxed ) )
-        , m_successor_task( other.m_successor_task )
-        , m_waiting_refcount( other.m_waiting_refcount )
-        , m_func_ref( other.m_func_ref )
-    {}
+    StructuredTask(const this_type& other)
+        : m_pool_ptr(other.m_pool_ptr),
+          m_task_status(other.m_task_status),
+          m_refcount(other.m_refcount.load(std::memory_order_relaxed)),
+          m_successor_task(other.m_successor_task),
+          m_waiting_refcount(other.m_waiting_refcount),
+          m_func_ref(other.m_func_ref) {}
 
-    StructuredTask( this_type && other )
-        : m_pool_ptr( other.m_pool_ptr )
-        , m_task_status( other.m_task_status )
-        , m_refcount( other.m_refcount.load( std::memory_order_relaxed ) )
-        , m_successor_task( other.m_successor_task )
-        , m_waiting_refcount( other.m_waiting_refcount )
-        , m_func_ref( std::move( other.m_func_ref ) )
-    {}
+    StructuredTask(this_type&& other)
+        : m_pool_ptr(other.m_pool_ptr),
+          m_task_status(other.m_task_status),
+          m_refcount(other.m_refcount.load(std::memory_order_relaxed)),
+          m_successor_task(other.m_successor_task),
+          m_waiting_refcount(other.m_waiting_refcount),
+          m_func_ref(std::move(other.m_func_ref)) {}
 
     virtual ~StructuredTask() = default;
 
-    this_type & operator=( const this_type & other )
-    {
-      if (this != &other)
-      {
+    this_type& operator=(const this_type& other) {
+      if (this != &other) {
         m_pool_ptr = other.m_pool_ptr;
         m_task_status = other.m_task_status;
-        m_refcount.store( other.m_refcount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+        m_refcount.store(other.m_refcount.load(std::memory_order_relaxed),
+                         std::memory_order_relaxed);
         m_successor_task = other.m_successor_task;
         m_waiting_refcount = other.m_waiting_refcount;
         m_func_ref = other.m_func_ref;
@@ -1511,224 +1387,174 @@ class StructuredTask : public concurrent_queue_intrusive_node
       return *this;
     }
 
-    this_type & operator=( this_type && other )
-    {
-      if (this != &other)
-      {
+    this_type& operator=(this_type&& other) {
+      if (this != &other) {
         m_pool_ptr = other.m_pool_ptr;
         m_task_status = other.m_task_status;
-        m_refcount.store( other.m_refcount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+        m_refcount.store(other.m_refcount.load(std::memory_order_relaxed),
+                         std::memory_order_relaxed);
         m_successor_task = other.m_successor_task;
         m_waiting_refcount = other.m_waiting_refcount;
-        m_func_ref = std::move( other.m_func_ref );
+        m_func_ref = std::move(other.m_func_ref);
       }
 
       return *this;
     }
 
-    StructuredTask * getSuccessorTask() const
-    {
-      return m_successor_task;
-    }
+    StructuredTask* getSuccessorTask() const { return m_successor_task; }
 
-    void setSuccessorTask( StructuredTask * successor_task )
-    {
-      if ( m_successor_task )
-      {
-        m_successor_task->m_refcount.fetch_sub( 1, std::memory_order_acq_rel );
+    void setSuccessorTask(StructuredTask* successor_task) {
+      if (m_successor_task) {
+        m_successor_task->m_refcount.fetch_sub(1, std::memory_order_acq_rel);
       }
 
       m_successor_task = successor_task;
 
-      if ( m_successor_task )
-      {
-        m_successor_task->m_refcount.fetch_add( 1, std::memory_order_acq_rel );
+      if (m_successor_task) {
+        m_successor_task->m_refcount.fetch_add(1, std::memory_order_acq_rel);
       }
     }
 
-    void moveWaitingConditionTo( StructuredTask * new_task_to_wait_for )
-    {
-      if ( new_task_to_wait_for != this )
-      {
+    void moveWaitingConditionTo(StructuredTask* new_task_to_wait_for) {
+      if (new_task_to_wait_for != this) {
         new_task_to_wait_for->m_waiting_refcount = m_waiting_refcount;
         m_waiting_refcount = nullptr;
       }
     }
 
-    void extendWaitingConditionToNextExecutionInstance()
-    {
-      if ( m_waiting_refcount )
-      {
-        m_waiting_refcount->fetch_add( 1, std::memory_order_acq_rel );
+    void extendWaitingConditionToNextExecutionInstance() {
+      if (m_waiting_refcount) {
+        m_waiting_refcount->fetch_add(1, std::memory_order_acq_rel);
       }
     }
 
-    void reset()
-    {
+    void reset() {
       m_task_status = 0;
-      m_refcount.store( 0, std::memory_order_release );
+      m_refcount.store(0, std::memory_order_release);
       m_successor_task = nullptr;
       m_waiting_refcount = nullptr;
     }
 
-    template< class T_CALLABLE >
-    void setCallable( T_CALLABLE & callable )
-    {
-      setCallableImpl( callable );
+    template <class T_CALLABLE>
+    void setCallable(T_CALLABLE& callable) {
+      setCallableImpl(callable);
     }
 
   protected:
-    int decrementRefCount()
-    {
-      return m_refcount.fetch_sub( 1, std::memory_order_acq_rel ) - 1;
+    int decrementRefCount() {
+      return m_refcount.fetch_sub(1, std::memory_order_acq_rel) - 1;
     }
 
-    int addRefCount( int count )
-    {
-      return m_refcount.fetch_add( count, std::memory_order_acq_rel ) + count;
+    int addRefCount(int count) {
+      return m_refcount.fetch_add(count, std::memory_order_acq_rel) + count;
     }
 
   private:
-    void execute()
-    {
-      m_func_ref();
-    }
+    void execute() { m_func_ref(); }
 
-    template< class T_CALLABLE >
-    void setCallableImpl( T_CALLABLE & callable )
-    {
-      m_func_ref = detail::function_ref< void() >( std::forward< T_CALLABLE >( callable ) );
+    template <class T_CALLABLE>
+    void setCallableImpl(T_CALLABLE& callable) {
+      m_func_ref =
+          detail::function_ref<void()>(std::forward<T_CALLABLE>(callable));
     }
 
   protected:
-    mutable StructuredWorkStealingThreadPoolBase * m_pool_ptr;
+    mutable StructuredWorkStealingThreadPoolBase* m_pool_ptr;
     T_STATUS_MASK_TYPE m_task_status;
     std::atomic_int m_refcount;
-    StructuredTask * m_successor_task;
-    std::atomic_int * m_waiting_refcount;
-    detail::function_ref< void() > m_func_ref;
+    StructuredTask* m_successor_task;
+    std::atomic_int* m_waiting_refcount;
+    detail::function_ref<void()> m_func_ref;
 };
 
-
-
-class WorkerBlockingTask : public StructuredTask
-{
-  typedef StructuredTask base_type;
-  typedef WorkerBlockingTask this_type;
-
-public:
-  WorkerBlockingTask( std::counting_semaphore<> & sem )
-      : base_type()
-      , m_sem( &sem )
-  {
-    setCallable (*this);
-  }
-
-  WorkerBlockingTask ( const this_type & ) = delete;
-
-  WorkerBlockingTask ( this_type && other )
-      : base_type()
-      , m_sem( other.m_sem )
-  {
-    setCallable (*this);
-  }
-
-  virtual ~WorkerBlockingTask() = default;
-
-  this_type&
-  operator= ( const this_type & ) = delete;
-
-  this_type&
-  operator= ( this_type&& ) = delete;
-
-  void operator()()
-  {
-    m_sem->acquire();
-  }
-
-private:
-  std::counting_semaphore<> * m_sem;
-};
-
-
-
-template< typename T_QUEUE >
-class StructuredWorkStealingThreadPoolWorker
-{
-  typedef StructuredWorkStealingThreadPoolWorker< T_QUEUE > this_type;
-  typedef T_QUEUE task_queue_type;
+class WorkerBlockingTask : public StructuredTask {
+    typedef StructuredTask base_type;
+    typedef WorkerBlockingTask this_type;
 
   public:
-    StructuredWorkStealingThreadPoolWorker( std::counting_semaphore<> & sem )
-        : m_queue( nullptr )
-        , m_thread_id( 0 )
-        , m_thread()
-        , m_worker_blocking_task( sem )
-    {}
-
-    ~StructuredWorkStealingThreadPoolWorker()
-    {
-      joinWithThread();
+    WorkerBlockingTask(std::counting_semaphore<>& sem)
+        : base_type(), m_sem(&sem) {
+      setCallable(*this);
     }
+
+    WorkerBlockingTask(const this_type&) = delete;
+
+    WorkerBlockingTask(this_type&& other) : base_type(), m_sem(other.m_sem) {
+      setCallable(*this);
+    }
+
+    virtual ~WorkerBlockingTask() = default;
+
+    this_type& operator=(const this_type&) = delete;
+
+    this_type& operator=(this_type&&) = delete;
+
+    void operator()() { m_sem->acquire(); }
+
+  private:
+    std::counting_semaphore<>* m_sem;
+};
+
+template <typename T_QUEUE>
+class StructuredWorkStealingThreadPoolWorker {
+    typedef StructuredWorkStealingThreadPoolWorker<T_QUEUE> this_type;
+    typedef T_QUEUE task_queue_type;
+
+  public:
+    StructuredWorkStealingThreadPoolWorker(std::counting_semaphore<>& sem)
+        : m_queue(nullptr),
+          m_thread_id(0),
+          m_thread(),
+          m_worker_blocking_task(sem) {}
+
+    ~StructuredWorkStealingThreadPoolWorker() { joinWithThread(); }
 
     // Disable copying and moving
-    StructuredWorkStealingThreadPoolWorker( const this_type & ) = delete;
-    StructuredWorkStealingThreadPoolWorker( this_type && ) = delete;
-    this_type & operator=( const this_type & ) = delete;
-    this_type & operator=( this_type && ) = delete;
+    StructuredWorkStealingThreadPoolWorker(const this_type&) = delete;
+    StructuredWorkStealingThreadPoolWorker(this_type&&) = delete;
+    this_type& operator=(const this_type&) = delete;
+    this_type& operator=(this_type&&) = delete;
 
-    void startWorker( task_queue_type * queue,
-                      std::size_t thread_id )
-    {
+    void startWorker(task_queue_type* queue, std::size_t thread_id) {
       m_queue = queue;
       m_thread_id = thread_id;
-      m_thread = std::thread( &this_type::run, this );
+      m_thread = std::thread(&this_type::run, this);
     }
 
-    void joinWithThread()
-    {
-      if ( m_thread.joinable() )
-      {
+    void joinWithThread() {
+      if (m_thread.joinable()) {
         m_thread.join();
       }
     }
 
-    WorkerBlockingTask &
-    get_worker_blocking_task()
-    {
+    WorkerBlockingTask& get_worker_blocking_task() {
       return m_worker_blocking_task;
     }
 
   private:
-    void run()
-    {
-      ThreadContext::setThreadId( m_thread_id );
+    void run() {
+      ThreadContext::setThreadId(m_thread_id);
 
-      StructuredTask * task;
+      StructuredTask* task;
       hybrid_backoff bkoff;
 
-      while ( true )
-      {
+      while (true) {
         bkoff.reset();
-        while ( !m_queue->pop( task ) )
-        {
-          // Either the queue is empty or it was contended. Back-off before we retry.
+        while (!m_queue->pop(task)) {
+          // Either the queue is empty or it was contended. Back-off before we
+          // retry.
           bkoff.backoff();
         }
-        if ( task->m_task_status & StructuredTask::TERMINATION_MASK )
-        {
+        if (task->m_task_status & StructuredTask::TERMINATION_MASK) {
           // We received a signal to terminate.
           return;
-        }
-        else
-        {
-          do
-          {
+        } else {
+          do {
             task->execute();
 
-            StructuredTask * next_task = nullptr;
-            if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
-            {
+            StructuredTask* next_task = nullptr;
+            if (task->m_successor_task &&
+                task->m_successor_task->decrementRefCount() <= 0) {
               // The successor task is ready to be executed.
               // We take the successor task as our next
               // task to execute.
@@ -1736,155 +1562,131 @@ class StructuredWorkStealingThreadPoolWorker
               next_task->m_pool_ptr = task->m_pool_ptr;
             }
 
-            if ( task->m_waiting_refcount )
-            {
-              task->m_waiting_refcount->fetch_sub( 1, std::memory_order_acq_rel );
+            if (task->m_waiting_refcount) {
+              task->m_waiting_refcount->fetch_sub(1, std::memory_order_acq_rel);
             }
 
             task = next_task;
-          } while( task );
+          } while (task);
         }
       }
     }
 
   private:
-    task_queue_type * m_queue;
+    task_queue_type* m_queue;
     std::size_t m_thread_id;
     std::thread m_thread;
     WorkerBlockingTask m_worker_blocking_task;
 };
 
-
-
-template< std::size_t MAX_NUM_THREADS >
-class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPoolBase
-{
+template <std::size_t MAX_NUM_THREADS>
+class StructuredWorkStealingThreadPool
+    : public StructuredWorkStealingThreadPoolBase {
   public:
-    typedef StructuredWorkStealingThreadPool< MAX_NUM_THREADS > this_type;
-    typedef distributed_queue_intrusive< StructuredTask,
-                                         MAX_NUM_THREADS > task_queue_type;
-    typedef StructuredWorkStealingThreadPoolWorker< task_queue_type > worker_type;
+    typedef StructuredWorkStealingThreadPool<MAX_NUM_THREADS> this_type;
+    typedef distributed_queue_intrusive<StructuredTask, MAX_NUM_THREADS>
+        task_queue_type;
+    typedef StructuredWorkStealingThreadPoolWorker<task_queue_type> worker_type;
 
   public:
-    StructuredWorkStealingThreadPool( std::size_t num_threads )
-        : m_task_queue( std::min( num_threads, MAX_NUM_THREADS ) )
-        , m_num_threads( std::min( num_threads, MAX_NUM_THREADS ) )
-        , m_workers_started()
-        , m_sem( 0 )
-        , m_termination_tasks()
-        , m_workers( m_sem )
-    {
-      m_workers_started.test_and_set( std::memory_order_acquire );
+    StructuredWorkStealingThreadPool(std::size_t num_threads)
+        : m_task_queue(std::min(num_threads, MAX_NUM_THREADS)),
+          m_num_threads(std::min(num_threads, MAX_NUM_THREADS)),
+          m_workers_started(),
+          m_sem(0),
+          m_termination_tasks(),
+          m_workers(m_sem) {
+      m_workers_started.test_and_set(std::memory_order_acquire);
       // Initialize the thread ID of the calling main thread.
       ThreadContext::initMainThreadId();
 
-      for( std::size_t i = 0; i < MAX_NUM_THREADS; ++i )
-      {
-        m_termination_tasks[i].m_task_status |= StructuredTask::TERMINATION_MASK;
+      for (std::size_t i = 0; i < MAX_NUM_THREADS; ++i) {
+        m_termination_tasks[i].m_task_status |=
+            StructuredTask::TERMINATION_MASK;
       }
 
       // Enqueue tasks which will cause the workers to be blocked.
       stop_workers();
 
       // Fire up the worker threads.
-      for( std::size_t i = 0; i < m_num_threads - 1; ++i )
-      {
-        m_workers[i].startWorker( &m_task_queue, i + 1 );
+      for (std::size_t i = 0; i < m_num_threads - 1; ++i) {
+        m_workers[i].startWorker(&m_task_queue, i + 1);
       }
     }
 
     // Disable copying and moving
-    StructuredWorkStealingThreadPool( const this_type & ) = delete;
-    StructuredWorkStealingThreadPool( this_type && ) = delete;
-    this_type & operator=( const this_type & ) = delete;
-    this_type & operator=( this_type && ) = delete;
+    StructuredWorkStealingThreadPool(const this_type&) = delete;
+    StructuredWorkStealingThreadPool(this_type&&) = delete;
+    this_type& operator=(const this_type&) = delete;
+    this_type& operator=(this_type&&) = delete;
 
-    ~StructuredWorkStealingThreadPool()
-    {
-      shutdown();
-    }
+    ~StructuredWorkStealingThreadPool() { shutdown(); }
 
-    void shutdown()
-    {
+    void shutdown() {
       // Send a termination message to all workers.
-      for( std::size_t i = 0; i < m_num_threads - 1; ++i )
-      {
-        m_task_queue.push( i, m_termination_tasks[i] );
+      for (std::size_t i = 0; i < m_num_threads - 1; ++i) {
+        m_task_queue.push(i, m_termination_tasks[i]);
       }
 
       wake_workers();
 
-      for( std::size_t i = 0; i < m_num_threads - 1; ++i )
-      {
+      for (std::size_t i = 0; i < m_num_threads - 1; ++i) {
         m_workers[i].joinWithThread();
       }
 
       m_task_queue.clear();
-      m_workers_started.clear( std::memory_order_release );
+      m_workers_started.clear(std::memory_order_release);
     }
 
-    void enqueueTask( StructuredTask * task )
-    {
+    void enqueueTask(StructuredTask* task) {
       task->m_pool_ptr = this;
-      m_task_queue.push( task );
+      m_task_queue.push(task);
       wake_workers();
     }
 
-    void enqueueTask( std::size_t queue_hint, StructuredTask * task )
-    {
+    void enqueueTask(std::size_t queue_hint, StructuredTask* task) {
       task->m_pool_ptr = this;
-      m_task_queue.push( queue_hint, task );
+      m_task_queue.push(queue_hint, task);
       wake_workers();
     }
 
-    void enqueueTaskList( TaskListTmpl< StructuredTask > & task_list )
-    {
-      if ( !task_list.empty() )
-      {
-        for ( StructuredTask & task : task_list )
-        {
+    void enqueueTaskList(TaskListTmpl<StructuredTask>& task_list) {
+      if (!task_list.empty()) {
+        for (StructuredTask& task : task_list) {
           task.m_pool_ptr = this;
         }
 
-        m_task_queue.pushList( task_list.front(), task_list.back() );
+        m_task_queue.pushList(task_list.front(), task_list.back());
         wake_workers();
       }
     }
 
-    void enqueueTaskList( std::size_t queue_hint, TaskListTmpl< StructuredTask > & task_list )
-    {
-      if ( !task_list.empty() )
-      {
-        for ( StructuredTask & task : task_list )
-        {
+    void enqueueTaskList(std::size_t queue_hint,
+                         TaskListTmpl<StructuredTask>& task_list) {
+      if (!task_list.empty()) {
+        for (StructuredTask& task : task_list) {
           task.m_pool_ptr = this;
         }
 
-        m_task_queue.pushList( queue_hint, task_list.front(), task_list.back() );
+        m_task_queue.pushList(queue_hint, task_list.front(), task_list.back());
         wake_workers();
       }
     }
 
-    bool stealTask()
-    {
-      StructuredTask * task;
+    bool stealTask() {
+      StructuredTask* task;
 
-      if ( m_task_queue.pop( task ) )
-      {
-        if ( task->m_task_status & StructuredTask::TERMINATION_MASK )
-        {
+      if (m_task_queue.pop(task)) {
+        if (task->m_task_status & StructuredTask::TERMINATION_MASK) {
           // We received a signal to terminate.
           return false;
-        }
-        else
-        {
-          do
-          {
+        } else {
+          do {
             task->execute();
 
-            StructuredTask * next_task = nullptr;
-            if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
-            {
+            StructuredTask* next_task = nullptr;
+            if (task->m_successor_task &&
+                task->m_successor_task->decrementRefCount() <= 0) {
               // The successor task is ready to be executed.
               // We take the successor task as our next
               // task to execute.
@@ -1892,13 +1694,12 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
               next_task->m_pool_ptr = task->m_pool_ptr;
             }
 
-            if ( task->m_waiting_refcount )
-            {
-              task->m_waiting_refcount->fetch_sub( 1, std::memory_order_acq_rel );
+            if (task->m_waiting_refcount) {
+              task->m_waiting_refcount->fetch_sub(1, std::memory_order_acq_rel);
             }
 
             task = next_task;
-          } while( task );
+          } while (task);
 
           return true;
         }
@@ -1907,37 +1708,22 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
       return false;
     }
 
-    unsigned int
-    get_num_workers () const
-    {
-      return m_num_threads;
-    }
+    unsigned int get_num_workers() const { return m_num_threads; }
 
-    unsigned int
-    get_worker_id () const
-    {
-      return ThreadContext::getThreadId();
-    }
+    unsigned int get_worker_id() const { return ThreadContext::getThreadId(); }
 
-    void
-    stop_workers()
-    {
-      if ( m_workers_started.test( std::memory_order_acquire ) )
-      {
-	m_workers_started.clear( std::memory_order_release );
-        for( std::size_t i = 0; i < m_num_threads - 1; ++i )
-        {
-          m_task_queue.push( m_workers[i].get_worker_blocking_task() );
+    void stop_workers() {
+      if (m_workers_started.test(std::memory_order_acquire)) {
+        m_workers_started.clear(std::memory_order_release);
+        for (std::size_t i = 0; i < m_num_threads - 1; ++i) {
+          m_task_queue.push(m_workers[i].get_worker_blocking_task());
         }
       }
     }
 
-    void
-    wake_workers()
-    {
-      if ( !m_workers_started.test_and_set( std::memory_order_acquire ) )
-      {
-        m_sem.release( m_num_threads - 1 );
+    void wake_workers() {
+      if (!m_workers_started.test_and_set(std::memory_order_acquire)) {
+        m_sem.release(m_num_threads - 1);
       }
     }
 
@@ -1946,205 +1732,154 @@ class StructuredWorkStealingThreadPool : public StructuredWorkStealingThreadPool
     const std::size_t m_num_threads;
     std::atomic_flag m_workers_started;
     std::counting_semaphore<> m_sem;
-    array_fixed_size< StructuredTask,
-                      MAX_NUM_THREADS > m_termination_tasks;
-    array_fixed_size< worker_type,
-                      MAX_NUM_THREADS - 1 > m_workers;
+    array_fixed_size<StructuredTask, MAX_NUM_THREADS> m_termination_tasks;
+    array_fixed_size<worker_type, MAX_NUM_THREADS - 1> m_workers;
 };
 
-
-
-template< typename T_THREAD_POOL >
-class StructuredTaskGroup
-{
-  typedef StructuredTaskGroup this_type;
+template <typename T_THREAD_POOL>
+class StructuredTaskGroup {
+    typedef StructuredTaskGroup this_type;
 
   public:
-    StructuredTaskGroup( T_THREAD_POOL * pool )
-        : m_waiting_refcount( 0 )
-        , m_pool_ptr( pool )
-    {}
+    StructuredTaskGroup(T_THREAD_POOL* pool)
+        : m_waiting_refcount(0), m_pool_ptr(pool) {}
 
-    StructuredTaskGroup( const this_type & ) = delete;
+    StructuredTaskGroup(const this_type&) = delete;
 
-    StructuredTaskGroup( this_type && other )
-        : m_waiting_refcount( 0 )
-        , m_pool_ptr( other.m_pool_ptr )
-    {}
+    StructuredTaskGroup(this_type&& other)
+        : m_waiting_refcount(0), m_pool_ptr(other.m_pool_ptr) {}
 
     /**
      * The caller of the destructor synchronizes, waiting until
      * all tasks spawed through the task group have been completed.
      */
-    ~StructuredTaskGroup()
-    {
-      wait();
-    }
+    ~StructuredTaskGroup() { wait(); }
 
-    this_type & operator=( const this_type & ) = delete;
+    this_type& operator=(const this_type&) = delete;
 
-    this_type & operator=( this_type && other )
-    {
-      if (this != &other)
-      {
-        m_waiting_refcount.store( 0, std::memory_order_release );
+    this_type& operator=(this_type&& other) {
+      if (this != &other) {
+        m_waiting_refcount.store(0, std::memory_order_release);
         m_pool_ptr = other.m_pool_ptr;
       }
 
       return *this;
     }
 
-    void spawn( StructuredTask * task )
-    {
-      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+    void spawn(StructuredTask* task) {
+      m_waiting_refcount.fetch_add(1, std::memory_order_acq_rel);
       task->m_waiting_refcount = &m_waiting_refcount;
-      m_pool_ptr->enqueueTask( task );
+      m_pool_ptr->enqueueTask(task);
     }
 
-    void spawn( std::size_t queue_hint, StructuredTask * task )
-    {
-      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+    void spawn(std::size_t queue_hint, StructuredTask* task) {
+      m_waiting_refcount.fetch_add(1, std::memory_order_acq_rel);
       task->m_waiting_refcount = &m_waiting_refcount;
-      m_pool_ptr->enqueueTask( queue_hint, task );
+      m_pool_ptr->enqueueTask(queue_hint, task);
     }
 
-    void spawn( TaskListTmpl< StructuredTask > & task_list )
-    {
-      if ( !task_list.empty() )
-      {
-        for ( StructuredTask & task : task_list )
-        {
-          m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+    void spawn(TaskListTmpl<StructuredTask>& task_list) {
+      if (!task_list.empty()) {
+        for (StructuredTask& task : task_list) {
+          m_waiting_refcount.fetch_add(1, std::memory_order_acq_rel);
           task.m_waiting_refcount = &m_waiting_refcount;
         }
       }
 
-      m_pool_ptr->enqueueTaskList( task_list );
+      m_pool_ptr->enqueueTaskList(task_list);
     }
 
-    void spawn( std::size_t queue_hint, TaskListTmpl< StructuredTask > & task_list )
-    {
-      if ( !task_list.empty() )
-      {
-        for ( StructuredTask & task : task_list )
-        {
-          m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+    void spawn(std::size_t queue_hint,
+               TaskListTmpl<StructuredTask>& task_list) {
+      if (!task_list.empty()) {
+        for (StructuredTask& task : task_list) {
+          m_waiting_refcount.fetch_add(1, std::memory_order_acq_rel);
           task.m_waiting_refcount = &m_waiting_refcount;
         }
       }
 
-      m_pool_ptr->enqueueTaskList( queue_hint, task_list );
+      m_pool_ptr->enqueueTaskList(queue_hint, task_list);
     }
 
-    void wait()
-    {
+    void wait() {
       hybrid_backoff bkoff;
-      while ( m_waiting_refcount.load( std::memory_order_acquire ) > 0 )
-      {
-        if ( m_pool_ptr->stealTask() )
-        {
+      while (m_waiting_refcount.load(std::memory_order_acquire) > 0) {
+        if (m_pool_ptr->stealTask()) {
           bkoff.reset();
-        }
-        else
-        {
+        } else {
           bkoff.backoff();
         }
       }
     }
 
-    void incrementNumberOfAwaitedTaskCompletions( int num_addition_tasks )
-    {
-      m_waiting_refcount.fetch_add( num_addition_tasks, std::memory_order_acq_rel );
+    void incrementNumberOfAwaitedTaskCompletions(int num_addition_tasks) {
+      m_waiting_refcount.fetch_add(num_addition_tasks,
+                                   std::memory_order_acq_rel);
     }
 
-    void spawn_and_wait( StructuredTask * task )
-    {
-      m_waiting_refcount.fetch_add( 1, std::memory_order_acq_rel );
+    void spawn_and_wait(StructuredTask* task) {
+      m_waiting_refcount.fetch_add(1, std::memory_order_acq_rel);
       task->m_waiting_refcount = &m_waiting_refcount;
 
-      do
-      {
+      do {
         task->m_pool_ptr = m_pool_ptr;
         task->execute();
 
-        StructuredTask * next_task = nullptr;
-        if ( task->m_successor_task && task->m_successor_task->decrementRefCount() <= 0 )
-        {
+        StructuredTask* next_task = nullptr;
+        if (task->m_successor_task &&
+            task->m_successor_task->decrementRefCount() <= 0) {
           // The successor task is ready to be executed.
           // We take the successor task as our next
           // task to execute.
           next_task = task->m_successor_task;
         }
 
-        if ( task->m_waiting_refcount )
-        {
-          task->m_waiting_refcount->fetch_sub( 1, std::memory_order_acq_rel );
+        if (task->m_waiting_refcount) {
+          task->m_waiting_refcount->fetch_sub(1, std::memory_order_acq_rel);
         }
 
         task = next_task;
-      } while( task );
+      } while (task);
 
       wait();
     }
 
-    void reset()
-    {
-      m_waiting_refcount.store( 0, std::memory_order_acq_rel );
-    }
+    void reset() { m_waiting_refcount.store(0, std::memory_order_acq_rel); }
 
   protected:
-    T_THREAD_POOL * get_thread_pool() const
-    {
-      return m_pool_ptr;
-    }
+    T_THREAD_POOL* get_thread_pool() const { return m_pool_ptr; }
 
   private:
     std::atomic_int m_waiting_refcount;
-    mutable T_THREAD_POOL * m_pool_ptr;
+    mutable T_THREAD_POOL* m_pool_ptr;
 };
 
+template <bool B, typename T = void>
+using enable_if_t = typename std::enable_if<B, T>::type;
 
+template <typename T_CALLABLE, typename... T_ARGS>
+struct TakesArgumentsHelper {
+    typedef std::true_type yes_type;
+    typedef std::false_type no_type;
 
-template< bool B,
-          typename T = void >
-using enable_if_t = typename std::enable_if< B, T >::type;
+    // Declare a value of type FUNC and try to call it
+    // using the argument types provided.
+    template <typename X_CALLABLE>
+    static yes_type test(
+        decltype(std::declval<X_CALLABLE&>()(std::declval<T_ARGS>()...))*) {
+      return yes_type{};
+    }
 
+    template <typename FUNC>
+    static no_type test(...) {
+      return no_type{};
+    }
 
-
-template< typename T_CALLABLE,
-          typename ...T_ARGS >
-struct TakesArgumentsHelper
-{
-  typedef std::true_type yes_type;
-  typedef std::false_type no_type;
-
-  // Declare a value of type FUNC and try to call it
-  // using the argument types provided.
-  template< typename X_CALLABLE >
-  static yes_type test( decltype( std::declval< X_CALLABLE & >()( std::declval< T_ARGS >()... ) )* )
-  {
-    return yes_type{};
-  }
-
-  template< typename FUNC >
-  static no_type test(...)
-  {
-    return no_type{};
-  }
-
-  static constexpr bool value = std::is_same< decltype( test< T_CALLABLE >( nullptr ) ), yes_type >::value;
+    static constexpr bool value =
+        std::is_same<decltype(test<T_CALLABLE>(nullptr)), yes_type>::value;
 };
 
-} // namespace detail
-
-
-
-
-
-
-
-
-
+}  // namespace detail
 
 /**
  * This class provides a drop-in replacement for std::mutex.
@@ -2153,18 +1888,17 @@ struct TakesArgumentsHelper
  * The back-off strategy is incremental deferring the calling
  * task more and more until it finally gets the lock.
  */
-class SpinLock : private detail::SpinLock
-{
-  typedef detail::SpinLock base_type;
-  typedef SpinLock this_type;
+class SpinLock : private detail::SpinLock {
+    typedef detail::SpinLock base_type;
+    typedef SpinLock this_type;
 
   public:
     SpinLock() : base_type() {}
 
-    SpinLock( const this_type & ) = delete;
-    SpinLock( this_type && ) = delete;
-    this_type & operator=( const this_type & ) = delete;
-    this_type & operator=( this_type && ) = delete;
+    SpinLock(const this_type&) = delete;
+    SpinLock(this_type&&) = delete;
+    this_type& operator=(const this_type&) = delete;
+    this_type& operator=(this_type&&) = delete;
 
     /**
      * Locks the mutex and returns.
@@ -2185,24 +1919,21 @@ class SpinLock : private detail::SpinLock
     bool try_lock() { return base_type::try_lock(); }
 };
 
-
-
 /**
  * This back-off strategy is a mixture of different back-off
  * mechanisms and implements incremental back-off.
  * An instance of this class keeps track of the "back-off state",
  * which is advanced on each call to backoff().
  */
-class hybrid_backoff : private detail::hybrid_backoff
-{
-  typedef detail::hybrid_backoff base_type;
-  typedef hybrid_backoff this_type;
+class hybrid_backoff : private detail::hybrid_backoff {
+    typedef detail::hybrid_backoff base_type;
+    typedef hybrid_backoff this_type;
 
   public:
     hybrid_backoff() : base_type() {}
 
-    hybrid_backoff( const this_type & ) = delete;
-    hybrid_backoff & operator=( const this_type & ) = delete;
+    hybrid_backoff(const this_type&) = delete;
+    hybrid_backoff& operator=(const this_type&) = delete;
 
     /**
      * This method applies an incremental back-off strategy.
@@ -2222,8 +1953,6 @@ class hybrid_backoff : private detail::hybrid_backoff
     void reset() { base_type::reset(); }
 };
 
-
-
 /**
  * This class provides some static methods to query
  * the unique ID of a thread. Each thread of a thread pool
@@ -2231,21 +1960,17 @@ class hybrid_backoff : private detail::hybrid_backoff
  * contiguous range starting from 0. This allows using them
  * as indexes of an array.
  */
-class ThreadContext
-{
+class ThreadContext {
   public:
     /**
      * This static method returns the ID of the calling thread.
      *
      * @return the unique ID of the calling thread
      */
-    static std::size_t getThreadId()
-    {
+    static std::size_t getThreadId() {
       return detail::ThreadContext::getThreadId();
     }
 };
-
-
 
 /**
  * This template provides a thread-local storage. It owns a
@@ -2261,15 +1986,11 @@ class ThreadContext
  * their local values without any synchronization. Later on the
  * values can be aggregated by iterating over them.
  */
-template< typename T_VALUE,
-          unsigned int T_MAX_NUM_THREADS >
-class ThreadSpecificValueArray
-{
+template <typename T_VALUE, unsigned int T_MAX_NUM_THREADS>
+class ThreadSpecificValueArray {
   private:
-    typedef detail::array_fixed_size< T_VALUE,
-                                      T_MAX_NUM_THREADS > array_type;
-    typedef ThreadSpecificValueArray< T_VALUE,
-                                      T_MAX_NUM_THREADS > this_type;
+    typedef detail::array_fixed_size<T_VALUE, T_MAX_NUM_THREADS> array_type;
+    typedef ThreadSpecificValueArray<T_VALUE, T_MAX_NUM_THREADS> this_type;
 
   public:
     using value_type = typename array_type::value_type;
@@ -2286,32 +2007,33 @@ class ThreadSpecificValueArray
 
   public:
     ThreadSpecificValueArray() = default;
-    ThreadSpecificValueArray( const this_type & ) = default;
-    ThreadSpecificValueArray( this_type && ) = default;
+    ThreadSpecificValueArray(const this_type&) = default;
+    ThreadSpecificValueArray(this_type&&) = default;
 
     // Pass a single parameter down to all partial data structures.
-    template< typename Arg >
-    ThreadSpecificValueArray( Arg&& arg )
-        : m_thread_local_values( std::forward< Arg >( arg ) )
-    {}
+    template <typename Arg>
+    ThreadSpecificValueArray(Arg&& arg)
+        : m_thread_local_values(std::forward<Arg>(arg)) {}
 
-    this_type & operator= ( const this_type & ) = default;
-    this_type & operator=( this_type && ) = default;
+    this_type& operator=(const this_type&) = default;
+    this_type& operator=(this_type&&) = default;
 
-    reference local()
-    {
+    reference local() {
       return m_thread_local_values[ThreadContext::getThreadId()];
     }
-    const_reference local() const
-    {
+    const_reference local() const {
       return m_thread_local_values[ThreadContext::getThreadId()];
     }
 
     // Element access
-    reference at( size_type pos ) { return m_thread_local_values.at( pos ); }
-    const_reference at( size_type pos ) const { return m_thread_local_values.at( pos ); }
-    reference operator[]( size_type pos ) { return m_thread_local_values[pos]; }
-    const_reference operator[]( size_type pos ) const { return m_thread_local_values[pos]; }
+    reference at(size_type pos) { return m_thread_local_values.at(pos); }
+    const_reference at(size_type pos) const {
+      return m_thread_local_values.at(pos);
+    }
+    reference operator[](size_type pos) { return m_thread_local_values[pos]; }
+    const_reference operator[](size_type pos) const {
+      return m_thread_local_values[pos];
+    }
     reference front() { return m_thread_local_values.front(); }
     const_reference front() const { return m_thread_local_values.front(); }
     reference back() { return m_thread_local_values.back(); }
@@ -2325,22 +2047,28 @@ class ThreadSpecificValueArray
     const_iterator end() const { return m_thread_local_values.end(); }
     const_iterator cend() const { return m_thread_local_values.cend(); }
     reverse_iterator rbegin() { return m_thread_local_values.rbegin(); }
-    const_reverse_iterator rbegin() const { return m_thread_local_values.rbegin(); }
-    const_reverse_iterator crbegin() const { return m_thread_local_values.crbegin(); }
+    const_reverse_iterator rbegin() const {
+      return m_thread_local_values.rbegin();
+    }
+    const_reverse_iterator crbegin() const {
+      return m_thread_local_values.crbegin();
+    }
     reverse_iterator rend() { return m_thread_local_values.rend(); }
     const_reverse_iterator rend() const { return m_thread_local_values.rend(); }
-    const_reverse_iterator crend() const { return m_thread_local_values.crend(); }
+    const_reverse_iterator crend() const {
+      return m_thread_local_values.crend();
+    }
 
-    constexpr bool empty() const noexcept { return m_thread_local_values.empty(); }
-    constexpr size_type size() const noexcept { return m_thread_local_values.size(); }
+    constexpr bool empty() const noexcept {
+      return m_thread_local_values.empty();
+    }
+    constexpr size_type size() const noexcept {
+      return m_thread_local_values.size();
+    }
 
   private:
     array_type m_thread_local_values;
 };
-
-
-
-
 
 /**
  * This class template provides a work stealing thread
@@ -2387,15 +2115,14 @@ class ThreadSpecificValueArray
  * with respect to their associated thread pool. That means you must
  * be careful to not mix the thread pools, meaning tasks executed on a
  * thread pool A must not spawn tasks on a thread pool B. Further, instances
- * of the ThreadSpecificValueArray template must not be accessed by tasks/threads
- * associated to different thread pools. This is because in that case
- * different threads having the same ID access the same data, which
- * leads to race conditions.
+ * of the ThreadSpecificValueArray template must not be accessed by
+ * tasks/threads associated to different thread pools. This is because in that
+ * case different threads having the same ID access the same data, which leads
+ * to race conditions.
  */
-template< std::size_t MAX_NUM_THREADS >
-class WorkStealingThreadPool
-{
-  typedef WorkStealingThreadPool< MAX_NUM_THREADS > pool_this_type;
+template <std::size_t MAX_NUM_THREADS>
+class WorkStealingThreadPool {
+    typedef WorkStealingThreadPool<MAX_NUM_THREADS> pool_this_type;
 
   public:
     // Forward declaration.
@@ -2420,19 +2147,22 @@ class WorkStealingThreadPool
      * group upon its completion. That way task graphs with
      * continuation tasks can be designed.
      */
-    class TaskGroup : public detail::StructuredTaskGroup< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > >
-    {
-      typedef detail::StructuredTaskGroup< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > > base_type;
-      typedef TaskGroup this_type;
+    class TaskGroup
+        : public detail::StructuredTaskGroup<
+              detail::StructuredWorkStealingThreadPool<MAX_NUM_THREADS> > {
+        typedef detail::StructuredTaskGroup<
+            detail::StructuredWorkStealingThreadPool<MAX_NUM_THREADS> >
+            base_type;
+        typedef TaskGroup this_type;
 
       public:
         using Task = pool_this_type::Task;
-        using TaskList = detail::TaskListTmpl< Task >;
+        using TaskList = detail::TaskListTmpl<Task>;
 
       public:
-        TaskGroup( detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > * pool )
-            : base_type( pool )
-        {}
+        TaskGroup(
+            detail::StructuredWorkStealingThreadPool<MAX_NUM_THREADS>* pool)
+            : base_type(pool) {}
 
         /**
          * This method spawn \a task. That means \a task is inserted into
@@ -2442,10 +2172,7 @@ class WorkStealingThreadPool
          *
          * @param task the task to spawn
          */
-        void spawn( Task * task )
-        {
-          base_type::spawn( task );
-        }
+        void spawn(Task* task) { base_type::spawn(task); }
 
         /**
          * This method spawn \a task. That means \a task is inserted into
@@ -2467,9 +2194,8 @@ class WorkStealingThreadPool
          * @param queue_hint the hint for insertion into the task queue
          * @param task the task to spawn
          */
-        void spawn( std::size_t queue_hint, Task * task )
-        {
-          base_type::spawn( queue_hint, task );
+        void spawn(std::size_t queue_hint, Task* task) {
+          base_type::spawn(queue_hint, task);
         }
 
         /**
@@ -2481,9 +2207,8 @@ class WorkStealingThreadPool
          *
          * @param task_list the list of tasks to spawn
          */
-        void spawn( TaskList & task_list )
-        {
-          base_type::spawn( TaskListTmpl< detail::StructuredTask >( task_list ) );
+        void spawn(TaskList& task_list) {
+          base_type::spawn(TaskListTmpl<detail::StructuredTask>(task_list));
         }
 
         /**
@@ -2506,9 +2231,9 @@ class WorkStealingThreadPool
          * @param queue_hint the hint for insertion into the task queue
          * @param task_list the list of tasks to spawn
          */
-        void spawn( std::size_t queue_hint, TaskList & task_list )
-        {
-          base_type::spawn( queue_hint, TaskListTmpl< detail::StructuredTask >( task_list ) );
+        void spawn(std::size_t queue_hint, TaskList& task_list) {
+          base_type::spawn(queue_hint,
+                           TaskListTmpl<detail::StructuredTask>(task_list));
         }
 
         /**
@@ -2524,10 +2249,7 @@ class WorkStealingThreadPool
          * group upon its completion. That way task graphs with
          * continuation tasks can be designed.
          */
-        void wait()
-        {
-          base_type::wait();
-        }
+        void wait() { base_type::wait(); }
 
         /**
          * As documented in the class description of TaskGroup,
@@ -2544,9 +2266,9 @@ class WorkStealingThreadPool
          *
          * @param num_addition_tasks
          */
-        void incrementNumberOfAwaitedTaskCompletions( int num_addition_tasks )
-        {
-          base_type::incrementNumberOfAwaitedTaskCompletions( num_addition_tasks );
+        void incrementNumberOfAwaitedTaskCompletions(int num_addition_tasks) {
+          base_type::incrementNumberOfAwaitedTaskCompletions(
+              num_addition_tasks);
         }
 
         /**
@@ -2561,10 +2283,7 @@ class WorkStealingThreadPool
          *
          * @param task the task to execute before waiting
          */
-        void spawn_and_wait( Task * task )
-        {
-          base_type::spawn_and_wait( task );
-        }
+        void spawn_and_wait(Task* task) { base_type::spawn_and_wait(task); }
 
         /**
          * This method creates and returns a task group that uses
@@ -2574,9 +2293,8 @@ class WorkStealingThreadPool
          *
          * @return a task group
          */
-        TaskGroup createTaskGroup() const
-        {
-          return TaskGroup( this->get_thread_pool() );
+        TaskGroup createTaskGroup() const {
+          return TaskGroup(this->get_thread_pool());
         }
 
         /**
@@ -2589,22 +2307,14 @@ class WorkStealingThreadPool
          *
          * @return an empty task list
          */
-        TaskList createTaskList() const
-        {
-          return TaskList();
-        }
+        TaskList createTaskList() const { return TaskList(); }
 
         /**
          * Resets the task group to a state as if it has just been constructed.
          * The association with the thread pool is kept as is.
          */
-        void reset()
-        {
-          base_type::reset();
-        }
+        void reset() { base_type::reset(); }
     };
-
-
 
     /**
      * This task class is heavily inspired by Intel TBB library.
@@ -2682,19 +2392,20 @@ class WorkStealingThreadPool
      * and call tg.wait() afterwards or simply let tg go out of scope,
      * which will automatically call wait() in its destructor.
      * As the T::operator()() synchronizes with the completion of t_1 - t_k,
-     * it is fine to allocate t_1 - t_k on the stack when T::operator()() is called.
-     * Before T::operator()() returns, at which point t_1 - t_k are destroyed, t_1 - t_k
-     * have been executed.
-     * Note that it is critical to spawn the tasks through a TaskGroup, otherwise
-     * T::operator()() will return before t_1 - t_k have been executed.
-     * Note that it is also possible to create a task list containing t_1 - t_k
-     * and then spawning that task list.
+     * it is fine to allocate t_1 - t_k on the stack when T::operator()() is
+     * called. Before T::operator()() returns, at which point t_1 - t_k are
+     * destroyed, t_1 - t_k have been executed. Note that it is critical to
+     * spawn the tasks through a TaskGroup, otherwise T::operator()() will
+     * return before t_1 - t_k have been executed. Note that it is also possible
+     * to create a task list containing t_1 - t_k and then spawning that task
+     * list.
      *
-     * Intel TBB supports recycling a task as a continuation. The meaning is that
-     * the task t is not destroyed and is called again once all of its predecessors
-     * have been completed. This style is unsupported, but the blocking style can be
-     * used in place. Instead of returning after the synchronization on
-     * all predecessor tasks, you may just write some code that executes afterwards.
+     * Intel TBB supports recycling a task as a continuation. The meaning is
+     * that the task t is not destroyed and is called again once all of its
+     * predecessors have been completed. This style is unsupported, but the
+     * blocking style can be used in place. Instead of returning after the
+     * synchronization on all predecessor tasks, you may just write some code
+     * that executes afterwards.
      *
      *
      *
@@ -2712,23 +2423,23 @@ class WorkStealingThreadPool
      * }
      *
      * This pattern starts with the invocation of task t.
-     * Once executed, t creates a continuation task c, moves its own waiting condition
-     * to c and creates a set of k tasks, setting c as their successor task. However, a task
-     * is NOT spawned directly after being created. The reason is that
-     * otherwise c might be executed as a successor task BEFORE ALL its
-     * predecessors have been linked up. For instance, if t_k would be spawned
-     * right away, then it might be executed by some other thread BEFORE t_1 has
-     * been constructed. As t_1 has not been constructed yet, c also does not know
-     * it as predecessor yet. Therefore, spawning t_k right away can lead to premature
-     * execution of the continuation task c. In order to prevent this, a task list
-     * is created instead, where each predecessor of task c is added to. Then that
-     * list is spawned as a whole. Once all tasks t_1 - t_k are completed, task c gets executed.
-     * This can happen before or after t.operator()() returns: It is not defined.
-     * Moving the waiting condition of t to c causes the call
-     * tg.spawn_and_wait( &t ) to wait until c has finished executing. If the
-     * waiting condition would not be moved, then tg.spawn_and_wait( &t ) would
-     * return after t.operator()() returns, independently of whether c has
-     * been completed.
+     * Once executed, t creates a continuation task c, moves its own waiting
+     * condition to c and creates a set of k tasks, setting c as their successor
+     * task. However, a task is NOT spawned directly after being created. The
+     * reason is that otherwise c might be executed as a successor task BEFORE
+     * ALL its predecessors have been linked up. For instance, if t_k would be
+     * spawned right away, then it might be executed by some other thread BEFORE
+     * t_1 has been constructed. As t_1 has not been constructed yet, c also
+     * does not know it as predecessor yet. Therefore, spawning t_k right away
+     * can lead to premature execution of the continuation task c. In order to
+     * prevent this, a task list is created instead, where each predecessor of
+     * task c is added to. Then that list is spawned as a whole. Once all tasks
+     * t_1 - t_k are completed, task c gets executed. This can happen before or
+     * after t.operator()() returns: It is not defined. Moving the waiting
+     * condition of t to c causes the call tg.spawn_and_wait( &t ) to wait until
+     * c has finished executing. If the waiting condition would not be moved,
+     * then tg.spawn_and_wait( &t ) would return after t.operator()() returns,
+     * independently of whether c has been completed.
      *
      *
      *
@@ -2754,18 +2465,17 @@ class WorkStealingThreadPool
      *   ... update state and execute what otherwise t_1 would compute ...
      * }
      * This pattern starts with the invocation of task t.
-     * Once executed, t creates a continuation task c, moves its own waiting condition
-     * to c, sets c as its new successor and creates a set of k-1 tasks, setting
-     * c as their successor task. The predecessor tasks can be spawned directly,
-     * because t has set c as its successor BEFORE the other predecessors of
-     * c are spawned. Once all tasks t_2 - t_k are completed AND t.operator()()
-     * has returned (which also executes something more after having spawned
-     * t_2 - t_k), task c gets executed.
-     * Moving the waiting condition of t to c causes the call
-     * tg.spawn_and_wait( &t ) to wait until c has finished executing. If the
-     * waiting condition would not be moved, then tg.spawn_and_wait( &t ) would
-     * return after t.operator()() returns, independently of whether c has
-     * been completed.
+     * Once executed, t creates a continuation task c, moves its own waiting
+     * condition to c, sets c as its new successor and creates a set of k-1
+     * tasks, setting c as their successor task. The predecessor tasks can be
+     * spawned directly, because t has set c as its successor BEFORE the other
+     * predecessors of c are spawned. Once all tasks t_2 - t_k are completed AND
+     * t.operator()() has returned (which also executes something more after
+     * having spawned t_2 - t_k), task c gets executed. Moving the waiting
+     * condition of t to c causes the call tg.spawn_and_wait( &t ) to wait until
+     * c has finished executing. If the waiting condition would not be moved,
+     * then tg.spawn_and_wait( &t ) would return after t.operator()() returns,
+     * independently of whether c has been completed.
      *
      *
      *
@@ -2779,20 +2489,20 @@ class WorkStealingThreadPool
      *   ... do some other work ...
      *   tg.wait();
      * }
-     * In this pattern a TaskGroup tg is created. Then a set of k tasks is created
-     * and spawned through tg. Afterwards the main thread does some other work
-     * and later on synchronizes with the all spawned task, effectively
-     * waiting for t_1 - t_k to complete. Instead of calling tg.wait(),
-     * one could also just let tg go out of scope. This has the same effect.
+     * In this pattern a TaskGroup tg is created. Then a set of k tasks is
+     * created and spawned through tg. Afterwards the main thread does some
+     * other work and later on synchronizes with the all spawned task,
+     * effectively waiting for t_1 - t_k to complete. Instead of calling
+     * tg.wait(), one could also just let tg go out of scope. This has the same
+     * effect.
      */
-    class Task : public detail::StructuredTask
-    {
-      typedef detail::StructuredTask base_type;
-      typedef Task this_type;
+    class Task : public detail::StructuredTask {
+        typedef detail::StructuredTask base_type;
+        typedef Task this_type;
 
       public:
         using TaskGroup = pool_this_type::TaskGroup;
-        using TaskList = detail::TaskListTmpl< this_type >;
+        using TaskList = detail::TaskListTmpl<this_type>;
 
       public:
         virtual ~Task() = default;
@@ -2809,9 +2519,8 @@ class WorkStealingThreadPool
          *
          * @param task the task to spawn
          */
-        void spawn( this_type * task ) const
-        {
-          get_thread_pool()->enqueueTask( task );
+        void spawn(this_type* task) const {
+          get_thread_pool()->enqueueTask(task);
         }
 
         /**
@@ -2838,9 +2547,8 @@ class WorkStealingThreadPool
          * @param queue_hint the hint for insertion into the task queue
          * @param task the task to spawn
          */
-        void spawn( std::size_t queue_hint, this_type * task ) const
-        {
-          get_thread_pool()->enqueueTask( queue_hint, task );
+        void spawn(std::size_t queue_hint, this_type* task) const {
+          get_thread_pool()->enqueueTask(queue_hint, task);
         }
 
         /**
@@ -2855,9 +2563,9 @@ class WorkStealingThreadPool
          *
          * @param task_list the list of tasks to spawn
          */
-        void spawn( TaskList & task_list ) const
-        {
-          get_thread_pool()->enqueueTaskList( TaskListTmpl< detail::StructuredTask >( task_list ) );
+        void spawn(TaskList& task_list) const {
+          get_thread_pool()->enqueueTaskList(
+              TaskListTmpl<detail::StructuredTask>(task_list));
         }
 
         /**
@@ -2884,9 +2592,9 @@ class WorkStealingThreadPool
          * @param queue_hint the hint for insertion into the task queue
          * @param task_list the list of tasks to spawn
          */
-        void spawn( std::size_t queue_hint, TaskList & task_list ) const
-        {
-          get_thread_pool()->enqueueTaskList( queue_hint, TaskListTmpl< detail::StructuredTask >( task_list ) );
+        void spawn(std::size_t queue_hint, TaskList& task_list) const {
+          get_thread_pool()->enqueueTaskList(
+              queue_hint, TaskListTmpl<detail::StructuredTask>(task_list));
         }
 
         /**
@@ -2896,9 +2604,8 @@ class WorkStealingThreadPool
          *
          * @return the successor task of this task
          */
-        this_type * getSuccessorTask() const
-        {
-          return static_cast< this_type * >( base_type::getSuccessorTask() );
+        this_type* getSuccessorTask() const {
+          return static_cast<this_type*>(base_type::getSuccessorTask());
         }
 
         /**
@@ -2912,9 +2619,8 @@ class WorkStealingThreadPool
          *
          * @param successor_task the new successor task of this task.
          */
-        void setSuccessorTask( this_type * successor_task )
-        {
-          base_type::setSuccessorTask( successor_task );
+        void setSuccessorTask(this_type* successor_task) {
+          base_type::setSuccessorTask(successor_task);
         }
 
         /**
@@ -2932,9 +2638,8 @@ class WorkStealingThreadPool
          *
          * @param new_task_to_wait_for the other task
          */
-        void moveWaitingConditionTo( this_type * new_task_to_wait_for )
-        {
-          base_type::moveWaitingConditionTo( new_task_to_wait_for );
+        void moveWaitingConditionTo(this_type* new_task_to_wait_for) {
+          base_type::moveWaitingConditionTo(new_task_to_wait_for);
         }
 
         /**
@@ -2950,8 +2655,7 @@ class WorkStealingThreadPool
          * in the example above, tg.wait() would then synchronize with
          * the point in time when the re-execution of the task completes.
          */
-        void extendWaitingConditionToNextExecutionInstance()
-        {
+        void extendWaitingConditionToNextExecutionInstance() {
           base_type::extendWaitingConditionToNextExecutionInstance();
         }
 
@@ -2963,9 +2667,8 @@ class WorkStealingThreadPool
          *
          * @return a task group
          */
-        TaskGroup createTaskGroup() const
-        {
-          return TaskGroup( get_thread_pool() );
+        TaskGroup createTaskGroup() const {
+          return TaskGroup(get_thread_pool());
         }
 
         /**
@@ -2978,41 +2681,33 @@ class WorkStealingThreadPool
          *
          * @return an empty task list
          */
-        TaskList createTaskList() const
-        {
-          return TaskList();
-        }
+        TaskList createTaskList() const { return TaskList(); }
 
         /**
          * Resets the task to a state as if it has just been constructed.
          */
-        void reset()
-        {
-          base_type::reset();
-        }
+        void reset() { base_type::reset(); }
 
         /**
          * Sets the callable to execute by this task.
          *
          * @param callable the callable to execute by this task
          */
-        template< class T_CALLABLE >
-        void setCallable( T_CALLABLE & callable )
-        {
-          base_type::setCallable( callable );
+        template <class T_CALLABLE>
+        void setCallable(T_CALLABLE& callable) {
+          base_type::setCallable(callable);
         }
 
       private:
-        detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > *
-	get_thread_pool() const
-        {
-          return static_cast< detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > * >( m_pool_ptr );
+        detail::StructuredWorkStealingThreadPool<MAX_NUM_THREADS>*
+        get_thread_pool() const {
+          return static_cast<
+              detail::StructuredWorkStealingThreadPool<MAX_NUM_THREADS>*>(
+              m_pool_ptr);
         }
     };
 
     typedef typename Task::TaskList TaskList;
-
-
 
   public:
     /**
@@ -3030,21 +2725,19 @@ class WorkStealingThreadPool
      *
      * @param num_threads the number of threads to be used by the thread pool
      */
-    WorkStealingThreadPool( std::size_t num_threads )
-        : m_pool_impl( num_threads )
-    {}
+    WorkStealingThreadPool(std::size_t num_threads)
+        : m_pool_impl(num_threads) {}
 
     // Disable copying and moving
-    WorkStealingThreadPool( const pool_this_type & ) = delete;
-    WorkStealingThreadPool( pool_this_type && ) = delete;
-    pool_this_type & operator=( const pool_this_type & ) = delete;
-    pool_this_type & operator=( pool_this_type && ) = delete;
+    WorkStealingThreadPool(const pool_this_type&) = delete;
+    WorkStealingThreadPool(pool_this_type&&) = delete;
+    pool_this_type& operator=(const pool_this_type&) = delete;
+    pool_this_type& operator=(pool_this_type&&) = delete;
 
     /**
      * This method calls #shutdown() and destroys the thread pool.
      */
-    ~WorkStealingThreadPool()
-    {}
+    ~WorkStealingThreadPool() {}
 
     /**
      * This method shuts down the thread pool. It enqueues N special
@@ -3063,10 +2756,7 @@ class WorkStealingThreadPool
      * to prevent having a thread pool with worker threads that do nothing
      * but to consume CPU time.
      */
-    void shutdown()
-    {
-      m_pool_impl.shutdown();
-    }
+    void shutdown() { m_pool_impl.shutdown(); }
 
     /**
      * This method enqueues \a task. That means \a task is inserted into
@@ -3075,10 +2765,7 @@ class WorkStealingThreadPool
      *
      * @param task the task to insert
      */
-    void enqueueTask( Task * task )
-    {
-      m_pool_impl.enqueueTask( task );
-    }
+    void enqueueTask(Task* task) { m_pool_impl.enqueueTask(task); }
 
     /**
      * This method enqueues \a task. That means \a task is inserted into
@@ -3087,9 +2774,9 @@ class WorkStealingThreadPool
      * The parameter \a queue_hint is a hint for insertion into the task
      * queue. Actually, the task queue consists of multiple queues. Each
      * thread is associated with its own queue. Only if it does not find
-     * any task inside its own queue, it tries to steal a task from another queue.
-     * So if the caller wants to distribute tasks among the worker threads,
-     * it can use \a queue_hint to do so. The queue where the task gets
+     * any task inside its own queue, it tries to steal a task from another
+     * queue. So if the caller wants to distribute tasks among the worker
+     * threads, it can use \a queue_hint to do so. The queue where the task gets
      * inserted into is determined by "queue_hint % num_queues". So a
      * strategy to distribute tasks among these queues might look like:
      * queue_hint = 0;
@@ -3098,34 +2785,32 @@ class WorkStealingThreadPool
      * @param queue_hint the hint for insertion into the task queue
      * @param task the task to insert
      */
-    void enqueueTask( std::size_t queue_hint, Task * task )
-    {
-      m_pool_impl.enqueueTask( queue_hint, task );
+    void enqueueTask(std::size_t queue_hint, Task* task) {
+      m_pool_impl.enqueueTask(queue_hint, task);
     }
 
     /**
      * This method enqueues a list of tasks \a task_list. That means the tasks
-     * in the list are atomically inserted into the task queue of this thread pool.
-     * If these are the first tasks to be enqueued, then this pool starts its
-     * worker threads.
+     * in the list are atomically inserted into the task queue of this thread
+     * pool. If these are the first tasks to be enqueued, then this pool starts
+     * its worker threads.
      *
      * @param task_list the list of tasks to enqueue
      */
-    void enqueueTaskList( TaskList & task_list )
-    {
-      m_pool_impl.enqueueTaskList( task_list );
+    void enqueueTaskList(TaskList& task_list) {
+      m_pool_impl.enqueueTaskList(task_list);
     }
 
     /**
      * This method enqueues a list of tasks \a task_list. That means the tasks
-     * in the list are atomically inserted into the task queue of this thread pool.
-     * If these are the first tasks to be enqueued, then this pool starts its
-     * worker threads. The parameter \a queue_hint is a hint for insertion into
-     * the task queue. Actually, the task queue consists of multiple queues. Each
-     * thread is associated with its own queue. Only if it does not find
-     * any task inside its own queue, it tries to steal a task from another queue.
-     * So if the caller wants to distribute tasks among the worker threads,
-     * it can use \a queue_hint to do so. The queue where the task gets
+     * in the list are atomically inserted into the task queue of this thread
+     * pool. If these are the first tasks to be enqueued, then this pool starts
+     * its worker threads. The parameter \a queue_hint is a hint for insertion
+     * into the task queue. Actually, the task queue consists of multiple
+     * queues. Each thread is associated with its own queue. Only if it does not
+     * find any task inside its own queue, it tries to steal a task from another
+     * queue. So if the caller wants to distribute tasks among the worker
+     * threads, it can use \a queue_hint to do so. The queue where the task gets
      * inserted into is determined by "queue_hint % num_queues". So a
      * strategy to distribute tasks among these queues might look like:
      * queue_hint = 0;
@@ -3134,9 +2819,8 @@ class WorkStealingThreadPool
      * @param queue_hint the hint for insertion into the task queue
      * @param task_list the list of tasks to enqueue
      */
-    void enqueueTaskList( std::size_t queue_hint, TaskList & task_list )
-    {
-      m_pool_impl.enqueueTaskList( queue_hint, task_list );
+    void enqueueTaskList(std::size_t queue_hint, TaskList& task_list) {
+      m_pool_impl.enqueueTaskList(queue_hint, task_list);
     }
 
     /**
@@ -3160,10 +2844,7 @@ class WorkStealingThreadPool
      *
      * @return whether at least one task was dequeued and executed
      */
-    bool stealTask()
-    {
-      return m_pool_impl.stealTask();
-    }
+    bool stealTask() { return m_pool_impl.stealTask(); }
 
     /**
      * This method creates and returns a task group that uses
@@ -3172,10 +2853,7 @@ class WorkStealingThreadPool
      *
      * @return a task group
      */
-    TaskGroup createTaskGroup()
-    {
-      return TaskGroup( &m_pool_impl );
-    }
+    TaskGroup createTaskGroup() { return TaskGroup(&m_pool_impl); }
 
     /**
      * This method creates and returns an empty task list
@@ -3187,10 +2865,7 @@ class WorkStealingThreadPool
      *
      * @return an empty task list
      */
-    TaskList createTaskList() const
-    {
-      return TaskList();
-    }
+    TaskList createTaskList() const { return TaskList(); }
 
     /**
      * Creates a task that executes the given callable.
@@ -3198,11 +2873,9 @@ class WorkStealingThreadPool
      * @param callable the callable to execute by the task
      * @return the created task
      */
-    template< class T_CALLABLE >
-    Task
-    makeTask( T_CALLABLE & callable ) const
-    {
-      return { callable };
+    template <class T_CALLABLE>
+    Task makeTask(T_CALLABLE& callable) const {
+      return {callable};
     }
 
     /**
@@ -3210,9 +2883,7 @@ class WorkStealingThreadPool
      *
      * @return the number of workers of this thread pool
      */
-    unsigned int
-    get_num_workers () const
-    {
+    unsigned int get_num_workers() const {
       return m_pool_impl.get_num_workers();
     }
 
@@ -3224,39 +2895,24 @@ class WorkStealingThreadPool
      *
      * @return the ID of the calling worker thread
      */
-    unsigned int
-    get_worker_id () const
-    {
-      return m_pool_impl.get_worker_id();
-    }
+    unsigned int get_worker_id() const { return m_pool_impl.get_worker_id(); }
 
     /**
      * Calling this method causes the worker threads to stop
      * trying to fetch new tasks until they are woken up again.
      */
-    void
-    stop_workers()
-    {
-      m_pool_impl.stop_workers();
-    }
+    void stop_workers() { m_pool_impl.stop_workers(); }
 
     /**
      * Calling this method wakes up the worker threads again, if they
      * have been stopped before.
      */
-    void
-    wake_workers()
-    {
-      m_pool_impl.wake_workers();
-    }
+    void wake_workers() { m_pool_impl.wake_workers(); }
 
   private:
-    detail::StructuredWorkStealingThreadPool< MAX_NUM_THREADS > m_pool_impl;
+    detail::StructuredWorkStealingThreadPool<MAX_NUM_THREADS> m_pool_impl;
 };
 
+}  // namespace threads
 
-
-} // namespace threads
-
-
-#endif // THREADS_LIBRARY_H
+#endif  // THREADS_LIBRARY_H

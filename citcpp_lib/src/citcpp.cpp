@@ -1,28 +1,28 @@
 #include <citcpp/citcpp.hpp>
-#include "detail/exec_handle_ipog_impl.hpp"
+
 #include "detail/citcpp_ipog.hpp"
+#include "detail/exec_handle_ipog_impl.hpp"
 
-namespace citcpp
-{
-  std::unique_ptr<exec_handle_ipog>
-  compute_covering_array_ipog (input_model input_model, unsigned int t,
-			       const covering_array_computation_config &config)
-  {
-    auto ipog_algo = std::make_unique<detail::citcpp_ipog> (
-	std::move (input_model), config);
+namespace citcpp {
 
-    ipog_algo->set_interaction_strength (t);
+std::unique_ptr<exec_handle_ipog> compute_covering_array_ipog(
+    input_model input_model, unsigned int t,
+    const covering_array_computation_config &config) {
 
-    detail::exec_handle_ipog_impl *handle =
-	new detail::exec_handle_ipog_impl ();
-    handle->set_runnable (std::move (ipog_algo));
-    return std::unique_ptr<exec_handle_ipog> (handle);
-  }
+  auto ipog_algo =
+      std::make_unique<detail::citcpp_ipog>(std::move(input_model), config);
 
-  std::unique_ptr<exec_handle_ipog>
-  compute_covering_array_ipog (input_model input_model, unsigned int t)
-  {
-    return compute_covering_array_ipog (input_model, t,
-					covering_array_computation_config ());
-  }
+  ipog_algo->set_interaction_strength(t);
+
+  detail::exec_handle_ipog_impl *handle = new detail::exec_handle_ipog_impl();
+  handle->set_runnable(std::move(ipog_algo));
+  return std::unique_ptr<exec_handle_ipog>(handle);
 }
+
+std::unique_ptr<exec_handle_ipog> compute_covering_array_ipog(
+    input_model input_model, unsigned int t) {
+  return compute_covering_array_ipog(input_model, t,
+                                     covering_array_computation_config());
+}
+
+}  // namespace citcpp

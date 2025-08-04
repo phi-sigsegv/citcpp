@@ -1,0 +1,10 @@
+---
+# We'll use defaults from the Google style, but with 140 columns instead of just 80.
+BasedOnStyle: Google
+ColumnLimit 140
+IndentAccessModifiers: true
+KeepEmptyLines:
+  AtEndOfFile: false
+  AtStartOfBlock: true
+  AtStartOfFile: false
+...
