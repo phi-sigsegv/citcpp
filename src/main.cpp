@@ -8,6 +8,8 @@
 #include <iostream>
 #include <thread>
 
+#include "config.hpp"
+
 citcpp::input_model create_large_model() {
   using namespace citcpp;
 
@@ -187,6 +189,10 @@ int main(int argc, char *argv[]) {
       "generating covering arrays and measuring t-way coverage of a given "
       "testset."};
 
+  bool show_version = false;
+  app.add_flag("-v,--version", show_version,
+               "Print version information and exit.");
+
   int interaction_strength = 2;
   app.add_option("--doi", interaction_strength,
                  "Specifies the degree of interactions to be covered. Use -1 "
@@ -221,9 +227,21 @@ int main(int argc, char *argv[]) {
   CLI::App *command_cov_measure = app.add_subcommand(
       "covm", "This command measures the coverage of a given testset.");
 
-  app.require_subcommand(1, 1);
+  app.require_subcommand(0, 1);
 
   CLI11_PARSE(app, argc, argv);
+
+  if (app.get_subcommands().empty()) {
+    if (show_version) {
+      std::cout << "citcpp version " << CITCPP_VERSION_MAJOR << "."
+                << CITCPP_VERSION_MINOR << "." << CITCPP_VERSION_PATCH
+                << std::endl;
+    } else {
+      std::cout << app.help() << std::flush;
+    }
+
+    return 0;
+  }
 
   input_model model(create_pict_example_model());
 
