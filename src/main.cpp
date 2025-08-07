@@ -1,3 +1,4 @@
+#include <CLI11.hpp>
 #include <atomic>
 #include <chrono>
 #include <citcpp/citcpp.hpp>
@@ -153,7 +154,27 @@ namespace {
 
 volatile std::sig_atomic_t g_signal_status;
 
-}
+class InteractionStrengthValidator : public CLI::Validator {
+  public:
+    InteractionStrengthValidator() : Validator() {
+      func_ = [](const std::string &input) {
+        using CLI::detail::lexical_cast;
+
+        int val;
+        const bool converted = lexical_cast(input, val);
+
+        if ((!converted) || (val < -1 || val == 0)) {
+          std::stringstream out;
+          out << "Value " << input << " neither >= 1, nor -1";
+          return out.str();
+        }
+
+        return std::string{};
+      };
+    }
+};
+
+}  // namespace
 
 void signal_handler(int signal) { g_signal_status = signal; }
 
@@ -161,14 +182,57 @@ int main(int argc, char *argv[]) {
   using namespace citcpp;
   using namespace std::chrono_literals;
 
+  CLI::App app{
+      "This is citcpp, a tool for combinatorial testing, which can be used for "
+      "generating covering arrays and measuring t-way coverage of a given "
+      "testset."};
+
+  int interaction_strength = 2;
+  app.add_option("--doi", interaction_strength,
+                 "Specifies the degree of interactions to be covered. Use -1 "
+                 "for mixed strength as specified in the input file. The "
+                 "default value is 2.")
+      ->check(InteractionStrengthValidator());
+
+  bool show_progress = false;
+  app.add_flag("--progress", show_progress,
+               "Set this flag to enable displaying progress information.");
+
+  std::string sep{","};
+  app.add_option("--sep", sep,
+                 "Set this to specify the separator for values in a testset. "
+                 "The default value is \",\".");
+
+  bool parallel = false;
+  app.add_flag(
+      "--par", parallel,
+      "Set this flag to enable parallelization of the algorithm execution.");
+
+  CLI::App *command_cagen =
+      app.add_subcommand("cagen", "This command generates a covering array.");
+
+  bool rand_star = true;
+  command_cagen->add_option(
+      "--randstar", rand_star,
+      "Set this to \"on\" to randomize don't care values and to \"off\" to "
+      "not randomize don't care values, i.e. to keep them in the generated "
+      "testset. The default value is \"on\".");
+
+  CLI::App *command_cov_measure = app.add_subcommand(
+      "covm", "This command measures the coverage of a given testset.");
+
+  app.require_subcommand(1, 1);
+
+  CLI11_PARSE(app, argc, argv);
+
   input_model model(create_pict_example_model());
 
   std::cout << "Starting execution\n" << std::endl;
   std::unique_ptr<exec_handle_ipog> handle =
-      compute_covering_array_ipog(model, 2,
+      compute_covering_array_ipog(model, interaction_strength,
                                   covering_array_computation_config()
-                                      .with_replace_dont_care_values(false)
-                                      .with_multithreading_enabled(false));
+                                      .with_replace_dont_care_values(rand_star)
+                                      .with_multithreading_enabled(parallel));
 
   // Install a signal handler allowing to gracefully abort the computation using
   // Ctrl+C.
@@ -180,18 +244,20 @@ int main(int argc, char *argv[]) {
 
   auto f = handle->get_test_set();
   while (f.wait_for(1s) == std::future_status::timeout) {
-    unsigned long long num_covered_combos =
-        handle->get_number_of_covered_combinations();
-    unsigned long long num_combos_to_cover =
-        handle->get_number_of_combinations_to_cover();
-    double precent_done =
-        (double)num_covered_combos / (double)num_combos_to_cover * 100.0;
-    std::cout << "\r";
-    std::cout << "combos: (" << num_covered_combos << " / "
-              << num_combos_to_cover << ") " << precent_done << "%, params: ("
-              << handle->get_number_of_processed_parameters() << " / "
-              << model.get_parameters().size() << "), "
-              << handle->get_testset_size() << " tests" << std::flush;
+    if (show_progress) {
+      unsigned long long num_covered_combos =
+          handle->get_number_of_covered_combinations();
+      unsigned long long num_combos_to_cover =
+          handle->get_number_of_combinations_to_cover();
+      double precent_done =
+          (double)num_covered_combos / (double)num_combos_to_cover * 100.0;
+      std::cout << "\r";
+      std::cout << "combos: (" << num_covered_combos << " / "
+                << num_combos_to_cover << ") " << precent_done << "%, params: ("
+                << handle->get_number_of_processed_parameters() << " / "
+                << model.get_parameters().size() << "), "
+                << handle->get_testset_size() << " tests" << std::flush;
+    }
 
     if (g_signal_status == SIGINT) {
       handle->abort();
