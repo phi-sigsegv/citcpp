@@ -52,6 +52,11 @@ citcpp::test_set model::create_from_internal_test_set(
     const citcpp::detail::test_set &test_set) const {
   citcpp::test_set ret;
 
+  for (const parameter &param : input_model_.get_parameters()) {
+    ret.add_parameter(
+        parameter_def().name(param.get_name()).type(param.get_type()));
+  }
+
   for (const test &test : test_set.get_list_of_tests()) {
     ret.get_list_of_tests().emplace_back(std::vector<parameter_value>(
         test.get_values().size(), DONT_CARE_PARAMETER_VALUE));
@@ -63,6 +68,7 @@ citcpp::test_set model::create_from_internal_test_set(
 
 void model::convert_test(const test &src,
                          std::vector<parameter_value> &tgt) const {
+
   for (test::size_type p = 0; p < src.get_values().size(); ++p) {
     int pv = src.get_values().at(p);
     unsigned param_index_in_model = parameter_index_map_[p];

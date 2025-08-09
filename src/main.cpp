@@ -3,11 +3,14 @@
 #include <chrono>
 #include <citcpp/citcpp.hpp>
 #include <csignal>
+#include <fstream>
 #include <iomanip>
 #include <ios>
 #include <iostream>
+#include <sstream>
 #include <thread>
 
+#include "acts_model_parser.hpp"
 #include "config.hpp"
 
 citcpp::input_model create_large_model() {
@@ -182,6 +185,7 @@ void signal_handler(int signal) { g_signal_status = signal; }
 
 int main(int argc, char *argv[]) {
   using namespace citcpp;
+  using namespace citcpp::detail;
   using namespace std::chrono_literals;
 
   CLI::App app{
@@ -224,6 +228,13 @@ int main(int argc, char *argv[]) {
       "not randomize don't care values, i.e. to keep them in the generated "
       "testset. The default value is \"on\".");
 
+  std::string model_file_path{""};
+  command_cagen
+      ->add_option(
+          "model_file", model_file_path,
+          "This is the path to the input model in ACTS format (TXT version).")
+      ->required();
+
   CLI::App *command_cov_measure = app.add_subcommand(
       "covm", "This command measures the coverage of a given testset.");
 
@@ -243,9 +254,30 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  input_model model(create_pict_example_model());
+  // We read the ACTS model file into a string.
+  std::ifstream model_file_is{model_file_path};
+  if (!model_file_is.is_open()) {
+    std::cerr << "Cannot open model file " << model_file_path << " for reading"
+              << std::endl;
 
-  std::cout << "Starting execution\n" << std::endl;
+    return 1;
+  }
+  std::ostringstream model_file_oss{};
+  model_file_oss << model_file_is.rdbuf();
+
+  acts_model_parser acts_parser;
+  input_model model;
+  if (!acts_parser.parse_input_model(model_file_oss.view(), model)) {
+    std::cerr << acts_parser.get_last_error_message() << std::endl;
+
+    return 1;
+  }
+
+  std::cout << "System name: " << model.get_name() << "\n" << std::endl;
+  std::cout << "Strength    : " << interaction_strength << std::endl;
+  std::cout << "Parameters  : " << model.get_parameters().size() << "\n"
+            << std::endl;
+
   std::unique_ptr<exec_handle_ipog> handle =
       compute_covering_array_ipog(model, interaction_strength,
                                   covering_array_computation_config()
@@ -270,7 +302,7 @@ int main(int argc, char *argv[]) {
       double precent_done =
           (double)num_covered_combos / (double)num_combos_to_cover * 100.0;
       std::cout << "\r";
-      std::cout << "combos: (" << num_covered_combos << " / "
+      std::cout << "tuples: (" << num_covered_combos << " / "
                 << num_combos_to_cover << ") " << precent_done << "%, params: ("
                 << handle->get_number_of_processed_parameters() << " / "
                 << model.get_parameters().size() << "), "
@@ -290,7 +322,7 @@ int main(int argc, char *argv[]) {
       (double)num_covered_combos / (double)num_combos_to_cover * 100.0;
 
   std::cout << "\r";
-  std::cout << "combos: (" << num_covered_combos << " / " << num_combos_to_cover
+  std::cout << "tuples: (" << num_covered_combos << " / " << num_combos_to_cover
             << ") " << precent_done << "%, params: ("
             << handle->get_number_of_processed_parameters() << " / "
             << model.get_parameters().size() << "), "

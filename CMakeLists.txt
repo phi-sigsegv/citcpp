@@ -19,6 +19,7 @@ message(STATUS "CITCPP_BUILD_TESTS: " ${CITCPP_BUILD_TESTS})
 add_subdirectory(citcpp_lib)
 
 set(CITCPP_EXE_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/acts_model_parser.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 )
 

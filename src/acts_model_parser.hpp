@@ -1,0 +1,42 @@
+#ifndef ACTS_MODEL_PARSER_HPP_
+#define ACTS_MODEL_PARSER_HPP_
+
+#include <citcpp/input_model.hpp>
+#include <memory>
+#include <string_view>
+
+namespace citcpp {
+namespace detail {
+
+class acts_model_parser {
+  public:
+    /**
+     * Creates a parser for ACTS models.
+     */
+    acts_model_parser();
+
+    ~acts_model_parser();
+
+    /**
+     * Parses the input model from a given string_view.
+     *
+     * @param sv the string_view to parse the input_model from
+     * @param model the input model to put the parsed data into
+     * @return \a true if parsing was successful, \a false otherwise
+     */
+    bool parse_input_model(std::string_view sv, input_model& model);
+
+    /**
+     * Returns the last error message of the parser.
+     */
+    std::string_view get_last_error_message() const;
+
+  private:
+    class impl;
+    std::unique_ptr<impl> impl_;
+};
+
+}  // namespace detail
+}  // namespace citcpp
+
+#endif /* ACTS_MODEL_PARSER_HPP_ */
