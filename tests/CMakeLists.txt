@@ -5,6 +5,7 @@ include(${CITCPP_3RD_PARTY_DIR}/doctest/cmake/doctest.cmake)
 list(APPEND CITCPP_UNITTESTS 
   test_binom_coeff_table
   test_bitset
+  test_cagen
 )
 
 foreach(unittest IN LISTS CITCPP_UNITTESTS)
