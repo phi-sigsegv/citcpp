@@ -46,10 +46,6 @@ model::model(const input_model &input_model,
 
 const input_model &model::get_input_model() const { return input_model_; }
 
-const std::vector<unsigned int> &model::get_parameters() const {
-  return parameters_;
-}
-
 citcpp::test_set model::create_from_internal_test_set(
     const citcpp::detail::test_set &test_set) const {
 
@@ -103,6 +99,12 @@ void model::convert_test(const test &src,
     }
   }
 }
+
+relation::relation(const std::vector<unsigned int> &parameters,
+                   unsigned int specified_interaction_strength)
+    : parameters_(parameters),
+      specified_interaction_strength_(specified_interaction_strength),
+      current_interaction_strength_(1) {}
 
 }  // namespace detail
 }  // namespace citcpp

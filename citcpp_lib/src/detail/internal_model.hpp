@@ -31,7 +31,9 @@ class model {
     /**
      * Returns the list of parameters of this model.
      */
-    const std::vector<unsigned int> &get_parameters() const;
+    const std::vector<unsigned int> &get_parameters() const {
+      return parameters_;
+    }
 
     /**
      * Constructs and returns a test set based on the given internal test set
@@ -57,6 +59,37 @@ class model {
     const input_model &input_model_;
     const std::vector<unsigned int> parameter_index_map_;
     std::vector<unsigned int> parameters_;
+};
+
+/**
+ * This is an internal representation of a relation, i.e.
+ * a set of parameters and a corresponding interaction strength.
+ */
+class relation {
+  public:
+    relation(const std::vector<unsigned int> &parameters,
+             unsigned int specified_interaction_strength);
+
+    const std::vector<unsigned int> &get_parameters() const {
+      return parameters_;
+    }
+
+    unsigned int get_specified__interaction_strength() const {
+      return specified_interaction_strength_;
+    }
+
+    unsigned int get_current_interaction_strength() const {
+      return current_interaction_strength_;
+    }
+
+    void set_current_interaction_strength(unsigned int interaction_strength) {
+      current_interaction_strength_ = interaction_strength;
+    }
+
+  private:
+    const std::vector<unsigned int> parameters_;
+    const unsigned int specified_interaction_strength_;
+    unsigned int current_interaction_strength_;
 };
 
 }  // namespace detail
