@@ -55,29 +55,32 @@ int main(int argc, char *argv[]) {
   app.add_flag("-v,--version", show_version,
                "Print version information and exit.");
 
+  CLI::App *command_cagen =
+      app.add_subcommand("cagen", "This command generates a covering array.");
+
   int interaction_strength = 2;
-  app.add_option("--doi", interaction_strength,
-                 "Specifies the degree of interactions to be covered. Use -1 "
-                 "for mixed strength as specified in the input file. The "
-                 "default value is 2.")
+  command_cagen
+      ->add_option("--doi", interaction_strength,
+                   "Specifies the degree of interactions to be covered. Use -1 "
+                   "for mixed strength as specified in the input file. The "
+                   "default value is 2.")
       ->check(InteractionStrengthValidator());
 
   bool show_progress = false;
-  app.add_flag("--progress", show_progress,
-               "Set this flag to enable displaying progress information.");
+  command_cagen->add_flag(
+      "--progress", show_progress,
+      "Set this flag to enable displaying progress information.");
 
   std::string sep{covering_array_computation_config().value_separator()};
-  app.add_option("--sep", sep,
-                 "Set this to specify the separator for values in a testset. "
-                 "The default value is \",\".");
+  command_cagen->add_option(
+      "--sep", sep,
+      "Set this to specify the separator for values in a testset. "
+      "The default value is \",\".");
 
   bool parallel = false;
-  app.add_flag(
-      "--par", parallel,
-      "Set this flag to enable parallelization of the algorithm execution.");
-
-  CLI::App *command_cagen =
-      app.add_subcommand("cagen", "This command generates a covering array.");
+  command_cagen->add_flag("--par", parallel,
+                          "Set this flag to enable parallelization of the "
+                          "algorithm execution.");
 
   bool rand_star = true;
   command_cagen->add_option(
@@ -92,6 +95,11 @@ int main(int argc, char *argv[]) {
           "model_file", model_file_path,
           "This is the path to the input model in ACTS format (TXT version).")
       ->required();
+
+  std::string test_set_file_path{"output.csv"};
+  command_cagen->add_option(
+      "testset_file", test_set_file_path,
+      "This is the path where the testset shall be written to.");
 
   CLI::App *command_cov_measure = app.add_subcommand(
       "covm", "This command measures the coverage of a given testset.");
@@ -120,6 +128,16 @@ int main(int argc, char *argv[]) {
 
     return 1;
   }
+
+  // Ensure early that we can write to the output file.
+  std::ofstream test_set_file_os{test_set_file_path};
+  if (!test_set_file_os.is_open()) {
+    std::cerr << "Cannot open testset file " << test_set_file_path
+              << " for writing" << std::endl;
+
+    return 1;
+  }
+
   std::ostringstream model_file_oss{};
   model_file_oss << model_file_is.rdbuf();
 
@@ -152,6 +170,7 @@ int main(int argc, char *argv[]) {
   std::cout << std::fixed;
 
   auto f = handle->get_test_set();
+  bool aborted = false;
   while (f.wait_for(1s) == std::future_status::timeout) {
     if (show_progress) {
       unsigned long long num_covered_combos =
@@ -170,6 +189,7 @@ int main(int argc, char *argv[]) {
 
     if (g_signal_status == SIGINT) {
       handle->abort();
+      aborted = true;
     }
   }
 
@@ -194,11 +214,19 @@ int main(int argc, char *argv[]) {
 
   test_set t(f.get());
 
-  std::cout << "test set has the following " << t.get_list_of_tests().size()
-            << " rows:\n";
-  std::cout << t << std::endl;
+  if (aborted) {
+    std::cout << "WARNING: Covering array computation has been aborted. The "
+                 "generated testset is most likely incomplete regarding the "
+                 "specified coverage."
+              << std::endl;
+  }
 
   const auto duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
   std::cout << "Execution took: " << duration_seconds << std::endl;
+
+  test_set_file_os << t << std::endl;
+  std::cout << "Output file: " << test_set_file_path << std::endl;
+
+  return 0;
 }
