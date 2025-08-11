@@ -10,6 +10,9 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/for_each_cross_product_elem.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/internal_model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_algorithm_uniform_strength.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_utils.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp.cpp
 )
 

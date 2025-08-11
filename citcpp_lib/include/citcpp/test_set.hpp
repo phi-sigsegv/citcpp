@@ -3,6 +3,8 @@
 
 #include <list>
 #include <ostream>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "input_model.hpp"
@@ -58,6 +60,12 @@ class parameter_def {
  */
 class test_set {
   public:
+    test_set(std::string_view value_separator);
+
+    test_set();
+
+    const std::string &get_value_separator() const { return value_separator_; }
+
     const std::vector<parameter_def> &get_parameters() const {
       return parameters_;
     }
@@ -80,32 +88,10 @@ class test_set {
       return test_set_;
     }
 
-    friend std::ostream &operator<<(std::ostream &os,
-                                    const test_set &test_set) {
-
-      const char *empty_sep = "";
-      const char *real_sep = ", ";
-
-      const char *sep = empty_sep;
-      for (const auto &param : test_set.get_parameters()) {
-        os << sep << param;
-        sep = real_sep;
-      }
-      os << "\n";
-
-      for (const auto &test : test_set.get_list_of_tests()) {
-        sep = empty_sep;
-        for (const auto &pv : test) {
-          os << sep << pv;
-          sep = real_sep;
-        }
-        os << "\n";
-      }
-
-      return os;
-    }
+    friend std::ostream &operator<<(std::ostream &os, const test_set &test_set);
 
   private:
+    const std::string value_separator_;
     std::vector<parameter_def> parameters_;
     std::list<std::vector<parameter_value>> test_set_;
 };

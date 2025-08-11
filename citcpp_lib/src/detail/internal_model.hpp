@@ -40,7 +40,17 @@ class model {
     citcpp::test_set create_from_internal_test_set(
         const citcpp::detail::test_set &test_set) const;
 
+    /**
+     * Constructs and returns a test set based on the given internal test set
+     * representation.
+     */
+    citcpp::test_set create_from_internal_test_set(
+        const citcpp::detail::test_set &test_set,
+        std::string_view value_separator) const;
+
   private:
+    void convert_test_set(const citcpp::detail::test_set &src,
+                          citcpp::test_set &tgt) const;
     void convert_test(const test &src, std::vector<parameter_value> &tgt) const;
 
   private:

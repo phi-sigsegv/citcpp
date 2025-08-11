@@ -1,5 +1,7 @@
 #include "internal_model.hpp"
 
+#include "citcpp_utils.hpp"
+
 namespace {
 
 std::vector<unsigned int> compute_parameter_index_map(
@@ -50,20 +52,38 @@ const std::vector<unsigned int> &model::get_parameters() const {
 
 citcpp::test_set model::create_from_internal_test_set(
     const citcpp::detail::test_set &test_set) const {
-  citcpp::test_set ret;
+
+  citcpp::test_set ret(DEFAULT_VALUE_SEPARATOR);
+
+  convert_test_set(test_set, ret);
+
+  return ret;
+}
+
+citcpp::test_set model::create_from_internal_test_set(
+    const citcpp::detail::test_set &test_set,
+    std::string_view value_separator) const {
+
+  citcpp::test_set ret(value_separator);
+
+  convert_test_set(test_set, ret);
+
+  return ret;
+}
+
+void model::convert_test_set(const citcpp::detail::test_set &src,
+                             citcpp::test_set &tgt) const {
 
   for (const parameter &param : input_model_.get_parameters()) {
-    ret.add_parameter(
+    tgt.add_parameter(
         parameter_def().name(param.get_name()).type(param.get_type()));
   }
 
-  for (const test &test : test_set.get_list_of_tests()) {
-    ret.get_list_of_tests().emplace_back(std::vector<parameter_value>(
+  for (const test &test : src.get_list_of_tests()) {
+    tgt.get_list_of_tests().emplace_back(std::vector<parameter_value>(
         test.get_values().size(), DONT_CARE_PARAMETER_VALUE));
-    convert_test(test, ret.get_list_of_tests().back());
+    convert_test(test, tgt.get_list_of_tests().back());
   }
-
-  return ret;
 }
 
 void model::convert_test(const test &src,

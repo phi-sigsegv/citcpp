@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
   app.add_flag("--progress", show_progress,
                "Set this flag to enable displaying progress information.");
 
-  std::string sep{","};
+  std::string sep{covering_array_computation_config().value_separator()};
   app.add_option("--sep", sep,
                  "Set this to specify the separator for values in a testset. "
                  "The default value is \",\".");
@@ -140,7 +140,8 @@ int main(int argc, char *argv[]) {
       compute_covering_array_ipog(model, interaction_strength,
                                   covering_array_computation_config()
                                       .with_replace_dont_care_values(rand_star)
-                                      .with_multithreading_enabled(parallel));
+                                      .with_multithreading_enabled(parallel)
+                                      .with_value_separator(sep));
 
   // Install a signal handler allowing to gracefully abort the computation using
   // Ctrl+C.

@@ -192,7 +192,8 @@ void citcpp_ipog::entry_point(exec_handle_ipog_impl &exec_handle) {
   if (config_.replace_dont_care_values()) {
     replace_dont_care_values(test_set_, model_);
   }
-  ::citcpp::test_set ts(model_.create_from_internal_test_set(test_set_));
+  ::citcpp::test_set ts(model_.create_from_internal_test_set(
+      test_set_, config_.value_separator()));
 
   const auto t_end = std::chrono::high_resolution_clock::now();
   const auto duration_in_milli_seconds =
