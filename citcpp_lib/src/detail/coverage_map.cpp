@@ -69,9 +69,17 @@ coverage_map_base::coverage_map_base(
 
     param_indices[t - 1] = parameter_index_map[n - 1];
 
-    total_num_tuples_ = recursively_initialize_coverage_map(
-        n_ - 2, t_ - 2, num_last_param_values, *this, model,
-        parameter_index_map, cov_map_first_level_index, param_indices);
+    if (t_ >= 2) {
+      total_num_tuples_ = recursively_initialize_coverage_map(
+          n_ - 2, t_ - 2, num_last_param_values, *this, model,
+          parameter_index_map, cov_map_first_level_index, param_indices);
+    } else {
+      // We have exactly one parameter to select, which is just the one we have
+      // fixed. So we do not have to walk over combinations of parameters here.
+      get_coverage_map()[0] = coverage_map_base::second_level_type(
+          num_last_param_values, param_indices);
+      total_num_tuples_ = num_last_param_values;
+    }
   } else {
     total_num_tuples_ = recursively_initialize_coverage_map(
         n_ - 1, t_ - 1, 1, *this, model, parameter_index_map,

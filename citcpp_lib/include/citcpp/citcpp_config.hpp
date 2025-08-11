@@ -6,7 +6,7 @@ namespace citcpp {
 class covering_array_computation_config {
   public:
     covering_array_computation_config()
-        : replace_dont_care_values_(true), multithreading_enabled_(true) {}
+        : replace_dont_care_values_(true), multithreading_enabled_(false) {}
 
     bool replace_dont_care_values() const { return replace_dont_care_values_; }
 
