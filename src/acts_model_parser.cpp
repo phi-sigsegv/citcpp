@@ -6,6 +6,8 @@
 #include <string>
 #include <string_view>
 
+#include "parser_utils.hpp"
+
 namespace {
 
 class input_model_data_consumer {
@@ -110,7 +112,9 @@ class enum_value_consumer {
         : consumer_(consumer) {}
 
     void operator()(const peg::SemanticValues &vs) {
-      consumer_->add_param_value(vs.token_to_string());
+      std::string str(vs.token_to_string());
+      citcpp::detail::trim(str);
+      consumer_->add_param_value(str);
     }
 
   private:
@@ -255,7 +259,11 @@ class acts_model_parser::impl : input_model_data_consumer {
       current_param_.get_values().clear();
     }
 
-    bool parse_input_model(std::string_view sv) { return parser_.parse(sv); }
+    bool parse_input_model(std::string_view sv) {
+      error_message_.clear();
+      current_param_.get_values().clear();
+      return parser_.parse(sv);
+    }
 
     std::string_view get_last_error_message() const { return error_message_; }
 
