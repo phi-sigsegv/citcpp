@@ -48,7 +48,7 @@ TEST_CASE("Testing PICT example model, strength 1") {
 
   input_model model{create_pict_example_model()};
 
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog(
+  std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 1, covering_array_computation_config());
   auto f = handle->get_test_set();
   test_set t(f.get());
@@ -69,7 +69,7 @@ TEST_CASE("Testing PICT example model, strength 2") {
 
   input_model model{create_pict_example_model()};
 
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog(
+  std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 2, covering_array_computation_config());
   auto f = handle->get_test_set();
   test_set t(f.get());
@@ -85,7 +85,7 @@ TEST_CASE("Testing PICT example model, strength 3") {
 
   input_model model{create_pict_example_model()};
 
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog(
+  std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 3, covering_array_computation_config());
   auto f = handle->get_test_set();
   test_set t(f.get());
@@ -101,7 +101,7 @@ TEST_CASE("Testing PICT example model, strength 4") {
 
   input_model model{create_pict_example_model()};
 
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog(
+  std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 4, covering_array_computation_config());
   auto f = handle->get_test_set();
   test_set t(f.get());
@@ -117,7 +117,7 @@ TEST_CASE("Testing PICT example model, strength 5") {
 
   input_model model{create_pict_example_model()};
 
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog(
+  std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 5, covering_array_computation_config());
   auto f = handle->get_test_set();
   test_set t(f.get());
@@ -133,7 +133,7 @@ TEST_CASE("Testing PICT example model, strength 6") {
 
   input_model model{create_pict_example_model()};
 
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog(
+  std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 6, covering_array_computation_config());
   auto f = handle->get_test_set();
   test_set t(f.get());
@@ -149,7 +149,7 @@ TEST_CASE("Testing PICT example model, strength 7") {
 
   input_model model{create_pict_example_model()};
 
-  std::unique_ptr<exec_handle_ipog> handle = compute_covering_array_ipog(
+  std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 7, covering_array_computation_config());
   auto f = handle->get_test_set();
   test_set t(f.get());

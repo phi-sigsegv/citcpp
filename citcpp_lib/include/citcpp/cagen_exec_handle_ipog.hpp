@@ -1,7 +1,7 @@
-#ifndef EXEC_HANDLE_IPOG_HPP_
-#define EXEC_HANDLE_IPOG_HPP_
+#ifndef CAGEN_EXEC_HANDLE_IPOG_HPP_
+#define CAGEN_EXEC_HANDLE_IPOG_HPP_
 
-#include "exec_handle.hpp"
+#include "cagen_exec_handle.hpp"
 
 namespace citcpp {
 
@@ -12,7 +12,7 @@ namespace citcpp {
  * shall be returned.
  * All methods can be safely called from an arbitrary thread.
  */
-class exec_handle_ipog : public virtual exec_handle {
+class cagen_exec_handle_ipog : public virtual cagen_exec_handle {
   public:
     /**
      * The real destructor of this handle calls abort() and joins with
@@ -20,7 +20,7 @@ class exec_handle_ipog : public virtual exec_handle {
      * if this handle is destroyed without the client explicitly waiting
      * for the execution.
      */
-    virtual ~exec_handle_ipog() {}
+    virtual ~cagen_exec_handle_ipog() {}
 
     /**
      * Returns the number of parameters completely processed so far.
@@ -30,4 +30,4 @@ class exec_handle_ipog : public virtual exec_handle {
 
 }  // namespace citcpp
 
-#endif /* EXEC_HANDLE_IPOG_HPP_ */
+#endif /* CAGEN_EXEC_HANDLE_IPOG_HPP_ */

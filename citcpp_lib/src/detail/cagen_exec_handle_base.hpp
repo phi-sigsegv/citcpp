@@ -1,18 +1,18 @@
-#ifndef EXEC_HANDLE_IMPL_HPP_
-#define EXEC_HANDLE_IMPL_HPP_
+#ifndef CAGEN_EXEC_HANDLE_IMPL_HPP_
+#define CAGEN_EXEC_HANDLE_IMPL_HPP_
 
 #include <atomic>
-#include <citcpp/exec_handle.hpp>
+#include <citcpp/cagen_exec_handle.hpp>
 #include <functional>
 #include <thread>
 
 namespace citcpp {
 namespace detail {
 
-class exec_handle_base : public virtual exec_handle {
+class cagen_exec_handle_base : public virtual cagen_exec_handle {
   public:
-    exec_handle_base()
-        : exec_handle(),
+    cagen_exec_handle_base()
+        : cagen_exec_handle(),
           num_combinations_to_cover_(0),
           covered_combinations_(0),
           testset_size_(0),
@@ -21,15 +21,15 @@ class exec_handle_base : public virtual exec_handle {
           duration_msec_(0),
           thread_() {}
 
-    exec_handle_base(exec_handle_base&&) = default;
+    cagen_exec_handle_base(cagen_exec_handle_base&&) = default;
 
-    exec_handle_base(const exec_handle_base&) = delete;
+    cagen_exec_handle_base(const cagen_exec_handle_base&) = delete;
 
-    exec_handle_base& operator=(exec_handle_base&&) = default;
+    cagen_exec_handle_base& operator=(cagen_exec_handle_base&&) = default;
 
-    exec_handle_base& operator=(const exec_handle_base&) = delete;
+    cagen_exec_handle_base& operator=(const cagen_exec_handle_base&) = delete;
 
-    ~exec_handle_base() {
+    ~cagen_exec_handle_base() {
       abort();
       thread_.join();
     }
@@ -102,4 +102,4 @@ class exec_handle_base : public virtual exec_handle {
 }  // namespace detail
 }  // namespace citcpp
 
-#endif /* EXEC_HANDLE_IMPL_HPP_ */
+#endif /* CAGEN_EXEC_HANDLE_IMPL_HPP_ */

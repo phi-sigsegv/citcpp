@@ -1,11 +1,11 @@
 #include <citcpp/citcpp.hpp>
 
+#include "detail/cagen_exec_handle_ipog_impl.hpp"
 #include "detail/citcpp_ipog.hpp"
-#include "detail/exec_handle_ipog_impl.hpp"
 
 namespace citcpp {
 
-std::unique_ptr<exec_handle_ipog> compute_covering_array_ipog(
+std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     input_model input_model, unsigned int t,
     const covering_array_computation_config &config) {
 
@@ -14,12 +14,13 @@ std::unique_ptr<exec_handle_ipog> compute_covering_array_ipog(
 
   ipog_algo->set_interaction_strength(t);
 
-  detail::exec_handle_ipog_impl *handle = new detail::exec_handle_ipog_impl();
+  detail::cagen_exec_handle_ipog_impl *handle =
+      new detail::cagen_exec_handle_ipog_impl();
   handle->set_runnable(std::move(ipog_algo));
-  return std::unique_ptr<exec_handle_ipog>(handle);
+  return std::unique_ptr<cagen_exec_handle_ipog>(handle);
 }
 
-std::unique_ptr<exec_handle_ipog> compute_covering_array_ipog(
+std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     input_model input_model, unsigned int t) {
   return compute_covering_array_ipog(input_model, t,
                                      covering_array_computation_config());

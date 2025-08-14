@@ -6,10 +6,10 @@
 #include <thread>
 
 #include "binom_coeff_table.hpp"
+#include "cagen_exec_handle_ipog_impl.hpp"
 #include "citcpp_algo_common.hpp"
 #include "coverage_map.hpp"
 #include "datatypes_config.hpp"
-#include "exec_handle_ipog_impl.hpp"
 #include "for_each_cross_product_elem.hpp"
 #include "ipog_algorithm_uniform_strength.hpp"
 
@@ -32,7 +32,7 @@ std::vector<citcpp::parameter> get_parameters_sorted_by_number_of_values_desc(
 void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
                     citcpp::detail::test_set &test_set,
                     const citcpp::covering_array_computation_config config,
-                    citcpp::detail::exec_handle_ipog_impl &exec_handle) {
+                    citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
   using namespace citcpp::detail;
 
   unsigned int num_threads = std::thread::hardware_concurrency();
@@ -183,7 +183,7 @@ citcpp_ipog::citcpp_ipog(input_model &&input_model,
 
 void citcpp_ipog::set_interaction_strength(unsigned int t) { strength_ = t; }
 
-void citcpp_ipog::entry_point(exec_handle_ipog_impl &exec_handle) {
+void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl &exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
   citcpp::detail::test_set tests;

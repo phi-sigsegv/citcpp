@@ -1,33 +1,35 @@
-#ifndef DETAIL_EXEC_HANDLE_IPOG_IMPL_CPP_
-#define DETAIL_EXEC_HANDLE_IPOG_IMPL_CPP_
+#ifndef DETAIL_CAGEN_EXEC_HANDLE_IPOG_IMPL_CPP_
+#define DETAIL_CAGEN_EXEC_HANDLE_IPOG_IMPL_CPP_
 
-#include <citcpp/exec_handle_ipog.hpp>
+#include <citcpp/cagen_exec_handle_ipog.hpp>
 #include <memory>
 
+#include "cagen_exec_handle_base.hpp"
 #include "citcpp_ipog.hpp"
-#include "exec_handle_base.hpp"
 
 namespace citcpp {
 namespace detail {
 
-class exec_handle_ipog_impl : public virtual exec_handle_ipog,
-                              public exec_handle_base {
+class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
+                                    public cagen_exec_handle_base {
   public:
-    exec_handle_ipog_impl()
-        : exec_handle_ipog(),
-          exec_handle_base(),
+    cagen_exec_handle_ipog_impl()
+        : cagen_exec_handle_ipog(),
+          cagen_exec_handle_base(),
           num_processed_parameters_(0),
           runnable_() {}
 
-    exec_handle_ipog_impl(exec_handle_ipog_impl&&) = default;
+    cagen_exec_handle_ipog_impl(cagen_exec_handle_ipog_impl&&) = default;
 
-    exec_handle_ipog_impl(const exec_handle_ipog_impl&) = delete;
+    cagen_exec_handle_ipog_impl(const cagen_exec_handle_ipog_impl&) = delete;
 
-    exec_handle_ipog_impl& operator=(exec_handle_ipog_impl&&) = default;
+    cagen_exec_handle_ipog_impl& operator=(cagen_exec_handle_ipog_impl&&) =
+        default;
 
-    exec_handle_ipog_impl& operator=(const exec_handle_ipog_impl&) = delete;
+    cagen_exec_handle_ipog_impl& operator=(const cagen_exec_handle_ipog_impl&) =
+        delete;
 
-    ~exec_handle_ipog_impl() {}
+    ~cagen_exec_handle_ipog_impl() {}
 
   public:
     unsigned int get_number_of_processed_parameters() const {
@@ -58,4 +60,4 @@ class exec_handle_ipog_impl : public virtual exec_handle_ipog,
 }  // namespace detail
 }  // namespace citcpp
 
-#endif /* DETAIL_EXEC_HANDLE_IPOG_IMPL_CPP_ */
+#endif /* DETAIL_CAGEN_EXEC_HANDLE_IPOG_IMPL_CPP_ */

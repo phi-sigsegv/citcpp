@@ -1,5 +1,5 @@
-#ifndef EXEC_HANDLE_HPP_
-#define EXEC_HANDLE_HPP_
+#ifndef CAGEN_EXEC_HANDLE_HPP_
+#define CAGEN_EXEC_HANDLE_HPP_
 
 #include <future>
 
@@ -14,7 +14,7 @@ namespace citcpp {
  * shall be returned.
  * All methods can be safely called from an arbitrary thread.
  */
-class exec_handle {
+class cagen_exec_handle {
   public:
     /**
      * The real destructor of this handle calls abort() and joins with
@@ -22,7 +22,7 @@ class exec_handle {
      * if this handle is destroyed without the client explicitly waiting
      * for the execution.
      */
-    virtual ~exec_handle() {}
+    virtual ~cagen_exec_handle() {}
 
     /**
      * Returns the number of combinations to cover based on the given
@@ -69,4 +69,4 @@ class exec_handle {
 
 }  // namespace citcpp
 
-#endif /* EXEC_HANDLE_HPP_ */
+#endif /* CAGEN_EXEC_HANDLE_HPP_ */

@@ -10,9 +10,9 @@
 namespace citcpp {
 namespace detail {
 
-// Forward declaration of exec_handle_ipog_impl due to usage of
-// citcpp_ipog by exec_handle_ipog_impl definition.
-class exec_handle_ipog_impl;
+// Forward declaration of cagen_exec_handle_ipog_impl due to usage of
+// citcpp_ipog by cagen_exec_handle_ipog_impl definition.
+class cagen_exec_handle_ipog_impl;
 
 /**
  * This class provides an implementation of the IPOG algorithm.
@@ -41,7 +41,7 @@ class citcpp_ipog {
     /**
      * This is the entry point to be called by a thread.
      */
-    void entry_point(exec_handle_ipog_impl &exec_handle);
+    void entry_point(cagen_exec_handle_ipog_impl &exec_handle);
 
   private:
     const citcpp::covering_array_computation_config config_;

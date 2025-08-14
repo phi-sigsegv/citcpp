@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Parameters  : " << model.get_parameters().size() << "\n"
             << std::endl;
 
-  std::unique_ptr<exec_handle_ipog> handle =
+  std::unique_ptr<cagen_exec_handle_ipog> handle =
       compute_covering_array_ipog(model, interaction_strength,
                                   covering_array_computation_config()
                                       .with_replace_dont_care_values(rand_star)
