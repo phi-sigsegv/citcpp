@@ -6,6 +6,7 @@ list(APPEND CITCPP_UNITTESTS
   test_binom_coeff_table
   test_bitset
   test_cagen
+  test_cov_measure_result
 )
 
 foreach(unittest IN LISTS CITCPP_UNITTESTS)
