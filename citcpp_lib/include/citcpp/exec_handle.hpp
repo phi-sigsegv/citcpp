@@ -51,7 +51,7 @@ class exec_handle {
 
     /**
      * This method returns a future for the test set produced by the execution.
-     * The wrapped test set may either be complete with respect to the desired
+     * The test set may either be complete with respect to the desired
      * interaction coverage or not. This depends on whether the execution has
      * been aborted.
      */
