@@ -2,6 +2,7 @@
 
 #include "detail/cagen_exec_handle_ipog_impl.hpp"
 #include "detail/citcpp_ipog.hpp"
+#include "detail/covm_exec_handle_impl.hpp"
 
 namespace citcpp {
 
