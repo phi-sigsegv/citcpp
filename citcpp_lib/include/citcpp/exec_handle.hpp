@@ -45,8 +45,7 @@ class exec_handle {
     virtual unsigned int get_testset_size() const = 0;
 
     /**
-     * Calling this method aborts the current execution. The call returns
-     * once the partial test set has been constructed.
+     * Calling this method aborts the current execution.
      */
     virtual void abort() = 0;
 
