@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <citcpp/cagen_exec_handle.hpp>
-#include <functional>
 #include <thread>
 
 namespace citcpp {
@@ -21,12 +20,9 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
           duration_msec_(0),
           thread_() {}
 
-    cagen_exec_handle_base(cagen_exec_handle_base&&) = default;
-
+    cagen_exec_handle_base(cagen_exec_handle_base&&) = delete;
     cagen_exec_handle_base(const cagen_exec_handle_base&) = delete;
-
-    cagen_exec_handle_base& operator=(cagen_exec_handle_base&&) = default;
-
+    cagen_exec_handle_base& operator=(cagen_exec_handle_base&&) = delete;
     cagen_exec_handle_base& operator=(const cagen_exec_handle_base&) = delete;
 
     ~cagen_exec_handle_base() {
