@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <ostream>
 #include <vector>
 
 namespace citcpp {
@@ -12,9 +13,15 @@ namespace citcpp {
  */
 class coverage_measurement {
   public:
-    static constexpr unsigned int NUM_DIFFERENTIATED_COVERAGE_LEVELS = 21;
+    static constexpr int NUM_DIFFERENTIATED_COVERAGE_LEVELS = 21;
     typedef std::array<unsigned long long, NUM_DIFFERENTIATED_COVERAGE_LEVELS>
         t_coverage_level_to_num_param_combos;
+
+    coverage_measurement()
+        : num_param_combos_to_cover_(0),
+          num_tuples_to_cover_(0),
+          covered_tuples_(),
+          cov_level_to_num_param_combos_() {}
 
     /**
      * Returns the number of parameter combinations that have to be covered.
@@ -121,12 +128,12 @@ class coverage_measurement {
       coverage_fraction = std::max(std::min(coverage_fraction, 1.0), 0.0);
 
       // Map the coverage fraction to the appropriate array index.
-      unsigned int index =
-          (unsigned int)((double)(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
-                         coverage_fraction);
+      int index =
+          std::min((int)((double)(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
+                         coverage_fraction),
+                   NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
 
-      return cov_level_to_num_param_combos_[std::min(
-          index, NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1)];
+      return cov_level_to_num_param_combos_[index];
     }
 
     /**
@@ -140,12 +147,33 @@ class coverage_measurement {
       coverage_fraction = std::max(std::min(coverage_fraction, 1.0), 0.0);
 
       // Map the coverage fraction to the appropriate array index.
-      unsigned int index =
-          (unsigned int)((double)(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
-                         coverage_fraction);
+      int index =
+          std::min((int)((double)(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
+                         coverage_fraction),
+                   NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
 
       return cov_level_to_num_param_combos_[std::min(
           index, NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1)];
+    }
+
+    /**
+     * Adds the information that the given number of parameter combinations
+     * have been covered to the specified extent.
+     */
+    void add_coverage_of_param_combos(unsigned long long num_param_combos,
+                                      double coverage_fraction) {
+
+      coverage_fraction = std::max(std::min(coverage_fraction, 1.0), 0.0);
+
+      // Map the coverage fraction to the appropriate array index.
+      int index =
+          std::min((int)((double)(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
+                         coverage_fraction),
+                   NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
+
+      for (; index >= 0; --index) {
+        cov_level_to_num_param_combos_[index] += num_param_combos;
+      }
     }
 
     void set_coverage_level_to_num_param_combos(
@@ -170,6 +198,9 @@ class coverage_measurement {
              cov_level_to_num_param_combos_ ==
                  other.cov_level_to_num_param_combos_;
     }
+
+    friend std::ostream &operator<<(std::ostream &os,
+                                    const coverage_measurement &covm);
 
   private:
     unsigned long long num_param_combos_to_cover_;

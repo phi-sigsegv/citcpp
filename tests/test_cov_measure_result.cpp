@@ -3,8 +3,9 @@
 #include <doctest.h>
 
 #include <citcpp/coverage_measurement.hpp>
+#include <iostream>
 
-TEST_CASE("coverage_measurement, testing result class") {
+TEST_CASE("coverage_measurement, testing accessing param combo coverage") {
   using namespace citcpp;
 
   coverage_measurement sut;
@@ -20,6 +21,10 @@ TEST_CASE("coverage_measurement, testing result class") {
 
   sut.set_coverage_level_to_num_param_combos(
       coverage_level_to_num_param_combos);
+  sut.set_number_of_param_combos_to_cover(30);
+  sut.set_number_of_combinations_to_cover(50);
+  sut.set_coverered_tuples(
+      std::vector<unsigned long long>{1, 2, 3, 4, 5, 6, 7});
 
   SUBCASE("Test access using fractions") {
     CHECK(sut[0.0] == 0);
@@ -104,5 +109,30 @@ TEST_CASE("coverage_measurement, testing result class") {
 
     CHECK(sut[1.0] == 20);
     CHECK(sut[1.01] == 20);
+  }
+
+  SUBCASE("Test getters for other metrics") {
+    CHECK(sut.get_number_of_param_combos_to_cover() == 30);
+    CHECK(sut.get_number_of_combinations_to_cover() == 50);
+    CHECK(sut.get_coverered_tuples() ==
+          std::vector<unsigned long long>{1, 2, 3, 4, 5, 6, 7});
+  }
+}
+
+TEST_CASE("coverage_measurement, test adding coverage of param combos") {
+  using namespace citcpp;
+
+  coverage_measurement sut;
+
+  sut.add_coverage_of_param_combos(20, 0.69);
+
+  for (int i = 0; i <= 13; ++i) {
+    const double frac = (double)i * 0.05;
+    CHECK(sut[frac] == 20);
+  }
+
+  for (int i = 14; i <= 20; ++i) {
+    const double frac = (double)i * 0.05;
+    CHECK(sut[frac] == 0);
   }
 }
