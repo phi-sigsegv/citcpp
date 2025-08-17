@@ -30,19 +30,12 @@ class covm_exec_handle {
     virtual unsigned long long get_number_of_combinations_to_cover() const = 0;
 
     /**
-     * Returns the currently covered number of combinations. This number
-     * is frequently updated during the execution. So for instance
-     * this method can be used for showing the progress of the execution.
+     * Returns the current number of combinations whose coverage has been
+     * checked. This number is frequently updated during the execution. So for
+     * instance this method can be used for showing the progress of the
+     * execution.
      */
-    virtual unsigned long long get_number_of_covered_combinations() const = 0;
-
-    /**
-     * Returns the current number of tests whose coverage has been measured
-     * so far. This number is frequently updated during the execution.
-     * So for instance this method can be used for showing the progress of
-     * the execution.
-     */
-    virtual unsigned int get_number_of_measured_tests() const = 0;
+    virtual unsigned long long get_number_of_checked_combinations() const = 0;
 
     /**
      * Calling this method aborts the current execution.

@@ -13,8 +13,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
     covm_exec_handle_impl()
         : covm_exec_handle(),
           num_combinations_to_cover_(0),
-          covered_combinations_(0),
-          num_measured_test_(0),
+          checked_combinations_(0),
           is_aborted_(),
           covm_result_(),
           duration_msec_(0),
@@ -35,12 +34,8 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
       return num_combinations_to_cover_;
     }
 
-    unsigned long long get_number_of_covered_combinations() const {
-      return covered_combinations_;
-    }
-
-    unsigned int get_number_of_measured_tests() const {
-      return num_measured_test_;
+    unsigned long long get_number_of_checked_combinations() const {
+      return checked_combinations_;
     }
 
     void abort() { is_aborted_.test_and_set(); }
@@ -58,24 +53,15 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
       num_combinations_to_cover_ = num_combinations_to_cover;
     }
 
-    void set_number_of_covered_combinations(
-        unsigned long long covered_combinations) {
-      covered_combinations_ = covered_combinations;
+    void set_number_of_checked_combinations(
+        unsigned long long checked_combinations) {
+      checked_combinations_ = checked_combinations;
     }
 
-    void add_number_of_covered_combinations(
-        unsigned long long covered_combinations) {
-      covered_combinations_.fetch_add(covered_combinations,
+    void add_number_of_checked_combinations(
+        unsigned long long checked_combinations) {
+      checked_combinations_.fetch_add(checked_combinations,
                                       std::memory_order_acq_rel);
-    }
-
-    void set_number_of_measured_tests(unsigned int num_measured_test) {
-      num_measured_test_ = num_measured_test;
-    }
-
-    void add_number_of_measured_tests(unsigned int num_measured_test) {
-      num_measured_test_.fetch_add(num_measured_test,
-                                   std::memory_order_acq_rel);
     }
 
     bool is_job_aborted() { return is_aborted_.test(); }
@@ -90,8 +76,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
 
   public:
     std::atomic_ullong num_combinations_to_cover_;
-    std::atomic_ullong covered_combinations_;
-    std::atomic_uint num_measured_test_;
+    std::atomic_ullong checked_combinations_;
     std::atomic_flag is_aborted_;
     std::promise<citcpp::coverage_measurement> covm_result_;
     std::atomic_uint duration_msec_;
