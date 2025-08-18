@@ -48,7 +48,6 @@ class citcpp_ipog {
     const citcpp::input_model input_model_;
     const model model_;
     unsigned int strength_;
-    test_set test_set_;
 };
 
 }  // namespace detail
