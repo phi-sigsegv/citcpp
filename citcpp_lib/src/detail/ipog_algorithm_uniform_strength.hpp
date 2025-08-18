@@ -1,7 +1,6 @@
 #ifndef DETAIL_IPOG_ALGORITHM_UNIFORM_STRENGTH_HPP_
 #define DETAIL_IPOG_ALGORITHM_UNIFORM_STRENGTH_HPP_
 
-#include "binom_coeff_table.hpp"
 #include "coverage_map.hpp"
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
