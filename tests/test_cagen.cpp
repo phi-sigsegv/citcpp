@@ -10,18 +10,35 @@ citcpp::input_model create_pict_example_model() {
 
   input_model model;
 
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("PLATFORM")
+                          .values({{"x86"}, {"x64"}, {"arm"}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("CPUS")
+                          .values({{1}, {2}, {4}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("RAM")
+                          .values({{"1GB"}, {"4GB"}, {"64GB"}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("HDD")
+                          .values({{"SCSI"}, {"IDE"}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("OS")
+                          .values({{"Win7"}, {"Win8"}, {"Win10"}}));
   model.add_parameter(
-      parameter().name("PLATFORM").values({{"x86"}, {"x64"}, {"arm"}}));
-  model.add_parameter(parameter().name("CPUS").values({{"1"}, {"2"}, {"4"}}));
-  model.add_parameter(
-      parameter().name("RAM").values({{"1GB"}, {"4GB"}, {"64GB"}}));
-  model.add_parameter(parameter().name("HDD").values({{"SCSI"}, {"IDE"}}));
-  model.add_parameter(
-      parameter().name("OS").values({{"Win7"}, {"Win8"}, {"Win10"}}));
-  model.add_parameter(parameter().name("Browser").values(
-      {{"Edge"}, {"Opera"}, {"Chrome"}, {"Firefox"}}));
-  model.add_parameter(
-      parameter().name("APP").values({{"Word"}, {"Excel"}, {"Powerpoint"}}));
+      parameter()
+          .type(parameter_type::ENUM)
+          .name("Browser")
+          .values({{"Edge"}, {"Opera"}, {"Chrome"}, {"Firefox"}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("APP")
+                          .values({{"Word"}, {"Excel"}, {"Powerpoint"}}));
 
   return model;
 }
