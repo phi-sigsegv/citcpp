@@ -31,8 +31,6 @@ std::vector<unsigned int> compute_parameter_index_map(
 namespace citcpp {
 namespace detail {
 
-const parameter_value DONT_CARE_PARAMETER_VALUE{"*"};
-
 model::model(const input_model &input_model,
              const std::vector<parameter> &ordered_parameters)
     : input_model_(input_model),

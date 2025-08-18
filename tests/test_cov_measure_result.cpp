@@ -3,7 +3,6 @@
 #include <doctest.h>
 
 #include <citcpp/coverage_measurement.hpp>
-#include <iostream>
 
 TEST_CASE("coverage_measurement, testing accessing param combo coverage") {
   using namespace citcpp;
@@ -114,7 +113,7 @@ TEST_CASE("coverage_measurement, testing accessing param combo coverage") {
   SUBCASE("Test getters for other metrics") {
     CHECK(sut.get_number_of_param_combos_to_cover() == 30);
     CHECK(sut.get_number_of_combinations_to_cover() == 50);
-    CHECK(sut.get_coverered_tuples() ==
+    CHECK(sut.get_covered_tuples() ==
           std::vector<unsigned long long>{1, 2, 3, 4, 5, 6, 7});
   }
 }

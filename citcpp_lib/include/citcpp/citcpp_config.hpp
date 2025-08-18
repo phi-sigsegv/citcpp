@@ -43,6 +43,33 @@ class covering_array_computation_config {
     std::string value_seperator_;
 };
 
+class coverage_measurement_config {
+  public:
+    coverage_measurement_config();
+
+    bool multithreading_enabled() const { return multithreading_enabled_; }
+
+    const std::string& value_separator() const { return value_seperator_; }
+
+    coverage_measurement_config& with_multithreading_enabled(
+        bool multithreading_enabled) {
+      multithreading_enabled_ = multithreading_enabled;
+
+      return *this;
+    }
+
+    coverage_measurement_config& with_value_separator(
+        std::string_view value_seperator) {
+      value_seperator_ = value_seperator;
+
+      return *this;
+    }
+
+  private:
+    bool multithreading_enabled_;
+    std::string value_seperator_;
+};
+
 }  // namespace citcpp
 
 #endif /* CITCPP_CONFIG_HPP_ */

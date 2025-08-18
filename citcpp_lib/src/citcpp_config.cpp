@@ -9,4 +9,8 @@ covering_array_computation_config::covering_array_computation_config()
       multithreading_enabled_(false),
       value_seperator_(detail::DEFAULT_VALUE_SEPARATOR) {}
 
+coverage_measurement_config::coverage_measurement_config()
+    : multithreading_enabled_(false),
+      value_seperator_(detail::DEFAULT_VALUE_SEPARATOR) {}
+
 }  // namespace citcpp

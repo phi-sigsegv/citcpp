@@ -34,6 +34,10 @@ class parameter_value {
       return *this;
     }
 
+    const std::variant<bool, std::string, int> &get_variant_value() const {
+      return value_;
+    }
+
     bool operator==(const parameter_value &other) const {
       return value_ == other.value_;
     }

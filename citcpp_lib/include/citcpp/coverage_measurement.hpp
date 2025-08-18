@@ -79,16 +79,6 @@ class coverage_measurement {
     }
 
     /**
-     * Returns the number of tests whose coverage has been measured.
-     * Due to the fact that the coverage measurement might have been
-     * aborted, the number of tests measured so far could be less than
-     * the number of all tests in the given test set.
-     */
-    unsigned int get_number_of_measured_tests() const {
-      return covered_tuples_.size();
-    }
-
-    /**
      * Returns a vector of the number of covered tuples. The numbers are in an
      * incremental fashion: The number at index i denotes the number of tuples
      * covered by the tests from index 0 up to index i in the given test set.
@@ -102,7 +92,7 @@ class coverage_measurement {
      * incremental fashion: The number at index i denotes the number of tuples
      * covered by the tests from index 0 up to index i in the given test set.
      */
-    std::vector<unsigned long long> &get_coverered_tuples() {
+    std::vector<unsigned long long> &get_covered_tuples() {
       return covered_tuples_;
     }
 

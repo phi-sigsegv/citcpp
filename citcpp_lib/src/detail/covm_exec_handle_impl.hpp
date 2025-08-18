@@ -3,7 +3,10 @@
 
 #include <atomic>
 #include <citcpp/covm_exec_handle.hpp>
+#include <memory>
 #include <thread>
+
+#include "citcpp_covm.hpp"
 
 namespace citcpp {
 namespace detail {
@@ -17,7 +20,8 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
           is_aborted_(),
           covm_result_(),
           duration_msec_(0),
-          thread_() {}
+          thread_(),
+          runnable_() {}
 
     covm_exec_handle_impl(covm_exec_handle_impl&&) = delete;
     covm_exec_handle_impl(const covm_exec_handle_impl&) = delete;
@@ -74,6 +78,17 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
       duration_msec_ = duration_msec;
     }
 
+    /**
+     * Sets the runnable to be called by the thread of this execution
+     * handle. The thread will invoke the runnable right away,
+     * as soon as this method is being called.
+     */
+    void set_runnable(std::unique_ptr<citcpp_covm>&& runnable) {
+      runnable_ = std::move(runnable);
+      thread_ = std::thread(&citcpp_covm::entry_point, runnable_.get(),
+                            std::ref(*this));
+    }
+
   public:
     std::atomic_ullong num_combinations_to_cover_;
     std::atomic_ullong checked_combinations_;
@@ -81,6 +96,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
     std::promise<citcpp::coverage_measurement> covm_result_;
     std::atomic_uint duration_msec_;
     std::thread thread_;
+    std::unique_ptr<citcpp_covm> runnable_;
 };
 
 }  // namespace detail

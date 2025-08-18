@@ -4,6 +4,9 @@
 
 #include <chrono>
 #include <citcpp/citcpp.hpp>
+#include <iostream>
+
+namespace {
 
 citcpp::input_model create_pict_example_model() {
   using namespace citcpp;
@@ -43,7 +46,9 @@ citcpp::input_model create_pict_example_model() {
   return model;
 }
 
-TEST_CASE("Testing PICT example model, strength 1") {
+}  // namespace
+
+TEST_CASE("cagen, testing PICT example model, strength 1") {
   using namespace citcpp;
 
   input_model model{create_pict_example_model()};
@@ -64,7 +69,7 @@ TEST_CASE("Testing PICT example model, strength 1") {
   CHECK(t.get_list_of_tests().size() == 4);
 }
 
-TEST_CASE("Testing PICT example model, strength 2") {
+TEST_CASE("cagen, testing PICT example model, strength 2") {
   using namespace citcpp;
 
   input_model model{create_pict_example_model()};
@@ -80,7 +85,7 @@ TEST_CASE("Testing PICT example model, strength 2") {
             << t.get_list_of_tests().size() << " rows." << std::endl;
 }
 
-TEST_CASE("Testing PICT example model, strength 3") {
+TEST_CASE("cagen, testing PICT example model, strength 3") {
   using namespace citcpp;
 
   input_model model{create_pict_example_model()};
@@ -96,7 +101,7 @@ TEST_CASE("Testing PICT example model, strength 3") {
             << t.get_list_of_tests().size() << " rows." << std::endl;
 }
 
-TEST_CASE("Testing PICT example model, strength 4") {
+TEST_CASE("cagen, testing PICT example model, strength 4") {
   using namespace citcpp;
 
   input_model model{create_pict_example_model()};
@@ -112,7 +117,7 @@ TEST_CASE("Testing PICT example model, strength 4") {
             << t.get_list_of_tests().size() << " rows." << std::endl;
 }
 
-TEST_CASE("Testing PICT example model, strength 5") {
+TEST_CASE("cagen, testing PICT example model, strength 5") {
   using namespace citcpp;
 
   input_model model{create_pict_example_model()};
@@ -128,7 +133,7 @@ TEST_CASE("Testing PICT example model, strength 5") {
             << t.get_list_of_tests().size() << " rows." << std::endl;
 }
 
-TEST_CASE("Testing PICT example model, strength 6") {
+TEST_CASE("cagen, testing PICT example model, strength 6") {
   using namespace citcpp;
 
   input_model model{create_pict_example_model()};
@@ -144,7 +149,7 @@ TEST_CASE("Testing PICT example model, strength 6") {
             << t.get_list_of_tests().size() << " rows." << std::endl;
 }
 
-TEST_CASE("Testing PICT example model, strength 7") {
+TEST_CASE("cagen, testing PICT example model, strength 7") {
   using namespace citcpp;
 
   input_model model{create_pict_example_model()};
