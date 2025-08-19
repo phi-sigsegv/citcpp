@@ -20,10 +20,10 @@ std::ostream &operator<<(std::ostream &os, const coverage_measurement &covm) {
   for (int i = 0; i <= 20; ++i) {
     const double frac = (double)i * 0.05;
     const unsigned long long num_param_combos = covm[frac];
-    const double precent_of_all_param_combos =
+    const double percent_of_all_param_combos =
         (double)num_param_combos / (double)num_param_combos_to_cover * 100.0;
     os << "Coverage >= " << frac * 100.0 << ": " << num_param_combos << "/"
-       << num_param_combos_to_cover << " = " << precent_of_all_param_combos
+       << num_param_combos_to_cover << " = " << percent_of_all_param_combos
        << "%\n";
   }
 
