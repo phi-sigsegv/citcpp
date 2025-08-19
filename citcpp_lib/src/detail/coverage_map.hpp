@@ -270,7 +270,7 @@ class value_combination_iterator {
         bit_pos_ = 0;
 
         return recursively_visit_all_value_combos_of_param_combo(
-            value_combinations, value_indices_.size() - 1);
+            value_combinations, 0);
       }
 
       return true;
@@ -283,18 +283,19 @@ class value_combination_iterator {
   private:
     bool recursively_visit_all_value_combos_of_param_combo(
         coverage_map_base::second_level_type &value_combinations,
-        int current_index) {
+        unsigned int current_index) {
+
       // The current range goes from 0 to max_value[current_index]
       unsigned int max_val =
           cov_map_.get_model().get_parameters()
               [value_combinations.get_parameter_indices()[current_index]];
 
-      for (int i = max_val - 1; i >= 0; --i) {
+      for (unsigned int i = 0; i < max_val; ++i) {
         value_indices_[current_index] = i;
 
         bool ret = true;
 
-        if (current_index == 0) {
+        if (current_index == value_indices_.size() - 1) {
           // We assume that the visitor is a functor accepting a reference to
           // this iterator. In addition
           ret = visitor_(value_combinations, value_indices_, bit_pos_);
@@ -302,7 +303,7 @@ class value_combination_iterator {
           ++bit_pos_;
         } else {
           ret = recursively_visit_all_value_combos_of_param_combo(
-              value_combinations, current_index - 1);
+              value_combinations, current_index + 1);
         }
 
         if (!ret) {
