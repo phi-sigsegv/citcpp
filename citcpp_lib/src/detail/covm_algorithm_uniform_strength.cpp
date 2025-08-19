@@ -31,8 +31,17 @@ class covm_per_param_combo_functor {
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
         // values for p_i. If we now have values x_0, x_1, x_2, then the index
         // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index =
-            test.get_values()[param_indices[param_indices.size() - 1]];
+        const unsigned int last_param_idx =
+            param_indices[param_indices.size() - 1];
+        const int last_param_value = test.get_values()[last_param_idx];
+        if (last_param_value < 0) {
+          // We have found a don't care value for that combination in
+          // the considered test in one of the parameters.
+          // There is nothing to be updated concerning the
+          // coverage.
+          continue;
+        }
+        coverage_map::second_level_type::size_type index = last_param_value;
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size() - 1; ++i) {
           const unsigned int param_idx = param_indices[i];
