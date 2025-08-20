@@ -270,7 +270,7 @@ class value_combination_iterator {
         bit_pos_ = 0;
 
         return recursively_visit_all_value_combos_of_param_combo(
-            value_combinations, 0);
+            value_combinations, value_indices_.size() - 1, 0);
       }
 
       return true;
@@ -283,27 +283,36 @@ class value_combination_iterator {
   private:
     bool recursively_visit_all_value_combos_of_param_combo(
         coverage_map_base::second_level_type &value_combinations,
-        unsigned int current_index) {
+        int current_index, size_type partial_bit_pos) {
 
       // The current range goes from 0 to max_value[current_index]
-      unsigned int max_val =
+      const unsigned int max_val =
           cov_map_.get_model().get_parameters()
               [value_combinations.get_parameter_indices()[current_index]];
 
-      for (unsigned int i = 0; i < max_val; ++i) {
+      const param_vector &param_indices =
+          value_combinations.get_parameter_indices();
+      size_type bit_pos_value_factor = 1;
+      for (std::vector<unsigned int>::size_type j = current_index + 1;
+           j < param_indices.size(); ++j) {
+        bit_pos_value_factor *=
+            cov_map_.get_model().get_parameters()[param_indices[j]];
+      }
+
+      for (int i = max_val - 1; i >= 0; --i) {
         value_indices_[current_index] = i;
 
         bool ret = true;
 
-        if (current_index == value_indices_.size() - 1) {
+        if (current_index == 0) {
+          bit_pos_ = partial_bit_pos + i * bit_pos_value_factor;
           // We assume that the visitor is a functor accepting a reference to
           // this iterator. In addition
           ret = visitor_(value_combinations, value_indices_, bit_pos_);
-
-          ++bit_pos_;
         } else {
           ret = recursively_visit_all_value_combos_of_param_combo(
-              value_combinations, current_index + 1);
+              value_combinations, current_index - 1,
+              partial_bit_pos + i * bit_pos_value_factor);
         }
 
         if (!ret) {
