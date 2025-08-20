@@ -17,11 +17,8 @@ class model {
   public:
     /**
      * Constructs an internal representation of the given input model.
-     * The given list of parameter allows to specify a desired different
-     * ordering of the parameters in the internal model.
      */
-    model(const input_model &input_model,
-          const std::vector<parameter> &ordered_parameters);
+    model(const input_model &input_model);
 
     /**
      * Returns the input which this internal model has been created from.
@@ -57,7 +54,6 @@ class model {
 
   private:
     const input_model &input_model_;
-    const std::vector<unsigned int> parameter_index_map_;
     std::vector<unsigned int> parameters_;
 };
 

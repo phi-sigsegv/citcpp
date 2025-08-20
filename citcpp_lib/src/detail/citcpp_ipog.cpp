@@ -15,18 +15,19 @@
 
 namespace {
 
-std::vector<citcpp::parameter> get_parameters_sorted_by_number_of_values_desc(
-    const std::vector<citcpp::parameter> &params) {
-  using namespace citcpp;
+std::vector<unsigned int>
+get_parameter_indices_ordered_by_number_of_values_desc(
+    const std::vector<unsigned int> &params) {
 
-  std::vector<parameter> sorted_params(params);
+  std::vector<unsigned int> parameter_index_map(params.size());
+  std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
 
-  std::sort(sorted_params.begin(), sorted_params.end(),
-            [](const parameter &p1, const parameter &p2) {
-              return p1.get_values().size() > p2.get_values().size();
+  std::sort(parameter_index_map.begin(), parameter_index_map.end(),
+            [&params](const unsigned int &index1, const unsigned int &index2) {
+              return params[index1] > params[index2];
             });
 
-  return sorted_params;
+  return parameter_index_map;
 }
 
 void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
@@ -55,11 +56,12 @@ void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
     return;
   }
 
+  std::vector<unsigned int> parameter_index_map(
+      get_parameter_indices_ordered_by_number_of_values_desc(
+          model.get_parameters()));
+
   {
     // Step 1: Initialize for the first t parameters.
-    std::vector<unsigned int> parameter_index_map(
-        model.get_parameters().size());
-    std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
     auto initial_step_res = create_all_value_combinations(
         strength, model, parameter_index_map, test_set);
     exec_handle.add_number_of_covered_combinations(
@@ -70,14 +72,10 @@ void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
 
   {
     // Here is the main IPOG loop.
-    const binom_coeff_table binomial_coeffs(model.get_parameters().size());
-    std::vector<unsigned int> parameter_index_map(
-        model.get_parameters().size());
-    std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
+    const binom_coeff_table binomial_coeffs(parameter_index_map.size());
 
     for (unsigned int current_param_idx = strength;
-         current_param_idx < model.get_parameters().size();
-         ++current_param_idx) {
+         current_param_idx < parameter_index_map.size(); ++current_param_idx) {
       if (exec_handle.is_job_aborted()) {
         return;
       }
@@ -169,16 +167,14 @@ citcpp_ipog::citcpp_ipog(const input_model &input_model,
                          const covering_array_computation_config &config)
     : config_(config),
       input_model_(input_model),
-      model_(input_model_, get_parameters_sorted_by_number_of_values_desc(
-                               input_model_.get_parameters())),
+      model_(input_model_),
       strength_(1) {}
 
 citcpp_ipog::citcpp_ipog(input_model &&input_model,
                          const covering_array_computation_config &config)
     : config_(config),
       input_model_(std::move(input_model)),
-      model_(input_model_, get_parameters_sorted_by_number_of_values_desc(
-                               input_model_.get_parameters())),
+      model_(input_model_),
       strength_(1) {}
 
 void citcpp_ipog::set_interaction_strength(unsigned int t) { strength_ = t; }
