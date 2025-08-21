@@ -57,7 +57,12 @@ TEST_CASE("covm, testing PICT example model, strength 1") {
       compute_covering_array_ipog(model, 1,
                                   covering_array_computation_config());
   auto cagen_f = cagen_handle->get_test_set();
-  test_set t(cagen_f.get());
+  cagen_exec_result cagen_result(cagen_f.get());
+  const test_set& t = cagen_result.get_result();
+
+  CHECK(cagen_result.get_result_code() ==
+        cagen_exec_result::cagen_result_code::
+            COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
@@ -67,7 +72,11 @@ TEST_CASE("covm, testing PICT example model, strength 1") {
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, t, 1, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
-  coverage_measurement covm(covm_f.get());
+  covm_exec_result covm_result(covm_f.get());
+  const coverage_measurement& covm = covm_result.get_result();
+
+  CHECK(covm_result.get_result_code() ==
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
   const auto covm_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
@@ -89,7 +98,12 @@ TEST_CASE("covm, testing PICT example model, strength 2") {
       compute_covering_array_ipog(model, 2,
                                   covering_array_computation_config());
   auto cagen_f = cagen_handle->get_test_set();
-  test_set t(cagen_f.get());
+  cagen_exec_result cagen_result(cagen_f.get());
+  const test_set& t = cagen_result.get_result();
+
+  CHECK(cagen_result.get_result_code() ==
+        cagen_exec_result::cagen_result_code::
+            COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
@@ -99,7 +113,11 @@ TEST_CASE("covm, testing PICT example model, strength 2") {
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, t, 2, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
-  coverage_measurement covm(covm_f.get());
+  covm_exec_result covm_result(covm_f.get());
+  const coverage_measurement& covm = covm_result.get_result();
+
+  CHECK(covm_result.get_result_code() ==
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
   const auto covm_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
@@ -121,7 +139,12 @@ TEST_CASE("covm, testing PICT example model, strength 3") {
       compute_covering_array_ipog(model, 3,
                                   covering_array_computation_config());
   auto cagen_f = cagen_handle->get_test_set();
-  test_set t(cagen_f.get());
+  cagen_exec_result cagen_result(cagen_f.get());
+  const test_set& t = cagen_result.get_result();
+
+  CHECK(cagen_result.get_result_code() ==
+        cagen_exec_result::cagen_result_code::
+            COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
@@ -131,7 +154,11 @@ TEST_CASE("covm, testing PICT example model, strength 3") {
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, t, 3, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
-  coverage_measurement covm(covm_f.get());
+  covm_exec_result covm_result(covm_f.get());
+  const coverage_measurement& covm = covm_result.get_result();
+
+  CHECK(covm_result.get_result_code() ==
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
   const auto covm_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
@@ -153,7 +180,12 @@ TEST_CASE("covm, testing PICT example model, strength 4") {
       compute_covering_array_ipog(model, 4,
                                   covering_array_computation_config());
   auto cagen_f = cagen_handle->get_test_set();
-  test_set t(cagen_f.get());
+  cagen_exec_result cagen_result(cagen_f.get());
+  const test_set& t = cagen_result.get_result();
+
+  CHECK(cagen_result.get_result_code() ==
+        cagen_exec_result::cagen_result_code::
+            COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
@@ -163,7 +195,11 @@ TEST_CASE("covm, testing PICT example model, strength 4") {
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, t, 4, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
-  coverage_measurement covm(covm_f.get());
+  covm_exec_result covm_result(covm_f.get());
+  const coverage_measurement& covm = covm_result.get_result();
+
+  CHECK(covm_result.get_result_code() ==
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
   const auto covm_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
@@ -185,7 +221,12 @@ TEST_CASE("covm, testing PICT example model, strength 5") {
       compute_covering_array_ipog(model, 5,
                                   covering_array_computation_config());
   auto cagen_f = cagen_handle->get_test_set();
-  test_set t(cagen_f.get());
+  cagen_exec_result cagen_result(cagen_f.get());
+  const test_set& t = cagen_result.get_result();
+
+  CHECK(cagen_result.get_result_code() ==
+        cagen_exec_result::cagen_result_code::
+            COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
@@ -195,7 +236,11 @@ TEST_CASE("covm, testing PICT example model, strength 5") {
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, t, 5, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
-  coverage_measurement covm(covm_f.get());
+  covm_exec_result covm_result(covm_f.get());
+  const coverage_measurement& covm = covm_result.get_result();
+
+  CHECK(covm_result.get_result_code() ==
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
   const auto covm_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
@@ -217,7 +262,12 @@ TEST_CASE("covm, testing PICT example model, strength 6") {
       compute_covering_array_ipog(model, 6,
                                   covering_array_computation_config());
   auto cagen_f = cagen_handle->get_test_set();
-  test_set t(cagen_f.get());
+  cagen_exec_result cagen_result(cagen_f.get());
+  const test_set& t = cagen_result.get_result();
+
+  CHECK(cagen_result.get_result_code() ==
+        cagen_exec_result::cagen_result_code::
+            COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
@@ -227,7 +277,11 @@ TEST_CASE("covm, testing PICT example model, strength 6") {
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, t, 6, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
-  coverage_measurement covm(covm_f.get());
+  covm_exec_result covm_result(covm_f.get());
+  const coverage_measurement& covm = covm_result.get_result();
+
+  CHECK(covm_result.get_result_code() ==
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
   const auto covm_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
@@ -249,7 +303,12 @@ TEST_CASE("covm, testing PICT example model, strength 7") {
       compute_covering_array_ipog(model, 7,
                                   covering_array_computation_config());
   auto cagen_f = cagen_handle->get_test_set();
-  test_set t(cagen_f.get());
+  cagen_exec_result cagen_result(cagen_f.get());
+  const test_set& t = cagen_result.get_result();
+
+  CHECK(cagen_result.get_result_code() ==
+        cagen_exec_result::cagen_result_code::
+            COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
@@ -259,7 +318,11 @@ TEST_CASE("covm, testing PICT example model, strength 7") {
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, t, 7, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
-  coverage_measurement covm(covm_f.get());
+  covm_exec_result covm_result(covm_f.get());
+  const coverage_measurement& covm = covm_result.get_result();
+
+  CHECK(covm_result.get_result_code() ==
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
   const auto covm_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));

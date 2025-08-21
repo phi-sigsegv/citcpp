@@ -91,7 +91,7 @@ class test_set {
     friend std::ostream &operator<<(std::ostream &os, const test_set &test_set);
 
   private:
-    const std::string value_separator_;
+    std::string value_separator_;
     std::vector<parameter_def> parameters_;
     std::list<std::vector<parameter_value>> test_set_;
 };

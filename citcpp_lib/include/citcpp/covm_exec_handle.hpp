@@ -2,10 +2,63 @@
 #define COVM_EXEC_HANDLE_HPP_
 
 #include <future>
+#include <string>
+#include <string_view>
 
 #include "coverage_measurement.hpp"
 
 namespace citcpp {
+
+/**
+ * This class models the result of a coverage measurement job.
+ */
+class covm_exec_result {
+  public:
+    /**
+     * This enumeration defines the possible results of a coverage measurement
+     * job.
+     */
+    enum class covm_result_code {
+      /**
+       * The coverage measurement completed succesfully and the entire
+       * test set has been checked against the coverage base.
+       */
+      COVERAGE_MEASUREMENT_COMPLETED,
+      /**
+       * The coverage measurement has been aborted, meaning the test set has
+       * only been measured against a fraction of the coverage base.
+       */
+      COVERAGE_MEASUREMENT_ABORTED,
+      /**
+       * The coverage measurement has terminated with an error.
+       * Use covm_exec_result#get_error_message in order to retrieve
+       * the corresponding error message.
+       */
+      COVERAGE_MEASUREMENT_ERROR
+    };
+
+    /**
+     * Returns the object collecting the results of the coverage measurement.
+     */
+    const coverage_measurement &get_result() const { return result_; }
+
+    /**
+     * Returns the status code defining the result of the coverage measurement
+     * execution.
+     */
+    covm_result_code get_result_code() const { return result_code_; }
+
+    /**
+     * Returns the error message if an error occurred, or otherwise an empty
+     * string.
+     */
+    std::string_view get_error_message() const { return error_message_; }
+
+  protected:
+    coverage_measurement result_;
+    covm_result_code result_code_;
+    std::string error_message_;
+};
 
 /**
  * This class provides means to monitor the progress of the execution,
@@ -49,7 +102,7 @@ class covm_exec_handle {
      * test set or not. This depends on whether the execution has
      * been aborted.
      */
-    virtual std::future<coverage_measurement> get_coverage_measurement() = 0;
+    virtual std::future<covm_exec_result> get_coverage_measurement() = 0;
 
     /**
      * Once the coverage measurement has terminated, either because the

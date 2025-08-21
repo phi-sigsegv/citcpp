@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
   std::cout << std::setprecision(default_precision);
   std::cout << std::defaultfloat;
 
-  test_set t(f.get());
+  cagen_exec_result result(f.get());
 
   if (aborted) {
     std::cout << "WARNING: Covering array computation has been aborted. The "
@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
   std::cout << "Execution took: " << duration_seconds << std::endl;
 
-  test_set_file_os << t << std::endl;
+  test_set_file_os << result.get_result() << std::endl;
   std::cout << "Output file: " << test_set_file_path << std::endl;
 
   return 0;

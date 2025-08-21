@@ -56,7 +56,11 @@ TEST_CASE("cagen, testing PICT example model, strength 1") {
   std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 1, covering_array_computation_config());
   auto f = handle->get_test_set();
-  test_set t(f.get());
+  cagen_exec_result result(f.get());
+  const test_set& t = result.get_result();
+
+  CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                        COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
@@ -77,7 +81,11 @@ TEST_CASE("cagen, testing PICT example model, strength 2") {
   std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 2, covering_array_computation_config());
   auto f = handle->get_test_set();
-  test_set t(f.get());
+  cagen_exec_result result(f.get());
+  const test_set& t = result.get_result();
+
+  CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                        COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
@@ -93,7 +101,11 @@ TEST_CASE("cagen, testing PICT example model, strength 3") {
   std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 3, covering_array_computation_config());
   auto f = handle->get_test_set();
-  test_set t(f.get());
+  cagen_exec_result result(f.get());
+  const test_set& t = result.get_result();
+
+  CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                        COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
@@ -109,7 +121,11 @@ TEST_CASE("cagen, testing PICT example model, strength 4") {
   std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 4, covering_array_computation_config());
   auto f = handle->get_test_set();
-  test_set t(f.get());
+  cagen_exec_result result(f.get());
+  const test_set& t = result.get_result();
+
+  CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                        COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
@@ -125,7 +141,11 @@ TEST_CASE("cagen, testing PICT example model, strength 5") {
   std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 5, covering_array_computation_config());
   auto f = handle->get_test_set();
-  test_set t(f.get());
+  cagen_exec_result result(f.get());
+  const test_set& t = result.get_result();
+
+  CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                        COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
@@ -141,7 +161,11 @@ TEST_CASE("cagen, testing PICT example model, strength 6") {
   std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 6, covering_array_computation_config());
   auto f = handle->get_test_set();
-  test_set t(f.get());
+  cagen_exec_result result(f.get());
+  const test_set& t = result.get_result();
+
+  CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                        COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
@@ -157,7 +181,11 @@ TEST_CASE("cagen, testing PICT example model, strength 7") {
   std::unique_ptr<cagen_exec_handle_ipog> handle = compute_covering_array_ipog(
       model, 7, covering_array_computation_config());
   auto f = handle->get_test_set();
-  test_set t(f.get());
+  cagen_exec_result result(f.get());
+  const test_set& t = result.get_result();
+
+  CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                        COVERING_ARRAY_GENERATION_COMPLETED);
 
   const auto duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));

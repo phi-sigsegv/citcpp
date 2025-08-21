@@ -7,6 +7,7 @@
 
 #include "binom_coeff_table.hpp"
 #include "cagen_exec_handle_ipog_impl.hpp"
+#include "cagen_exec_result_impl.hpp"
 #include "citcpp_algo_common.hpp"
 #include "coverage_map.hpp"
 #include "datatypes_config.hpp"
@@ -197,7 +198,17 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl &exec_handle) {
 
   // Set the generated test set.
   // This will also signal to the client that we are done.
-  exec_handle.set_test_set(std::move(ts));
+  cagen_exec_result_impl result;
+  if (exec_handle.is_job_aborted()) {
+    result.set_result_code(cagen_exec_result::cagen_result_code::
+                               COVERING_ARRAY_GENERATION_ABORTED);
+  } else {
+    result.set_result_code(cagen_exec_result::cagen_result_code::
+                               COVERING_ARRAY_GENERATION_COMPLETED);
+  }
+  result.set_error_message("");
+  result.set_result(std::move(ts));
+  exec_handle.set_test_set(std::move(result));
 }
 
 }  // namespace detail

@@ -12,6 +12,7 @@
 #include "coverage_map.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
+#include "covm_exec_result_impl.hpp"
 #include "datatypes_config.hpp"
 
 namespace {
@@ -186,7 +187,17 @@ void citcpp_covm::entry_point(covm_exec_handle_impl &exec_handle) {
 
   // Set the generated result object.
   // This will also signal to the client that we are done.
-  exec_handle.set_coverage_measurement(std::move(covm));
+  covm_exec_result_impl result;
+  if (exec_handle.is_job_aborted()) {
+    result.set_result_code(
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_ABORTED);
+  } else {
+    result.set_result_code(
+        covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+  }
+  result.set_error_message("");
+  result.set_result(std::move(covm));
+  exec_handle.set_coverage_measurement(std::move(result));
 }
 
 }  // namespace detail

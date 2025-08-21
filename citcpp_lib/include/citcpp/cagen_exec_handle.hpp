@@ -2,10 +2,63 @@
 #define CAGEN_EXEC_HANDLE_HPP_
 
 #include <future>
+#include <string>
+#include <string_view>
 
 #include "test_set.hpp"
 
 namespace citcpp {
+
+/**
+ * This class models the result of a covering array generation job.
+ */
+class cagen_exec_result {
+  public:
+    /**
+     * This enumeration defines the possible results of a covering array
+     * generation job.
+     */
+    enum class cagen_result_code {
+      /**
+       * The covering array generation completed succesfully and the test set
+       * covers the entire specified coverage base.
+       */
+      COVERING_ARRAY_GENERATION_COMPLETED,
+      /**
+       * The covering array generation has been aborted, meaning the test set
+       * may only cover a fraction of the coverage base.
+       */
+      COVERING_ARRAY_GENERATION_ABORTED,
+      /**
+       * The overing array generation has terminated with an error.
+       * Use cagen_exec_result#get_error_message in order to retrieve
+       * the corresponding error message.
+       */
+      COVERING_ARRAY_GENERATION_ERROR
+    };
+
+    /**
+     * Returns the created test set.
+     */
+    const test_set &get_result() const { return test_set_; }
+
+    /**
+     * Returns the status code defining the result of the covering array
+     * generation.
+     */
+    cagen_result_code get_result_code() const { return result_code_; }
+
+    /**
+     * Returns the error message if an error occurred, or otherwise an empty
+     * string.
+     */
+    std::string_view get_error_message() const { return error_message_; }
+
+  protected:
+    test_set test_set_;
+    cagen_result_code result_code_;
+    std::string error_message_;
+};
 
 /**
  * This class provides means to monitor the progress of the execution,
@@ -55,7 +108,7 @@ class cagen_exec_handle {
      * interaction coverage or not. This depends on whether the execution has
      * been aborted.
      */
-    virtual std::future<test_set> get_test_set() = 0;
+    virtual std::future<cagen_exec_result> get_test_set() = 0;
 
     /**
      * Once the computation of the test set has terminated, either because the

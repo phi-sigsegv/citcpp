@@ -44,7 +44,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
 
     void abort() { is_aborted_.test_and_set(); }
 
-    std::future<citcpp::coverage_measurement> get_coverage_measurement() {
+    std::future<citcpp::covm_exec_result> get_coverage_measurement() {
       return covm_result_.get_future();
     }
 
@@ -70,7 +70,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
 
     bool is_job_aborted() { return is_aborted_.test(); }
 
-    void set_coverage_measurement(citcpp::coverage_measurement&& covm_result) {
+    void set_coverage_measurement(citcpp::covm_exec_result&& covm_result) {
       covm_result_.set_value(std::move(covm_result));
     }
 
@@ -93,7 +93,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
     std::atomic_ullong num_combinations_to_cover_;
     std::atomic_ullong checked_combinations_;
     std::atomic_flag is_aborted_;
-    std::promise<citcpp::coverage_measurement> covm_result_;
+    std::promise<citcpp::covm_exec_result> covm_result_;
     std::atomic_uint duration_msec_;
     std::thread thread_;
     std::unique_ptr<citcpp_covm> runnable_;
