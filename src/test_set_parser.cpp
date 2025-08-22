@@ -2,6 +2,8 @@
 
 #include <peglib.h>
 
+#include <algorithm>
+#include <cctype>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -17,10 +19,6 @@ class test_set_data_consumer {
     virtual void end_param_declarations() = 0;
     virtual void parse_param_value(const std::string &value, size_t line,
                                    size_t col) = 0;
-    virtual void add_param_value(bool value) = 0;
-    virtual void add_param_value(const std::string &value) = 0;
-    virtual void add_param_value(int value) = 0;
-    virtual void add_param_dont_care_value() = 0;
     virtual void end_test(size_t line, size_t col) = 0;
 };
 
@@ -57,69 +55,9 @@ class test_value_consumer {
 
     void operator()(const peg::SemanticValues &vs) {
       auto line_info = vs.line_info();
-      consumer_->parse_param_value(vs.token_to_string(), line_info.first,
-                                   line_info.second);
-    }
-
-  private:
-    test_set_data_consumer *consumer_;
-};
-
-class boolean_value_consumer {
-  public:
-    boolean_value_consumer(test_set_data_consumer *consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues &vs) {
-      switch (vs.choice()) {
-        case 0:
-          consumer_->add_param_value(true);
-          return;
-        default:
-          consumer_->add_param_value(false);
-          return;
-      }
-    }
-
-  private:
-    test_set_data_consumer *consumer_;
-};
-
-class integer_value_consumer {
-  public:
-    integer_value_consumer(test_set_data_consumer *consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues &vs) {
-      consumer_->add_param_value(vs.token_to_number<int>());
-    }
-
-  private:
-    test_set_data_consumer *consumer_;
-};
-
-class enum_value_consumer {
-  public:
-    enum_value_consumer(test_set_data_consumer *consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues &vs) {
       std::string str(vs.token_to_string());
       citcpp::detail::trim(str);
-      consumer_->add_param_value(str);
-    }
-
-  private:
-    test_set_data_consumer *consumer_;
-};
-
-class dont_care_consumer {
-  public:
-    dont_care_consumer(test_set_data_consumer *consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues &vs) {
-      consumer_->add_param_dont_care_value();
+      consumer_->parse_param_value(str, line_info.first, line_info.second);
     }
 
   private:
@@ -169,40 +107,14 @@ peg::parser create_test_set_parser(std::string_view separator) {
   return p;
 }
 
-peg::parser create_boolean_value_parser() {
-  using namespace peg;
-
-  parser p(R"(
-Root             <- BooleanValue / DontCare
-BooleanValue     <- 'true'i / 'false'i
-DontCare         <- '*'
-  )");
-
-  return p;
+bool i_char_equals(char a, char b) {
+  return std::tolower(static_cast<unsigned char>(a)) ==
+         std::tolower(static_cast<unsigned char>(b));
 }
 
-peg::parser create_integer_value_parser() {
-  using namespace peg;
-
-  parser p(R"(
-Root             <- IntegerValue / DontCare
-IntegerValue     <- [+-]? [0-9]+
-DontCare         <- '*'
-  )");
-
-  return p;
-}
-
-peg::parser create_enum_value_parser() {
-  using namespace peg;
-
-  parser p(R"(
-Root             <- DontCare /  EnumValue
-EnumValue        <- (!('*') .)*
-DontCare         <- '*'
-  )");
-
-  return p;
+bool i_string_equals(const std::string &a, const std::string &b) {
+  return a.size() == b.size() &&
+         std::equal(a.begin(), a.end(), b.begin(), i_char_equals);
 }
 
 }  // namespace
@@ -220,15 +132,8 @@ class test_set_parser::impl : test_set_data_consumer {
           param_declarations_end_consumer_(
               param_declarations_end_consumer(this)),
           test_value_consumer_(test_value_consumer(this)),
-          boolean_value_consumer_(boolean_value_consumer(this)),
-          integer_value_consumer_(integer_value_consumer(this)),
-          enum_value_consumer_(enum_value_consumer(this)),
-          dont_care_consumer_(dont_care_consumer(this)),
           test_end_consumer_(test_end_consumer(this)),
           test_set_parser_(create_test_set_parser(separator)),
-          boolean_value_parser_(create_boolean_value_parser()),
-          integer_value_parser_(create_integer_value_parser()),
-          enum_value_parser_(create_enum_value_parser()),
           error_occurred_(false),
           error_message_(),
           current_param_(parameter_def()),
@@ -243,12 +148,6 @@ class test_set_parser::impl : test_set_data_consumer {
       test_set_parser_["Parameter"] = param_identifier_consumer_;
       test_set_parser_["ParamDelcEnd"] = param_declarations_end_consumer_;
       test_set_parser_["TestValue"] = test_value_consumer_;
-      boolean_value_parser_["BooleanValue"] = boolean_value_consumer_;
-      boolean_value_parser_["DontCare"] = dont_care_consumer_;
-      integer_value_parser_["IntegerValue"] = integer_value_consumer_;
-      integer_value_parser_["DontCare"] = dont_care_consumer_;
-      enum_value_parser_["EnumValue"] = enum_value_consumer_;
-      enum_value_parser_["DontCare"] = dont_care_consumer_;
       test_set_parser_["TestEnd"] = test_end_consumer_;
 
       test_set_parser_.set_logger(
@@ -285,34 +184,42 @@ class test_set_parser::impl : test_set_data_consumer {
       if (current_param_index_ < test_set_->get_parameters().size()) {
         switch (test_set_->get_parameters()[current_param_index_].get_type()) {
           case parameter_type::BOOLEAN:
-            if (!boolean_value_parser_.parse(value)) {
-              error_occurred_ = true;
-              std::ostringstream oss;
-              oss << "Error in test set file at " << line << ":" << col
-                  << " -> Expecting boolean value or *";
+            if (value == "*") {
+              current_test_.push_back(std::move(parameter_value(value)));
+            } else {
+              if (i_string_equals(value, "true")) {
+                current_test_.push_back(std::move(parameter_value(true)));
+              } else if (i_string_equals(value, "false")) {
+                current_test_.push_back(std::move(parameter_value(false)));
+              } else {
+                error_occurred_ = true;
+                std::ostringstream oss;
+                oss << "Error in test set file at " << line << ":" << col
+                    << " -> Expecting boolean value or *";
 
-              error_message_ = oss.str();
+                error_message_ = oss.str();
+              }
             }
             break;
           case parameter_type::INTEGER:
-            if (!integer_value_parser_.parse(value)) {
-              error_occurred_ = true;
-              std::ostringstream oss;
-              oss << "Error in test set file at " << line << ":" << col
-                  << " -> Expecting integer value or *";
+            if (value == "*") {
+              current_test_.push_back(std::move(parameter_value(value)));
+            } else {
+              try {
+                const int int_value{std::stoi(value)};
+                current_test_.push_back(std::move(parameter_value(int_value)));
+              } catch (std::invalid_argument const &ex) {
+                error_occurred_ = true;
+                std::ostringstream oss;
+                oss << "Error in test set file at " << line << ":" << col
+                    << " -> Expecting integer value or *";
 
-              error_message_ = oss.str();
+                error_message_ = oss.str();
+              }
             }
             break;
           case parameter_type::ENUM:
-            if (!enum_value_parser_.parse(value)) {
-              error_occurred_ = true;
-              std::ostringstream oss;
-              oss << "Error in test set file at " << line << ":" << col
-                  << " -> Expecting enum value or *";
-
-              error_message_ = oss.str();
-            }
+            current_test_.push_back(std::move(parameter_value(value)));
             break;
         }
       } else {
@@ -325,22 +232,6 @@ class test_set_parser::impl : test_set_data_consumer {
       }
 
       ++current_param_index_;
-    }
-
-    void add_param_value(bool value) {
-      current_test_.push_back(std::move(parameter_value(value)));
-    }
-
-    void add_param_value(int value) {
-      current_test_.push_back(std::move(parameter_value(value)));
-    }
-
-    void add_param_value(const std::string &value) {
-      current_test_.push_back(std::move(parameter_value(value)));
-    }
-
-    void add_param_dont_care_value() {
-      current_test_.push_back(std::move(parameter_value("*")));
     }
 
     void end_test(size_t line, size_t col) {
@@ -380,15 +271,8 @@ class test_set_parser::impl : test_set_data_consumer {
     param_identifier_consumer param_identifier_consumer_;
     param_declarations_end_consumer param_declarations_end_consumer_;
     test_value_consumer test_value_consumer_;
-    boolean_value_consumer boolean_value_consumer_;
-    integer_value_consumer integer_value_consumer_;
-    enum_value_consumer enum_value_consumer_;
-    dont_care_consumer dont_care_consumer_;
     test_end_consumer test_end_consumer_;
     peg::parser test_set_parser_;
-    peg::parser boolean_value_parser_;
-    peg::parser integer_value_parser_;
-    peg::parser enum_value_parser_;
     bool error_occurred_;
     std::string error_message_;
     parameter_def current_param_;
