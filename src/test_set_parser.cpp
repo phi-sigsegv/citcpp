@@ -21,7 +21,7 @@ class test_set_data_consumer {
     virtual void add_param_value(const std::string &value) = 0;
     virtual void add_param_value(int value) = 0;
     virtual void add_param_dont_care_value() = 0;
-    virtual void end_test() = 0;
+    virtual void end_test(size_t line, size_t col) = 0;
 };
 
 class param_identifier_consumer {
@@ -130,7 +130,10 @@ class test_end_consumer {
   public:
     test_end_consumer(test_set_data_consumer *consumer) : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) { consumer_->end_test(); }
+    void operator()(const peg::SemanticValues &vs) {
+      auto line_info = vs.line_info();
+      consumer_->end_test(line_info.first, line_info.second);
+    }
 
   private:
     test_set_data_consumer *consumer_;
@@ -139,19 +142,24 @@ class test_end_consumer {
 peg::parser create_test_set_parser(std::string_view separator) {
   using namespace peg;
 
+  std::string trimmed_separator(separator);
+  citcpp::detail::trim(trimmed_separator);
+
   std::stringstream grammar;
 
   grammar << "Root             <- _ ParameterList ParamDelcEnd Tests\n";
-  grammar << "ParameterList    <- Parameter (_ '" << separator
+  grammar << "ParameterList    <- Parameter (_ '" << trimmed_separator
           << "' _ Parameter)*\n";
   grammar << "Parameter        <- [a-zA-Z_] [a-zA-Z0-9_]*\n";
   grammar << "ParamDelcEnd     <- (SpaceChar / Eol)*\n";
   grammar << "Tests            <- (Test)* (SpaceChar / Eol)*\n";
   grammar << "Test             <- _ TestValueList TestEnd\n";
-  grammar << "TestValueList    <- TestValue (_ '" << separator
+  grammar << "TestValueList    <- TestValue ('" << trimmed_separator
           << "' _ TestValue)*\n";
-  grammar << "TestValue        <- (!('" << separator << "' / Eol) .)*\n";
-  grammar << "TestEnd          <- _ Eol\n";
+  grammar << "TestValue        <- (!('" << trimmed_separator
+          << "' / SpaceChar / Eol) .)"
+          << "(!('" << trimmed_separator << "' / Eol) .)*\n";
+  grammar << "TestEnd          <- Eol\n";
   grammar << "~_               <- (SpaceChar)*\n";
   grammar << "SpaceChar        <- ' ' / '\t'\n";
   grammar << "Eol              <- '\r\n' / '\n' / '\r'\n";
@@ -315,6 +323,7 @@ class test_set_parser::impl : test_set_data_consumer {
 
         error_message_ = oss.str();
       }
+
       ++current_param_index_;
     }
 
@@ -334,8 +343,22 @@ class test_set_parser::impl : test_set_data_consumer {
       current_test_.push_back(std::move(parameter_value("*")));
     }
 
-    void end_test() {
-      test_set_->get_list_of_tests().push_back(current_test_);
+    void end_test(size_t line, size_t col) {
+      if (current_param_index_ == test_set_->get_parameters().size()) {
+        test_set_->get_list_of_tests().push_back(current_test_);
+      } else if (current_param_index_ > 0) {
+        error_occurred_ = true;
+        std::ostringstream oss;
+        oss << "Error in test set file at " << line << ":" << col
+            << " -> Test has less values than parameter declarations";
+
+        error_message_ = oss.str();
+      } else {
+        // The case that the testset has too many values is handled in another
+        // rule. So this else case is concerned with a test having zero values.
+        // This is fine however and just indicates an empty line in the testset,
+        // or a line with just whitespace. So we simply ignore that one.
+      }
       current_test_.clear();
       current_param_index_ = 0;
     }

@@ -18,12 +18,12 @@ std::ostream &operator<<(std::ostream &os, const coverage_measurement &covm) {
 
     if (percent_covered >= percent_covered_threshold) {
       const double percent_of_tests =
-          std::round(1000.0 * (double)test_index /
-                     (double)covm.get_covered_tuples().size()) /
+          std::ceil(1000.0 * (double)(test_index + 1) /
+                    (double)covm.get_covered_tuples().size()) /
           10.0;
 
       os << "Coverage >= " << percent_covered << "% = " << num_covered_combos
-         << "/" << num_combos_to_cover << " : " << test_index << "/"
+         << "/" << num_combos_to_cover << " : " << (test_index + 1) << "/"
          << covm.get_covered_tuples().size() << " = " << percent_of_tests
          << "% of tests\n";
 

@@ -162,21 +162,21 @@ ParameterRule    <- (BooleanParam / EnumParam / IntParam)
 
 Identifier       <- [a-zA-Z_] [a-zA-Z0-9_]*
 
-BooleanParam     <- Identifier _ BooleanType _ ':' _ BooleanValueList ParamDelcEnd
+BooleanParam     <- Identifier _ BooleanType _ ':' _ BooleanValueList SpaceChar* ParamDelcEnd
 EnumParam        <- Identifier _ EnumType _ ':' _ EnumValueList ParamDelcEnd
-IntParam         <- Identifier _ IntType _ ':' _ IntegerValueList ParamDelcEnd
+IntParam         <- Identifier _ IntType _ ':' _ IntegerValueList SpaceChar* ParamDelcEnd
 
 BooleanType      <- '(' _ ('boolean'i / 'bool'i) _ ')'
 EnumType         <- '(' _ 'enum'i _ ')'
 IntType          <- '(' _ ('integer'i / 'int'i) _ ')'
 
-ParamDelcEnd     <- SpaceChar* Eol
+ParamDelcEnd     <- Eol
 
 BooleanValueList <- BooleanValue (_ ',' _ BooleanValue)*
 BooleanValue     <- 'true'i / 'false'i
 
 EnumValueList    <- EnumValue (_ ',' _ EnumValue)*
-EnumValue        <- (!(',' / ';' / Eol) .)*
+EnumValue        <- (!(',' / ';' / SpaceChar / Eol) .) (!(',' / ';' / Eol) .)*
 
 IntegerValueList <- IntegerValue (_ ',' _ IntegerValue)*
 IntegerValue     <- [+-]? [0-9]+
