@@ -8,26 +8,26 @@ std::ostream &operator<<(std::ostream &os, const coverage_measurement &covm) {
       covm.get_number_of_combinations_to_cover();
 
   unsigned int test_index = 0;
-  unsigned int five_percent_factor = 1;
-  double cov_threshold = five_percent_factor * 0.05;
+  unsigned int percent_covered_threshold = 5;
   os << "Coverage by tests:\n";
   for (unsigned long long num_covered_combos : covm.get_covered_tuples()) {
     const double fraction_covered =
         (double)num_covered_combos / (double)num_combos_to_cover;
+    const unsigned int percent_covered =
+        (((unsigned int)std::floor(fraction_covered * 100.0)) / 5) * 5;
 
-    if (fraction_covered >= cov_threshold) {
+    if (percent_covered >= percent_covered_threshold) {
       const double percent_of_tests =
           std::round(1000.0 * (double)test_index /
                      (double)covm.get_covered_tuples().size()) /
           10.0;
 
-      os << "Coverage >= " << cov_threshold * 100.0
-         << "% = " << num_covered_combos << "/" << num_combos_to_cover << " : "
-         << test_index << "/" << covm.get_covered_tuples().size() << " = "
-         << percent_of_tests << "% of tests\n";
+      os << "Coverage >= " << percent_covered << "% = " << num_covered_combos
+         << "/" << num_combos_to_cover << " : " << test_index << "/"
+         << covm.get_covered_tuples().size() << " = " << percent_of_tests
+         << "% of tests\n";
 
-      ++five_percent_factor;
-      cov_threshold = five_percent_factor * 0.05;
+      percent_covered_threshold = percent_covered + 5;
     }
 
     ++test_index;
