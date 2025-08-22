@@ -101,9 +101,20 @@ class coverage_measurement {
       covered_tuples_ = covered_tuples;
     }
 
+    void set_coverered_tuples(
+        std::vector<unsigned long long> &&covered_tuples) {
+      covered_tuples_ = std::move(covered_tuples);
+    }
+
     coverage_measurement &coverered_tuples(
         const std::vector<unsigned long long> &covered_tuples) {
       covered_tuples_ = covered_tuples;
+      return *this;
+    }
+
+    coverage_measurement &coverered_tuples(
+        std::vector<unsigned long long> &&covered_tuples) {
+      covered_tuples_ = std::move(covered_tuples);
       return *this;
     }
 
@@ -173,11 +184,24 @@ class coverage_measurement {
       cov_level_to_num_param_combos_ = cov_level_to_num_param_combos;
     }
 
+    void set_coverage_level_to_num_param_combos(
+        t_coverage_level_to_num_param_combos &&cov_level_to_num_param_combos) {
+
+      cov_level_to_num_param_combos_ = std::move(cov_level_to_num_param_combos);
+    }
+
     coverage_measurement &coverage_level_to_num_param_combos(
         const t_coverage_level_to_num_param_combos
             &cov_level_to_num_param_combos) {
 
       cov_level_to_num_param_combos_ = cov_level_to_num_param_combos;
+      return *this;
+    }
+
+    coverage_measurement &coverage_level_to_num_param_combos(
+        t_coverage_level_to_num_param_combos &&cov_level_to_num_param_combos) {
+
+      cov_level_to_num_param_combos_ = std::move(cov_level_to_num_param_combos);
       return *this;
     }
 

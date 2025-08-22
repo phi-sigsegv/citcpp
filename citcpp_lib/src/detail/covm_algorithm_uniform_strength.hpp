@@ -5,6 +5,7 @@
 
 #include "coverage_map.hpp"
 #include "covm_exec_handle_impl.hpp"
+#include "datatypes_config.hpp"
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
 
