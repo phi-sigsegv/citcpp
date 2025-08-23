@@ -288,7 +288,16 @@ int execute_covm(const std::string &model_file_path,
 
 }  // namespace
 
-void signal_handler(int signal) { g_signal_status = signal; }
+void signal_handler(int signal) {
+  g_signal_status = signal;
+
+  // Restore the default signal handler. This ensures that
+  // we can send SIGINT again, but the second time it really terminates
+  // the program.
+  // This is useful, if our graceful termination strategy takes too
+  // long because we are not checking the corresponding flag often enough.
+  std::signal(SIGINT, SIG_DFL);
+}
 
 int main(int argc, char *argv[]) {
   using namespace citcpp;
