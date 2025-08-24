@@ -132,10 +132,10 @@ class compute_partial_sum_with_parameter_map_task
     this_type &operator=(this_type &&) = delete;
 
     void operator()() {
-      unsigned long long chunk_num_combos =
-          recursive_combine_and_sum(start_idx_for_next_ - 1, current_level_ - 1,
-                                    (*factorLevels_)[start_idx_for_next_],
-                                    *factorLevels_, *parameter_index_map_);
+      unsigned long long chunk_num_combos = recursive_combine_and_sum(
+          start_idx_for_next_ - 1, current_level_ - 1,
+          (*factorLevels_)[(*parameter_index_map_)[start_idx_for_next_]],
+          *factorLevels_, *parameter_index_map_);
       num_combinations_->fetch_add(chunk_num_combos, std::memory_order_acq_rel);
     }
 
