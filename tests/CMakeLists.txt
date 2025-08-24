@@ -13,7 +13,7 @@ list(APPEND CITCPP_UNITTESTS
 foreach(unittest IN LISTS CITCPP_UNITTESTS)
   add_executable(${unittest} ${unittest}.cpp)
   target_link_libraries(${unittest} citcpp_lib)
-  target_include_directories(${unittest} PRIVATE ${CITCPP_3RD_PARTY_DIR}/doctest)
+  target_include_directories(${unittest} PRIVATE "${CITCPP_3RD_PARTY_DIR}/doctest")
   doctest_discover_tests(${unittest})
 endforeach()
 

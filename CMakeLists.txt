@@ -28,7 +28,7 @@ set(CITCPP_EXE_SOURCES
 configure_file(src/config.hpp.in config.hpp)
 
 add_executable(citcpp_exe ${CITCPP_EXE_SOURCES})
-target_include_directories(citcpp_exe PUBLIC "${PROJECT_BINARY_DIR}" ${CITCPP_3RD_PARTY_DIR}/cpp-peglib ${CITCPP_3RD_PARTY_DIR}/CLI11)
+target_include_directories(citcpp_exe PUBLIC "${PROJECT_BINARY_DIR}" "${CITCPP_3RD_PARTY_DIR}/cpp-peglib" "${CITCPP_3RD_PARTY_DIR}/CLI11")
 target_link_libraries(citcpp_exe PUBLIC citcpp_lib)
 set_property(TARGET citcpp_exe PROPERTY OUTPUT_NAME citcpp)
 
