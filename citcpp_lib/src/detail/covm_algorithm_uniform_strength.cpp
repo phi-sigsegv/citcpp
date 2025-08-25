@@ -17,7 +17,7 @@ class covm_per_param_combo_functor {
   public:
     covm_per_param_combo_functor(
         const citcpp::detail::model &model,
-        const citcpp::detail::test_set &test_set,
+        const citcpp::detail::internal_test_set &test_set,
         citcpp::detail::covm_exec_handle_impl &exec_handle,
         citcpp::coverage_measurement &covm)
         : model_(model),
@@ -92,7 +92,7 @@ class covm_per_param_combo_functor {
 
   private:
     const citcpp::detail::model &model_;
-    const citcpp::detail::test_set &test_set_;
+    const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
     std::vector<unsigned long long> covered_tuples_;
     citcpp::coverage_measurement &covm_;
@@ -102,7 +102,7 @@ class covm_per_param_combo_functor_parallel {
   public:
     covm_per_param_combo_functor_parallel(
         const citcpp::detail::model &model,
-        const citcpp::detail::test_set &test_set,
+        const citcpp::detail::internal_test_set &test_set,
         citcpp::detail::covm_exec_handle_impl &exec_handle,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
         : model_(model),
@@ -209,7 +209,7 @@ class covm_per_param_combo_functor_parallel {
 
   private:
     const citcpp::detail::model &model_;
-    const citcpp::detail::test_set &test_set_;
+    const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
     citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>>
         covered_tuples_;
@@ -224,7 +224,7 @@ class covm_per_param_combo_functor_parallel {
 namespace citcpp {
 namespace detail {
 
-void measure_coverage(const model &model, const test_set &test_set,
+void measure_coverage(const model &model, const internal_test_set &test_set,
                       coverage_map &cov_map, covm_exec_handle_impl &exec_handle,
                       citcpp::coverage_measurement &covm) {
 
@@ -248,7 +248,7 @@ void measure_coverage(const model &model, const test_set &test_set,
   covm.set_coverered_tuples(std::move(covered_tuples));
 }
 
-void measure_coverage(const model &model, const test_set &test_set,
+void measure_coverage(const model &model, const internal_test_set &test_set,
                       coverage_map &cov_map, covm_exec_handle_impl &exec_handle,
                       citcpp::coverage_measurement &covm, thread_pool &tp) {
 

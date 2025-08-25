@@ -843,7 +843,8 @@ class ipog_vertical_extension_functor {
   public:
     ipog_vertical_extension_functor(
         const unsigned int current_param_idx,
-        const citcpp::detail::model &model, citcpp::detail::test_set &test_set,
+        const citcpp::detail::model &model,
+        citcpp::detail::internal_test_set &test_set,
         citcpp::detail::ipog_horizontal_extension_result
             &partitioning_of_tests_according_to_current_values,
         const unsigned long long num_missing_combinations_to_cover)
@@ -999,7 +1000,7 @@ class ipog_vertical_extension_functor {
   private:
     const unsigned int current_param_idx_;
     const citcpp::detail::model &model_;
-    citcpp::detail::test_set &test_set_;
+    citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values_;
     const unsigned long long num_missing_combinations_to_cover_;
@@ -1014,7 +1015,7 @@ namespace detail {
 create_all_value_combinations_result create_all_value_combinations(
     unsigned int strength, const model &model,
     const std::vector<unsigned int> &parameter_index_map,
-    citcpp::detail::test_set &test_set) {
+    citcpp::detail::internal_test_set &test_set) {
   auto l_map_to_param_idx = [&parameter_index_map](int idx) {
     return parameter_index_map[idx];
   };
@@ -1059,7 +1060,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned int current_param_idx, const unsigned int strength,
     const model &model, const std::vector<unsigned int> &parameter_index_map,
     const unsigned long long num_missing_combinations_to_cover,
-    test_set &test_set, coverage_map &cov_map) {
+    internal_test_set &test_set, coverage_map &cov_map) {
   const unsigned int real_current_param_idx =
       parameter_index_map[current_param_idx];
   const int num_current_param_values =
@@ -1159,7 +1160,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned int current_param_idx, const unsigned int strength,
     const model &model, const std::vector<unsigned int> &parameter_index_map,
     const unsigned long long num_missing_combinations_to_cover,
-    test_set &test_set, coverage_map &cov_map, thread_pool &tp) {
+    internal_test_set &test_set, coverage_map &cov_map, thread_pool &tp) {
   const unsigned int real_current_param_idx =
       parameter_index_map[current_param_idx];
   const int num_current_param_values =
@@ -1261,7 +1262,7 @@ ipog_vertical_extension_result ipog_vertical_extension(
     const unsigned long long num_missing_combinations_to_cover,
     ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values,
-    test_set &test_set, coverage_map &cov_map) {
+    internal_test_set &test_set, coverage_map &cov_map) {
   // First initialize the result object.
   ipog_vertical_extension_result result = {0};
 

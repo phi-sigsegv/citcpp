@@ -32,7 +32,7 @@ get_parameter_indices_ordered_by_number_of_values_desc(
 }
 
 void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
-                    citcpp::detail::test_set &test_set,
+                    citcpp::detail::internal_test_set &test_set,
                     const citcpp::covering_array_computation_config config,
                     citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
   using namespace citcpp::detail;
@@ -143,7 +143,7 @@ void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
   }
 }
 
-void replace_dont_care_values(citcpp::detail::test_set &test_set,
+void replace_dont_care_values(citcpp::detail::internal_test_set &test_set,
                               const citcpp::detail::model &model) {
   using namespace citcpp::detail;
 
@@ -183,12 +183,12 @@ void citcpp_ipog::set_interaction_strength(unsigned int t) { strength_ = t; }
 void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl &exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  citcpp::detail::test_set tests;
+  citcpp::detail::internal_test_set tests;
   main_ipog_loop(model_, strength_, tests, config_, exec_handle);
   if (config_.replace_dont_care_values()) {
     replace_dont_care_values(tests, model_);
   }
-  ::citcpp::test_set ts(
+  test_set ts(
       model_.create_from_internal_test_set(tests, config_.value_separator()));
 
   const auto t_end = std::chrono::high_resolution_clock::now();

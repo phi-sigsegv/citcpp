@@ -20,9 +20,9 @@ class covm_exec_handle_impl;
  */
 class citcpp_covm {
   public:
-    citcpp_covm(const input_model &input_model, const citcpp::test_set &tests,
+    citcpp_covm(const input_model &input_model, const test_set &tests,
                 const coverage_measurement_config &config);
-    citcpp_covm(input_model &&input_model, citcpp::test_set &&tests,
+    citcpp_covm(input_model &&input_model, test_set &&tests,
                 const coverage_measurement_config &config);
 
     /**
@@ -45,11 +45,11 @@ class citcpp_covm {
     void entry_point(covm_exec_handle_impl &exec_handle);
 
   private:
-    const citcpp::coverage_measurement_config config_;
-    const citcpp::input_model input_model_;
+    const coverage_measurement_config config_;
+    const input_model input_model_;
     const model model_;
-    const citcpp::test_set input_tests_;
-    const test_set tests_;
+    const test_set input_tests_;
+    const internal_test_set tests_;
     unsigned int strength_;
 };
 

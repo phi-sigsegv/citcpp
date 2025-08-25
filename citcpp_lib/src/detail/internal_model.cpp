@@ -14,29 +14,29 @@ model::model(const input_model &input_model)
 
 const input_model &model::get_input_model() const { return input_model_; }
 
-citcpp::test_set model::create_from_internal_test_set(
-    const citcpp::detail::test_set &test_set) const {
+test_set model::create_from_internal_test_set(
+    const internal_test_set &int_test_set) const {
 
-  citcpp::test_set ret(DEFAULT_VALUE_SEPARATOR);
+  test_set ret(DEFAULT_VALUE_SEPARATOR);
 
-  convert_test_set(test_set, ret);
+  convert_test_set(int_test_set, ret);
 
   return ret;
 }
 
-citcpp::test_set model::create_from_internal_test_set(
-    const citcpp::detail::test_set &test_set,
+test_set model::create_from_internal_test_set(
+    const internal_test_set &int_test_set,
     std::string_view value_separator) const {
 
-  citcpp::test_set ret(value_separator);
+  test_set ret(value_separator);
 
-  convert_test_set(test_set, ret);
+  convert_test_set(int_test_set, ret);
 
   return ret;
 }
 
-void model::convert_test_set(const citcpp::detail::test_set &src,
-                             citcpp::test_set &tgt) const {
+void model::convert_test_set(const internal_test_set &src,
+                             test_set &tgt) const {
 
   for (const parameter &param : input_model_.get_parameters()) {
     tgt.add_parameter(

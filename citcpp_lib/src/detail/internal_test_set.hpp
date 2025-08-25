@@ -96,7 +96,7 @@ class test : public sl_list_node_intrusive {
 /**
  * This class represents a produced test set.
  */
-class test_set {
+class internal_test_set {
   public:
     const std::list<test>& get_list_of_tests() const { return testset_; }
 

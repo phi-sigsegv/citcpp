@@ -29,7 +29,7 @@ struct create_all_value_combinations_result {
 create_all_value_combinations_result create_all_value_combinations(
     unsigned int strength, const model &model,
     const std::vector<unsigned int> &parameter_index_map,
-    citcpp::detail::test_set &test_set);
+    citcpp::detail::internal_test_set &test_set);
 
 struct ipog_horizontal_extension_result {
     std::vector<list_intrusive<test>> value_to_row_mapping;
@@ -41,13 +41,13 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned int current_param_idx, const unsigned int strength,
     const model &model, const std::vector<unsigned int> &parameter_index_map,
     const unsigned long long num_missing_combinations_to_cover,
-    test_set &test_set, coverage_map &cov_map);
+    internal_test_set &test_set, coverage_map &cov_map);
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned int current_param_idx, const unsigned int strength,
     const model &model, const std::vector<unsigned int> &parameter_index_map,
     const unsigned long long num_missing_combinations_to_cover,
-    test_set &test_set, coverage_map &cov_map, thread_pool &tp);
+    internal_test_set &test_set, coverage_map &cov_map, thread_pool &tp);
 
 struct ipog_vertical_extension_result {
     unsigned long long num_new_covered_tuples;
@@ -58,7 +58,7 @@ ipog_vertical_extension_result ipog_vertical_extension(
     const unsigned long long num_missing_combinations_to_cover,
     ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values,
-    test_set &test_set, coverage_map &cov_map);
+    internal_test_set &test_set, coverage_map &cov_map);
 
 }  // namespace detail
 }  // namespace citcpp

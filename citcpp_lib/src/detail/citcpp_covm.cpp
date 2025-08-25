@@ -17,7 +17,7 @@
 
 namespace {
 
-citcpp::detail::test_set create_internal_test_set(
+citcpp::detail::internal_test_set create_internal_test_set(
     const citcpp::input_model input_model, const citcpp::test_set &tests) {
   using namespace citcpp::detail;
 
@@ -71,7 +71,7 @@ citcpp::detail::test_set create_internal_test_set(
     }
   }
 
-  citcpp::detail::test_set internal_test_set;
+  citcpp::detail::internal_test_set internal_test_set;
 
   {
     for (const std::vector<citcpp::parameter_value> &values :
@@ -107,7 +107,7 @@ citcpp::detail::test_set create_internal_test_set(
 }
 
 void main_covm_loop(const citcpp::detail::model &model,
-                    const citcpp::detail::test_set &test_set,
+                    const citcpp::detail::internal_test_set &test_set,
                     const citcpp::coverage_measurement_config &config,
                     unsigned int strength, citcpp::coverage_measurement &covm,
                     citcpp::detail::covm_exec_handle_impl &exec_handle) {
@@ -153,8 +153,7 @@ void main_covm_loop(const citcpp::detail::model &model,
 namespace citcpp {
 namespace detail {
 
-citcpp_covm::citcpp_covm(const input_model &input_model,
-                         const citcpp::test_set &tests,
+citcpp_covm::citcpp_covm(const input_model &input_model, const test_set &tests,
                          const coverage_measurement_config &config)
     : config_(config),
       input_model_(input_model),
@@ -163,7 +162,7 @@ citcpp_covm::citcpp_covm(const input_model &input_model,
       tests_(create_internal_test_set(input_model_, input_tests_)),
       strength_(1) {}
 
-citcpp_covm::citcpp_covm(input_model &&input_model, citcpp::test_set &&tests,
+citcpp_covm::citcpp_covm(input_model &&input_model, test_set &&tests,
                          const coverage_measurement_config &config)
     : config_(config),
       input_model_(std::move(input_model)),
