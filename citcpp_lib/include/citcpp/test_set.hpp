@@ -88,6 +88,10 @@ class test_set {
       return test_set_;
     }
 
+    bool operator==(const test_set &other) const {
+      return parameters_ == other.parameters_ && test_set_ == other.test_set_;
+    }
+
     friend std::ostream &operator<<(std::ostream &os, const test_set &test_set);
 
   private:

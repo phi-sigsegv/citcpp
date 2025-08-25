@@ -28,6 +28,27 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
                                      covering_array_computation_config());
 }
 
+std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
+    input_model input_model, test_set tests, unsigned int t,
+    const covering_array_computation_config &config) {
+
+  auto ipog_algo = std::make_unique<detail::citcpp_ipog>(
+      std::move(input_model), std::move(tests), config);
+
+  ipog_algo->set_interaction_strength(t);
+
+  detail::cagen_exec_handle_ipog_impl *handle =
+      new detail::cagen_exec_handle_ipog_impl();
+  handle->set_runnable(std::move(ipog_algo));
+  return std::unique_ptr<cagen_exec_handle_ipog>(handle);
+}
+
+std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
+    input_model input_model, test_set tests, unsigned int t) {
+  return compute_covering_array_ipog(input_model, tests, t,
+                                     covering_array_computation_config());
+}
+
 std::unique_ptr<covm_exec_handle> measure_coverage(
     input_model input_model, test_set tests, unsigned int t,
     const coverage_measurement_config &config) {

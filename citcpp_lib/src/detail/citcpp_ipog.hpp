@@ -3,6 +3,7 @@
 
 #include <citcpp/citcpp_config.hpp>
 #include <citcpp/input_model.hpp>
+#include <citcpp/test_set.hpp>
 
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
@@ -22,6 +23,10 @@ class citcpp_ipog {
     citcpp_ipog(const input_model &input_model,
                 const covering_array_computation_config &config);
     citcpp_ipog(input_model &&input_model,
+                const covering_array_computation_config &config);
+    citcpp_ipog(const input_model &input_model, const citcpp::test_set &tests,
+                const covering_array_computation_config &config);
+    citcpp_ipog(input_model &&input_model, test_set &&tests,
                 const covering_array_computation_config &config);
 
     /**
@@ -47,6 +52,7 @@ class citcpp_ipog {
     const citcpp::covering_array_computation_config config_;
     const citcpp::input_model input_model_;
     const model model_;
+    const internal_test_set input_tests_;
     unsigned int strength_;
 };
 

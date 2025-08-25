@@ -1,0 +1,26 @@
+#ifndef IPOG_VERTICAL_EXTENSION_HPP_
+#define IPOG_VERTICAL_EXTENSION_HPP_
+
+#include "coverage_map.hpp"
+#include "internal_model.hpp"
+#include "internal_test_set.hpp"
+#include "ipog_horizontal_extension.hpp"
+
+namespace citcpp {
+namespace detail {
+
+struct ipog_vertical_extension_result {
+    unsigned long long num_new_covered_tuples;
+};
+
+ipog_vertical_extension_result ipog_vertical_extension(
+    const unsigned int current_param_idx, const model &model,
+    const unsigned long long num_missing_combinations_to_cover,
+    ipog_horizontal_extension_result
+        &partitioning_of_tests_according_to_current_values,
+    internal_test_set &test_set, coverage_map &cov_map);
+
+}  // namespace detail
+}  // namespace citcpp
+
+#endif /* IPOG_VERTICAL_EXTENSION_HPP_ */

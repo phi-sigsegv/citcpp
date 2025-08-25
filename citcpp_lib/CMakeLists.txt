@@ -11,7 +11,10 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/coverage_map.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/for_each_cross_product_elem.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/internal_model.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_algorithm_uniform_strength.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_all_value_combinations.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_horizontal_extension.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_measure_testset.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_vertical_extension.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/covm_algorithm_uniform_strength.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_covm.cpp

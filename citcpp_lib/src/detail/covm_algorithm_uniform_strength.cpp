@@ -2,11 +2,9 @@
 
 #include <new>
 
-namespace {
+#include "citcpp_utils.hpp"
 
-struct alignas(std::hardware_destructive_interference_size) aligned_ull_value {
-    unsigned long long value;
-};
+namespace {
 
 struct alignas(std::hardware_destructive_interference_size)
     aligned_coverage_level_to_num_param_combos {
@@ -109,7 +107,7 @@ class covm_per_param_combo_functor_parallel {
           test_set_(test_set),
           exec_handle_(exec_handle),
           covered_tuples_(cov_map_it.get_num_workers(),
-                          std::vector<aligned_ull_value>(
+                          std::vector<citcpp::detail::aligned_ull_value>(
                               test_set.get_list_of_tests().size())),
           cov_level_to_num_param_combos_(cov_map_it.get_num_workers()),
           cov_map_it_(cov_map_it) {}
@@ -194,7 +192,8 @@ class covm_per_param_combo_functor_parallel {
       return true;
     }
 
-    const citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>> &
+    const citcpp::detail::thread_local_vector<
+        std::vector<citcpp::detail::aligned_ull_value>> &
     get_coverered_tuples() const {
 
       return covered_tuples_;
@@ -211,7 +210,8 @@ class covm_per_param_combo_functor_parallel {
     const citcpp::detail::model &model_;
     const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
-    citcpp::detail::thread_local_vector<std::vector<aligned_ull_value>>
+    citcpp::detail::thread_local_vector<
+        std::vector<citcpp::detail::aligned_ull_value>>
         covered_tuples_;
     citcpp::detail::thread_local_vector<
         aligned_coverage_level_to_num_param_combos>
