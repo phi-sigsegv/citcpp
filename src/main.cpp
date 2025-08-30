@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <ios>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <thread>
 
@@ -38,14 +39,13 @@ class InteractionStrengthValidator : public CLI::Validator {
     }
 };
 
-int execute_cagen(const std::string &model_file_path,
-                  const std::string &test_set_file_path,
-                  int interaction_strength, bool show_progress,
-                  const std::string &sep, bool parallel, bool rand_star) {
+std::unique_ptr<citcpp::input_model> read_model_file(
+    const std::string &model_file_path, bool &ok) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
-  using namespace std::chrono_literals;
+
+  ok = true;
 
   // We read the ACTS model file into a string.
   std::ifstream model_file_is{model_file_path};
@@ -53,6 +53,85 @@ int execute_cagen(const std::string &model_file_path,
     std::cerr << "Cannot open model file " << model_file_path << " for reading"
               << std::endl;
 
+    ok = false;
+    return std::unique_ptr<citcpp::input_model>();
+  }
+
+  std::ostringstream model_file_oss{};
+  model_file_oss << model_file_is.rdbuf();
+
+  acts_model_parser acts_parser;
+  std::unique_ptr<citcpp::input_model> model =
+      std::make_unique<citcpp::input_model>();
+  if (!acts_parser.parse_input_model(model_file_oss.view(), *model)) {
+    std::cerr << acts_parser.get_last_error_message() << std::endl;
+
+    ok = false;
+    return std::unique_ptr<citcpp::input_model>();
+  }
+
+  return model;
+}
+
+std::unique_ptr<citcpp::test_set> read_test_set_file(
+    const citcpp::input_model &model, const std::string &test_set_file_path,
+    const std::string &sep, bool optional, bool &ok) {
+
+  using namespace citcpp;
+  using namespace citcpp::detail;
+
+  ok = true;
+
+  if (test_set_file_path.empty()) {
+    return std::unique_ptr<citcpp::test_set>();
+  }
+
+  // We read the testset file into a string.
+  std::ifstream test_set_file_is{test_set_file_path};
+  if (!test_set_file_is.is_open()) {
+    std::cerr << "Cannot open testset file " << test_set_file_path
+              << " for reading" << std::endl;
+
+    ok = false;
+    return std::unique_ptr<citcpp::test_set>();
+  }
+
+  std::ostringstream test_set_file_oss{};
+  test_set_file_oss << test_set_file_is.rdbuf();
+
+  test_set_parser testset_parser(model, sep);
+  std::unique_ptr<citcpp::test_set> tests =
+      std::make_unique<citcpp::test_set>();
+  if (!testset_parser.parse_test_set(test_set_file_oss.view(), *tests)) {
+    std::cerr << testset_parser.get_last_error_message() << std::endl;
+
+    ok = false;
+    return std::unique_ptr<citcpp::test_set>();
+  }
+
+  return tests;
+}
+
+int execute_cagen(const std::string &model_file_path,
+                  const std::string &test_set_file_path,
+                  const std::string &seed_test_set_file_path,
+                  int interaction_strength, bool show_progress,
+                  const std::string &sep, bool parallel, bool rand_star) {
+
+  using namespace citcpp;
+  using namespace citcpp::detail;
+  using namespace std::chrono_literals;
+
+  bool read_ok = false;
+  std::unique_ptr<citcpp::input_model> model =
+      read_model_file(model_file_path, read_ok);
+  if (!read_ok) {
+    return 1;
+  }
+
+  std::unique_ptr<citcpp::test_set> seed_test_set =
+      read_test_set_file(*model, seed_test_set_file_path, sep, true, read_ok);
+  if (!read_ok) {
     return 1;
   }
 
@@ -65,28 +144,24 @@ int execute_cagen(const std::string &model_file_path,
     return 1;
   }
 
-  std::ostringstream model_file_oss{};
-  model_file_oss << model_file_is.rdbuf();
-
-  acts_model_parser acts_parser;
-  input_model model;
-  if (!acts_parser.parse_input_model(model_file_oss.view(), model)) {
-    std::cerr << acts_parser.get_last_error_message() << std::endl;
-
-    return 1;
-  }
-
-  std::cout << "System name : " << model.get_name() << "\n" << std::endl;
+  std::cout << "System name : " << model->get_name() << "\n" << std::endl;
   std::cout << "Strength    : " << interaction_strength << std::endl;
-  std::cout << "Parameters  : " << model.get_parameters().size() << "\n"
+  std::cout << "Parameters  : " << model->get_parameters().size() << "\n"
             << std::endl;
 
   std::unique_ptr<cagen_exec_handle_ipog> handle =
-      compute_covering_array_ipog(model, interaction_strength,
-                                  covering_array_computation_config()
-                                      .with_replace_dont_care_values(rand_star)
-                                      .with_multithreading_enabled(parallel)
-                                      .with_value_separator(sep));
+      seed_test_set ? compute_covering_array_ipog(
+                          *model, *seed_test_set, interaction_strength,
+                          covering_array_computation_config()
+                              .with_replace_dont_care_values(rand_star)
+                              .with_multithreading_enabled(parallel)
+                              .with_value_separator(sep))
+                    : compute_covering_array_ipog(
+                          *model, interaction_strength,
+                          covering_array_computation_config()
+                              .with_replace_dont_care_values(rand_star)
+                              .with_multithreading_enabled(parallel)
+                              .with_value_separator(sep));
 
   const auto default_precision{std::cout.precision()};
   std::cout << std::setprecision(1);
@@ -106,7 +181,7 @@ int execute_cagen(const std::string &model_file_path,
       std::cout << "tuples: (" << num_covered_combos << " / "
                 << num_combos_to_cover << ") " << precent_done << "%, params: ("
                 << handle->get_number_of_processed_parameters() << " / "
-                << model.get_parameters().size() << "), "
+                << model->get_parameters().size() << "), "
                 << handle->get_testset_size() << " tests" << std::flush;
     }
 
@@ -127,7 +202,7 @@ int execute_cagen(const std::string &model_file_path,
   std::cout << "tuples: (" << num_covered_combos << " / " << num_combos_to_cover
             << ") " << precent_done << "%, params: ("
             << handle->get_number_of_processed_parameters() << " / "
-            << model.get_parameters().size() << "), "
+            << model->get_parameters().size() << "), "
             << handle->get_testset_size() << " tests\n"
             << std::endl;
 
@@ -164,21 +239,16 @@ int execute_covm(const std::string &model_file_path,
   using namespace citcpp::detail;
   using namespace std::chrono_literals;
 
-  // We read the ACTS model file into a string.
-  std::ifstream model_file_is{model_file_path};
-  if (!model_file_is.is_open()) {
-    std::cerr << "Cannot open model file " << model_file_path << " for reading"
-              << std::endl;
-
+  bool read_ok = false;
+  std::unique_ptr<citcpp::input_model> model =
+      read_model_file(model_file_path, read_ok);
+  if (!read_ok) {
     return 1;
   }
 
-  // We read the testset file into a string.
-  std::ifstream test_set_file_is{test_set_file_path};
-  if (!test_set_file_is.is_open()) {
-    std::cerr << "Cannot open testset file " << test_set_file_path
-              << " for reading" << std::endl;
-
+  std::unique_ptr<citcpp::test_set> tests =
+      read_test_set_file(*model, test_set_file_path, sep, false, read_ok);
+  if (!read_ok) {
     return 1;
   }
 
@@ -191,36 +261,14 @@ int execute_covm(const std::string &model_file_path,
     return 1;
   }
 
-  std::ostringstream model_file_oss{};
-  model_file_oss << model_file_is.rdbuf();
-
-  acts_model_parser acts_parser;
-  input_model model;
-  if (!acts_parser.parse_input_model(model_file_oss.view(), model)) {
-    std::cerr << acts_parser.get_last_error_message() << std::endl;
-
-    return 1;
-  }
-
-  std::ostringstream test_set_file_oss{};
-  test_set_file_oss << test_set_file_is.rdbuf();
-
-  test_set_parser testset_parser(model, sep);
-  test_set tests;
-  if (!testset_parser.parse_test_set(test_set_file_oss.view(), tests)) {
-    std::cerr << testset_parser.get_last_error_message() << std::endl;
-
-    return 1;
-  }
-
-  std::cout << "System name : " << model.get_name() << "\n" << std::endl;
+  std::cout << "System name : " << model->get_name() << "\n" << std::endl;
   std::cout << "Strength    : " << interaction_strength << std::endl;
-  std::cout << "Parameters  : " << model.get_parameters().size() << std::endl;
-  std::cout << "Testset size: " << tests.get_list_of_tests().size() << "\n"
+  std::cout << "Parameters  : " << model->get_parameters().size() << std::endl;
+  std::cout << "Testset size: " << tests->get_list_of_tests().size() << "\n"
             << std::endl;
 
   std::unique_ptr<covm_exec_handle> handle =
-      measure_coverage(model, tests, interaction_strength,
+      measure_coverage(*model, *tests, interaction_strength,
                        coverage_measurement_config()
                            .with_multithreading_enabled(parallel)
                            .with_value_separator(sep));
@@ -347,6 +395,12 @@ int main(int argc, char *argv[]) {
       "not randomize don't care values, i.e. to keep them in the generated "
       "testset. The default value is \"on\".");
 
+  std::string seed_test_set_file_path{""};
+  command_cagen->add_option(
+      "--seed-testset_file", seed_test_set_file_path,
+      "This is the path where the seed testset is located that "
+      "shall be extended.");
+
   std::string model_file_path{""};
   command_cagen
       ->add_option(
@@ -425,8 +479,8 @@ int main(int argc, char *argv[]) {
 
   if (command_cagen->parsed()) {
     return execute_cagen(model_file_path, test_set_file_path,
-                         interaction_strength, show_progress, sep, parallel,
-                         rand_star);
+                         seed_test_set_file_path, interaction_strength,
+                         show_progress, sep, parallel, rand_star);
   }
   if (command_cov_measure->parsed()) {
     return execute_covm(model_file_path, test_set_file_path,
