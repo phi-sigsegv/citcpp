@@ -34,6 +34,77 @@ get_parameter_indices_ordered_by_number_of_values_desc(
   return parameter_index_map;
 }
 
+void main_ipog_loop_body(
+    const citcpp::detail::model &model, unsigned int strength,
+    const std::vector<unsigned int> &parameter_index_map,
+    citcpp::detail::internal_test_set &test_set, unsigned int current_param_idx,
+    const bool with_mt,
+    const citcpp::detail::binom_coeff_table &binomial_coeffs,
+    citcpp::detail::thread_pool &tp,
+    citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
+  using namespace citcpp::detail;
+
+  if (model.get_parameters()[parameter_index_map[current_param_idx]] <= 1) {
+    // If the current parameter only has only value, then
+    // we can treat this situation much simpler: We just have
+    // to add that particular value to each test and update
+    // the number of covered combinations.
+    for (test &t : test_set.get_list_of_tests()) {
+      t.get_values()[parameter_index_map[current_param_idx]] = 0;
+    }
+
+    unsigned long long number_combos_to_cover =
+        current_param_idx == 0
+            ? 1
+            : (with_mt ? number_of_combinations_to_cover(
+                             tp, current_param_idx, model, parameter_index_map,
+                             strength - 1)
+                       : number_of_combinations_to_cover(
+                             current_param_idx, model, parameter_index_map,
+                             strength - 1));
+    tp.stop_workers();
+    exec_handle.add_number_of_covered_combinations(number_combos_to_cover);
+  } else {
+    coverage_map cov_map(current_param_idx + 1, strength, model,
+                         parameter_index_map, binomial_coeffs, true);
+
+    unsigned long long number_combos_to_cover =
+        cov_map.get_total_number_of_tuples();
+
+    auto horizontal_ext_res =
+        with_mt ? ipog_horizontal_extension(
+                      current_param_idx, strength, model, parameter_index_map,
+                      number_combos_to_cover, test_set, cov_map, tp)
+                : ipog_horizontal_extension(
+                      current_param_idx, strength, model, parameter_index_map,
+                      number_combos_to_cover, test_set, cov_map);
+    tp.stop_workers();
+
+    number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
+    exec_handle.add_number_of_covered_combinations(
+        horizontal_ext_res.num_new_covered_tuples);
+    exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
+
+    if (exec_handle.is_job_aborted()) {
+      exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
+      return;
+    }
+
+    if (number_combos_to_cover > 0) {
+      auto vertical_ext_res = ipog_vertical_extension(
+          current_param_idx, model, number_combos_to_cover, horizontal_ext_res,
+          test_set, cov_map);
+
+      number_combos_to_cover -= vertical_ext_res.num_new_covered_tuples;
+      exec_handle.add_number_of_covered_combinations(
+          vertical_ext_res.num_new_covered_tuples);
+      exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
+    }
+  }
+
+  exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
+}
+
 void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
                     citcpp::detail::internal_test_set &test_set,
                     const citcpp::covering_array_computation_config config,
@@ -74,76 +145,19 @@ void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
     exec_handle.set_number_of_processed_parameters(strength);
   }
 
-  {
-    // Here is the main IPOG loop.
-    const binom_coeff_table binomial_coeffs(parameter_index_map.size());
+  // Here is the main IPOG loop.
+  const binom_coeff_table binomial_coeffs(parameter_index_map.size());
 
-    for (unsigned int current_param_idx = strength;
-         current_param_idx < parameter_index_map.size(); ++current_param_idx) {
+  for (unsigned int current_param_idx = strength;
+       current_param_idx < parameter_index_map.size(); ++current_param_idx) {
 
-      if (exec_handle.is_job_aborted()) {
-        return;
-      }
-
-      if (model.get_parameters()[parameter_index_map[current_param_idx]] <= 1) {
-        // If the current parameter only has only value, then
-        // we can treat this situation much simpler: We just have
-        // to add that particular value to each test and update
-        // the number of covered combinations.
-        for (test &t : test_set.get_list_of_tests()) {
-          t.get_values()[parameter_index_map[current_param_idx]] = 0;
-        }
-
-        unsigned long long number_combos_to_cover =
-            with_mt ? number_of_combinations_to_cover(
-                          tp, current_param_idx, model, parameter_index_map,
-                          strength - 1)
-                    : number_of_combinations_to_cover(current_param_idx, model,
-                                                      parameter_index_map,
-                                                      strength - 1);
-        tp.stop_workers();
-        exec_handle.add_number_of_covered_combinations(number_combos_to_cover);
-      } else {
-        coverage_map cov_map(current_param_idx + 1, strength, model,
-                             parameter_index_map, binomial_coeffs, true);
-
-        unsigned long long number_combos_to_cover =
-            cov_map.get_total_number_of_tuples();
-
-        auto horizontal_ext_res =
-            with_mt
-                ? ipog_horizontal_extension(
-                      current_param_idx, strength, model, parameter_index_map,
-                      number_combos_to_cover, test_set, cov_map, tp)
-                : ipog_horizontal_extension(
-                      current_param_idx, strength, model, parameter_index_map,
-                      number_combos_to_cover, test_set, cov_map);
-        tp.stop_workers();
-
-        number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
-        exec_handle.add_number_of_covered_combinations(
-            horizontal_ext_res.num_new_covered_tuples);
-        exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
-
-        if (exec_handle.is_job_aborted()) {
-          exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
-          return;
-        }
-
-        if (number_combos_to_cover > 0) {
-          auto vertical_ext_res = ipog_vertical_extension(
-              current_param_idx, model, number_combos_to_cover,
-              horizontal_ext_res, test_set, cov_map);
-
-          number_combos_to_cover -= vertical_ext_res.num_new_covered_tuples;
-          exec_handle.add_number_of_covered_combinations(
-              vertical_ext_res.num_new_covered_tuples);
-          exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
-        }
-      }
-
-      exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
+    if (exec_handle.is_job_aborted()) {
+      return;
     }
+
+    main_ipog_loop_body(model, strength, parameter_index_map, test_set,
+                        current_param_idx, with_mt, binomial_coeffs, tp,
+                        exec_handle);
   }
 }
 
@@ -178,82 +192,21 @@ void main_ipog_loop_extend_test_set(
       get_parameter_indices_ordered_by_number_of_values_desc(
           model.get_parameters()));
 
-  {
-    // Here is the main IPOG loop.
-    const binom_coeff_table binomial_coeffs(parameter_index_map.size());
+  // Here is the main IPOG loop.
+  const binom_coeff_table binomial_coeffs(parameter_index_map.size());
 
-    for (unsigned int current_param_idx = 0;
-         current_param_idx < parameter_index_map.size(); ++current_param_idx) {
+  for (unsigned int current_param_idx = 0;
+       current_param_idx < parameter_index_map.size(); ++current_param_idx) {
 
-      if (exec_handle.is_job_aborted()) {
-        return;
-      }
-
-      unsigned int current_strength = std::min(strength, current_param_idx + 1);
-
-      if (model.get_parameters()[parameter_index_map[current_param_idx]] <= 1) {
-        // If the current parameter only has only value, then
-        // we can treat this situation much simpler: We just have
-        // to add that particular value to each test and update
-        // the number of covered combinations.
-        for (test &t : test_set.get_list_of_tests()) {
-          t.get_values()[parameter_index_map[current_param_idx]] = 0;
-        }
-
-        unsigned long long number_combos_to_cover =
-            current_param_idx == 0
-                ? 1
-                : (with_mt ? number_of_combinations_to_cover(
-                                 tp, current_param_idx, model,
-                                 parameter_index_map, current_strength - 1)
-                           : number_of_combinations_to_cover(
-                                 current_param_idx, model, parameter_index_map,
-                                 current_strength - 1));
-        tp.stop_workers();
-        exec_handle.add_number_of_covered_combinations(number_combos_to_cover);
-      } else {
-        coverage_map cov_map(current_param_idx + 1, current_strength, model,
-                             parameter_index_map, binomial_coeffs, true);
-
-        unsigned long long number_combos_to_cover =
-            cov_map.get_total_number_of_tuples();
-
-        auto horizontal_ext_res =
-            with_mt
-                ? ipog_horizontal_extension(current_param_idx, current_strength,
-                                            model, parameter_index_map,
-                                            number_combos_to_cover, test_set,
-                                            cov_map, tp)
-                : ipog_horizontal_extension(current_param_idx, current_strength,
-                                            model, parameter_index_map,
-                                            number_combos_to_cover, test_set,
-                                            cov_map);
-        tp.stop_workers();
-
-        number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
-        exec_handle.add_number_of_covered_combinations(
-            horizontal_ext_res.num_new_covered_tuples);
-        exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
-
-        if (exec_handle.is_job_aborted()) {
-          exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
-          return;
-        }
-
-        if (number_combos_to_cover > 0) {
-          auto vertical_ext_res = ipog_vertical_extension(
-              current_param_idx, model, number_combos_to_cover,
-              horizontal_ext_res, test_set, cov_map);
-
-          number_combos_to_cover -= vertical_ext_res.num_new_covered_tuples;
-          exec_handle.add_number_of_covered_combinations(
-              vertical_ext_res.num_new_covered_tuples);
-          exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
-        }
-      }
-
-      exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
+    if (exec_handle.is_job_aborted()) {
+      return;
     }
+
+    unsigned int current_strength = std::min(strength, current_param_idx + 1);
+
+    main_ipog_loop_body(model, current_strength, parameter_index_map, test_set,
+                        current_param_idx, with_mt, binomial_coeffs, tp,
+                        exec_handle);
   }
 }
 
