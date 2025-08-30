@@ -47,7 +47,14 @@ class compute_partial_sum_task : public citcpp::detail::thread_pool::Task {
     typedef compute_partial_sum_task this_type;
 
   public:
-    compute_partial_sum_task() = delete;
+    compute_partial_sum_task()
+        : base_type(),
+          start_idx_for_next_(0),
+          current_level_(0),
+          factorLevels_(nullptr),
+          num_combinations_(nullptr) {
+      setCallable(*this);
+    }
 
     compute_partial_sum_task(int start_idx_for_next, int current_level,
                              const std::vector<unsigned int> *factorLevels,
@@ -75,7 +82,18 @@ class compute_partial_sum_task : public citcpp::detail::thread_pool::Task {
 
     this_type &operator=(const this_type &) = delete;
 
-    this_type &operator=(this_type &&) = delete;
+    this_type &operator=(this_type &&other) {
+      if (this != &other) {
+        base_type::operator=(std::move(other));
+        start_idx_for_next_ = other.start_idx_for_next_;
+        current_level_ = other.current_level_;
+        factorLevels_ = other.factorLevels_;
+        num_combinations_ = other.num_combinations_;
+        setCallable(*this);
+      }
+
+      return *this;
+    }
 
     void operator()() {
       unsigned long long chunk_num_combos = recursive_combine_and_sum(
@@ -97,7 +115,15 @@ class compute_partial_sum_with_parameter_map_task
     typedef compute_partial_sum_with_parameter_map_task this_type;
 
   public:
-    compute_partial_sum_with_parameter_map_task() = delete;
+    compute_partial_sum_with_parameter_map_task()
+        : base_type(),
+          start_idx_for_next_(0),
+          current_level_(0),
+          factorLevels_(nullptr),
+          parameter_index_map_(nullptr),
+          num_combinations_(nullptr) {
+      setCallable(*this);
+    }
 
     compute_partial_sum_with_parameter_map_task(
         int start_idx_for_next, int current_level,
@@ -129,7 +155,19 @@ class compute_partial_sum_with_parameter_map_task
 
     this_type &operator=(const this_type &) = delete;
 
-    this_type &operator=(this_type &&) = delete;
+    this_type &operator=(this_type &&other) {
+      if (this != &other) {
+        base_type::operator=(std::move(other));
+        start_idx_for_next_ = other.start_idx_for_next_;
+        current_level_ = other.current_level_;
+        factorLevels_ = other.factorLevels_;
+        parameter_index_map_ = other.parameter_index_map_;
+        num_combinations_ = other.num_combinations_;
+        setCallable(*this);
+      }
+
+      return *this;
+    }
 
     void operator()() {
       unsigned long long chunk_num_combos = recursive_combine_and_sum(
@@ -173,10 +211,11 @@ unsigned long long number_of_combinations_to_cover(thread_pool &tp,
 
   task_group tg(tp.createTaskGroup());
 
-  std::vector<compute_partial_sum_task> tasks;
+  std::vector<compute_partial_sum_task> tasks(numFactors - t + 1);
   for (unsigned int i = numFactors - 1; i >= (t - 1); --i) {
-    tasks.emplace_back(i, t - 1, &model.get_parameters(), &num_combinations);
-    tg.spawn(i, &tasks.back());
+    tasks[i - t + 1] = compute_partial_sum_task(
+        i, t - 1, &model.get_parameters(), &num_combinations);
+    tg.spawn(i, &tasks[i - t + 1]);
   }
   tg.wait();
 
@@ -206,11 +245,13 @@ unsigned long long number_of_combinations_to_cover(
 
   task_group tg(tp.createTaskGroup());
 
-  std::vector<compute_partial_sum_with_parameter_map_task> tasks;
+  std::vector<compute_partial_sum_with_parameter_map_task> tasks(numFactors -
+                                                                 t + 1);
   for (unsigned int i = numFactors - 1; i >= (t - 1); --i) {
-    tasks.emplace_back(i, t - 1, &model.get_parameters(), &parameter_index_map,
-                       &num_combinations);
-    tg.spawn(i, &tasks.back());
+    tasks[i - t + 1] = compute_partial_sum_with_parameter_map_task(
+        i, t - 1, &model.get_parameters(), &parameter_index_map,
+        &num_combinations);
+    tg.spawn(i, &tasks[i - t + 1]);
   }
   tg.wait();
 
