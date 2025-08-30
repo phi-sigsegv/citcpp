@@ -13,6 +13,7 @@
 
 #include "acts_model_parser.hpp"
 #include "config.hpp"
+#include "covm_json.hpp"
 #include "test_set_parser.hpp"
 
 namespace {
@@ -328,7 +329,8 @@ int execute_covm(const std::string &model_file_path,
       std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
   std::cout << "Execution took: " << duration_seconds << std::endl;
 
-  coverage_measurement_file_os << result.get_result() << std::endl;
+  coverage_measurement_file_os << coverage_measurement_json(result.get_result())
+                               << std::endl;
   std::cout << "Output file: " << coverage_measurement_file_path << std::endl;
 
   return 0;
