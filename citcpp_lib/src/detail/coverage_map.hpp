@@ -418,7 +418,9 @@ class coverage_map_parallel_iterator {
         task.reset();
         tg.spawn(i, &task);
       }
-      tg.spawn_and_wait(&iterate_tasks_[0]);
+      iterate_task &task = iterate_tasks_[0];
+      task.reset();
+      tg.spawn_and_wait(&task);
     }
 
   private:
@@ -454,7 +456,6 @@ class coverage_map_parallel_iterator {
         virtual ~iterate_task() {}
 
         this_type &operator=(const this_type &) = delete;
-
         this_type &operator=(this_type &&) = delete;
 
         void operator()() {

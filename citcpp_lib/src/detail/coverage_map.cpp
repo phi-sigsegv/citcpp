@@ -67,7 +67,7 @@ coverage_map_base::coverage_map_base(
     const int num_last_param_values =
         model.get_parameters()[real_last_param_idx];
 
-    param_indices[t - 1] = parameter_index_map[n - 1];
+    param_indices[t - 1] = real_last_param_idx;
 
     if (t_ >= 2) {
       total_num_tuples_ = recursively_initialize_coverage_map(

@@ -6,6 +6,7 @@
 #include <new>
 #include <string>
 
+#include "internal_model.hpp"
 #include "internal_test_set.hpp"
 
 namespace citcpp {
@@ -21,6 +22,8 @@ extern const citcpp::parameter_value DONT_CARE_PARAMETER_VALUE;
 
 internal_test_set create_internal_test_set(const input_model &input_model,
                                            const citcpp::test_set &tests);
+
+void replace_dont_care_values(internal_test_set &test_set, const model &model);
 
 }  // namespace detail
 }  // namespace citcpp

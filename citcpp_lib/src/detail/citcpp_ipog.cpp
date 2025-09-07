@@ -12,7 +12,6 @@
 #include "citcpp_utils.hpp"
 #include "coverage_map.hpp"
 #include "datatypes_config.hpp"
-#include "for_each_cross_product_elem.hpp"
 #include "ipog_all_value_combinations.hpp"
 #include "ipog_horizontal_extension.hpp"
 #include "ipog_vertical_extension.hpp"
@@ -207,22 +206,6 @@ void main_ipog_loop_extend_test_set(
     main_ipog_loop_body(model, current_strength, parameter_index_map, test_set,
                         current_param_idx, with_mt, binomial_coeffs, tp,
                         exec_handle);
-  }
-}
-
-void replace_dont_care_values(citcpp::detail::internal_test_set &test_set,
-                              const citcpp::detail::model &model) {
-  using namespace citcpp::detail;
-
-  for (test &t : test_set.get_list_of_tests()) {
-    for (unsigned int i = 0; i < t.get_values().size(); ++i) {
-      int &value = t.get_values()[i];
-      if (value < 0) {
-        // Found don't care value. We simply replace it with the
-        // first value of the respective parameter.
-        value = 0;
-      }
-    }
   }
 }
 
