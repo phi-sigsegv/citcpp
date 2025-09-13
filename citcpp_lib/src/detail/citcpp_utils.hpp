@@ -16,6 +16,11 @@ struct alignas(std::hardware_destructive_interference_size) aligned_ull_value {
     unsigned long long value;
 };
 
+template <typename T>
+struct alignas(std::hardware_destructive_interference_size) aligned_vector {
+    std::vector<T> value;
+};
+
 extern const std::string EMPTY_VALUE_SEPARATOR;
 extern const std::string DEFAULT_VALUE_SEPARATOR;
 extern const citcpp::parameter_value DONT_CARE_PARAMETER_VALUE;
