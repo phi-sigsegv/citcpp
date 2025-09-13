@@ -25,28 +25,32 @@ class bitset {
     typedef std::uint32_t size_type;
 
   public:
-    bitset() : bits_(nullptr), size_(0) {}
+    bitset() : bits_(nullptr), size_(0), num_ones_(0) {}
 
     bitset(size_type num_bits)
         : bits_(new storage_type[calculate_num_storage_blocks_from_num_bits(
               num_bits)]{}),
-          size_(num_bits) {}
+          size_(num_bits),
+          num_ones_(0) {}
 
     bitset(const bitset &other)
         : bits_(new storage_type[calculate_num_storage_blocks_from_num_bits(
               other.size_)]{}),
-          size_(other.size_) {
-      std::memcpy(this->bits_, other.bits_,
-                  calculate_num_storage_blocks_from_num_bits(this->size_) *
+          size_(other.size_),
+          num_ones_(other.num_ones_) {
+      std::memcpy(bits_, other.bits_,
+                  calculate_num_storage_blocks_from_num_bits(size_) *
                       sizeof(storage_type));
     }
 
-    bitset(bitset &&other) : bits_(other.bits_), size_(other.size_) {
-      other.size_ = 0;
+    bitset(bitset &&other)
+        : bits_(other.bits_), size_(other.size_), num_ones_(other.num_ones_) {
       other.bits_ = nullptr;
+      other.size_ = 0;
+      other.num_ones_ = 0;
     }
 
-    ~bitset() { delete[] this->bits_; }
+    ~bitset() { delete[] bits_; }
 
     bitset &operator=(const bitset &other) {
       if (&other != this) {
@@ -58,6 +62,7 @@ class bitset {
         std::memcpy(this->bits_, other.bits_,
                     calculate_num_storage_blocks_from_num_bits(this->size_) *
                         sizeof(storage_type));
+        num_ones_ = other.num_ones_;
       }
 
       return *this;
@@ -65,11 +70,13 @@ class bitset {
 
     bitset &operator=(bitset &&other) {
       if (&other != this) {
-        delete[] this->bits_;
-        size_ = other.size_;
+        delete[] bits_;
         bits_ = other.bits_;
-        other.size_ = 0;
+        size_ = other.size_;
+        num_ones_ = other.num_ones_;
         other.bits_ = nullptr;
+        other.size_ = 0;
+        other.num_ones_ = 0;
       }
 
       return *this;
@@ -79,8 +86,9 @@ class bitset {
      * Swaps this and the given other bitset.
      */
     void swap(bitset &other) {
-      std::swap(size_, other.size_);
       std::swap(bits_, other.bits_);
+      std::swap(size_, other.size_);
+      std::swap(num_ones_, other.num_ones_);
     }
 
     /**
@@ -126,6 +134,9 @@ class bitset {
       const storage_type mask = bit_mask(bit_pos);
 
       const bool previous_value = (bits_[storage_block_index] & mask) != 0;
+      if (!previous_value) {
+        ++num_ones_;
+      }
 
       bits_[storage_block_index] |= mask;
 
@@ -145,6 +156,9 @@ class bitset {
       const storage_type mask = bit_mask(bit_pos);
 
       const bool previous_value = (bits_[storage_block_index] & mask) != 0;
+      if (previous_value) {
+        --num_ones_;
+      }
 
       bits_[storage_block_index] &= ~mask;
 
@@ -159,87 +173,22 @@ class bitset {
     /**
      * Checks if all of the bits are set to true.
      */
-    bool all() const {
-      if (size() == 0) {
-        return true;
-      }
-
-      const size_type partial_storage_block_num_bits =
-          calculate_bit_index_mod_storage_width(size());
-      const storage_type all_ones = all_ones_tmpl<storage_type>::value;
-      const size_type number_of_storage_blocks = calculate_num_storage_blocks();
-
-      if (partial_storage_block_num_bits == 0) {
-        // We use each storage block completely.
-        for (size_type i = 0; i < number_of_storage_blocks; ++i) {
-          if (bits_[i] != all_ones) {
-            return false;
-          }
-        }
-      } else {
-        // First we check whether all storage blocks which we are using
-        // completely have all their bits set.
-        for (size_type i = 0; i < (number_of_storage_blocks - 1); ++i) {
-          if (bits_[i] != all_ones) {
-            return false;
-          }
-        }
-
-        const storage_type mask =
-            (storage_type(1) << partial_storage_block_num_bits) - 1;
-        if (bits_[number_of_storage_blocks - 1] != mask) {
-          return false;
-        }
-      }
-      return true;
-    }
+    bool all() const { return num_ones_ == size(); }
 
     /**
      * Checks if any bits are set to true.
      */
-    bool any() const {
-      for (size_type i = 0; i < calculate_num_storage_blocks(); ++i) {
-        if (bits_[i]) return true;
-      }
-
-      return false;
-    }
+    bool any() const { return num_ones_ > 0; }
 
     /**
      * Checks if none of the bits are set to true.
      */
-    bool none() const { return !any(); }
+    bool none() const { return num_ones_ == 0; }
 
     /**
      * Returns the number of bits that are set to true.
      */
-    size_type count() const {
-      const size_type partial_storage_block_num_bits =
-          calculate_bit_index_mod_storage_width(size());
-      const size_type number_of_storage_blocks = calculate_num_storage_blocks();
-
-      size_type num_ones = 0;
-
-      if (partial_storage_block_num_bits == 0) {
-        // We use each storage block completely.
-        for (size_type i = 0; i < number_of_storage_blocks; ++i) {
-          num_ones += std::popcount(bits_[i]);
-        }
-      } else {
-        // First we check whether all storage blocks which we are using
-        // completely have all their bits set.
-        for (size_type i = 0; i < (number_of_storage_blocks - 1); ++i) {
-          num_ones += std::popcount(bits_[i]);
-        }
-
-        const storage_type mask =
-            (storage_type(1) << partial_storage_block_num_bits) - 1;
-
-        num_ones += std::popcount(bits_[number_of_storage_blocks - 1] & mask);
-      }
-
-      return num_ones;
-    }
+    size_type count() const { return num_ones_; }
 
     /**
      * Sets the bit at the given position to true.
@@ -248,6 +197,11 @@ class bitset {
       const size_type storage_block_index =
           calculate_storage_block_index(bit_pos);
       const storage_type mask = bit_mask(bit_pos);
+
+      const bool previous_value = (bits_[storage_block_index] & mask) != 0;
+      if (!previous_value) {
+        ++num_ones_;
+      }
 
       bits_[storage_block_index] |= mask;
     }
@@ -263,14 +217,23 @@ class bitset {
         bits_[i] = all_ones;
       }
 
-      set_unused_bits_to_zero(number_of_storage_blocks);
+      num_ones_ = size();
     }
 
     /**
      * Sets the bit at the given position to false.
      */
     void reset(size_type bit_pos) {
-      bits_[calculate_storage_block_index(bit_pos)] &= ~bit_mask(bit_pos);
+      const size_type storage_block_index =
+          calculate_storage_block_index(bit_pos);
+      const storage_type mask = bit_mask(bit_pos);
+
+      const bool previous_value = (bits_[storage_block_index] & mask) != 0;
+      if (previous_value) {
+        --num_ones_;
+      }
+
+      bits_[storage_block_index] &= ~mask;
     }
 
     /**
@@ -283,13 +246,19 @@ class bitset {
       for (size_type i = 0; i < number_of_storage_blocks; ++i) {
         bits_[i] = all_zeros;
       }
+
+      num_ones_ = 0;
     }
 
     /**
      * Flips the bit at the given position.
      */
     void flip(size_type bit_pos) {
-      bits_[calculate_storage_block_index(bit_pos)] ^= bit_mask(bit_pos);
+      const size_type storage_block_index =
+          calculate_storage_block_index(bit_pos);
+      const storage_type mask = bit_mask(bit_pos);
+
+      bits_[storage_block_index] ^= mask;
     }
 
     /**
@@ -301,8 +270,6 @@ class bitset {
       for (size_type i = 0; i < number_of_storage_blocks; ++i) {
         bits_[i] = ~bits_[i];
       }
-
-      set_unused_bits_to_zero(number_of_storage_blocks);
     }
 
   public:
@@ -331,22 +298,13 @@ class bitset {
       return calculate_num_storage_blocks_from_num_bits(size_);
     }
 
-    void set_unused_bits_to_zero(size_type number_of_storage_blocks) {
-      const size_type partial_storage_block_num_bits =
-          calculate_bit_index_mod_storage_width(size());
-
-      if (partial_storage_block_num_bits != 0) {
-        bits_[number_of_storage_blocks - 1] &=
-            (storage_type(1) << partial_storage_block_num_bits) - 1;
-      }
-    }
-
   protected:
     static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>,
                   "The underlying type must be a fundamental type");
 
     storage_type *bits_;
     size_type size_;
+    size_type num_ones_;
 };
 
 using bitset_uint64 = bitset<std::uint64_t>;

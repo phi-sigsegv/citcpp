@@ -14,28 +14,19 @@
 namespace citcpp {
 namespace detail {
 
-class coverage_map_second_level : bitset_uint64 {
+class coverage_map_second_level : public bitset_uint64 {
   public:
-    typedef bitset_uint64::size_type size_type;
-
-  public:
-    coverage_map_second_level()
-        : bitset_uint64(0), num_ones_(0), param_indices_() {}
+    coverage_map_second_level() : bitset_uint64() {}
 
     coverage_map_second_level(size_type num_bits,
                               const param_vector &param_indices)
-        : bitset_uint64(num_bits),
-          num_ones_(0),
-          param_indices_(param_indices) {}
+        : bitset_uint64(num_bits), param_indices_(param_indices) {}
 
     coverage_map_second_level(const coverage_map_second_level &other)
-        : bitset_uint64(other),
-          num_ones_(other.num_ones_),
-          param_indices_(other.param_indices_) {}
+        : bitset_uint64(other), param_indices_(other.param_indices_) {}
 
     coverage_map_second_level(coverage_map_second_level &&other)
         : bitset_uint64(std::move(other)),
-          num_ones_(other.num_ones_),
           param_indices_(std::move(other.param_indices_)) {}
 
     ~coverage_map_second_level() {}
@@ -44,7 +35,6 @@ class coverage_map_second_level : bitset_uint64 {
         const coverage_map_second_level &other) {
       if (this != &other) {
         bitset_uint64::operator=(other);
-        num_ones_ = other.num_ones_;
         param_indices_ = other.param_indices_;
       }
 
@@ -54,7 +44,6 @@ class coverage_map_second_level : bitset_uint64 {
     coverage_map_second_level &operator=(coverage_map_second_level &&other) {
       if (this != &other) {
         bitset_uint64::operator=(std::move(other));
-        num_ones_ = other.num_ones_;
         param_indices_ = std::move(other.param_indices_);
       }
 
@@ -66,121 +55,12 @@ class coverage_map_second_level : bitset_uint64 {
      */
     void swap(coverage_map_second_level &other) {
       bitset_uint64::swap(other);
-      std::swap(num_ones_, other.num_ones_);
-    }
-
-    /**
-     * Accesses the bit at the given position.
-     * This method does no range checking. Passing an invalid position results
-     * in undefined behavior.
-     */
-    bool test(size_type bit_pos) const { return bitset_uint64::test(bit_pos); }
-
-    /**
-     * Accesses the bit at the given position.
-     * This method does no range checking. Passing an invalid position results
-     * in undefined behavior.
-     */
-    bool operator[](size_type bit_pos) const {
-      return bitset_uint64::operator[](bit_pos);
-    }
-
-    /**
-     * Accesses the bit at the given position.
-     * Unlike operator[] and test(), this method performs a range check and
-     * throws std::out_of_range if the given position is not valid.
-     */
-    bool at(size_type bit_pos) const { return bitset_uint64::at(bit_pos); }
-
-    /**
-     * Checks if all of the bits are set to true.
-     */
-    bool all() const { return num_ones_ == size(); }
-
-    /**
-     * Checks if any bits are set to true.
-     */
-    bool any() const { return num_ones_ > 0; }
-
-    /**
-     * Checks if none of the bits are set to true.
-     */
-    bool none() const { return num_ones_ == 0; }
-
-    /**
-     * Returns the number of bits of this bitset.
-     */
-    size_type size() const { return bitset_uint64::size(); }
-
-    /**
-     * Accesses the bit at the given position and sets it to true.
-     * This method returns the previous value stored at the
-     * position.
-     * This method does no range checking. Passing an invalid position results
-     * in undefined behavior.
-     */
-    bool test_and_set(size_type bit_pos) {
-      const bool previous_value = bitset_uint64::test_and_set(bit_pos);
-
-      if (!previous_value) {
-        ++num_ones_;
-      }
-
-      return previous_value;
-    }
-
-    /**
-     * Accesses the bit at the given position and sets it to false.
-     * This method returns the previous value stored at the
-     * position.
-     * This method does no range checking. Passing an invalid position results
-     * in undefined behavior.
-     */
-    bool test_and_reset(size_type bit_pos) {
-      const bool previous_value = bitset_uint64::test_and_reset(bit_pos);
-
-      if (previous_value) {
-        --num_ones_;
-      }
-
-      return previous_value;
-    }
-
-    /**
-     * Returns the number of bits that are set to true.
-     */
-    size_type count() const { return num_ones_; }
-
-    /**
-     * Sets the bit at the given position to true.
-     */
-    void set(size_type bit_pos) { test_and_set(bit_pos); }
-
-    /**
-     * Sets all bits to true.
-     */
-    void set() {
-      bitset_uint64::set();
-      num_ones_ = size();
-    }
-
-    /**
-     * Sets the bit at the given position to false.
-     */
-    void reset(size_type bit_pos) { test_and_reset(bit_pos); }
-
-    /**
-     * Sets all bits to false.
-     */
-    void reset() {
-      bitset_uint64::reset();
-      num_ones_ = 0;
+      std::swap(param_indices_, other.param_indices_);
     }
 
     const param_vector &get_parameter_indices() const { return param_indices_; }
 
   private:
-    size_type num_ones_;
     param_vector param_indices_;
 };
 
