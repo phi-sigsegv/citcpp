@@ -331,11 +331,67 @@ class array_owning_wrapper {
 };
 
 template <typename T_FUNDAMENTAL_STORAGE_TYPE>
+class array_non_owning_wrapper {
+  public:
+    typedef T_FUNDAMENTAL_STORAGE_TYPE storage_type;
+    typedef std::uint32_t size_type;
+
+  public:
+    array_non_owning_wrapper() : bits_(nullptr), size_(0) {}
+
+    array_non_owning_wrapper(size_type num_bits)
+        : bits_(nullptr), size_(num_bits) {}
+
+    array_non_owning_wrapper(const array_non_owning_wrapper &other) = delete;
+
+    array_non_owning_wrapper(array_non_owning_wrapper &&other)
+        : bits_(other.bits_), size_(other.size_) {
+      other.bits_ = nullptr;
+      other.size_ = 0;
+    }
+
+    array_non_owning_wrapper &operator=(const array_non_owning_wrapper &other) =
+        delete;
+
+    array_non_owning_wrapper &operator=(array_non_owning_wrapper &&other) {
+      if (&other != this) {
+        bits_ = other.bits_;
+        size_ = other.size_;
+        other.bits_ = nullptr;
+        other.size_ = 0;
+      }
+
+      return *this;
+    }
+
+    void swap(array_non_owning_wrapper &other) {
+      std::swap(bits_, other.bits_);
+      std::swap(size_, other.size_);
+    }
+
+    void set_backing_array(storage_type *bits) { bits_ = bits; }
+
+  protected:
+    static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>,
+                  "The underlying type must be a fundamental type");
+
+    storage_type *bits_;
+    size_type size_;
+};
+
+template <typename T_FUNDAMENTAL_STORAGE_TYPE>
 using bitset =
     bitset_operations<T_FUNDAMENTAL_STORAGE_TYPE,
                       array_owning_wrapper<T_FUNDAMENTAL_STORAGE_TYPE>>;
 
 using bitset_uint64 = bitset<std::uint64_t>;
+
+template <typename T_FUNDAMENTAL_STORAGE_TYPE>
+using bitset_non_owning =
+    bitset_operations<T_FUNDAMENTAL_STORAGE_TYPE,
+                      array_non_owning_wrapper<T_FUNDAMENTAL_STORAGE_TYPE>>;
+
+using bitset_non_owning_uint64 = bitset_non_owning<std::uint64_t>;
 
 }  // namespace detail
 }  // namespace citcpp
