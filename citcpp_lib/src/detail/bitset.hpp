@@ -322,6 +322,8 @@ class array_owning_wrapper {
       std::swap(size_, other.size_);
     }
 
+    storage_type *get_array() const { return bits_; }
+
   protected:
     static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>,
                   "The underlying type must be a fundamental type");
@@ -378,6 +380,8 @@ class array_non_owning_wrapper {
     storage_type *bits_;
     size_type size_;
 };
+
+using array_wrapper_uint64 = array_owning_wrapper<std::uint64_t>;
 
 template <typename T_FUNDAMENTAL_STORAGE_TYPE>
 using bitset =

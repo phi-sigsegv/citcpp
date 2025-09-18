@@ -13,8 +13,9 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/internal_model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_all_value_combinations.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_horizontal_extension.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_otf_horizontal_extension.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_vertical_extension.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_otf_horizontal_extension.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_otf_vertical_extension.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/covm_algorithm_uniform_strength.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_covm.cpp
