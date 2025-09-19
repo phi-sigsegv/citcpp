@@ -66,7 +66,7 @@ TEST_CASE("covm, testing PICT example model, strength 1") {
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::unique_ptr<covm_exec_handle> covm_handle =
@@ -107,7 +107,7 @@ TEST_CASE("covm, testing PICT example model, strength 2") {
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::unique_ptr<covm_exec_handle> covm_handle =
@@ -148,7 +148,7 @@ TEST_CASE("covm, testing PICT example model, strength 3") {
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::unique_ptr<covm_exec_handle> covm_handle =
@@ -189,7 +189,7 @@ TEST_CASE("covm, testing PICT example model, strength 4") {
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::unique_ptr<covm_exec_handle> covm_handle =
@@ -230,7 +230,7 @@ TEST_CASE("covm, testing PICT example model, strength 5") {
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::unique_ptr<covm_exec_handle> covm_handle =
@@ -271,7 +271,7 @@ TEST_CASE("covm, testing PICT example model, strength 6") {
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::unique_ptr<covm_exec_handle> covm_handle =
@@ -312,7 +312,7 @@ TEST_CASE("covm, testing PICT example model, strength 7") {
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::unique_ptr<covm_exec_handle> covm_handle =

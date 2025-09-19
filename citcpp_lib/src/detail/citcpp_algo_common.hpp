@@ -23,20 +23,32 @@ unsigned long long number_of_combinations_to_cover(thread_pool &tp,
                                                    unsigned int t);
 
 /**
- * Returns the number of tuple combinations to cover for the given model and
- * interaction strength.
+ * Returns the number of t-tuples to cover for n parameters
+ * (indices [0, ... ,n-1]) from the given model and
+ * interaction strength t.
+ * Depending on the value of the parameter \a fixed_last_parameter, the last
+ * parameter is fixed. Or in other words: We count tuples of length t-1
+ * from the parameters [0, ... ,n-2], and extend those by always
+ * appending a value from parameter n-1 to them.
  */
 unsigned long long number_of_combinations_to_cover(
-    unsigned int current_param_idx, const model &model,
-    const std::vector<unsigned int> &parameter_index_map, unsigned int t);
+    unsigned int n, const model &model,
+    const std::vector<unsigned int> &parameter_index_map, unsigned int t,
+    bool fixed_last_parameter);
 
 /**
- * Returns the number of tuple combinations to cover for the given model and
- * interaction strength.
+ * Returns the number of t-tuples to cover for n parameters
+ * (indices [0, ... ,n-1]) from the given model and
+ * interaction strength t.
+ * Depending on the value of the parameter \a fixed_last_parameter, the last
+ * parameter is fixed. Or in other words: We count tuples of length t-1
+ * from the parameters [0, ... ,n-2], and extend those by always
+ * appending a value from parameter n-1 to them.
  */
 unsigned long long number_of_combinations_to_cover(
-    thread_pool &tp, unsigned int current_param_idx, const model &model,
-    const std::vector<unsigned int> &parameter_index_map, unsigned int t);
+    thread_pool &tp, unsigned int n, const model &model,
+    const std::vector<unsigned int> &parameter_index_map, unsigned int t,
+    bool fixed_last_parameter);
 
 }  // namespace detail
 }  // namespace citcpp

@@ -41,6 +41,14 @@ void main_ipog_loop_body(
     citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
   using namespace citcpp::detail;
 
+  unsigned long long number_combos_to_cover =
+      with_mt
+          ? number_of_combinations_to_cover(tp, current_param_idx + 1, model,
+                                            parameter_index_map, strength, true)
+          : number_of_combinations_to_cover(current_param_idx + 1, model,
+                                            parameter_index_map, strength,
+                                            true);
+
   if (model.get_parameters()[parameter_index_map[current_param_idx]] <= 1) {
     // If the current parameter only has only value, then
     // we can treat this situation much simpler: We just have
@@ -50,24 +58,9 @@ void main_ipog_loop_body(
       t.get_values()[parameter_index_map[current_param_idx]] = 0;
     }
 
-    unsigned long long number_combos_to_cover =
-        with_mt
-            ? number_of_combinations_to_cover(tp, current_param_idx + 1, model,
-                                              parameter_index_map, strength - 1)
-            : number_of_combinations_to_cover(current_param_idx + 1, model,
-                                              parameter_index_map,
-                                              strength - 1);
     tp.stop_workers();
     exec_handle.add_number_of_covered_combinations(number_combos_to_cover);
   } else {
-    unsigned long long number_combos_to_cover =
-        with_mt
-            ? number_of_combinations_to_cover(tp, current_param_idx + 1, model,
-                                              parameter_index_map, strength - 1)
-            : number_of_combinations_to_cover(current_param_idx + 1, model,
-                                              parameter_index_map,
-                                              strength - 1);
-
     auto horizontal_ext_res =
         with_mt ? ipog_horizontal_extension(
                       current_param_idx, strength, model, parameter_index_map,

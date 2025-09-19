@@ -71,7 +71,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Now extending the exact same testset." << std::endl;
@@ -119,7 +119,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Now extending the exact same testset." << std::endl;
@@ -167,7 +167,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Now extending the exact same testset." << std::endl;
@@ -215,7 +215,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Now extending the exact same testset." << std::endl;
@@ -263,7 +263,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Now extending the exact same testset." << std::endl;
@@ -311,7 +311,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Now extending the exact same testset." << std::endl;
@@ -359,7 +359,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Now extending the exact same testset." << std::endl;
@@ -405,7 +405,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Deleteing the last 33% of the tests." << std::endl;
@@ -474,7 +474,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Deleteing the last 33% of the tests." << std::endl;
@@ -543,7 +543,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Deleteing the last 33% of the tests." << std::endl;
@@ -612,7 +612,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Deleteing the last 33% of the tests." << std::endl;
@@ -681,7 +681,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Deleteing the last 33% of the tests." << std::endl;
@@ -750,7 +750,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Deleteing the last 33% of the tests." << std::endl;
@@ -819,7 +819,7 @@ TEST_CASE(
 
   const auto cagen_duration_seconds = std::chrono::duration<double>(
       std::chrono::milliseconds(cagen_handle->get_duration_in_milli_seconds()));
-  std::cout << "Test generated in " << cagen_duration_seconds << " and has "
+  std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
   std::cout << "Deleteing the last 33% of the tests." << std::endl;

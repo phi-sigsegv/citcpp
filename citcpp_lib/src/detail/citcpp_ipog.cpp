@@ -53,14 +53,12 @@ void main_ipog_loop_body(
     }
 
     unsigned long long number_combos_to_cover =
-        current_param_idx == 0
-            ? 1
-            : (with_mt ? number_of_combinations_to_cover(
-                             tp, current_param_idx, model, parameter_index_map,
-                             strength - 1)
-                       : number_of_combinations_to_cover(
-                             current_param_idx, model, parameter_index_map,
-                             strength - 1));
+        with_mt ? number_of_combinations_to_cover(tp, current_param_idx + 1,
+                                                  model, parameter_index_map,
+                                                  strength, true)
+                : number_of_combinations_to_cover(current_param_idx + 1, model,
+                                                  parameter_index_map, strength,
+                                                  true);
     tp.stop_workers();
     exec_handle.add_number_of_covered_combinations(number_combos_to_cover);
   } else {
