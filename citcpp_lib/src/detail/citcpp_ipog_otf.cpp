@@ -1,0 +1,285 @@
+#include "citcpp_ipog_otf.hpp"
+
+#include <algorithm>
+#include <chrono>
+#include <numeric>
+#include <thread>
+
+#include "binom_coeff_table.hpp"
+#include "cagen_exec_handle_ipog_impl.hpp"
+#include "cagen_exec_result_impl.hpp"
+#include "citcpp_algo_common.hpp"
+#include "citcpp_utils.hpp"
+#include "datatypes_config.hpp"
+#include "ipog_all_value_combinations.hpp"
+#include "ipog_otf_horizontal_extension.hpp"
+#include "ipog_otf_vertical_extension.hpp"
+
+namespace {
+
+std::vector<unsigned int>
+get_parameter_indices_ordered_by_number_of_values_desc(
+    const std::vector<unsigned int> &params) {
+
+  std::vector<unsigned int> parameter_index_map(params.size());
+  std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
+
+  std::sort(parameter_index_map.begin(), parameter_index_map.end(),
+            [&params](const unsigned int &index1, const unsigned int &index2) {
+              return params[index1] > params[index2];
+            });
+
+  return parameter_index_map;
+}
+
+void main_ipog_loop_body(
+    const citcpp::detail::model &model, unsigned int strength,
+    const std::vector<unsigned int> &parameter_index_map,
+    citcpp::detail::internal_test_set &test_set, bool is_extend_mode,
+    unsigned int current_param_idx, const bool with_mt,
+    citcpp::detail::thread_pool &tp,
+    citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
+  using namespace citcpp::detail;
+
+  if (model.get_parameters()[parameter_index_map[current_param_idx]] <= 1) {
+    // If the current parameter only has only value, then
+    // we can treat this situation much simpler: We just have
+    // to add that particular value to each test and update
+    // the number of covered combinations.
+    for (test &t : test_set.get_list_of_tests()) {
+      t.get_values()[parameter_index_map[current_param_idx]] = 0;
+    }
+
+    unsigned long long number_combos_to_cover =
+        with_mt
+            ? number_of_combinations_to_cover(tp, current_param_idx + 1, model,
+                                              parameter_index_map, strength - 1)
+            : number_of_combinations_to_cover(current_param_idx + 1, model,
+                                              parameter_index_map,
+                                              strength - 1);
+    tp.stop_workers();
+    exec_handle.add_number_of_covered_combinations(number_combos_to_cover);
+  } else {
+    unsigned long long number_combos_to_cover =
+        with_mt
+            ? number_of_combinations_to_cover(tp, current_param_idx + 1, model,
+                                              parameter_index_map, strength - 1)
+            : number_of_combinations_to_cover(current_param_idx + 1, model,
+                                              parameter_index_map,
+                                              strength - 1);
+
+    auto horizontal_ext_res =
+        with_mt ? ipog_horizontal_extension(
+                      current_param_idx, strength, model, parameter_index_map,
+                      number_combos_to_cover, test_set, is_extend_mode, tp)
+                : ipog_horizontal_extension(
+                      current_param_idx, strength, model, parameter_index_map,
+                      number_combos_to_cover, test_set, is_extend_mode);
+    tp.stop_workers();
+
+    number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
+    exec_handle.add_number_of_covered_combinations(
+        horizontal_ext_res.num_new_covered_tuples);
+    exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
+
+    if (exec_handle.is_job_aborted()) {
+      exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
+      return;
+    }
+
+    if (number_combos_to_cover > 0) {
+      auto vertical_ext_res = ipog_vertical_extension(
+          current_param_idx, strength, model, parameter_index_map,
+          number_combos_to_cover, horizontal_ext_res, test_set);
+
+      number_combos_to_cover -= vertical_ext_res.num_new_covered_tuples;
+      exec_handle.add_number_of_covered_combinations(
+          vertical_ext_res.num_new_covered_tuples);
+      exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
+    }
+  }
+
+  exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
+}
+
+void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
+                    citcpp::detail::internal_test_set &test_set,
+                    const citcpp::covering_array_computation_config config,
+                    citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
+  using namespace citcpp::detail;
+
+  unsigned int num_threads = std::thread::hardware_concurrency();
+  if (num_threads == 0) {
+    num_threads = 4;
+  }
+
+  thread_pool tp(num_threads);
+
+  const bool with_mt = config.multithreading_enabled();
+
+  // First we compute the number of combination we have to cover.
+  unsigned long long number_combos_to_cover =
+      with_mt ? number_of_combinations_to_cover(tp, model, strength)
+              : number_of_combinations_to_cover(model, strength);
+  tp.stop_workers();
+  exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
+
+  if (exec_handle.is_job_aborted()) {
+    return;
+  }
+
+  std::vector<unsigned int> parameter_index_map(
+      get_parameter_indices_ordered_by_number_of_values_desc(
+          model.get_parameters()));
+
+  {
+    // Step 1: Initialize for the first t parameters.
+    auto initial_step_res = create_all_value_combinations(
+        strength, model, parameter_index_map, test_set);
+    exec_handle.add_number_of_covered_combinations(
+        initial_step_res.num_created_combinations);
+    exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
+    exec_handle.set_number_of_processed_parameters(strength);
+  }
+
+  // Here is the main IPOG loop.
+  for (unsigned int current_param_idx = strength;
+       current_param_idx < parameter_index_map.size(); ++current_param_idx) {
+
+    if (exec_handle.is_job_aborted()) {
+      return;
+    }
+
+    main_ipog_loop_body(model, strength, parameter_index_map, test_set, false,
+                        current_param_idx, with_mt, tp, exec_handle);
+  }
+}
+
+void main_ipog_loop_extend_test_set(
+    const citcpp::detail::model &model, unsigned int strength,
+    citcpp::detail::internal_test_set &test_set,
+    const citcpp::covering_array_computation_config config,
+    citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
+  using namespace citcpp::detail;
+
+  unsigned int num_threads = std::thread::hardware_concurrency();
+  if (num_threads == 0) {
+    num_threads = 4;
+  }
+
+  thread_pool tp(num_threads);
+
+  const bool with_mt = config.multithreading_enabled();
+
+  // First we compute the number of combination we have to cover.
+  unsigned long long number_combos_to_cover =
+      with_mt ? number_of_combinations_to_cover(tp, model, strength)
+              : number_of_combinations_to_cover(model, strength);
+  tp.stop_workers();
+  exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
+
+  if (exec_handle.is_job_aborted()) {
+    return;
+  }
+
+  std::vector<unsigned int> parameter_index_map(
+      get_parameter_indices_ordered_by_number_of_values_desc(
+          model.get_parameters()));
+
+  // Here is the main IPOG loop.
+  for (unsigned int current_param_idx = 0;
+       current_param_idx < parameter_index_map.size(); ++current_param_idx) {
+
+    if (exec_handle.is_job_aborted()) {
+      return;
+    }
+
+    unsigned int current_strength = std::min(strength, current_param_idx + 1);
+
+    main_ipog_loop_body(model, current_strength, parameter_index_map, test_set,
+                        true, current_param_idx, with_mt, tp, exec_handle);
+  }
+}
+
+}  // namespace
+
+namespace citcpp {
+namespace detail {
+
+citcpp_ipog_otf::citcpp_ipog_otf(
+    const input_model &input_model,
+    const covering_array_computation_config &config)
+    : config_(config),
+      input_model_(input_model),
+      model_(input_model_),
+      input_tests_(),
+      strength_(1) {}
+
+citcpp_ipog_otf::citcpp_ipog_otf(
+    input_model &&input_model, const covering_array_computation_config &config)
+    : config_(config),
+      input_model_(std::move(input_model)),
+      model_(input_model_),
+      input_tests_(),
+      strength_(1) {}
+
+citcpp_ipog_otf::citcpp_ipog_otf(
+    const input_model &input_model, const citcpp::test_set &tests,
+    const covering_array_computation_config &config)
+    : config_(config),
+      input_model_(input_model),
+      model_(input_model_),
+      input_tests_(create_internal_test_set(input_model_, tests)),
+      strength_(1) {}
+
+citcpp_ipog_otf::citcpp_ipog_otf(
+    input_model &&input_model, test_set &&tests,
+    const covering_array_computation_config &config)
+    : config_(config),
+      input_model_(std::move(input_model)),
+      model_(input_model_),
+      input_tests_(create_internal_test_set(input_model_, tests)),
+      strength_(1) {}
+
+void citcpp_ipog_otf::set_interaction_strength(unsigned int t) {
+  strength_ = t;
+}
+
+void citcpp_ipog_otf::entry_point(cagen_exec_handle_ipog_impl &exec_handle) {
+  const auto t_start = std::chrono::high_resolution_clock::now();
+
+  internal_test_set tests(input_tests_);
+  if (tests.get_list_of_tests().empty()) {
+    main_ipog_loop(model_, strength_, tests, config_, exec_handle);
+  } else {
+    main_ipog_loop_extend_test_set(model_, strength_, tests, config_,
+                                   exec_handle);
+  }
+  if (config_.replace_dont_care_values()) {
+    replace_dont_care_values(tests, model_);
+  }
+  test_set ts(
+      model_.create_from_internal_test_set(tests, config_.value_separator()));
+
+  const auto t_end = std::chrono::high_resolution_clock::now();
+  const auto duration_in_milli_seconds =
+      duration_cast<std::chrono::milliseconds>(t_end - t_start);
+  exec_handle.set_duration_in_milli_seconds(duration_in_milli_seconds.count());
+
+  // Set the generated test set.
+  // This will also signal to the client that we are done.
+  cagen_exec_result_impl result;
+  if (exec_handle.is_job_aborted()) {
+    result.set_result_code(cagen_exec_result::cagen_result_code::
+                               COVERING_ARRAY_GENERATION_ABORTED);
+  } else {
+    result.set_result_code(cagen_exec_result::cagen_result_code::
+                               COVERING_ARRAY_GENERATION_COMPLETED);
+  }
+  result.set_error_message("");
+  result.set_result(std::move(ts));
+  exec_handle.set_test_set(std::move(result));
+}
+
+}  // namespace detail
+}  // namespace citcpp
