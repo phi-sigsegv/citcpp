@@ -5,6 +5,7 @@
 #include <citcpp/input_model.hpp>
 #include <citcpp/test_set.hpp>
 
+#include "citcpp_ipog_base.hpp"
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
 
@@ -18,7 +19,7 @@ class cagen_exec_handle_ipog_impl;
 /**
  * This class provides an implementation of the IPOG algorithm.
  */
-class citcpp_ipog_otf {
+class citcpp_ipog_otf : public citcpp_ipog_base {
   public:
     citcpp_ipog_otf(const input_model &input_model,
                     const covering_array_computation_config &config);

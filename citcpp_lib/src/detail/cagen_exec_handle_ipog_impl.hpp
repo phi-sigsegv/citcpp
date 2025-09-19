@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "cagen_exec_handle_base.hpp"
-#include "citcpp_ipog.hpp"
+#include "citcpp_ipog_base.hpp"
 
 namespace citcpp {
 namespace detail {
@@ -46,15 +46,15 @@ class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
      * handle. The thread will invoke the runnable right away,
      * as soon as this method is being called.
      */
-    void set_runnable(std::unique_ptr<citcpp_ipog>&& runnable) {
+    void set_runnable(std::unique_ptr<citcpp_ipog_base>&& runnable) {
       runnable_ = std::move(runnable);
-      thread_ = std::thread(&citcpp_ipog::entry_point, runnable_.get(),
+      thread_ = std::thread(&citcpp_ipog_base::entry_point, runnable_.get(),
                             std::ref(*this));
     }
 
   private:
     std::atomic_uint num_processed_parameters_;
-    std::unique_ptr<citcpp_ipog> runnable_;
+    std::unique_ptr<citcpp_ipog_base> runnable_;
 };
 
 }  // namespace detail

@@ -216,7 +216,8 @@ namespace detail {
 
 citcpp_ipog::citcpp_ipog(const input_model &input_model,
                          const covering_array_computation_config &config)
-    : config_(config),
+    : citcpp_ipog_base(),
+      config_(config),
       input_model_(input_model),
       model_(input_model_),
       input_tests_(),
@@ -224,7 +225,8 @@ citcpp_ipog::citcpp_ipog(const input_model &input_model,
 
 citcpp_ipog::citcpp_ipog(input_model &&input_model,
                          const covering_array_computation_config &config)
-    : config_(config),
+    : citcpp_ipog_base(),
+      config_(config),
       input_model_(std::move(input_model)),
       model_(input_model_),
       input_tests_(),
@@ -233,7 +235,8 @@ citcpp_ipog::citcpp_ipog(input_model &&input_model,
 citcpp_ipog::citcpp_ipog(const input_model &input_model,
                          const citcpp::test_set &tests,
                          const covering_array_computation_config &config)
-    : config_(config),
+    : citcpp_ipog_base(),
+      config_(config),
       input_model_(input_model),
       model_(input_model_),
       input_tests_(create_internal_test_set(input_model_, tests)),
@@ -241,7 +244,8 @@ citcpp_ipog::citcpp_ipog(const input_model &input_model,
 
 citcpp_ipog::citcpp_ipog(input_model &&input_model, test_set &&tests,
                          const covering_array_computation_config &config)
-    : config_(config),
+    : citcpp_ipog_base(),
+      config_(config),
       input_model_(std::move(input_model)),
       model_(input_model_),
       input_tests_(create_internal_test_set(input_model_, tests)),
