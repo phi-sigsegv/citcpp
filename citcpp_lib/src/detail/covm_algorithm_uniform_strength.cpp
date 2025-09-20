@@ -2,9 +2,16 @@
 
 #include <new>
 
+#include "bitset.hpp"
 #include "citcpp_utils.hpp"
+#include "param_combo_iteration.hpp"
 
 namespace {
+
+struct alignas(std::hardware_destructive_interference_size)
+    aligned_array_wrapper {
+    citcpp::detail::array_wrapper_uint64 value;
+};
 
 struct alignas(std::hardware_destructive_interference_size)
     aligned_coverage_level_to_num_param_combos {
@@ -16,20 +23,26 @@ class covm_per_param_combo_functor {
     covm_per_param_combo_functor(
         const citcpp::detail::model &model,
         const citcpp::detail::internal_test_set &test_set,
+        const unsigned int bitset_backing_array_size,
         citcpp::detail::covm_exec_handle_impl &exec_handle,
         citcpp::coverage_measurement &covm)
         : model_(model),
           test_set_(test_set),
+          bitset_backing_array_(bitset_backing_array_size),
           exec_handle_(exec_handle),
           covered_tuples_(test_set.get_list_of_tests().size(), 0),
           covm_(covm) {}
 
-    bool operator()(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+    bool operator()(const citcpp::detail::param_vector &param_indices) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
-          value_combinations.get_parameter_indices();
+      bitset_non_owning_uint64::size_type bitset_size = 1;
+      for (auto p : param_indices) {
+        bitset_size *= model_.get_parameters()[p];
+      }
+      bitset_non_owning_uint64 values_combo_bitset(bitset_size);
+      values_combo_bitset.set_backing_array(bitset_backing_array_.get_array());
+      values_combo_bitset.reset();
 
       int test_index = 0;
       for (const test &test : test_set_.get_list_of_tests()) {
@@ -38,7 +51,7 @@ class covm_per_param_combo_functor {
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
         // values for p_i. If we now have values x_0, x_1, x_2, then the index
         // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index = 0;
+        bitset_non_owning_uint64::size_type index = 0;
         bool found_dont_care = false;
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size(); ++i) {
@@ -54,7 +67,7 @@ class covm_per_param_combo_functor {
             break;
           }
 
-          coverage_map::second_level_type::size_type addend = param_value;
+          bitset_non_owning_uint64::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
             addend *= model_.get_parameters()[param_indices[j]];
@@ -63,7 +76,7 @@ class covm_per_param_combo_functor {
         }
 
         if (!found_dont_care) {
-          if (!value_combinations.test_and_set(index)) {
+          if (!values_combo_bitset.test_and_set(index)) {
             covered_tuples_[test_index]++;
           }
         }
@@ -71,11 +84,11 @@ class covm_per_param_combo_functor {
         ++test_index;
       }
 
-      double param_coverage_fraction = (double)value_combinations.count() /
-                                       (double)value_combinations.size();
+      double param_coverage_fraction = (double)values_combo_bitset.count() /
+                                       (double)values_combo_bitset.size();
       covm_.add_coverage_of_param_combos(1, param_coverage_fraction);
       exec_handle_.add_number_of_checked_combinations(
-          value_combinations.size());
+          values_combo_bitset.size());
 
       if (exec_handle_.is_job_aborted()) {
         return false;
@@ -91,6 +104,7 @@ class covm_per_param_combo_functor {
   private:
     const citcpp::detail::model &model_;
     const citcpp::detail::internal_test_set &test_set_;
+    citcpp::detail::array_wrapper_uint64 bitset_backing_array_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
     std::vector<unsigned long long> covered_tuples_;
     citcpp::coverage_measurement &covm_;
@@ -101,23 +115,32 @@ class covm_per_param_combo_functor_parallel {
     covm_per_param_combo_functor_parallel(
         const citcpp::detail::model &model,
         const citcpp::detail::internal_test_set &test_set,
+        const unsigned int bitset_backing_array_size,
         citcpp::detail::covm_exec_handle_impl &exec_handle,
-        const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
+        const citcpp::detail::param_combo_parallel_iterator &param_combo_it)
         : model_(model),
           test_set_(test_set),
+          bitset_backing_array_(param_combo_it.get_num_workers(),
+                                {{bitset_backing_array_size}}),
           exec_handle_(exec_handle),
-          covered_tuples_(cov_map_it.get_num_workers(),
+          covered_tuples_(param_combo_it.get_num_workers(),
                           std::vector<citcpp::detail::aligned_ull_value>(
                               test_set.get_list_of_tests().size())),
-          cov_level_to_num_param_combos_(cov_map_it.get_num_workers()),
-          cov_map_it_(cov_map_it) {}
+          cov_level_to_num_param_combos_(param_combo_it.get_num_workers()),
+          param_combo_it_(param_combo_it) {}
 
-    bool operator()(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+    bool operator()(const citcpp::detail::param_vector &param_indices) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
-          value_combinations.get_parameter_indices();
+      bitset_non_owning_uint64::size_type bitset_size = 1;
+      for (auto p : param_indices) {
+        bitset_size *= model_.get_parameters()[p];
+      }
+      bitset_non_owning_uint64 values_combo_bitset(bitset_size);
+      values_combo_bitset.set_backing_array(
+          bitset_backing_array_[param_combo_it_.get_worker_id()]
+              .value.get_array());
+      values_combo_bitset.reset();
 
       int test_index = 0;
       bool found_dont_care = false;
@@ -127,7 +150,7 @@ class covm_per_param_combo_functor_parallel {
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
         // values for p_i. If we now have values x_0, x_1, x_2, then the index
         // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index = 0;
+        bitset_non_owning_uint64::size_type index = 0;
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size(); ++i) {
           const unsigned int param_idx = param_indices[i];
@@ -142,7 +165,7 @@ class covm_per_param_combo_functor_parallel {
             break;
           }
 
-          coverage_map::second_level_type::size_type addend = param_value;
+          bitset_non_owning_uint64::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
             addend *= model_.get_parameters()[param_indices[j]];
@@ -151,9 +174,9 @@ class covm_per_param_combo_functor_parallel {
         }
 
         if (!found_dont_care) {
-          if (!value_combinations.test_and_set(index)) {
+          if (!values_combo_bitset.test_and_set(index)) {
             auto &thread_local_covered_tuples =
-                covered_tuples_[cov_map_it_.get_worker_id()];
+                covered_tuples_[param_combo_it_.get_worker_id()];
             thread_local_covered_tuples[test_index].value++;
           }
         }
@@ -161,11 +184,11 @@ class covm_per_param_combo_functor_parallel {
         ++test_index;
       }
 
-      double param_coverage_fraction = (double)value_combinations.count() /
-                                       (double)value_combinations.size();
+      double param_coverage_fraction = (double)values_combo_bitset.count() /
+                                       (double)values_combo_bitset.size();
 
       auto &thread_local_cov_level_to_num_param_combos =
-          cov_level_to_num_param_combos_[cov_map_it_.get_worker_id()];
+          cov_level_to_num_param_combos_[param_combo_it_.get_worker_id()];
 
       param_coverage_fraction =
           std::max(std::min(param_coverage_fraction, 1.0), 0.0);
@@ -183,7 +206,7 @@ class covm_per_param_combo_functor_parallel {
       }
 
       exec_handle_.add_number_of_checked_combinations(
-          value_combinations.size());
+          values_combo_bitset.size());
 
       if (exec_handle_.is_job_aborted()) {
         return false;
@@ -209,6 +232,8 @@ class covm_per_param_combo_functor_parallel {
   private:
     const citcpp::detail::model &model_;
     const citcpp::detail::internal_test_set &test_set_;
+    citcpp::detail::thread_local_vector<aligned_array_wrapper>
+        bitset_backing_array_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
     citcpp::detail::thread_local_vector<
         std::vector<citcpp::detail::aligned_ull_value>>
@@ -216,7 +241,7 @@ class covm_per_param_combo_functor_parallel {
     citcpp::detail::thread_local_vector<
         aligned_coverage_level_to_num_param_combos>
         cov_level_to_num_param_combos_;
-    const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
+    const citcpp::detail::param_combo_parallel_iterator &param_combo_it_;
 };
 
 }  // namespace
@@ -224,15 +249,22 @@ class covm_per_param_combo_functor_parallel {
 namespace citcpp {
 namespace detail {
 
-void measure_coverage(const model &model, const internal_test_set &test_set,
-                      coverage_map &cov_map, covm_exec_handle_impl &exec_handle,
+void measure_coverage(const unsigned int strength, const model &model,
+                      const std::vector<unsigned int> &parameter_index_map,
+                      const internal_test_set &test_set,
+                      covm_exec_handle_impl &exec_handle,
                       citcpp::coverage_measurement &covm) {
 
-  covm_per_param_combo_functor per_param_combo_functor(model, test_set,
-                                                       exec_handle, covm);
+  const unsigned int product_of_max_parameter_sizes =
+      get_product_of_max_n_parameter_sizes(parameter_index_map.size(), strength,
+                                           model, parameter_index_map);
 
-  coverage_map_iterator cov_map_it = cov_map.create_iterator();
-  cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  covm_per_param_combo_functor per_param_combo_functor(
+      model, test_set, product_of_max_parameter_sizes, exec_handle, covm);
+
+  param_combo_iterator param_combo_it(parameter_index_map.size(), strength,
+                                      parameter_index_map, false);
+  param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   std::vector<unsigned long long> covered_tuples(
       per_param_combo_functor.get_coverered_tuples());
@@ -248,17 +280,24 @@ void measure_coverage(const model &model, const internal_test_set &test_set,
   covm.set_coverered_tuples(std::move(covered_tuples));
 }
 
-void measure_coverage(const model &model, const internal_test_set &test_set,
-                      coverage_map &cov_map, covm_exec_handle_impl &exec_handle,
+void measure_coverage(const unsigned int strength, const model &model,
+                      const std::vector<unsigned int> &parameter_index_map,
+                      const internal_test_set &test_set,
+                      covm_exec_handle_impl &exec_handle,
                       citcpp::coverage_measurement &covm, thread_pool &tp) {
 
-  coverage_map_parallel_iterator cov_map_it =
-      cov_map.create_parallel_iterator(tp);
+  const unsigned int product_of_max_parameter_sizes =
+      get_product_of_max_n_parameter_sizes(parameter_index_map.size(), strength,
+                                           model, parameter_index_map);
+
+  param_combo_parallel_iterator param_combo_it(
+      parameter_index_map.size(), strength, parameter_index_map, false, tp);
 
   covm_per_param_combo_functor_parallel per_param_combo_functor(
-      model, test_set, exec_handle, cov_map_it);
+      model, test_set, product_of_max_parameter_sizes, exec_handle,
+      param_combo_it);
 
-  cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   const auto &covered_tuples(per_param_combo_functor.get_coverered_tuples());
 

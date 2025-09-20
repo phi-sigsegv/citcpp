@@ -7,8 +7,8 @@
 #include <thread>
 
 #include "binom_coeff_table.hpp"
+#include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
-#include "coverage_map.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
 #include "covm_exec_result_impl.hpp"
@@ -23,6 +23,8 @@ void main_covm_loop(const citcpp::detail::model &model,
                     citcpp::detail::covm_exec_handle_impl &exec_handle) {
   using namespace citcpp::detail;
 
+  const bool with_mt = config.multithreading_enabled();
+
   unsigned int num_threads = std::thread::hardware_concurrency();
   if (num_threads == 0) {
     num_threads = 4;
@@ -34,12 +36,11 @@ void main_covm_loop(const citcpp::detail::model &model,
   std::vector<unsigned int> parameter_index_map(model.get_parameters().size());
   std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
 
-  coverage_map cov_map(model.get_parameters().size(), strength, model,
-                       parameter_index_map, binomial_coeffs, false);
-
   unsigned long long number_combos_to_cover =
-      cov_map.get_total_number_of_tuples();
-  covm.set_number_of_param_combos_to_cover(cov_map.get_coverage_map().size());
+      with_mt ? number_of_combinations_to_cover(tp, model, strength)
+              : number_of_combinations_to_cover(model, strength);
+  covm.set_number_of_param_combos_to_cover(
+      binomial_coeffs.get_coefficient(model.get_parameters().size(), strength));
   covm.set_number_of_combinations_to_cover(number_combos_to_cover);
   exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
 
@@ -47,12 +48,12 @@ void main_covm_loop(const citcpp::detail::model &model,
     return;
   }
 
-  const bool with_mt = config.multithreading_enabled();
-
   if (with_mt) {
-    measure_coverage(model, test_set, cov_map, exec_handle, covm, tp);
+    measure_coverage(strength, model, parameter_index_map, test_set,
+                     exec_handle, covm, tp);
   } else {
-    measure_coverage(model, test_set, cov_map, exec_handle, covm);
+    measure_coverage(strength, model, parameter_index_map, test_set,
+                     exec_handle, covm);
   }
 
   tp.stop_workers();

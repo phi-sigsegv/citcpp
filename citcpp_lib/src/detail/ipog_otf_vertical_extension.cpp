@@ -1,10 +1,9 @@
 #include "ipog_otf_vertical_extension.hpp"
 
 #include <functional>
-#include <queue>
-#include <vector>
 
 #include "bitset.hpp"
+#include "citcpp_utils.hpp"
 #include "param_combo_iteration.hpp"
 
 namespace {
@@ -331,50 +330,6 @@ class ipog_vertical_extension_functor {
     const unsigned long long num_missing_combinations_to_cover_;
     unsigned long long num_new_covered_tuples_;
 };
-
-unsigned int get_product_of_max_n_parameter_sizes(
-    const unsigned int current_param_idx, const unsigned int n,
-    const citcpp::detail::model &model,
-    const std::vector<unsigned int> &parameter_index_map) {
-
-  // Define a min-heap.
-  // std::priority_queue is a max-heap by default.
-  // We use std::greater to make it a min-heap.
-  // The smallest element is at the top.
-  std::priority_queue<unsigned int, std::vector<unsigned int>,
-                      std::greater<unsigned int>>
-      min_heap;
-
-  for (unsigned int i = 0; i < current_param_idx; ++i) {
-    const unsigned int num_param_values =
-        model.get_parameters()[parameter_index_map[i]];
-
-    if (min_heap.size() < n) {
-      // Case 1: Heap is not full, just insert the element.
-      min_heap.push(num_param_values);
-    } else {
-      // Case 2: Heap is full (size == n).
-      // Check if the current number is greater than the smallest element in
-      // the heap (the top).
-      if (num_param_values > min_heap.top()) {
-        // Remove the smallest element
-        min_heap.pop();
-        // Insert the larger current number
-        min_heap.push(num_param_values);
-      }
-      // If current_num is <= min_heap.top(), it's not one of the n largest,
-      // so we ignore it.
-    }
-  }
-
-  unsigned int product = 1;
-  while (!min_heap.empty()) {
-    product *= min_heap.top();
-    min_heap.pop();
-  }
-
-  return product;
-}
 
 }  // namespace
 
