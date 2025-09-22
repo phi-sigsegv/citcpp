@@ -128,8 +128,10 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
           current_test_index_(current_test_index),
           test_set_(test_set),
           is_extend_mode_(is_extend_mode),
-          param_combo_gain_per_value_(param_combo_it.get_num_workers(),
-                                      {{num_current_param_values}}),
+          param_combo_gain_per_value_(
+              param_combo_it.get_num_workers(),
+              citcpp::detail::aligned_vector<unsigned int>(
+                  num_current_param_values, 0)),
           gain_per_value_(gain_per_value),
           param_combo_it_(param_combo_it) {}
 
@@ -315,7 +317,8 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
   // This is an array containing the coverage gain per value of the current
   // parameter.
   thread_local_vector<aligned_vector<unsigned long long>> gain_per_value(
-      param_combo_it.get_num_workers(), {{num_current_param_values}});
+      param_combo_it.get_num_workers(),
+      aligned_vector<unsigned long long>(num_current_param_values, 0));
 
   ipog_horizontal_select_best_value_per_param_combo_functor_parallel
       per_param_combo_functor(real_current_param_idx, num_current_param_values,
