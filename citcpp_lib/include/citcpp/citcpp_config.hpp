@@ -1,6 +1,7 @@
 #ifndef CITCPP_CONFIG_HPP_
 #define CITCPP_CONFIG_HPP_
 
+#include <ostream>
 #include <string>
 #include <string_view>
 
@@ -24,6 +25,9 @@ enum class covering_array_computation_algorithm {
    */
   IPOG_OTF
 };
+
+std::ostream& operator<<(std::ostream& os,
+                         const covering_array_computation_algorithm& algo);
 
 /**
  * This class represents configuration settings for a coverage array

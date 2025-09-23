@@ -40,6 +40,24 @@ class InteractionStrengthValidator : public CLI::Validator {
     }
 };
 
+class CagenAlgorithmValidator : public CLI::Validator {
+  public:
+    CagenAlgorithmValidator() : Validator() {
+      func_ = [](const std::string &input) {
+        if (input.compare("IPOG") == 0 || input.compare("ipog") == 0 ||
+            input.compare("IPOG_OTF") == 0 || input.compare("ipog_otf") == 0) {
+
+          return std::string{};
+        }
+
+        std::stringstream out;
+        out << "invalid cagen algorithm \"" << input
+            << "\", should be \"IPOG\" or \"IPOG_OTF\"";
+        return out.str();
+      };
+    }
+};
+
 std::unique_ptr<citcpp::input_model> read_model_file(
     const std::string &model_file_path, bool &ok) {
 
@@ -116,6 +134,7 @@ std::unique_ptr<citcpp::test_set> read_test_set_file(
 int execute_cagen(const std::string &model_file_path,
                   const std::string &test_set_file_path,
                   const std::string &seed_test_set_file_path,
+                  citcpp::covering_array_computation_algorithm cagen_algo,
                   int interaction_strength, bool show_progress,
                   const std::string &sep, bool parallel, bool rand_star) {
 
@@ -146,6 +165,7 @@ int execute_cagen(const std::string &model_file_path,
   }
 
   std::cout << "System name : " << model->get_name() << "\n" << std::endl;
+  std::cout << "Algorithm   : " << cagen_algo << std::endl;
   std::cout << "Strength    : " << interaction_strength << std::endl;
   std::cout << "Parameters  : " << model->get_parameters().size() << "\n"
             << std::endl;
@@ -154,12 +174,14 @@ int execute_cagen(const std::string &model_file_path,
       seed_test_set ? compute_covering_array_ipog(
                           *model, *seed_test_set, interaction_strength,
                           covering_array_computation_config()
+                              .with_algorithm(cagen_algo)
                               .with_replace_dont_care_values(rand_star)
                               .with_multithreading_enabled(parallel)
                               .with_value_separator(sep))
                     : compute_covering_array_ipog(
                           *model, interaction_strength,
                           covering_array_computation_config()
+                              .with_algorithm(cagen_algo)
                               .with_replace_dont_care_values(rand_star)
                               .with_multithreading_enabled(parallel)
                               .with_value_separator(sep));
@@ -374,21 +396,30 @@ int main(int argc, char *argv[]) {
                    "default value is 2.")
       ->check(InteractionStrengthValidator());
 
+  bool parallel = false;
+  command_cagen->add_flag("--parallel", parallel,
+                          "Set this flag to enable parallelization of the "
+                          "algorithm execution.");
+
   bool show_progress = false;
   command_cagen->add_flag(
       "--progress", show_progress,
       "Set this flag to enable displaying progress information.");
 
-  std::string sep{covering_array_computation_config().value_separator()};
-  command_cagen->add_option(
-      "--sep", sep,
-      "Set this to specify the separator for values in a testset. "
-      "The default value is \",\".");
+  std::string cagen_algo_str{""};
+  command_cagen
+      ->add_option(
+          "--algo", cagen_algo_str,
+          "Set this flag to choose between available algorithms. "
+          "Supported ones "
+          "are \"IPOG\" and \"IPOG_OTF\". The default value is \"IPOG\".")
+      ->check(CagenAlgorithmValidator());
 
-  bool parallel = false;
-  command_cagen->add_flag("--parallel", parallel,
-                          "Set this flag to enable parallelization of the "
-                          "algorithm execution.");
+  std::string seed_test_set_file_path{""};
+  command_cagen->add_option(
+      "--seed-testset_file", seed_test_set_file_path,
+      "This is the path where the seed testset is located that "
+      "shall be extended.");
 
   bool rand_star = true;
   command_cagen->add_option(
@@ -397,11 +428,11 @@ int main(int argc, char *argv[]) {
       "not randomize don't care values, i.e. to keep them in the generated "
       "testset. The default value is \"on\".");
 
-  std::string seed_test_set_file_path{""};
+  std::string sep{covering_array_computation_config().value_separator()};
   command_cagen->add_option(
-      "--seed-testset_file", seed_test_set_file_path,
-      "This is the path where the seed testset is located that "
-      "shall be extended.");
+      "--sep", sep,
+      "Set this to specify the separator for values in a testset. "
+      "The default value is \",\".");
 
   std::string model_file_path{""};
   command_cagen
@@ -428,6 +459,11 @@ int main(int argc, char *argv[]) {
       ->check(InteractionStrengthValidator());
 
   command_cov_measure->add_flag(
+      "--parallel", parallel,
+      "Set this flag to enable parallelization of the "
+      "algorithm execution.");
+
+  command_cov_measure->add_flag(
       "--progress", show_progress,
       "Set this flag to enable displaying progress information.");
 
@@ -435,11 +471,6 @@ int main(int argc, char *argv[]) {
       "--sep", sep,
       "Set this to specify the separator for values in a testset. "
       "The default value is \",\".");
-
-  command_cov_measure->add_flag(
-      "--parallel", parallel,
-      "Set this flag to enable parallelization of the "
-      "algorithm execution.");
 
   command_cov_measure
       ->add_option(
@@ -480,9 +511,18 @@ int main(int argc, char *argv[]) {
   std::signal(SIGINT, signal_handler);
 
   if (command_cagen->parsed()) {
+    covering_array_computation_algorithm cagen_algo =
+        covering_array_computation_algorithm::IPOG;
+    if (cagen_algo_str.compare("IPOG_OTF") == 0 ||
+        cagen_algo_str.compare("ipog_otf") == 0) {
+
+      cagen_algo = covering_array_computation_algorithm::IPOG_OTF;
+    }
+
     return execute_cagen(model_file_path, test_set_file_path,
-                         seed_test_set_file_path, interaction_strength,
-                         show_progress, sep, parallel, rand_star);
+                         seed_test_set_file_path, cagen_algo,
+                         interaction_strength, show_progress, sep, parallel,
+                         rand_star);
   }
   if (command_cov_measure->parsed()) {
     return execute_covm(model_file_path, test_set_file_path,
