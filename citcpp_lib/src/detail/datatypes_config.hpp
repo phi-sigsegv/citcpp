@@ -5,6 +5,7 @@
  *      Author: philipp
  */
 #include <cstdint>
+#include <new>
 #include <vector>
 
 #include "small_vector.hpp"

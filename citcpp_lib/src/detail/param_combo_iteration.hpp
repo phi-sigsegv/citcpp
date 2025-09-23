@@ -221,16 +221,9 @@ class param_combo_parallel_iterator {
         this_type &operator=(this_type &&) = delete;
 
         void operator()() {
-          recursively_visit_all_param_combos(start_idx_, end_idx_,
-                                             num_params_to_select_ - 1);
-        }
-
-      private:
-        void recursively_visit_all_param_combos(int start_idx, int end_idx,
-                                                int current_level) {
-
+          const int current_level = num_params_to_select_ - 1;
           bool cont = true;
-          for (int j = start_idx; j >= end_idx; --j) {
+          for (int j = start_idx_; j >= end_idx_; --j) {
             param_indices_[current_level] = iterator_->parameter_index_map_[j];
 
             if (current_level == 0) {
