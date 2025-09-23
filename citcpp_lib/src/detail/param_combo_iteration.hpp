@@ -116,28 +116,22 @@ class param_combo_parallel_iterator {
           parameter_index_map[num_params_to_select_from - 1];
 
       if (fixed_last_parameter) {
-        if (num_params_to_select >= 3) {
+        // If we have fixed the last parameter and shall only select one,
+        // then there is nothing to do.
+        if (num_params_to_select >= 2) {
           for (unsigned int j = num_params_to_select_from - 2;
                j >= (num_params_to_select - 2); --j) {
 
-            param_vector param_indices(num_params_to_select);
-            param_indices[num_params_to_select - 1] =
-                parameter_index_map[num_params_to_select_from - 1];
-            param_indices[num_params_to_select - 2] = parameter_index_map[j];
-            iterate_tasks_.emplace_back(this, j, num_params_to_select - 2,
-                                        std::move(param_indices));
+            iterate_tasks_.emplace_back(this, j, j, num_params_to_select - 1,
+                                        param_vector(param_indices_));
           }
         }
       } else {
-        if (num_params_to_select >= 2) {
-          for (unsigned int j = num_params_to_select_from - 1;
-               j >= (num_params_to_select - 1); --j) {
+        for (unsigned int j = num_params_to_select_from - 1;
+             j >= (num_params_to_select - 1); --j) {
 
-            param_vector param_indices(num_params_to_select);
-            param_indices[num_params_to_select - 1] = parameter_index_map[j];
-            iterate_tasks_.emplace_back(this, j, num_params_to_select - 1,
-                                        std::move(param_indices));
-          }
+          iterate_tasks_.emplace_back(this, j, j, num_params_to_select,
+                                      param_vector(param_indices_));
         }
       }
     }
@@ -170,22 +164,10 @@ class param_combo_parallel_iterator {
     void visit_all_parameter_combinations(T_VISITOR &visitor) {
       visitor_ = visitor;
 
-      if (iterate_tasks_.empty()) {
-        if (fixed_last_parameter_) {
-          if (num_params_to_select_ >= 2) {
-            recursively_visit_all_param_combos(param_indices_,
-                                               num_params_to_select_from_ - 2,
-                                               num_params_to_select_ - 2);
-          } else {
-            // We have exactly one parameter to select, which is just the one we
-            // have fixed.
-            visitor_(param_indices_);
-          }
-        } else {
-          recursively_visit_all_param_combos(param_indices_,
-                                             num_params_to_select_from_ - 1,
-                                             num_params_to_select_ - 1);
-        }
+      if (fixed_last_parameter_ && num_params_to_select_ <= 1) {
+        // We have exactly one parameter to select, which is just the one we
+        // have fixed.
+        visitor(param_indices_);
       } else {
         task_group tg(tp_.createTaskGroup());
         for (unsigned int i = 1; i < iterate_tasks_.size(); ++i) {
@@ -209,12 +191,13 @@ class param_combo_parallel_iterator {
       public:
         iterate_task() = delete;
 
-        iterate_task(param_combo_parallel_iterator *iterator,
-                     int num_params_to_select_from, int num_params_to_select,
+        iterate_task(param_combo_parallel_iterator *iterator, int start_idx,
+                     int end_idx, int num_params_to_select,
                      param_vector &&param_indices)
             : base_type(),
               iterator_(iterator),
-              num_params_to_select_from_(num_params_to_select_from),
+              start_idx_(start_idx),
+              end_idx_(end_idx),
               num_params_to_select_(num_params_to_select),
               param_indices_(std::move(param_indices)) {
           setCallable(*this);
@@ -225,7 +208,8 @@ class param_combo_parallel_iterator {
         iterate_task(this_type &&other)
             : base_type(std::move(other)),
               iterator_(other.iterator_),
-              num_params_to_select_from_(other.num_params_to_select_from_),
+              start_idx_(other.start_idx_),
+              end_idx_(other.end_idx_),
               num_params_to_select_(other.num_params_to_select_),
               param_indices_(std::move(other.param_indices_)) {
           setCallable(*this);
@@ -237,14 +221,35 @@ class param_combo_parallel_iterator {
         this_type &operator=(this_type &&) = delete;
 
         void operator()() {
-          iterator_->recursively_visit_all_param_combos(
-              param_indices_, num_params_to_select_from_ - 1,
-              num_params_to_select_ - 1);
+          recursively_visit_all_param_combos(start_idx_, end_idx_,
+                                             num_params_to_select_ - 1);
+        }
+
+      private:
+        void recursively_visit_all_param_combos(int start_idx, int end_idx,
+                                                int current_level) {
+
+          bool cont = true;
+          for (int j = start_idx; j >= end_idx; --j) {
+            param_indices_[current_level] = iterator_->parameter_index_map_[j];
+
+            if (current_level == 0) {
+              cont = iterator_->visitor_(param_indices_);
+            } else {
+              cont = iterator_->recursively_visit_all_param_combos(
+                  param_indices_, j - 1, current_level - 1);
+            }
+
+            if (!cont) {
+              break;
+            }
+          }
         }
 
       private:
         param_combo_parallel_iterator *iterator_;
-        const int num_params_to_select_from_;
+        const int start_idx_;
+        const int end_idx_;
         const int num_params_to_select_;
         param_vector param_indices_;
     };
@@ -252,11 +257,10 @@ class param_combo_parallel_iterator {
     friend class iterate_task;
 
     bool recursively_visit_all_param_combos(param_vector &param_indices,
-                                            int start_idx_for_next,
-                                            int current_level) {
+                                            int start_idx, int current_level) {
 
       bool cont = true;
-      for (int j = start_idx_for_next; j >= current_level; --j) {
+      for (int j = start_idx; j >= current_level; --j) {
         param_indices[current_level] = parameter_index_map_[j];
 
         if (current_level == 0) {
