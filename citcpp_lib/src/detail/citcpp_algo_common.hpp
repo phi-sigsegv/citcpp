@@ -8,21 +8,6 @@ namespace citcpp {
 namespace detail {
 
 /**
- * Returns the number of tuple combinations to cover for the given model and
- * interaction strength.
- */
-unsigned long long number_of_combinations_to_cover(const model &model,
-                                                   unsigned int t);
-
-/**
- * Returns the number of tuple combinations to cover for the given model and
- * interaction strength.
- */
-unsigned long long number_of_combinations_to_cover(thread_pool &tp,
-                                                   const model &model,
-                                                   unsigned int t);
-
-/**
  * Returns the number of t-tuples to cover for n parameters
  * (indices [0, ... ,n-1]) from the given model and
  * interaction strength t.
@@ -46,9 +31,9 @@ unsigned long long number_of_combinations_to_cover(
  * appending a value from parameter n-1 to them.
  */
 unsigned long long number_of_combinations_to_cover(
-    thread_pool &tp, unsigned int n, const model &model,
+    unsigned int n, const model &model,
     const std::vector<unsigned int> &parameter_index_map, unsigned int t,
-    bool fixed_last_parameter);
+    bool fixed_last_parameter, thread_pool &tp);
 
 }  // namespace detail
 }  // namespace citcpp

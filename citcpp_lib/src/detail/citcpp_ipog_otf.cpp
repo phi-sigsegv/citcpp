@@ -42,12 +42,12 @@ void main_ipog_loop_body(
   using namespace citcpp::detail;
 
   unsigned long long number_combos_to_cover =
-      with_mt
-          ? number_of_combinations_to_cover(tp, current_param_idx + 1, model,
-                                            parameter_index_map, strength, true)
-          : number_of_combinations_to_cover(current_param_idx + 1, model,
-                                            parameter_index_map, strength,
-                                            true);
+      with_mt ? number_of_combinations_to_cover(current_param_idx + 1, model,
+                                                parameter_index_map, strength,
+                                                true, tp)
+              : number_of_combinations_to_cover(current_param_idx + 1, model,
+                                                parameter_index_map, strength,
+                                                true);
 
   if (model.get_parameters()[parameter_index_map[current_param_idx]] <= 1) {
     // If the current parameter only has only value, then
@@ -101,6 +101,10 @@ void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
                     citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
   using namespace citcpp::detail;
 
+  std::vector<unsigned int> parameter_index_map(
+      get_parameter_indices_ordered_by_number_of_values_desc(
+          model.get_parameters()));
+
   unsigned int num_threads = std::thread::hardware_concurrency();
   if (num_threads == 0) {
     num_threads = 4;
@@ -112,18 +116,18 @@ void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
 
   // First we compute the number of combination we have to cover.
   unsigned long long number_combos_to_cover =
-      with_mt ? number_of_combinations_to_cover(tp, model, strength)
-              : number_of_combinations_to_cover(model, strength);
+      with_mt ? number_of_combinations_to_cover(parameter_index_map.size(),
+                                                model, parameter_index_map,
+                                                strength, false, tp)
+              : number_of_combinations_to_cover(parameter_index_map.size(),
+                                                model, parameter_index_map,
+                                                strength, false);
   tp.stop_workers();
   exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
 
   if (exec_handle.is_job_aborted()) {
     return;
   }
-
-  std::vector<unsigned int> parameter_index_map(
-      get_parameter_indices_ordered_by_number_of_values_desc(
-          model.get_parameters()));
 
   {
     // Step 1: Initialize for the first t parameters.
@@ -155,6 +159,10 @@ void main_ipog_loop_extend_test_set(
     citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
   using namespace citcpp::detail;
 
+  std::vector<unsigned int> parameter_index_map(
+      get_parameter_indices_ordered_by_number_of_values_desc(
+          model.get_parameters()));
+
   unsigned int num_threads = std::thread::hardware_concurrency();
   if (num_threads == 0) {
     num_threads = 4;
@@ -166,18 +174,18 @@ void main_ipog_loop_extend_test_set(
 
   // First we compute the number of combination we have to cover.
   unsigned long long number_combos_to_cover =
-      with_mt ? number_of_combinations_to_cover(tp, model, strength)
-              : number_of_combinations_to_cover(model, strength);
+      with_mt ? number_of_combinations_to_cover(parameter_index_map.size(),
+                                                model, parameter_index_map,
+                                                strength, false, tp)
+              : number_of_combinations_to_cover(parameter_index_map.size(),
+                                                model, parameter_index_map,
+                                                strength, false);
   tp.stop_workers();
   exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
 
   if (exec_handle.is_job_aborted()) {
     return;
   }
-
-  std::vector<unsigned int> parameter_index_map(
-      get_parameter_indices_ordered_by_number_of_values_desc(
-          model.get_parameters()));
 
   // Here is the main IPOG loop.
   for (unsigned int current_param_idx = 0;

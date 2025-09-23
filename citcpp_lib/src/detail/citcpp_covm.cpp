@@ -37,8 +37,12 @@ void main_covm_loop(const citcpp::detail::model &model,
   std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
 
   unsigned long long number_combos_to_cover =
-      with_mt ? number_of_combinations_to_cover(tp, model, strength)
-              : number_of_combinations_to_cover(model, strength);
+      with_mt ? number_of_combinations_to_cover(parameter_index_map.size(),
+                                                model, parameter_index_map,
+                                                strength, false, tp)
+              : number_of_combinations_to_cover(parameter_index_map.size(),
+                                                model, parameter_index_map,
+                                                strength, false);
   covm.set_number_of_param_combos_to_cover(
       binomial_coeffs.get_coefficient(model.get_parameters().size(), strength));
   covm.set_number_of_combinations_to_cover(number_combos_to_cover);
