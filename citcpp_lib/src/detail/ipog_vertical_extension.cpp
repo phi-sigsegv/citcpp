@@ -64,11 +64,11 @@ class ipog_vertical_extension_functor {
       // value we have to cover.
       for (test &t : partitioning_of_tests_according_to_current_values_
                          .value_to_row_mapping[current_param_value_to_cover]) {
-        // We also skip tests which do not have at least one don't care
-        // value.
-        if (t.get_num_dont_care_values() == 0) {
-          continue;
-        }
+        // WARNING: We cannot skip tests which do not have at least one don't
+        // care value, since otherwise we would miss cases, where the vertical
+        // extension has covered a tuple by chance. If we would insist to only
+        // extend tests with don't care values, then we would miss that point
+        // and create another test for an already covered tuple.
 
         if (ipog_vertical_extension_try_inject_value_combo(param_indices,
                                                            value_indices, t)) {

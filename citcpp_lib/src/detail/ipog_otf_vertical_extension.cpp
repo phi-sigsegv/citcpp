@@ -119,6 +119,11 @@ class ipog_vertical_extension_tuple_functor {
                          .value_to_row_mapping[current_param_value_to_cover]) {
         // We also skip tests which do not have at least one don't care
         // value.
+        // This is safe to do here, since at the callsite of this functor,
+        // we have previously walked over all tests for the current parameter
+        // combination, and calculated its current coverage. Thus, there is no
+        // possibility for the vertical extension having covered a tuple by
+        // chance.
         if (t.get_num_dont_care_values() == 0) {
           continue;
         }
