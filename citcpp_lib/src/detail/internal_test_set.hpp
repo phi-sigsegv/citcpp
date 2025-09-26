@@ -9,8 +9,45 @@
 namespace citcpp {
 namespace detail {
 
-class test : public sl_list_node_intrusive {
+class test;
+
+class test_list_intrusive_integ : public sl_list_node_intrusive {
     typedef sl_list_node_intrusive base_type;
+
+  public:
+    test_list_intrusive_integ(test* test) : base_type(), test_(test) {}
+
+    test_list_intrusive_integ(const test_list_intrusive_integ& other)
+        : base_type(other), test_(other.test_) {}
+
+    test_list_intrusive_integ(test_list_intrusive_integ&& other)
+        : base_type(std::move(other)), test_(other.test_) {}
+
+    test_list_intrusive_integ& operator=(
+        const test_list_intrusive_integ& other) {
+      base_type::operator=(other);
+      test_ = other.test_;
+
+      return *this;
+    }
+
+    test_list_intrusive_integ& operator=(
+        test_list_intrusive_integ&& other) noexcept {
+      base_type::operator=(std::move(other));
+      test_ = other.test_;
+
+      return *this;
+    }
+
+    test& get_test() { return *test_; }
+
+    const test& get_test() const { return *test_; }
+
+  private:
+    test* test_;
+};
+
+class test {
     typedef std::vector<int> values_list_type;
 
   public:
@@ -29,33 +66,41 @@ class test : public sl_list_node_intrusive {
         const_reverse_iterator;
 
   public:
-    test() noexcept : base_type(), values_(), num_dont_care_values_(0) {}
+    test() noexcept
+        : values_(), num_dont_care_values_(0), value_partitioned_test_(this) {}
 
     explicit test(size_type count)
-        : base_type(), values_(count), num_dont_care_values_(0) {}
+        : values_(count),
+          num_dont_care_values_(0),
+          value_partitioned_test_(this) {}
 
     test(size_type count, const int& value)
-        : base_type(), values_(count, value), num_dont_care_values_(0) {}
+        : values_(count, value),
+          num_dont_care_values_(0),
+          value_partitioned_test_(this) {}
 
     template <class InputIt>
     test(InputIt first, InputIt last)
-        : base_type(), values_(first, last), num_dont_care_values_(0) {}
+        : values_(first, last),
+          num_dont_care_values_(0),
+          value_partitioned_test_(this) {}
 
     test(const test& other)
-        : base_type(other),
-          values_(other.values_),
-          num_dont_care_values_(other.num_dont_care_values_) {}
+        : values_(other.values_),
+          num_dont_care_values_(other.num_dont_care_values_),
+          value_partitioned_test_(this) {}
 
     test(test&& other)
-        : base_type(std::move(other)),
-          values_(std::move(other.values_)),
-          num_dont_care_values_(other.num_dont_care_values_) {}
+        : values_(std::move(other.values_)),
+          num_dont_care_values_(other.num_dont_care_values_),
+          value_partitioned_test_(this) {}
 
     test(std::initializer_list<int> init)
-        : base_type(), values_(std::move(init)), num_dont_care_values_(0) {}
+        : values_(std::move(init)),
+          num_dont_care_values_(0),
+          value_partitioned_test_(this) {}
 
     test& operator=(const test& other) {
-      base_type::operator=(other);
       values_ = other.values_;
       num_dont_care_values_ = other.num_dont_care_values_;
 
@@ -63,7 +108,6 @@ class test : public sl_list_node_intrusive {
     }
 
     test& operator=(test&& other) noexcept {
-      base_type::operator=(std::move(other));
       values_ = std::move(other.values_);
       num_dont_care_values_ = other.num_dont_care_values_;
 
@@ -88,9 +132,14 @@ class test : public sl_list_node_intrusive {
       num_dont_care_values_ = num_dont_care_values;
     }
 
+    test_list_intrusive_integ& get_value_partition_intrusive_list_node() {
+      return value_partitioned_test_;
+    }
+
   private:
     values_list_type values_;
     unsigned int num_dont_care_values_;
+    test_list_intrusive_integ value_partitioned_test_;
 };
 
 /**

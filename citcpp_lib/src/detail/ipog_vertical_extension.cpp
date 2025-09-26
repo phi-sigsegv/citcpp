@@ -62,16 +62,17 @@ class ipog_vertical_extension_functor {
 
       // Iterate over the tests with the same value for the current parameter
       // value we have to cover.
-      for (test &t : partitioning_of_tests_according_to_current_values_
-                         .value_to_row_mapping[current_param_value_to_cover]) {
+      for (test_list_intrusive_integ &t :
+           partitioning_of_tests_according_to_current_values_
+               .value_to_row_mapping[current_param_value_to_cover]) {
         // WARNING: We cannot skip tests which do not have at least one don't
         // care value, since otherwise we would miss cases, where the vertical
         // extension has covered a tuple by chance. If we would insist to only
         // extend tests with don't care values, then we would miss that point
         // and create another test for an already covered tuple.
 
-        if (ipog_vertical_extension_try_inject_value_combo(param_indices,
-                                                           value_indices, t)) {
+        if (ipog_vertical_extension_try_inject_value_combo(
+                param_indices, value_indices, t.get_test())) {
           // Return, since we have found a test and injected the value
           // combination.
           return;
@@ -85,7 +86,7 @@ class ipog_vertical_extension_functor {
            it != partitioning_of_tests_according_to_current_values_
                      .rows_with_current_parameter_dont_care_value.end();
            ++it) {
-        test &t = *it;
+        test &t = it->get_test();
 
         if (ipog_vertical_extension_try_inject_value_combo(param_indices,
                                                            value_indices, t)) {
@@ -97,7 +98,7 @@ class ipog_vertical_extension_functor {
               .rows_with_current_parameter_dont_care_value.erase(it);
           partitioning_of_tests_according_to_current_values_
               .value_to_row_mapping[current_param_value_to_cover]
-              .push_back(t);
+              .push_back(t.get_value_partition_intrusive_list_node());
 
           // Return, since we have found a test and injected the value
           // combination.
@@ -123,7 +124,9 @@ class ipog_vertical_extension_functor {
       // Update the mapping from values of the current parameter to the tests.
       partitioning_of_tests_according_to_current_values_
           .value_to_row_mapping[current_param_value_to_cover]
-          .push_back(test_set_.get_list_of_tests().back());
+          .push_back(test_set_.get_list_of_tests()
+                         .back()
+                         .get_value_partition_intrusive_list_node());
     }
 
     bool ipog_vertical_extension_try_inject_value_combo(

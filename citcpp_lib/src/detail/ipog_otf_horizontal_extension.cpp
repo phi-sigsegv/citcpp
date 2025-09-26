@@ -389,8 +389,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
   // First initialize the result object.
   ipog_horizontal_extension_result result{
-      std::vector<list_intrusive<test>>(num_current_param_values),
-      list_intrusive<test>(), 0};
+      std::vector<list_intrusive<test_list_intrusive_integ>>(
+          num_current_param_values),
+      list_intrusive<test_list_intrusive_integ>(), 0};
 
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
@@ -419,11 +420,13 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       t.get_values()[real_current_param_idx] = res.selected_value_;
       // Maintain a mapping from values of the current parameter to the
       // tests.
-      result.value_to_row_mapping[res.selected_value_].push_back(t);
+      result.value_to_row_mapping[res.selected_value_].push_back(
+          t.get_value_partition_intrusive_list_node());
     } else {
       // Maintain a mapping from values of the current parameter to the
       // tests.
-      result.rows_with_current_parameter_dont_care_value.push_back(t);
+      result.rows_with_current_parameter_dont_care_value.push_back(
+          t.get_value_partition_intrusive_list_node());
       // Since we have not set a concrete value, we increase the number of
       // dont care values in the test.
       t.set_num_dont_care_values(t.get_num_dont_care_values() + 1);
@@ -455,8 +458,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
   // First initialize the result object.
   ipog_horizontal_extension_result result{
-      std::vector<list_intrusive<test>>(num_current_param_values),
-      list_intrusive<test>(), 0};
+      std::vector<list_intrusive<test_list_intrusive_integ>>(
+          num_current_param_values),
+      list_intrusive<test_list_intrusive_integ>(), 0};
 
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
@@ -485,11 +489,13 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       t.get_values()[real_current_param_idx] = res.selected_value_;
       // Maintain a mapping from values of the current parameter to the
       // tests.
-      result.value_to_row_mapping[res.selected_value_].push_back(t);
+      result.value_to_row_mapping[res.selected_value_].push_back(
+          t.get_value_partition_intrusive_list_node());
     } else {
       // Maintain a mapping from values of the current parameter to the
       // tests.
-      result.rows_with_current_parameter_dont_care_value.push_back(t);
+      result.rows_with_current_parameter_dont_care_value.push_back(
+          t.get_value_partition_intrusive_list_node());
       // Since we have not set a concrete value, we increase the number of
       // dont care values in the test.
       t.set_num_dont_care_values(t.get_num_dont_care_values() + 1);

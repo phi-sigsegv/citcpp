@@ -7,8 +7,9 @@ namespace citcpp {
 namespace detail {
 
 struct ipog_horizontal_extension_result {
-    std::vector<list_intrusive<test>> value_to_row_mapping;
-    list_intrusive<test> rows_with_current_parameter_dont_care_value;
+    std::vector<list_intrusive<test_list_intrusive_integ>> value_to_row_mapping;
+    list_intrusive<test_list_intrusive_integ>
+        rows_with_current_parameter_dont_care_value;
     unsigned long long num_new_covered_tuples;
 };
 
