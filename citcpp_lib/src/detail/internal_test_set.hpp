@@ -67,38 +67,38 @@ class test {
 
   public:
     test() noexcept
-        : values_(), num_dont_care_values_(0), value_partitioned_test_(this) {}
+        : values_(), num_dont_care_values_(0), value_partition_il_node_(this) {}
 
     explicit test(size_type count)
         : values_(count),
           num_dont_care_values_(0),
-          value_partitioned_test_(this) {}
+          value_partition_il_node_(this) {}
 
     test(size_type count, const int& value)
         : values_(count, value),
           num_dont_care_values_(0),
-          value_partitioned_test_(this) {}
+          value_partition_il_node_(this) {}
 
     template <class InputIt>
     test(InputIt first, InputIt last)
         : values_(first, last),
           num_dont_care_values_(0),
-          value_partitioned_test_(this) {}
+          value_partition_il_node_(this) {}
 
     test(const test& other)
         : values_(other.values_),
           num_dont_care_values_(other.num_dont_care_values_),
-          value_partitioned_test_(this) {}
+          value_partition_il_node_(this) {}
 
     test(test&& other)
         : values_(std::move(other.values_)),
           num_dont_care_values_(other.num_dont_care_values_),
-          value_partitioned_test_(this) {}
+          value_partition_il_node_(this) {}
 
     test(std::initializer_list<int> init)
         : values_(std::move(init)),
           num_dont_care_values_(0),
-          value_partitioned_test_(this) {}
+          value_partition_il_node_(this) {}
 
     test& operator=(const test& other) {
       values_ = other.values_;
@@ -133,13 +133,13 @@ class test {
     }
 
     test_list_intrusive_integ& get_value_partition_intrusive_list_node() {
-      return value_partitioned_test_;
+      return value_partition_il_node_;
     }
 
   private:
     values_list_type values_;
     unsigned int num_dont_care_values_;
-    test_list_intrusive_integ value_partitioned_test_;
+    test_list_intrusive_integ value_partition_il_node_;
 };
 
 /**

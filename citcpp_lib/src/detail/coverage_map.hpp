@@ -131,86 +131,6 @@ class coverage_map_base {
     unsigned long long total_num_tuples_;
 };
 
-template <class T_VISITOR>
-class value_combination_iterator {
-  public:
-    typedef coverage_map_base::size_type size_type;
-
-    value_combination_iterator(const coverage_map_base &cov_map,
-                               bool skip_fully_covered_param_combo,
-                               T_VISITOR &visitor)
-        : cov_map_(cov_map),
-          skip_fully_covered_param_combo_(skip_fully_covered_param_combo),
-          value_indices_(cov_map.get_number_of_parameters_to_select()),
-          bit_pos_(0),
-          visitor_(visitor) {}
-
-    bool operator()(coverage_map_base::second_level_type &value_combinations) {
-      if (!skip_fully_covered_param_combo_ || !value_combinations.all()) {
-        bit_pos_ = 0;
-
-        return recursively_visit_all_value_combos_of_param_combo(
-            value_combinations, value_indices_.size() - 1, 0);
-      }
-
-      return true;
-    }
-
-    const value_vector &get_value_indices() const { return value_indices_; }
-
-    size_type get_bitpos() const { return bit_pos_; }
-
-  private:
-    bool recursively_visit_all_value_combos_of_param_combo(
-        coverage_map_base::second_level_type &value_combinations,
-        int current_index, size_type partial_bit_pos) {
-
-      // The current range goes from 0 to max_value[current_index]
-      const unsigned int max_val =
-          cov_map_.get_model().get_parameters()
-              [value_combinations.get_parameter_indices()[current_index]];
-
-      const param_vector &param_indices =
-          value_combinations.get_parameter_indices();
-      size_type bit_pos_value_factor = 1;
-      for (std::vector<unsigned int>::size_type j = current_index + 1;
-           j < param_indices.size(); ++j) {
-        bit_pos_value_factor *=
-            cov_map_.get_model().get_parameters()[param_indices[j]];
-      }
-
-      for (int i = max_val - 1; i >= 0; --i) {
-        value_indices_[current_index] = i;
-
-        bool ret = true;
-
-        if (current_index == 0) {
-          bit_pos_ = partial_bit_pos + i * bit_pos_value_factor;
-          // We assume that the visitor is a functor accepting a reference to
-          // this iterator. In addition
-          ret = visitor_(value_combinations, value_indices_, bit_pos_);
-        } else {
-          ret = recursively_visit_all_value_combos_of_param_combo(
-              value_combinations, current_index - 1,
-              partial_bit_pos + i * bit_pos_value_factor);
-        }
-
-        if (!ret) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-  private:
-    const coverage_map_base &cov_map_;
-    bool skip_fully_covered_param_combo_;
-    value_vector value_indices_;
-    size_type bit_pos_;
-    T_VISITOR &visitor_;
-};
-
 class coverage_map_iterator {
   public:
     coverage_map_iterator(coverage_map_base &cov_map) : cov_map_(cov_map) {}
@@ -229,20 +149,6 @@ class coverage_map_iterator {
       for (coverage_map_base::second_level_type &value_combinations :
            cov_map_.get_coverage_map()) {
         if (!visitor(value_combinations)) {
-          return;
-        }
-      }
-    }
-
-    template <class T_VISITOR>
-    void visit_all_tuples(bool skip_fully_covered_param_combo,
-                          T_VISITOR &visitor) {
-      value_combination_iterator<T_VISITOR> value_combo_it(
-          cov_map_, skip_fully_covered_param_combo, visitor);
-
-      for (coverage_map_base::second_level_type &value_combinations :
-           cov_map_.get_coverage_map()) {
-        if (!value_combo_it(value_combinations)) {
           return;
         }
       }
