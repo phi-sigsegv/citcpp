@@ -961,6 +961,13 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
             previous_test->get_num_dont_care_values() + 1);
       }
 
+      // Reset the intrusive list node, such that the vertical extension can
+      // assume both pointers to be nullptr.
+      previous_test->get_vertical_extension_intrusive_list_node().prev_node_ =
+          nullptr;
+      previous_test->get_vertical_extension_intrusive_list_node().next_node_ =
+          nullptr;
+
       new_covered_tuples_and_selected_value res =
           ipog_horizontal_update_coverage_map_and_select_best_value(
               real_current_param_idx, num_current_param_values, model,
@@ -1002,6 +1009,13 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       previous_test->set_num_dont_care_values(
           previous_test->get_num_dont_care_values() + 1);
     }
+
+    // Reset the intrusive list node, such that the vertical extension can
+    // assume both pointers to be nullptr.
+    previous_test->get_vertical_extension_intrusive_list_node().prev_node_ =
+        nullptr;
+    previous_test->get_vertical_extension_intrusive_list_node().next_node_ =
+        nullptr;
 
     unsigned long long num_new_covered_tuples =
         selected_value >= 0
@@ -1071,6 +1085,13 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
             previous_test->get_num_dont_care_values() + 1);
       }
 
+      // Reset the intrusive list node, such that the vertical extension can
+      // assume both pointers to be nullptr.
+      previous_test->get_vertical_extension_intrusive_list_node().prev_node_ =
+          nullptr;
+      previous_test->get_vertical_extension_intrusive_list_node().next_node_ =
+          nullptr;
+
       new_covered_tuples_and_selected_value res =
           ipog_horizontal_update_coverage_map_and_select_best_value(
               real_current_param_idx, num_current_param_values, model,
@@ -1112,6 +1133,13 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       previous_test->set_num_dont_care_values(
           previous_test->get_num_dont_care_values() + 1);
     }
+
+    // Reset the intrusive list node, such that the vertical extension can
+    // assume both pointers to be nullptr.
+    previous_test->get_vertical_extension_intrusive_list_node().prev_node_ =
+        nullptr;
+    previous_test->get_vertical_extension_intrusive_list_node().next_node_ =
+        nullptr;
 
     unsigned long long num_new_covered_tuples =
         selected_value >= 0

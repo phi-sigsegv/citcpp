@@ -12,12 +12,15 @@ class ipog_vertical_extension_tuple_functor {
         citcpp::detail::internal_test_set &test_set,
         citcpp::detail::ipog_horizontal_extension_result
             &partitioning_of_tests_according_to_current_values,
+        citcpp::detail::list_intrusive<
+            citcpp::detail::test_list_intrusive_integ> &modified_tests,
         const unsigned long long num_missing_combinations_to_cover)
         : current_param_idx_(current_param_idx),
           model_(model),
           test_set_(test_set),
           partitioning_of_tests_according_to_current_values_(
               partitioning_of_tests_according_to_current_values),
+          modified_tests_(modified_tests),
           num_missing_combinations_to_cover_(num_missing_combinations_to_cover),
           num_new_covered_tuples_(0) {}
 
@@ -75,6 +78,14 @@ class ipog_vertical_extension_tuple_functor {
 
         if (ipog_vertical_extension_try_inject_value_combo(
                 param_indices, value_indices, t.get_test())) {
+          // Remember that we have modified the test and need to
+          // evaluate it again whether also other combinations are covered.
+          if (!t.get_test()
+                   .get_vertical_extension_intrusive_list_node()
+                   .is_linked_up()) {
+            modified_tests_.push_back(
+                t.get_test().get_vertical_extension_intrusive_list_node());
+          }
           // Return, since we have found a test and injected the value
           // combination.
           return;
@@ -92,6 +103,12 @@ class ipog_vertical_extension_tuple_functor {
 
         if (ipog_vertical_extension_try_inject_value_combo(param_indices,
                                                            value_indices, t)) {
+          if (!t.get_vertical_extension_intrusive_list_node().is_linked_up()) {
+            // Remember that we have modified the test and need to
+            // evaluate it again whether also other combinations are covered.
+            modified_tests_.push_back(
+                t.get_vertical_extension_intrusive_list_node());
+          }
           // Since we have successfully injected the combination, the test must
           // be moved to a different partition for looking it up when trying to
           // inject other combinations with the same value for the current
@@ -171,6 +188,8 @@ class ipog_vertical_extension_tuple_functor {
     citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values_;
+    citcpp::detail::list_intrusive<citcpp::detail::test_list_intrusive_integ>
+        &modified_tests_;
     const unsigned long long num_missing_combinations_to_cover_;
     unsigned long long num_new_covered_tuples_;
 };
@@ -189,6 +208,7 @@ class ipog_vertical_extension_functor {
           test_set_(test_set),
           partitioning_of_tests_according_to_current_values_(
               partitioning_of_tests_according_to_current_values),
+          modified_tests_(),
           value_indices_(strength),
           num_missing_combinations_to_cover_(num_missing_combinations_to_cover),
           num_new_covered_tuples_(0) {}
@@ -218,9 +238,43 @@ class ipog_vertical_extension_functor {
       const param_vector &param_indices =
           value_combinations.get_parameter_indices();
 
+      for (test_list_intrusive_integ &t : modified_tests_) {
+        // Here we compute an index into the bitset. To do so, we treat the
+        // number of values of each parameter as a kind of radix. Consider
+        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
+        // values for p_i. If we now have values x_0, x_1, x_2, then the
+        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+        coverage_map::second_level_type::size_type base_index = 0;
+        bool index_valid = true;
+        for (std::vector<unsigned int>::size_type i = 0;
+             i < param_indices.size(); ++i) {
+
+          const unsigned int param_idx = param_indices[i];
+          const int param_value = t.get_test().get_values()[param_idx];
+
+          if (param_value < 0) {
+            // We have found a don't care value for that combination in
+            // the considered test.
+            index_valid = false;
+            break;
+          }
+
+          coverage_map::second_level_type::size_type addend = param_value;
+          for (std::vector<unsigned int>::size_type j = i + 1;
+               j < param_indices.size(); ++j) {
+            addend *= model_.get_parameters()[param_indices[j]];
+          }
+          base_index += addend;
+        }
+
+        if (index_valid) {
+          value_combinations.set(base_index);
+        }
+      }
+
       ipog_vertical_extension_tuple_functor tuple_functor(
           current_param_idx_, model_, test_set_,
-          partitioning_of_tests_according_to_current_values_,
+          partitioning_of_tests_according_to_current_values_, modified_tests_,
           num_missing_combinations_to_cover_);
 
       visit_all_value_combos_of_param_combo(model_, param_indices,
@@ -236,6 +290,8 @@ class ipog_vertical_extension_functor {
     citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values_;
+    citcpp::detail::list_intrusive<citcpp::detail::test_list_intrusive_integ>
+        modified_tests_;
     citcpp::detail::value_vector value_indices_;
     const unsigned long long num_missing_combinations_to_cover_;
     unsigned long long num_new_covered_tuples_;

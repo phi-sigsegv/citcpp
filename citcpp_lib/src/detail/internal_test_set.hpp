@@ -39,6 +39,10 @@ class test_list_intrusive_integ : public sl_list_node_intrusive {
       return *this;
     }
 
+    bool is_linked_up() const {
+      return prev_node_ != nullptr || next_node_ != nullptr;
+    }
+
     test& get_test() { return *test_; }
 
     const test& get_test() const { return *test_; }
@@ -67,38 +71,47 @@ class test {
 
   public:
     test() noexcept
-        : values_(), num_dont_care_values_(0), value_partition_il_node_(this) {}
+        : values_(),
+          num_dont_care_values_(0),
+          value_partition_il_node_(this),
+          vertical_ext_il_node_(this) {}
 
     explicit test(size_type count)
         : values_(count),
           num_dont_care_values_(0),
-          value_partition_il_node_(this) {}
+          value_partition_il_node_(this),
+          vertical_ext_il_node_(this) {}
 
     test(size_type count, const int& value)
         : values_(count, value),
           num_dont_care_values_(0),
-          value_partition_il_node_(this) {}
+          value_partition_il_node_(this),
+          vertical_ext_il_node_(this) {}
 
     template <class InputIt>
     test(InputIt first, InputIt last)
         : values_(first, last),
           num_dont_care_values_(0),
-          value_partition_il_node_(this) {}
+          value_partition_il_node_(this),
+          vertical_ext_il_node_(this) {}
 
     test(const test& other)
         : values_(other.values_),
           num_dont_care_values_(other.num_dont_care_values_),
-          value_partition_il_node_(this) {}
+          value_partition_il_node_(this),
+          vertical_ext_il_node_(this) {}
 
     test(test&& other)
         : values_(std::move(other.values_)),
           num_dont_care_values_(other.num_dont_care_values_),
-          value_partition_il_node_(this) {}
+          value_partition_il_node_(this),
+          vertical_ext_il_node_(this) {}
 
     test(std::initializer_list<int> init)
         : values_(std::move(init)),
           num_dont_care_values_(0),
-          value_partition_il_node_(this) {}
+          value_partition_il_node_(this),
+          vertical_ext_il_node_(this) {}
 
     test& operator=(const test& other) {
       values_ = other.values_;
@@ -136,10 +149,15 @@ class test {
       return value_partition_il_node_;
     }
 
+    test_list_intrusive_integ& get_vertical_extension_intrusive_list_node() {
+      return vertical_ext_il_node_;
+    }
+
   private:
     values_list_type values_;
     unsigned int num_dont_care_values_;
     test_list_intrusive_integ value_partition_il_node_;
+    test_list_intrusive_integ vertical_ext_il_node_;
 };
 
 /**
