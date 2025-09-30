@@ -25,19 +25,21 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
     bool operator()(const citcpp::detail::param_vector &param_indices) {
       using namespace citcpp::detail;
 
-      // We first check whether the test already has a concrete value
-      // for the current parameter, because if so, then there is no
-      // point in evaluating a coverage gain.
-      if (test_.get_values()[real_current_param_idx_] >= 0) {
-        gain_per_value_[test_.get_values()[real_current_param_idx_]] += 1;
-
-        return true;
-      }
+      const int current_param_value =
+          test_.get_values()[real_current_param_idx_];
 
       for (std::vector<unsigned int>::size_type i = 0;
            i < param_combo_gain_per_value_.size(); ++i) {
 
         param_combo_gain_per_value_[i] = 1;
+        if (current_param_value >= 0 && current_param_value != i) {
+          // We check whether the test already has a concrete value
+          // for the current parameter, because if so, then we force the gain
+          // computation to only have a gain for that particular value.
+          // We cannot skip the gain computation altogether, since we
+          // use that number to track the number of covered tuples.
+          param_combo_gain_per_value_[i] = 0;
+        }
       }
 
       unsigned int test_index = 0;
@@ -65,12 +67,12 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
           }
 
           if (is_same_tuple_prefix) {
+            const unsigned int param_idx =
+                param_indices[param_indices.size() - 1];
+            const int other_param_value = t.get_values()[param_idx];
+
             for (unsigned int value = 0;
                  value < param_combo_gain_per_value_.size(); ++value) {
-
-              const unsigned int param_idx =
-                  param_indices[param_indices.size() - 1];
-              const int other_param_value = t.get_values()[param_idx];
               if (value == other_param_value) {
                 param_combo_gain_per_value_[value] = 0;
               }

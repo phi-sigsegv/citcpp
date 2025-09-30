@@ -303,8 +303,10 @@ ipog_vertical_extension_result ipog_vertical_extension(
 
   const unsigned int product_of_max_parameter_sizes =
       num_current_param_values *
-      get_product_of_max_n_parameter_sizes(current_param_idx, strength - 1,
-                                           model, parameter_index_map);
+      (strength > 1
+           ? get_product_of_max_n_parameter_sizes(
+                 current_param_idx, strength - 1, model, parameter_index_map)
+           : 1);
 
   array_wrapper_uint64 bitset_backing_array(product_of_max_parameter_sizes);
 
