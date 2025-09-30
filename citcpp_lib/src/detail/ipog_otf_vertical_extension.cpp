@@ -62,16 +62,6 @@ class ipog_vertical_extension_tuple_functor {
       for (test_list_intrusive_integ &t :
            partitioning_of_tests_according_to_current_values_
                .value_to_row_mapping[current_param_value_to_cover]) {
-        // We also skip tests which do not have at least one don't care
-        // value.
-        // This is safe to do here, since at the callsite of this functor,
-        // we have previously walked over all tests for the current parameter
-        // combination, and calculated its current coverage. Thus, there is no
-        // possibility for the vertical extension having covered a tuple by
-        // chance.
-        if (t.get_test().get_num_dont_care_values() == 0) {
-          continue;
-        }
 
         if (ipog_vertical_extension_try_inject_value_combo(
                 param_indices, value_indices, t.get_test())) {
@@ -111,8 +101,6 @@ class ipog_vertical_extension_tuple_functor {
       // Thus, we have to add a new one with the value combination.
       // Initialize all values of the test with don't care.
       test t(model_.get_parameters().size(), -1);
-      t.set_num_dont_care_values((current_param_idx_ + 1) -
-                                 param_indices.size());
 
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
@@ -140,7 +128,6 @@ class ipog_vertical_extension_tuple_functor {
         const citcpp::detail::value_vector &value_indices,
         citcpp::detail::test &t) {
 
-      int overwritten_dont_cares = 0;
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
         const int param_value_to_cover = value_indices[i];
@@ -152,10 +139,6 @@ class ipog_vertical_extension_tuple_functor {
           // next one.
           return false;
         }
-
-        if (param_value_in_test < 0) {
-          ++overwritten_dont_cares;
-        }
       }
 
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
@@ -163,9 +146,6 @@ class ipog_vertical_extension_tuple_functor {
         const int param_value_to_cover = value_indices[i];
         t.get_values()[param_idx] = param_value_to_cover;
       }
-
-      t.set_num_dont_care_values(t.get_num_dont_care_values() -
-                                 overwritten_dont_cares);
 
       return true;
     }

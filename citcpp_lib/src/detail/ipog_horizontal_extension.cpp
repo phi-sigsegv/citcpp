@@ -955,10 +955,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         // Maintain a mapping from values of the current parameter to the tests.
         result.rows_with_current_parameter_dont_care_value.push_back(
             previous_test->get_value_partition_intrusive_list_node());
-        // Since we have not set a concrete value, we increase the number of
-        // dont care values in the test.
-        previous_test->set_num_dont_care_values(
-            previous_test->get_num_dont_care_values() + 1);
       }
 
       // Reset the intrusive list node, such that the vertical extension can
@@ -1004,10 +1000,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       // Maintain a mapping from values of the current parameter to the tests.
       result.rows_with_current_parameter_dont_care_value.push_back(
           previous_test->get_value_partition_intrusive_list_node());
-      // Since we have not set a concrete value, we increase the number of
-      // dont care values in the test.
-      previous_test->set_num_dont_care_values(
-          previous_test->get_num_dont_care_values() + 1);
     }
 
     // Reset the intrusive list node, such that the vertical extension can
@@ -1079,10 +1071,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         // Maintain a mapping from values of the current parameter to the tests.
         result.rows_with_current_parameter_dont_care_value.push_back(
             previous_test->get_value_partition_intrusive_list_node());
-        // Since we have not set a concrete value, we increase the number of
-        // dont care values in the test.
-        previous_test->set_num_dont_care_values(
-            previous_test->get_num_dont_care_values() + 1);
       }
 
       // Reset the intrusive list node, such that the vertical extension can
@@ -1128,10 +1116,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       // Maintain a mapping from values of the current parameter to the tests.
       result.rows_with_current_parameter_dont_care_value.push_back(
           previous_test->get_value_partition_intrusive_list_node());
-      // Since we have not set a concrete value, we increase the number of
-      // dont care values in the test.
-      previous_test->set_num_dont_care_values(
-          previous_test->get_num_dont_care_values() + 1);
     }
 
     // Reset the intrusive list node, such that the vertical extension can

@@ -35,7 +35,6 @@ create_all_value_combinations_result create_all_value_combinations(
        &result](const std::vector<unsigned int> &next_cross_product_elem) {
         // Initialize all values of the test with don't care.
         test t(model.get_parameters().size(), -1);
-        t.set_num_dont_care_values(0);
 
         // Replace the first t elements with the cross product element.
         for (unsigned int index = 0; index < next_cross_product_elem.size();

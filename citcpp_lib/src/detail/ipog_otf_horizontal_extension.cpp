@@ -429,9 +429,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       // tests.
       result.rows_with_current_parameter_dont_care_value.push_back(
           t.get_value_partition_intrusive_list_node());
-      // Since we have not set a concrete value, we increase the number of
-      // dont care values in the test.
-      t.set_num_dont_care_values(t.get_num_dont_care_values() + 1);
     }
 
     // Keep track of how many tuples we have covered in addition.
@@ -498,9 +495,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       // tests.
       result.rows_with_current_parameter_dont_care_value.push_back(
           t.get_value_partition_intrusive_list_node());
-      // Since we have not set a concrete value, we increase the number of
-      // dont care values in the test.
-      t.set_num_dont_care_values(t.get_num_dont_care_values() + 1);
     }
 
     // Keep track of how many tuples we have covered in addition.
