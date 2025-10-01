@@ -80,16 +80,27 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
           }
         }
 
-        if (!is_extend_mode_ && test_index >= current_test_index_) {
+        if (test_index >= current_test_index_ &&
+            (!is_extend_mode_ || current_param_value >= 0)) {
           // If we are not extending an already existing testset, then
           // we know for sure that all tests beyond our current one
           // have a don't care value for the current parameter.
           // That means our coverage gain would not change by also
           // inspecting the remaining tests for the current parameter
           // combination.
+          //
           // If we are extending an already existing testset however,
           // then we have to walk over all tests, since a later test
-          // might cover the same tuple.
+          // might cover the same tuple. So replacing the don't care value
+          // at the current parameter would not result in a coverage gain.
+          // If however the test has a concrete value at the current parameter,
+          // then we must only check the tests preceding the current one.
+          // This is because we need an accurate number for the coverage
+          // gain, since we use that number to track the number of covered
+          // tuples. While in principle coverage of the tuple could be
+          // accounted for by the current test and anther one, we always
+          // associate coverage of a tuple with the test that comes first.
+          // Therefore, we can abort the loop at this point.
           break;
         }
 
