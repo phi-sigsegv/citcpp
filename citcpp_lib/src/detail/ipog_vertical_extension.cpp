@@ -81,6 +81,7 @@ class ipog_vertical_extension_tuple_functor {
             modified_tests_.push_back(
                 t.get_test().get_vertical_extension_intrusive_list_node());
           }
+
           // Return, since we have found a test and injected the value
           // combination.
           return;
@@ -104,6 +105,7 @@ class ipog_vertical_extension_tuple_functor {
             modified_tests_.push_back(
                 t.get_vertical_extension_intrusive_list_node());
           }
+
           // Since we have successfully injected the combination, the test must
           // be moved to a different partition for looking it up when trying to
           // inject other combinations with the same value for the current
@@ -230,7 +232,7 @@ class ipog_vertical_extension_functor {
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
         // values for p_i. If we now have values x_0, x_1, x_2, then the
         // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type base_index = 0;
+        coverage_map::second_level_type::size_type index = 0;
         bool index_valid = true;
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size(); ++i) {
@@ -250,11 +252,13 @@ class ipog_vertical_extension_functor {
                j < param_indices.size(); ++j) {
             addend *= model_.get_parameters()[param_indices[j]];
           }
-          base_index += addend;
+          index += addend;
         }
 
         if (index_valid) {
-          value_combinations.set(base_index);
+          if (!value_combinations.test_and_set(index)) {
+            num_new_covered_tuples_++;
+          }
         }
       }
 
