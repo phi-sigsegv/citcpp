@@ -278,12 +278,8 @@ int ipog_horizontal_select_best_value(
 class ipog_horizontal_update_coverage_map_per_param_combo_functor {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor(
-        const citcpp::detail::model &model, const citcpp::detail::test &test,
-        const int current_param_selected_value)
-        : model_(model),
-          test_(test),
-          current_param_selected_value_(current_param_selected_value),
-          num_new_covered_tuples_(0) {}
+        const citcpp::detail::model &model, const citcpp::detail::test &test)
+        : model_(model), test_(test), num_new_covered_tuples_(0) {}
 
     bool operator()(
         citcpp::detail::coverage_map::second_level_type &value_combinations) {
@@ -294,15 +290,13 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
 
       if (!value_combinations.all()) {
         // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider three
-        // parameters p_0, p_1, p_2. The last parameter is always the current
-        // one processed by IPOG. Now say that v_i is the number of values for
-        // p_i. If we now have values x_0, x_1, x_2, then the index is x_0 * v_1
-        // * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index =
-            current_param_selected_value_;
+        // number of values of each parameter as a kind of radix. Consider
+        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
+        // values for p_i. If we now have values x_0, x_1, x_2, then the
+        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+        coverage_map::second_level_type::size_type index = 0;
         for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size() - 1; ++i) {
+             i < param_indices.size(); ++i) {
           const unsigned int param_idx = param_indices[i];
           const int param_value = test_.get_values()[param_idx];
 
@@ -338,7 +332,6 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
   private:
     const citcpp::detail::model &model_;
     const citcpp::detail::test &test_;
-    const int current_param_selected_value_;
     unsigned long long num_new_covered_tuples_;
 };
 
@@ -346,11 +339,9 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel(
         const citcpp::detail::model &model, const citcpp::detail::test &test,
-        const int current_param_selected_value,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
         : model_(model),
           test_(test),
-          current_param_selected_value_(current_param_selected_value),
           num_new_covered_tuples_(cov_map_it.get_num_workers()),
           cov_map_it_(cov_map_it) {}
 
@@ -363,15 +354,13 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
 
       if (!value_combinations.all()) {
         // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider three
-        // parameters p_0, p_1, p_2. The last parameter is always the current
-        // one processed by IPOG. Now say that v_i is the number of values for
-        // p_i. If we now have values x_0, x_1, x_2, then the index is x_0 * v_1
-        // * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index =
-            current_param_selected_value_;
+        // number of values of each parameter as a kind of radix. Consider
+        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
+        // values for p_i. If we now have values x_0, x_1, x_2, then the
+        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+        coverage_map::second_level_type::size_type index = 0;
         for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size() - 1; ++i) {
+             i < param_indices.size(); ++i) {
           const unsigned int param_idx = param_indices[i];
           const int param_value = test_.get_values()[param_idx];
 
@@ -412,7 +401,6 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
   private:
     const citcpp::detail::model &model_;
     const citcpp::detail::test &test_;
-    const int current_param_selected_value_;
     citcpp::detail::thread_local_vector<citcpp::detail::aligned_ull_value>
         num_new_covered_tuples_;
     const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
@@ -420,12 +408,11 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
 
 unsigned long long ipog_horizontal_update_coverage_map(
     const citcpp::detail::model &model, const citcpp::detail::test &test,
-    const int current_param_selected_value,
     citcpp::detail::coverage_map_iterator &cov_map_it) {
   using namespace citcpp::detail;
 
   ipog_horizontal_update_coverage_map_per_param_combo_functor
-      per_param_combo_functor(model, test, current_param_selected_value);
+      per_param_combo_functor(model, test);
   cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   return per_param_combo_functor.get_num_new_covered_tuples();
@@ -433,13 +420,11 @@ unsigned long long ipog_horizontal_update_coverage_map(
 
 unsigned long long ipog_horizontal_update_coverage_map(
     const citcpp::detail::model &model, const citcpp::detail::test &test,
-    const int current_param_selected_value,
     citcpp::detail::coverage_map_parallel_iterator &cov_map_it) {
   using namespace citcpp::detail;
 
   ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel
-      per_param_combo_functor(model, test, current_param_selected_value,
-                              cov_map_it);
+      per_param_combo_functor(model, test, cov_map_it);
   cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   return per_param_combo_functor.get_num_new_covered_tuples();
@@ -457,20 +442,18 @@ class
         const citcpp::detail::model &model,
         const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
         std::vector<unsigned long long> &gain_per_value,
-        const bool enable_gain_computation,
-        const int current_param_selected_value_for_prev_test)
+        const bool enable_coverage_update, const bool enable_gain_computation)
         : model_(model),
           prev_test_(prev_test),
           test_(test),
           gain_per_value_(gain_per_value),
+          enable_coverage_update_(enable_coverage_update),
           enable_gain_computation_(enable_gain_computation),
-          current_param_selected_value_for_prev_test_(
-              current_param_selected_value_for_prev_test),
           num_new_covered_tuples_(0) {}
 
     bool operator()(
         citcpp::detail::coverage_map::second_level_type &value_combinations) {
-      if (current_param_selected_value_for_prev_test_ >= 0) {
+      if (enable_coverage_update_) {
         update_coverage(value_combinations);
       }
       if (enable_gain_computation_) {
@@ -489,15 +472,13 @@ class
 
       if (!value_combinations.all()) {
         // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider three
-        // parameters p_0, p_1, p_2. The last parameter is always the current
-        // one processed by IPOG. Now say that v_i is the number of values for
-        // p_i. If we now have values x_0, x_1, x_2, then the index is x_0 * v_1
-        // * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index =
-            current_param_selected_value_for_prev_test_;
+        // number of values of each parameter as a kind of radix. Consider
+        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
+        // values for p_i. If we now have values x_0, x_1, x_2, then the
+        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+        coverage_map::second_level_type::size_type index = 0;
         for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size() - 1; ++i) {
+             i < param_indices.size(); ++i) {
           const unsigned int param_idx = param_indices[i];
           const int param_value = prev_test_.get_values()[param_idx];
 
@@ -585,8 +566,8 @@ class
     const citcpp::detail::test &prev_test_;
     const citcpp::detail::test &test_;
     std::vector<unsigned long long> &gain_per_value_;
+    const bool enable_coverage_update_;
     const bool enable_gain_computation_;
-    const int current_param_selected_value_for_prev_test_;
     unsigned long long num_new_covered_tuples_;
 };
 
@@ -598,22 +579,20 @@ class
         const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
         citcpp::detail::thread_local_vector<
             std::vector<citcpp::detail::aligned_ull_value>> &gain_per_value,
-        const bool enable_gain_computation,
-        const int current_param_selected_value_for_prev_test,
+        const bool enable_coverage_update, const bool enable_gain_computation,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
         : model_(model),
           prev_test_(prev_test),
           test_(test),
           gain_per_value_(gain_per_value),
+          enable_coverage_update_(enable_coverage_update),
           enable_gain_computation_(enable_gain_computation),
-          current_param_selected_value_for_prev_test_(
-              current_param_selected_value_for_prev_test),
           num_new_covered_tuples_(cov_map_it.get_num_workers()),
           cov_map_it_(cov_map_it) {}
 
     bool operator()(
         citcpp::detail::coverage_map::second_level_type &value_combinations) {
-      if (current_param_selected_value_for_prev_test_ >= 0) {
+      if (enable_coverage_update_) {
         update_coverage(value_combinations);
       }
       if (enable_gain_computation_) {
@@ -632,15 +611,13 @@ class
 
       if (!value_combinations.all()) {
         // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider three
-        // parameters p_0, p_1, p_2. The last parameter is always the current
-        // one processed by IPOG. Now say that v_i is the number of values for
-        // p_i. If we now have values x_0, x_1, x_2, then the index is x_0 * v_1
-        // * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index =
-            current_param_selected_value_for_prev_test_;
+        // number of values of each parameter as a kind of radix. Consider
+        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
+        // values for p_i. If we now have values x_0, x_1, x_2, then the
+        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+        coverage_map::second_level_type::size_type index = 0;
         for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size() - 1; ++i) {
+             i < param_indices.size(); ++i) {
           const unsigned int param_idx = param_indices[i];
           const int param_value = prev_test_.get_values()[param_idx];
 
@@ -738,8 +715,8 @@ class
     const citcpp::detail::test &test_;
     citcpp::detail::thread_local_vector<
         std::vector<citcpp::detail::aligned_ull_value>> &gain_per_value_;
+    const bool enable_coverage_update_;
     const bool enable_gain_computation_;
-    const int current_param_selected_value_for_prev_test_;
     citcpp::detail::thread_local_vector<citcpp::detail::aligned_ull_value>
         num_new_covered_tuples_;
     const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
@@ -750,7 +727,6 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
     const citcpp::detail::model &model, const citcpp::detail::test &prev_test,
-    const int current_param_selected_value_for_prev_test,
     const citcpp::detail::test &test,
     citcpp::detail::coverage_map_iterator &cov_map_it,
     unsigned int &last_picked_value,
@@ -775,9 +751,10 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
   }
 
   ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor
-      per_param_combo_functor(model, prev_test, test, gain_per_value,
-                              current_param_value < 0,
-                              current_param_selected_value_for_prev_test);
+      per_param_combo_functor(
+          model, prev_test, test, gain_per_value,
+          prev_test.get_values()[real_current_param_idx] >= 0,
+          current_param_value < 0);
   cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   new_covered_tuples_and_selected_value res;
@@ -822,7 +799,6 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
     const citcpp::detail::model &model, const citcpp::detail::test &prev_test,
-    const int current_param_selected_value_for_prev_test,
     const citcpp::detail::test &test,
     citcpp::detail::coverage_map_parallel_iterator &cov_map_it,
     unsigned int &last_picked_value,
@@ -854,8 +830,9 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
 
   ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel
       per_param_combo_functor(
-          model, prev_test, test, gain_per_value, current_param_value < 0,
-          current_param_selected_value_for_prev_test, cov_map_it);
+          model, prev_test, test, gain_per_value,
+          prev_test.get_values()[real_current_param_idx] >= 0,
+          current_param_value < 0, cov_map_it);
   cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   new_covered_tuples_and_selected_value res;
@@ -966,8 +943,8 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       new_covered_tuples_and_selected_value res =
           ipog_horizontal_update_coverage_map_and_select_best_value(
               real_current_param_idx, num_current_param_values,
-              cov_map.get_model(), *previous_test, selected_value, t,
-              cov_map_it, last_picked_value, value_to_num_picked);
+              cov_map.get_model(), *previous_test, t, cov_map_it,
+              last_picked_value, value_to_num_picked);
 
       selected_value = res.selected_value_;
 
@@ -1009,10 +986,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         nullptr;
 
     unsigned long long num_new_covered_tuples =
-        selected_value >= 0 ? ipog_horizontal_update_coverage_map(
-                                  cov_map.get_model(), *previous_test,
-                                  selected_value, cov_map_it)
-                            : 0;
+        selected_value >= 0
+            ? ipog_horizontal_update_coverage_map(cov_map.get_model(),
+                                                  *previous_test, cov_map_it)
+            : 0;
 
     // Keep track of how many tuples we have covered in addition.
     result.num_new_covered_tuples += num_new_covered_tuples;
@@ -1081,8 +1058,8 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       new_covered_tuples_and_selected_value res =
           ipog_horizontal_update_coverage_map_and_select_best_value(
               real_current_param_idx, num_current_param_values,
-              cov_map.get_model(), *previous_test, selected_value, t,
-              cov_map_it, last_picked_value, value_to_num_picked);
+              cov_map.get_model(), *previous_test, t, cov_map_it,
+              last_picked_value, value_to_num_picked);
 
       selected_value = res.selected_value_;
 
@@ -1124,10 +1101,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         nullptr;
 
     unsigned long long num_new_covered_tuples =
-        selected_value >= 0 ? ipog_horizontal_update_coverage_map(
-                                  cov_map.get_model(), *previous_test,
-                                  selected_value, cov_map_it)
-                            : 0;
+        selected_value >= 0
+            ? ipog_horizontal_update_coverage_map(cov_map.get_model(),
+                                                  *previous_test, cov_map_it)
+            : 0;
 
     // Keep track of how many tuples we have covered in addition.
     result.num_new_covered_tuples += num_new_covered_tuples;
