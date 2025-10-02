@@ -124,8 +124,8 @@ class covm_per_param_combo_functor_parallel {
                                 {{bitset_backing_array_size}}),
           exec_handle_(exec_handle),
           covered_tuples_(param_combo_it.get_num_workers(),
-                          std::vector<citcpp::detail::aligned_ull_value>(
-                              test_set.get_list_of_tests().size())),
+                          citcpp::detail::aligned_vector<unsigned long long>(
+                              test_set.get_list_of_tests().size(), 0)),
           cov_level_to_num_param_combos_(param_combo_it.get_num_workers()),
           param_combo_it_(param_combo_it) {}
 
@@ -177,7 +177,7 @@ class covm_per_param_combo_functor_parallel {
           if (!values_combo_bitset.test_and_set(index)) {
             auto &thread_local_covered_tuples =
                 covered_tuples_[param_combo_it_.get_worker_id()];
-            thread_local_covered_tuples[test_index].value++;
+            thread_local_covered_tuples.value[test_index]++;
           }
         }
 
@@ -216,7 +216,7 @@ class covm_per_param_combo_functor_parallel {
     }
 
     const citcpp::detail::thread_local_vector<
-        std::vector<citcpp::detail::aligned_ull_value>> &
+        citcpp::detail::aligned_vector<unsigned long long>> &
     get_coverered_tuples() const {
 
       return covered_tuples_;
@@ -236,7 +236,7 @@ class covm_per_param_combo_functor_parallel {
         bitset_backing_array_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
     citcpp::detail::thread_local_vector<
-        std::vector<citcpp::detail::aligned_ull_value>>
+        citcpp::detail::aligned_vector<unsigned long long>>
         covered_tuples_;
     citcpp::detail::thread_local_vector<
         aligned_coverage_level_to_num_param_combos>
@@ -309,7 +309,7 @@ void measure_coverage(const unsigned int strength, const model &model,
 
     for (const auto &thread_local_covered_tuples : covered_tuples) {
       cumulative_covered_tuples[test_index] +=
-          thread_local_covered_tuples[test_index].value;
+          thread_local_covered_tuples.value[test_index];
     }
 
     if (test_index > 0) {

@@ -77,7 +77,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     ipog_horizontal_select_best_value_per_param_combo_functor_parallel(
         const citcpp::detail::model &model, const citcpp::detail::test &test,
         citcpp::detail::thread_local_vector<
-            std::vector<citcpp::detail::aligned_ull_value>> &gain_per_value,
+            citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
         : model_(model),
           test_(test),
@@ -127,13 +127,12 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
         // If we have found a don't care value in one of the [0, ...
         // ,current_param_idx - 1] parameters, then we skip the combination in
         // the coverage gain computation.
-        std::vector<citcpp::detail::aligned_ull_value>
-            &thread_local_gain_per_value =
-                gain_per_value_[cov_map_it_.get_worker_id()];
+        std::vector<unsigned long long> &thread_local_gain_per_value =
+            gain_per_value_[cov_map_it_.get_worker_id()].value;
         for (unsigned int value = 0; value < thread_local_gain_per_value.size();
              ++value) {
           if (!value_combinations.test(base_index + value)) {
-            thread_local_gain_per_value[value].value += 1;
+            thread_local_gain_per_value[value] += 1;
           }
         }
       }
@@ -145,7 +144,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     const citcpp::detail::model &model_;
     const citcpp::detail::test &test_;
     citcpp::detail::thread_local_vector<
-        std::vector<citcpp::detail::aligned_ull_value>> &gain_per_value_;
+        citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value_;
     const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
 };
 
@@ -228,10 +227,11 @@ int ipog_horizontal_select_best_value(
 
   // This is an array containing the coverage gain per value of the current
   // parameter.
-  thread_local_vector<std::vector<citcpp::detail::aligned_ull_value>>
-      gain_per_value(cov_map_it.get_num_workers(),
-                     std::vector<citcpp::detail::aligned_ull_value>(
-                         num_current_param_values));
+  citcpp::detail::thread_local_vector<
+      citcpp::detail::aligned_vector<unsigned long long>>
+      gain_per_value(
+          cov_map_it.get_num_workers(),
+          aligned_vector<unsigned long long>(num_current_param_values, 0));
 
   ipog_horizontal_select_best_value_per_param_combo_functor_parallel
       per_param_combo_functor(model, test, gain_per_value, cov_map_it);
@@ -245,9 +245,9 @@ int ipog_horizontal_select_best_value(
         (v_index + last_picked_value + 1) % num_current_param_values;
 
     unsigned long long value_gain = 0;
-    for (std::vector<citcpp::detail::aligned_ull_value>
+    for (citcpp::detail::aligned_vector<unsigned long long>
              &thread_local_gain_per_value : gain_per_value) {
-      value_gain += thread_local_gain_per_value[value].value;
+      value_gain += thread_local_gain_per_value.value[value];
     }
 
     if (value_gain > max_gain) {
@@ -578,7 +578,7 @@ class
         const citcpp::detail::model &model,
         const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
         citcpp::detail::thread_local_vector<
-            std::vector<citcpp::detail::aligned_ull_value>> &gain_per_value,
+            citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value,
         const bool enable_coverage_update, const bool enable_gain_computation,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
         : model_(model),
@@ -688,13 +688,12 @@ class
         // If we have found a don't care value in one of the [0, ...
         // ,current_param_idx - 1] parameters, then we skip the combination in
         // the coverage gain computation.
-        std::vector<citcpp::detail::aligned_ull_value>
-            &thread_local_gain_per_value =
-                gain_per_value_[cov_map_it_.get_worker_id()];
+        std::vector<unsigned long long> &thread_local_gain_per_value =
+            gain_per_value_[cov_map_it_.get_worker_id()].value;
         for (unsigned int value = 0; value < thread_local_gain_per_value.size();
              ++value) {
           if (!value_combinations.test(base_index + value)) {
-            thread_local_gain_per_value[value].value += 1;
+            thread_local_gain_per_value[value] += 1;
           }
         }
       }
@@ -714,7 +713,7 @@ class
     const citcpp::detail::test &prev_test_;
     const citcpp::detail::test &test_;
     citcpp::detail::thread_local_vector<
-        std::vector<citcpp::detail::aligned_ull_value>> &gain_per_value_;
+        citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value_;
     const bool enable_coverage_update_;
     const bool enable_gain_computation_;
     citcpp::detail::thread_local_vector<citcpp::detail::aligned_ull_value>
@@ -807,10 +806,11 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
 
   // This is an array containing the coverage gain per value of the current
   // parameter.
-  thread_local_vector<std::vector<citcpp::detail::aligned_ull_value>>
-      gain_per_value(cov_map_it.get_num_workers(),
-                     std::vector<citcpp::detail::aligned_ull_value>(
-                         num_current_param_values));
+  citcpp::detail::thread_local_vector<
+      citcpp::detail::aligned_vector<unsigned long long>>
+      gain_per_value(
+          cov_map_it.get_num_workers(),
+          aligned_vector<unsigned long long>(num_current_param_values, 0));
 
   // We first check whether the test already has a concrete value
   // for the current parameter, because if so, then there is no
@@ -822,9 +822,9 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
 
     // The coverage gain computation is disabled in the functor,
     // so that it won't modify this gain info.
-    for (std::vector<citcpp::detail::aligned_ull_value>
-             &thread_local_gain_per_value : gain_per_value) {
-      thread_local_gain_per_value[current_param_value].value++;
+    for (aligned_vector<unsigned long long> &thread_local_gain_per_value :
+         gain_per_value) {
+      thread_local_gain_per_value.value[current_param_value]++;
     }
   }
 
@@ -847,9 +847,9 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
         (v_index + last_picked_value + 1) % num_current_param_values;
 
     unsigned long long value_gain = 0;
-    for (std::vector<citcpp::detail::aligned_ull_value>
-             &thread_local_gain_per_value : gain_per_value) {
-      value_gain += thread_local_gain_per_value[value].value;
+    for (aligned_vector<unsigned long long> &thread_local_gain_per_value :
+         gain_per_value) {
+      value_gain += thread_local_gain_per_value.value[value];
     }
 
     if (value_gain > max_gain) {
