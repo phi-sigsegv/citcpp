@@ -408,11 +408,13 @@ TEST_CASE(
   std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
-  std::cout << "Deleteing the last 33% of the tests." << std::endl;
+  std::cout << "Deleteing the first 33% of the tests and reversing their order."
+            << std::endl;
   int num_deleted_tests = t.get_list_of_tests().size() / 3;
   auto t_it = t.get_list_of_tests().begin();
-  std::advance(t_it, t.get_list_of_tests().size() - num_deleted_tests);
-  t.get_list_of_tests().erase(t_it, t.get_list_of_tests().end());
+  std::advance(t_it, num_deleted_tests);
+  t.get_list_of_tests().erase(t.get_list_of_tests().begin(), t_it);
+  t.get_list_of_tests().reverse();
   std::cout << "Our test set now has just " << t.get_list_of_tests().size()
             << " tests." << std::endl;
 
@@ -477,11 +479,13 @@ TEST_CASE(
   std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
-  std::cout << "Deleteing the last 33% of the tests." << std::endl;
+  std::cout << "Deleteing the first 33% of the tests and reversing their order."
+            << std::endl;
   int num_deleted_tests = t.get_list_of_tests().size() / 3;
   auto t_it = t.get_list_of_tests().begin();
-  std::advance(t_it, t.get_list_of_tests().size() - num_deleted_tests);
-  t.get_list_of_tests().erase(t_it, t.get_list_of_tests().end());
+  std::advance(t_it, num_deleted_tests);
+  t.get_list_of_tests().erase(t.get_list_of_tests().begin(), t_it);
+  t.get_list_of_tests().reverse();
   std::cout << "Our test set now has just " << t.get_list_of_tests().size()
             << " tests." << std::endl;
 
@@ -546,11 +550,13 @@ TEST_CASE(
   std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
-  std::cout << "Deleteing the last 33% of the tests." << std::endl;
+  std::cout << "Deleteing the first 33% of the tests and reversing their order."
+            << std::endl;
   int num_deleted_tests = t.get_list_of_tests().size() / 3;
   auto t_it = t.get_list_of_tests().begin();
-  std::advance(t_it, t.get_list_of_tests().size() - num_deleted_tests);
-  t.get_list_of_tests().erase(t_it, t.get_list_of_tests().end());
+  std::advance(t_it, num_deleted_tests);
+  t.get_list_of_tests().erase(t.get_list_of_tests().begin(), t_it);
+  t.get_list_of_tests().reverse();
   std::cout << "Our test set now has just " << t.get_list_of_tests().size()
             << " tests." << std::endl;
 
@@ -615,11 +621,13 @@ TEST_CASE(
   std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
-  std::cout << "Deleteing the last 33% of the tests." << std::endl;
+  std::cout << "Deleteing the first 33% of the tests and reversing their order."
+            << std::endl;
   int num_deleted_tests = t.get_list_of_tests().size() / 3;
   auto t_it = t.get_list_of_tests().begin();
-  std::advance(t_it, t.get_list_of_tests().size() - num_deleted_tests);
-  t.get_list_of_tests().erase(t_it, t.get_list_of_tests().end());
+  std::advance(t_it, num_deleted_tests);
+  t.get_list_of_tests().erase(t.get_list_of_tests().begin(), t_it);
+  t.get_list_of_tests().reverse();
   std::cout << "Our test set now has just " << t.get_list_of_tests().size()
             << " tests." << std::endl;
 
@@ -684,11 +692,13 @@ TEST_CASE(
   std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
-  std::cout << "Deleteing the last 33% of the tests." << std::endl;
+  std::cout << "Deleteing the first 33% of the tests and reversing their order."
+            << std::endl;
   int num_deleted_tests = t.get_list_of_tests().size() / 3;
   auto t_it = t.get_list_of_tests().begin();
-  std::advance(t_it, t.get_list_of_tests().size() - num_deleted_tests);
-  t.get_list_of_tests().erase(t_it, t.get_list_of_tests().end());
+  std::advance(t_it, num_deleted_tests);
+  t.get_list_of_tests().erase(t.get_list_of_tests().begin(), t_it);
+  t.get_list_of_tests().reverse();
   std::cout << "Our test set now has just " << t.get_list_of_tests().size()
             << " tests." << std::endl;
 
@@ -753,11 +763,13 @@ TEST_CASE(
   std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
-  std::cout << "Deleteing the last 33% of the tests." << std::endl;
+  std::cout << "Deleteing the first 33% of the tests and reversing their order."
+            << std::endl;
   int num_deleted_tests = t.get_list_of_tests().size() / 3;
   auto t_it = t.get_list_of_tests().begin();
-  std::advance(t_it, t.get_list_of_tests().size() - num_deleted_tests);
-  t.get_list_of_tests().erase(t_it, t.get_list_of_tests().end());
+  std::advance(t_it, num_deleted_tests);
+  t.get_list_of_tests().erase(t.get_list_of_tests().begin(), t_it);
+  t.get_list_of_tests().reverse();
   std::cout << "Our test set now has just " << t.get_list_of_tests().size()
             << " tests." << std::endl;
 
@@ -822,11 +834,13 @@ TEST_CASE(
   std::cout << "Test set generated in " << cagen_duration_seconds << " and has "
             << t.get_list_of_tests().size() << " rows." << std::endl;
 
-  std::cout << "Deleteing the last 33% of the tests." << std::endl;
+  std::cout << "Deleteing the first 33% of the tests and reversing their order."
+            << std::endl;
   int num_deleted_tests = t.get_list_of_tests().size() / 3;
   auto t_it = t.get_list_of_tests().begin();
-  std::advance(t_it, t.get_list_of_tests().size() - num_deleted_tests);
-  t.get_list_of_tests().erase(t_it, t.get_list_of_tests().end());
+  std::advance(t_it, num_deleted_tests);
+  t.get_list_of_tests().erase(t.get_list_of_tests().begin(), t_it);
+  t.get_list_of_tests().reverse();
   std::cout << "Our test set now has just " << t.get_list_of_tests().size()
             << " tests." << std::endl;
 
