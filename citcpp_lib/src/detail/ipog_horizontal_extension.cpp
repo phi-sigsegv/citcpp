@@ -908,15 +908,14 @@ namespace citcpp {
 namespace detail {
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
-    const unsigned int current_param_idx, const unsigned int strength,
-    const model &model, const std::vector<unsigned int> &parameter_index_map,
+    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set &test_set, coverage_map &cov_map) {
 
   const unsigned int real_current_param_idx =
-      parameter_index_map[current_param_idx];
+      cov_map.get_parameter_index_map()[current_param_idx];
   const int num_current_param_values =
-      model.get_parameters()[real_current_param_idx];
+      cov_map.get_model().get_parameters()[real_current_param_idx];
 
   // First initialize the result object.
   ipog_horizontal_extension_result result{
@@ -931,14 +930,14 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   test *previous_test = nullptr;
   int selected_value = 0;
   for (test &t : test_set.get_list_of_tests()) {
-    if (strength > 2) {
+    if (cov_map.get_number_of_parameters_to_select() > 2) {
       last_picked_value = num_current_param_values - 1;
     }
 
     if (!previous_test) {
       selected_value = ipog_horizontal_select_best_value(
-          real_current_param_idx, num_current_param_values, model, t,
-          cov_map_it, last_picked_value, value_to_num_picked);
+          real_current_param_idx, num_current_param_values, cov_map.get_model(),
+          t, cov_map_it, last_picked_value, value_to_num_picked);
     } else {
       if (selected_value >= 0) {
         // We might not have selected any value. This can happen, if no matter
@@ -966,9 +965,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
       new_covered_tuples_and_selected_value res =
           ipog_horizontal_update_coverage_map_and_select_best_value(
-              real_current_param_idx, num_current_param_values, model,
-              *previous_test, selected_value, t, cov_map_it, last_picked_value,
-              value_to_num_picked);
+              real_current_param_idx, num_current_param_values,
+              cov_map.get_model(), *previous_test, selected_value, t,
+              cov_map_it, last_picked_value, value_to_num_picked);
 
       selected_value = res.selected_value_;
 
@@ -1010,10 +1009,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         nullptr;
 
     unsigned long long num_new_covered_tuples =
-        selected_value >= 0
-            ? ipog_horizontal_update_coverage_map(model, *previous_test,
-                                                  selected_value, cov_map_it)
-            : 0;
+        selected_value >= 0 ? ipog_horizontal_update_coverage_map(
+                                  cov_map.get_model(), *previous_test,
+                                  selected_value, cov_map_it)
+                            : 0;
 
     // Keep track of how many tuples we have covered in addition.
     result.num_new_covered_tuples += num_new_covered_tuples;
@@ -1023,15 +1022,14 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 }
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
-    const unsigned int current_param_idx, const unsigned int strength,
-    const model &model, const std::vector<unsigned int> &parameter_index_map,
+    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set &test_set, coverage_map &cov_map, thread_pool &tp) {
 
   const unsigned int real_current_param_idx =
-      parameter_index_map[current_param_idx];
+      cov_map.get_parameter_index_map()[current_param_idx];
   const int num_current_param_values =
-      model.get_parameters()[real_current_param_idx];
+      cov_map.get_model().get_parameters()[real_current_param_idx];
 
   // First initialize the result object.
   ipog_horizontal_extension_result result{
@@ -1047,14 +1045,14 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   test *previous_test = nullptr;
   int selected_value = 0;
   for (test &t : test_set.get_list_of_tests()) {
-    if (strength > 2) {
+    if (cov_map.get_number_of_parameters_to_select() > 2) {
       last_picked_value = num_current_param_values - 1;
     }
 
     if (!previous_test) {
       selected_value = ipog_horizontal_select_best_value(
-          real_current_param_idx, num_current_param_values, model, t,
-          cov_map_it, last_picked_value, value_to_num_picked);
+          real_current_param_idx, num_current_param_values, cov_map.get_model(),
+          t, cov_map_it, last_picked_value, value_to_num_picked);
     } else {
       if (selected_value >= 0) {
         // We might not have selected any value. This can happen, if no matter
@@ -1082,9 +1080,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
       new_covered_tuples_and_selected_value res =
           ipog_horizontal_update_coverage_map_and_select_best_value(
-              real_current_param_idx, num_current_param_values, model,
-              *previous_test, selected_value, t, cov_map_it, last_picked_value,
-              value_to_num_picked);
+              real_current_param_idx, num_current_param_values,
+              cov_map.get_model(), *previous_test, selected_value, t,
+              cov_map_it, last_picked_value, value_to_num_picked);
 
       selected_value = res.selected_value_;
 
@@ -1126,10 +1124,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         nullptr;
 
     unsigned long long num_new_covered_tuples =
-        selected_value >= 0
-            ? ipog_horizontal_update_coverage_map(model, *previous_test,
-                                                  selected_value, cov_map_it)
-            : 0;
+        selected_value >= 0 ? ipog_horizontal_update_coverage_map(
+                                  cov_map.get_model(), *previous_test,
+                                  selected_value, cov_map_it)
+                            : 0;
 
     // Keep track of how many tuples we have covered in addition.
     result.num_new_covered_tuples += num_new_covered_tuples;

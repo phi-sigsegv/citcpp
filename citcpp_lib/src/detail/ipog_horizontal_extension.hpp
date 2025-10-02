@@ -10,14 +10,12 @@ namespace citcpp {
 namespace detail {
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
-    const unsigned int current_param_idx, const unsigned int strength,
-    const model &model, const std::vector<unsigned int> &parameter_index_map,
+    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set &test_set, coverage_map &cov_map);
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
-    const unsigned int current_param_idx, const unsigned int strength,
-    const model &model, const std::vector<unsigned int> &parameter_index_map,
+    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set &test_set, coverage_map &cov_map, thread_pool &tp);
 

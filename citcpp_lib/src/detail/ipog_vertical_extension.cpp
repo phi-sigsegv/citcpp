@@ -293,7 +293,7 @@ namespace citcpp {
 namespace detail {
 
 ipog_vertical_extension_result ipog_vertical_extension(
-    const unsigned int current_param_idx, const model &model,
+    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
     ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values,
@@ -304,8 +304,9 @@ ipog_vertical_extension_result ipog_vertical_extension(
 
   coverage_map_iterator cov_map_it = cov_map.create_iterator();
   ipog_vertical_extension_functor functor(
-      current_param_idx, cov_map.get_number_of_parameters_to_select(), model,
-      test_set, partitioning_of_tests_according_to_current_values,
+      current_param_idx, cov_map.get_number_of_parameters_to_select(),
+      cov_map.get_model(), test_set,
+      partitioning_of_tests_according_to_current_values,
       num_missing_combinations_to_cover);
 
   cov_map_it.visit_all_parameter_combinations(functor);

@@ -69,12 +69,12 @@ void main_ipog_loop_body(
         cov_map.get_total_number_of_tuples();
 
     auto horizontal_ext_res =
-        with_mt ? ipog_horizontal_extension(
-                      current_param_idx, strength, model, parameter_index_map,
-                      number_combos_to_cover, test_set, cov_map, tp)
-                : ipog_horizontal_extension(
-                      current_param_idx, strength, model, parameter_index_map,
-                      number_combos_to_cover, test_set, cov_map);
+        with_mt
+            ? ipog_horizontal_extension(current_param_idx,
+                                        number_combos_to_cover, test_set,
+                                        cov_map, tp)
+            : ipog_horizontal_extension(
+                  current_param_idx, number_combos_to_cover, test_set, cov_map);
     tp.stop_workers();
 
     number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
@@ -88,9 +88,9 @@ void main_ipog_loop_body(
     }
 
     if (number_combos_to_cover > 0) {
-      auto vertical_ext_res = ipog_vertical_extension(
-          current_param_idx, model, number_combos_to_cover, horizontal_ext_res,
-          test_set, cov_map);
+      auto vertical_ext_res =
+          ipog_vertical_extension(current_param_idx, number_combos_to_cover,
+                                  horizontal_ext_res, test_set, cov_map);
 
       number_combos_to_cover -= vertical_ext_res.num_new_covered_tuples;
       exec_handle.add_number_of_covered_combinations(

@@ -16,12 +16,11 @@ struct ipog_measure_testset_result {
 
 ipog_measure_testset_result ipog_measure_testset(
     const model &model, const internal_test_set &test_set,
-    coverage_map &cov_map, cagen_exec_handle_base &exec_handle);
+    coverage_map &cov_map);
 
 ipog_measure_testset_result ipog_measure_testset(
     const model &model, const internal_test_set &test_set,
-    coverage_map &cov_map, cagen_exec_handle_base &exec_handle,
-    thread_pool &tp);
+    coverage_map &cov_map, thread_pool &tp);
 
 }  // namespace detail
 }  // namespace citcpp

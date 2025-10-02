@@ -9,12 +9,10 @@ class ipog_measure_per_param_combo_functor {
     ipog_measure_per_param_combo_functor(
         const citcpp::detail::model &model,
         const citcpp::detail::internal_test_set &test_set,
-        citcpp::detail::coverage_map &cov_map,
-        citcpp::detail::cagen_exec_handle_base &exec_handle)
+        citcpp::detail::coverage_map &cov_map)
         : model_(model),
           test_set_(test_set),
           cov_map_(cov_map),
-          exec_handle_(exec_handle),
           num_covered_tuples_(0) {}
 
     bool operator()(
@@ -61,10 +59,6 @@ class ipog_measure_per_param_combo_functor {
         }
       }
 
-      if (exec_handle_.is_job_aborted()) {
-        return false;
-      }
-
       return true;
     }
 
@@ -76,7 +70,6 @@ class ipog_measure_per_param_combo_functor {
     const citcpp::detail::model &model_;
     const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::coverage_map &cov_map_;
-    citcpp::detail::cagen_exec_handle_base &exec_handle_;
     unsigned long long num_covered_tuples_;
 };
 
@@ -86,12 +79,10 @@ class ipog_measure_per_param_combo_functor_parallel {
         const citcpp::detail::model &model,
         const citcpp::detail::internal_test_set &test_set,
         citcpp::detail::coverage_map &cov_map,
-        citcpp::detail::cagen_exec_handle_base &exec_handle,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
         : model_(model),
           test_set_(test_set),
           cov_map_(cov_map),
-          exec_handle_(exec_handle),
           cov_map_it_(cov_map_it),
           num_covered_tuples_() {}
 
@@ -142,10 +133,6 @@ class ipog_measure_per_param_combo_functor_parallel {
         }
       }
 
-      if (exec_handle_.is_job_aborted()) {
-        return false;
-      }
-
       return true;
     }
 
@@ -163,7 +150,6 @@ class ipog_measure_per_param_combo_functor_parallel {
     const citcpp::detail::model &model_;
     const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::coverage_map &cov_map_;
-    citcpp::detail::cagen_exec_handle_base &exec_handle_;
     const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
     citcpp::detail::thread_local_vector<citcpp::detail::aligned_ull_value>
         num_covered_tuples_;
@@ -176,15 +162,15 @@ namespace detail {
 
 ipog_measure_testset_result ipog_measure_testset(
     const model &model, const internal_test_set &test_set,
-    coverage_map &cov_map, cagen_exec_handle_base &exec_handle) {
+    coverage_map &cov_map) {
 
   // First initialize the result object.
   ipog_measure_testset_result result = {0};
 
   coverage_map_iterator cov_map_it = cov_map.create_iterator();
 
-  ipog_measure_per_param_combo_functor per_param_combo_functor(
-      model, test_set, cov_map, exec_handle);
+  ipog_measure_per_param_combo_functor per_param_combo_functor(model, test_set,
+                                                               cov_map);
 
   cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
@@ -195,8 +181,7 @@ ipog_measure_testset_result ipog_measure_testset(
 
 ipog_measure_testset_result ipog_measure_testset(
     const model &model, const internal_test_set &test_set,
-    coverage_map &cov_map, cagen_exec_handle_base &exec_handle,
-    thread_pool &tp) {
+    coverage_map &cov_map, thread_pool &tp) {
 
   // First initialize the result object.
   ipog_measure_testset_result result = {0};
@@ -205,7 +190,7 @@ ipog_measure_testset_result ipog_measure_testset(
       cov_map.create_parallel_iterator(tp);
 
   ipog_measure_per_param_combo_functor_parallel per_param_combo_functor(
-      model, test_set, cov_map, exec_handle, cov_map_it);
+      model, test_set, cov_map, cov_map_it);
 
   cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 

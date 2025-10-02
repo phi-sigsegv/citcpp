@@ -11,7 +11,7 @@ namespace citcpp {
 namespace detail {
 
 ipog_vertical_extension_result ipog_vertical_extension(
-    const unsigned int current_param_idx, const model &model,
+    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
     ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values,
