@@ -4,6 +4,55 @@
 
 namespace {
 
+void measure_coverage(
+    citcpp::detail::coverage_map::second_level_type &value_combinations,
+    const citcpp::detail::model &model,
+    const citcpp::detail::internal_test_set &test_set,
+    citcpp::detail::coverage_map &cov_map,
+    unsigned long long &num_covered_tuples) {
+  using namespace citcpp::detail;
+
+  const param_vector &param_indices =
+      value_combinations.get_parameter_indices();
+
+  for (const test &test : test_set.get_list_of_tests()) {
+    // Here we compute an index into the bitset. To do so, we treat the
+    // number of values of each parameter as a kind of radix. Consider
+    // three parameters p_0, p_1, p_2. Now say that v_i is the number of
+    // values for p_i. If we now have values x_0, x_1, x_2, then the index
+    // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+    coverage_map::second_level_type::size_type index = 0;
+    bool found_dont_care = false;
+    for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size();
+         ++i) {
+      const unsigned int param_idx = param_indices[i];
+      const int param_value = test.get_values()[param_idx];
+
+      if (param_value < 0) {
+        // We have found a don't care value for that combination in
+        // the considered test in one of the parameters.
+        // There is nothing to be updated concerning the
+        // coverage.
+        found_dont_care = true;
+        break;
+      }
+
+      coverage_map::second_level_type::size_type addend = param_value;
+      for (std::vector<unsigned int>::size_type j = i + 1;
+           j < param_indices.size(); ++j) {
+        addend *= model.get_parameters()[param_indices[j]];
+      }
+      index += addend;
+    }
+
+    if (!found_dont_care) {
+      if (!value_combinations.test_and_set(index)) {
+        ++num_covered_tuples;
+      }
+    }
+  }
+}
+
 class ipog_measure_per_param_combo_functor {
   public:
     ipog_measure_per_param_combo_functor(
@@ -17,47 +66,9 @@ class ipog_measure_per_param_combo_functor {
 
     bool operator()(
         citcpp::detail::coverage_map::second_level_type &value_combinations) {
-      using namespace citcpp::detail;
 
-      const param_vector &param_indices =
-          value_combinations.get_parameter_indices();
-
-      for (const test &test : test_set_.get_list_of_tests()) {
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider
-        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
-        // values for p_i. If we now have values x_0, x_1, x_2, then the index
-        // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index = 0;
-        bool found_dont_care = false;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size(); ++i) {
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = test.get_values()[param_idx];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test in one of the parameters.
-            // There is nothing to be updated concerning the
-            // coverage.
-            found_dont_care = true;
-            break;
-          }
-
-          coverage_map::second_level_type::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
-          }
-          index += addend;
-        }
-
-        if (!found_dont_care) {
-          if (!value_combinations.test_and_set(index)) {
-            ++num_covered_tuples_;
-          }
-        }
-      }
+      measure_coverage(value_combinations, model_, test_set_, cov_map_,
+                       num_covered_tuples_);
 
       return true;
     }
@@ -88,50 +99,11 @@ class ipog_measure_per_param_combo_functor_parallel {
 
     bool operator()(
         citcpp::detail::coverage_map::second_level_type &value_combinations) {
-      using namespace citcpp::detail;
-
-      const param_vector &param_indices =
-          value_combinations.get_parameter_indices();
 
       auto &thread_local_num_covered_tuples_ =
           num_covered_tuples_[cov_map_it_.get_worker_id()].value;
-
-      for (const test &test : test_set_.get_list_of_tests()) {
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider
-        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
-        // values for p_i. If we now have values x_0, x_1, x_2, then the index
-        // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index = 0;
-        bool found_dont_care = false;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size(); ++i) {
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = test.get_values()[param_idx];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test in one of the parameters.
-            // There is nothing to be updated concerning the
-            // coverage.
-            found_dont_care = true;
-            break;
-          }
-
-          coverage_map::second_level_type::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
-          }
-          index += addend;
-        }
-
-        if (!found_dont_care) {
-          if (!value_combinations.test_and_set(index)) {
-            ++thread_local_num_covered_tuples_;
-          }
-        }
-      }
+      measure_coverage(value_combinations, model_, test_set_, cov_map_,
+                       thread_local_num_covered_tuples_);
 
       return true;
     }
