@@ -120,14 +120,14 @@ class covm_per_param_combo_functor_parallel {
         const citcpp::detail::param_combo_parallel_iterator &param_combo_it)
         : model_(model),
           test_set_(test_set),
+          exec_handle_(exec_handle),
+          param_combo_it_(param_combo_it),
           bitset_backing_array_(param_combo_it.get_num_workers(),
                                 {{bitset_backing_array_size}}),
-          exec_handle_(exec_handle),
           covered_tuples_(param_combo_it.get_num_workers(),
                           citcpp::detail::aligned_vector<unsigned long long>(
                               test_set.get_list_of_tests().size(), 0)),
-          cov_level_to_num_param_combos_(param_combo_it.get_num_workers()),
-          param_combo_it_(param_combo_it) {}
+          cov_level_to_num_param_combos_(param_combo_it.get_num_workers()) {}
 
     bool operator()(const citcpp::detail::param_vector &param_indices) {
       using namespace citcpp::detail;
@@ -232,16 +232,16 @@ class covm_per_param_combo_functor_parallel {
   private:
     const citcpp::detail::model &model_;
     const citcpp::detail::internal_test_set &test_set_;
-    citcpp::detail::thread_local_vector<aligned_array_wrapper>
-        bitset_backing_array_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
-    citcpp::detail::thread_local_vector<
-        citcpp::detail::aligned_vector<unsigned long long>>
-        covered_tuples_;
-    citcpp::detail::thread_local_vector<
-        aligned_coverage_level_to_num_param_combos>
-        cov_level_to_num_param_combos_;
     const citcpp::detail::param_combo_parallel_iterator &param_combo_it_;
+    alignas(std::hardware_destructive_interference_size) citcpp::detail::
+        thread_local_vector<aligned_array_wrapper> bitset_backing_array_;
+    alignas(std::hardware_destructive_interference_size)
+        citcpp::detail::thread_local_vector<
+            citcpp::detail::aligned_vector<unsigned long long>> covered_tuples_;
+    alignas(std::hardware_destructive_interference_size)
+        citcpp::detail::thread_local_vector<
+            aligned_coverage_level_to_num_param_combos> cov_level_to_num_param_combos_;
 };
 
 }  // namespace

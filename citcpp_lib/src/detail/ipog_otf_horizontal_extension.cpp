@@ -141,12 +141,12 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
           current_test_index_(current_test_index),
           test_set_(test_set),
           is_extend_mode_(is_extend_mode),
+          param_combo_it_(param_combo_it),
           param_combo_gain_per_value_(
               param_combo_it.get_num_workers(),
               citcpp::detail::aligned_vector<unsigned int>(
                   num_current_param_values, 0)),
-          gain_per_value_(gain_per_value),
-          param_combo_it_(param_combo_it) {}
+          gain_per_value_(gain_per_value) {}
 
     bool operator()(const citcpp::detail::param_vector &param_indices) {
       using namespace citcpp::detail;
@@ -243,12 +243,13 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     const unsigned int current_test_index_;
     const citcpp::detail::internal_test_set &test_set_;
     const bool is_extend_mode_;
-    citcpp::detail::thread_local_vector<
-        citcpp::detail::aligned_vector<unsigned int>>
-        param_combo_gain_per_value_;
-    citcpp::detail::thread_local_vector<
-        citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value_;
     const citcpp::detail::param_combo_parallel_iterator &param_combo_it_;
+    alignas(std::hardware_destructive_interference_size)
+        citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
+            unsigned int>> param_combo_gain_per_value_;
+    alignas(std::hardware_destructive_interference_size) citcpp::detail::
+        thread_local_vector<citcpp::detail::aligned_vector<unsigned long long>>
+            &gain_per_value_;
 };
 
 struct new_covered_tuples_and_selected_value {
