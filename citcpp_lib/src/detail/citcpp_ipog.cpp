@@ -14,6 +14,7 @@
 #include "datatypes_config.hpp"
 #include "ipog_all_value_combinations.hpp"
 #include "ipog_horizontal_extension.hpp"
+#include "ipog_measure_testset.hpp"
 #include "ipog_vertical_extension.hpp"
 
 namespace {
@@ -36,8 +37,8 @@ get_parameter_indices_ordered_by_number_of_values_desc(
 void main_ipog_loop_body(
     const citcpp::detail::model &model, unsigned int strength,
     const std::vector<unsigned int> &parameter_index_map,
-    citcpp::detail::internal_test_set &test_set, unsigned int current_param_idx,
-    const bool with_mt,
+    citcpp::detail::internal_test_set &test_set, bool is_extend_mode,
+    unsigned int current_param_idx, const bool with_mt,
     const citcpp::detail::binom_coeff_table &binomial_coeffs,
     citcpp::detail::thread_pool &tp,
     citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
@@ -67,6 +68,14 @@ void main_ipog_loop_body(
 
     unsigned long long number_combos_to_cover =
         cov_map.get_total_number_of_tuples();
+
+    if (is_extend_mode) {
+      auto measure_coverage_res =
+          with_mt ? ipog_measure_testset(model, test_set, cov_map, tp)
+                  : ipog_measure_testset(model, test_set, cov_map);
+
+      number_combos_to_cover -= measure_coverage_res.num_covered_tuples;
+    }
 
     auto horizontal_ext_res =
         with_mt
@@ -156,7 +165,7 @@ void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
       return;
     }
 
-    main_ipog_loop_body(model, strength, parameter_index_map, test_set,
+    main_ipog_loop_body(model, strength, parameter_index_map, test_set, false,
                         current_param_idx, with_mt, binomial_coeffs, tp,
                         exec_handle);
   }
@@ -210,7 +219,7 @@ void main_ipog_loop_extend_test_set(
     unsigned int current_strength = std::min(strength, current_param_idx + 1);
 
     main_ipog_loop_body(model, current_strength, parameter_index_map, test_set,
-                        current_param_idx, with_mt, binomial_coeffs, tp,
+                        true, current_param_idx, with_mt, binomial_coeffs, tp,
                         exec_handle);
   }
 }
