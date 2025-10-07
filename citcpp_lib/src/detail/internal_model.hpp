@@ -60,10 +60,10 @@ class internal_model {
  * This is an internal representation of a relation, i.e.
  * a set of parameters and a corresponding interaction strength.
  */
-class relation {
+class internal_relation {
   public:
-    relation(const std::vector<unsigned int> &parameters,
-             unsigned int specified_interaction_strength);
+    internal_relation(const std::vector<unsigned int> &parameters,
+                      unsigned int specified_interaction_strength);
 
     const std::vector<unsigned int> &get_parameters() const {
       return parameters_;

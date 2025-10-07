@@ -66,8 +66,9 @@ void internal_model::convert_test(const test &src,
   }
 }
 
-relation::relation(const std::vector<unsigned int> &parameters,
-                   unsigned int specified_interaction_strength)
+internal_relation::internal_relation(
+    const std::vector<unsigned int> &parameters,
+    unsigned int specified_interaction_strength)
     : parameters_(parameters),
       specified_interaction_strength_(specified_interaction_strength),
       current_interaction_strength_(1) {}
