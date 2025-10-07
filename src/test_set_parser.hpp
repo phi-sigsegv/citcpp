@@ -1,7 +1,7 @@
 #ifndef TEST_SET_PARSER_HPP_
 #define TEST_SET_PARSER_HPP_
 
-#include <citcpp/input_model.hpp>
+#include <citcpp/model.hpp>
 #include <citcpp/test_set.hpp>
 #include <memory>
 #include <string_view>

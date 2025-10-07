@@ -1,7 +1,7 @@
 #ifndef CITCPP_UTILS_HPP_
 #define CITCPP_UTILS_HPP_
 
-#include <citcpp/input_model.hpp>
+#include <citcpp/model.hpp>
 #include <citcpp/test_set.hpp>
 #include <new>
 #include <string>

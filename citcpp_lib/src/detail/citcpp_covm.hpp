@@ -2,7 +2,7 @@
 #define DETAIL_CITCPP_COVM_HPP_
 
 #include <citcpp/citcpp_config.hpp>
-#include <citcpp/input_model.hpp>
+#include <citcpp/model.hpp>
 #include <citcpp/test_set.hpp>
 
 #include "internal_model.hpp"

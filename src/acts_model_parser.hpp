@@ -1,7 +1,7 @@
 #ifndef ACTS_MODEL_PARSER_HPP_
 #define ACTS_MODEL_PARSER_HPP_
 
-#include <citcpp/input_model.hpp>
+#include <citcpp/model.hpp>
 #include <memory>
 #include <string_view>
 

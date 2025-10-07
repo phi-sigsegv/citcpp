@@ -1,7 +1,7 @@
 #ifndef MODEL_HPP_
 #define MODEL_HPP_
 
-#include <citcpp/input_model.hpp>
+#include <citcpp/model.hpp>
 #include <citcpp/test_set.hpp>
 #include <vector>
 

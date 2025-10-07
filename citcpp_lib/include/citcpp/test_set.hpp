@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-#include "input_model.hpp"
+#include "model.hpp"
 
 namespace citcpp {
 

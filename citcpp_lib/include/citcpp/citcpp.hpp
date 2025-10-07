@@ -6,7 +6,7 @@
 #include "cagen_exec_handle_ipog.hpp"
 #include "citcpp_config.hpp"
 #include "covm_exec_handle.hpp"
-#include "input_model.hpp"
+#include "model.hpp"
 #include "test_set.hpp"
 
 namespace citcpp {

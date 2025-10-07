@@ -2,7 +2,7 @@
 #define DETAIL_CITCPP_IPOG_OTF_HPP_
 
 #include <citcpp/citcpp_config.hpp>
-#include <citcpp/input_model.hpp>
+#include <citcpp/model.hpp>
 #include <citcpp/test_set.hpp>
 
 #include "citcpp_ipog_base.hpp"
