@@ -16,7 +16,7 @@
 
 namespace {
 
-void main_covm_loop(const citcpp::detail::model &model,
+void main_covm_loop(const citcpp::detail::internal_model &model,
                     const citcpp::detail::internal_test_set &test_set,
                     const citcpp::coverage_measurement_config &config,
                     unsigned int strength, citcpp::coverage_measurement &covm,

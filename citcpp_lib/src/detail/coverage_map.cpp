@@ -8,7 +8,7 @@ unsigned long long recursively_initialize_coverage_map(
     int start_idx_for_next, int current_level,
     unsigned long long num_value_combinations,
     citcpp::detail::coverage_map_base &cov_map,
-    const citcpp::detail::model &model,
+    const citcpp::detail::internal_model &model,
     const std::vector<unsigned int> &parameter_index_map,
     citcpp::detail::coverage_map_base::size_type &cov_map_first_level_index,
     citcpp::detail::param_vector &param_indices) {
@@ -48,7 +48,7 @@ namespace citcpp {
 namespace detail {
 
 coverage_map_base::coverage_map_base(
-    unsigned int n, unsigned int t, const model &model,
+    unsigned int n, unsigned int t, const internal_model &model,
     const std::vector<unsigned int> &parameter_index_map,
     const binom_coeff_table &binomial_coeffs, bool fixed_last_parameter)
     : size_(fixed_last_parameter ? binomial_coeffs.get_coefficient(n - 1, t - 1)

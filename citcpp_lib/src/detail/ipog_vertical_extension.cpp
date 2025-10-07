@@ -8,7 +8,7 @@ class ipog_vertical_extension_tuple_functor {
   public:
     ipog_vertical_extension_tuple_functor(
         const unsigned int current_param_idx,
-        const citcpp::detail::model &model,
+        const citcpp::detail::internal_model &model,
         citcpp::detail::internal_test_set &test_set,
         citcpp::detail::ipog_horizontal_extension_result
             &partitioning_of_tests_according_to_current_values,
@@ -172,7 +172,7 @@ class ipog_vertical_extension_tuple_functor {
 
   private:
     const unsigned int current_param_idx_;
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values_;
@@ -186,7 +186,7 @@ class ipog_vertical_extension_functor {
   public:
     ipog_vertical_extension_functor(
         const unsigned int current_param_idx, const unsigned int strength,
-        const citcpp::detail::model &model,
+        const citcpp::detail::internal_model &model,
         citcpp::detail::internal_test_set &test_set,
         citcpp::detail::ipog_horizontal_extension_result
             &partitioning_of_tests_according_to_current_values,
@@ -276,7 +276,7 @@ class ipog_vertical_extension_functor {
 
   private:
     const unsigned int current_param_idx_;
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::ipog_horizontal_extension_result
         &partitioning_of_tests_according_to_current_values_;

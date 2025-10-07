@@ -47,7 +47,7 @@ class citcpp_covm {
   private:
     const coverage_measurement_config config_;
     const input_model input_model_;
-    const model model_;
+    const internal_model model_;
     const test_set input_tests_;
     const internal_test_set tests_;
     unsigned int strength_;

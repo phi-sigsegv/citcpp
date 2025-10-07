@@ -52,7 +52,7 @@ class citcpp_ipog : public citcpp_ipog_base {
   private:
     const citcpp::covering_array_computation_config config_;
     const citcpp::input_model input_model_;
-    const model model_;
+    const internal_model model_;
     const internal_test_set input_tests_;
     unsigned int strength_;
 };

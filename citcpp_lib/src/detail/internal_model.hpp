@@ -13,12 +13,12 @@ namespace detail {
 /**
  * This is an internal representation of a given input model.
  */
-class model {
+class internal_model {
   public:
     /**
      * Constructs an internal representation of the given input model.
      */
-    model(const input_model &input_model);
+    internal_model(const input_model &input_model);
 
     /**
      * Returns the input which this internal model has been created from.

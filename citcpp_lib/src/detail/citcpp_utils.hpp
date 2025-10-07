@@ -16,7 +16,7 @@ namespace {
 
 template <class T_VISITOR, typename... T_ADDITIONAL_VISITOR_ARGS>
 bool recursively_visit_all_value_combos_of_param_combo(
-    const citcpp::detail::model &model,
+    const citcpp::detail::internal_model &model,
     const citcpp::detail::param_vector &param_indices,
     citcpp::detail::value_vector &value_indices, int current_index,
     citcpp::detail::bitset_non_owning_uint64::size_type partial_bit_pos,
@@ -73,16 +73,17 @@ extern const citcpp::parameter_value DONT_CARE_PARAMETER_VALUE;
 internal_test_set create_internal_test_set(const input_model &input_model,
                                            const citcpp::test_set &tests);
 
-void replace_dont_care_values(internal_test_set &test_set, const model &model);
+void replace_dont_care_values(internal_test_set &test_set,
+                              const internal_model &model);
 
 unsigned int get_product_of_max_n_parameter_sizes(
     const unsigned int num_parameters, const unsigned int n,
-    const citcpp::detail::model &model,
+    const citcpp::detail::internal_model &model,
     const std::vector<unsigned int> &parameter_index_map);
 
 template <class T_VISITOR, typename... T_ADDITIONAL_VISITOR_ARGS>
 void visit_all_value_combos_of_param_combo(
-    const citcpp::detail::model &model,
+    const citcpp::detail::internal_model &model,
     const citcpp::detail::param_vector &param_indices,
     citcpp::detail::value_vector &value_indices, T_VISITOR &visitor,
     T_ADDITIONAL_VISITOR_ARGS &&...additional_visitor_args) {

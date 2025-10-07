@@ -15,11 +15,11 @@ struct ipog_measure_testset_result {
 };
 
 ipog_measure_testset_result ipog_measure_testset(
-    const model &model, const internal_test_set &test_set,
+    const internal_model &model, const internal_test_set &test_set,
     coverage_map &cov_map);
 
 ipog_measure_testset_result ipog_measure_testset(
-    const model &model, const internal_test_set &test_set,
+    const internal_model &model, const internal_test_set &test_set,
     coverage_map &cov_map, thread_pool &tp);
 
 }  // namespace detail

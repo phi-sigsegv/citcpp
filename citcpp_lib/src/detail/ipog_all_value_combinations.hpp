@@ -26,7 +26,7 @@ struct create_all_value_combinations_result {
  * product.
  */
 create_all_value_combinations_result create_all_value_combinations(
-    unsigned int strength, const model &model,
+    unsigned int strength, const internal_model &model,
     const std::vector<unsigned int> &parameter_index_map,
     internal_test_set &test_set);
 

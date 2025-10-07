@@ -6,7 +6,7 @@ namespace {
 
 void measure_coverage(
     citcpp::detail::coverage_map::second_level_type &value_combinations,
-    const citcpp::detail::model &model,
+    const citcpp::detail::internal_model &model,
     const citcpp::detail::internal_test_set &test_set,
     citcpp::detail::coverage_map &cov_map,
     unsigned long long &num_covered_tuples) {
@@ -56,7 +56,7 @@ void measure_coverage(
 class ipog_measure_per_param_combo_functor {
   public:
     ipog_measure_per_param_combo_functor(
-        const citcpp::detail::model &model,
+        const citcpp::detail::internal_model &model,
         const citcpp::detail::internal_test_set &test_set,
         citcpp::detail::coverage_map &cov_map)
         : model_(model),
@@ -78,7 +78,7 @@ class ipog_measure_per_param_combo_functor {
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::coverage_map &cov_map_;
     unsigned long long num_covered_tuples_;
@@ -87,7 +87,7 @@ class ipog_measure_per_param_combo_functor {
 class ipog_measure_per_param_combo_functor_parallel {
   public:
     ipog_measure_per_param_combo_functor_parallel(
-        const citcpp::detail::model &model,
+        const citcpp::detail::internal_model &model,
         const citcpp::detail::internal_test_set &test_set,
         citcpp::detail::coverage_map &cov_map,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
@@ -119,7 +119,7 @@ class ipog_measure_per_param_combo_functor_parallel {
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::coverage_map &cov_map_;
     const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
@@ -133,7 +133,7 @@ namespace citcpp {
 namespace detail {
 
 ipog_measure_testset_result ipog_measure_testset(
-    const model &model, const internal_test_set &test_set,
+    const internal_model &model, const internal_test_set &test_set,
     coverage_map &cov_map) {
 
   // First initialize the result object.
@@ -152,7 +152,7 @@ ipog_measure_testset_result ipog_measure_testset(
 }
 
 ipog_measure_testset_result ipog_measure_testset(
-    const model &model, const internal_test_set &test_set,
+    const internal_model &model, const internal_test_set &test_set,
     coverage_map &cov_map, thread_pool &tp) {
 
   // First initialize the result object.

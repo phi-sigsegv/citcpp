@@ -86,7 +86,8 @@ class coverage_map_base {
     typedef std::vector<coverage_map_second_level>::size_type size_type;
     typedef coverage_map_second_level second_level_type;
 
-    coverage_map_base(unsigned int n, unsigned int t, const model &model,
+    coverage_map_base(unsigned int n, unsigned int t,
+                      const internal_model &model,
                       const std::vector<unsigned int> &parameter_index_map,
                       const binom_coeff_table &binomial_coeffs,
                       bool fixed_last_parameter);
@@ -99,7 +100,7 @@ class coverage_map_base {
     coverage_map_base &operator=(const coverage_map_base &other) = default;
     coverage_map_base &operator=(coverage_map_base &&other) = default;
 
-    const model &get_model() const { return model_; }
+    const internal_model &get_model() const { return model_; }
 
     const std::vector<unsigned int> &get_parameter_index_map() const {
       return parameter_index_map_;
@@ -123,7 +124,7 @@ class coverage_map_base {
 
   protected:
     const unsigned long long size_;
-    const model &model_;
+    const internal_model &model_;
     const std::vector<unsigned int> &parameter_index_map_;
     const unsigned int n_;
     const unsigned int t_;
@@ -291,7 +292,7 @@ class coverage_map : public coverage_map_base {
     typedef coverage_map_base base_type;
 
   public:
-    coverage_map(unsigned int n, unsigned int t, const model &model,
+    coverage_map(unsigned int n, unsigned int t, const internal_model &model,
                  const std::vector<unsigned int> &parameter_index_map,
                  const binom_coeff_table &binomial_coeffs,
                  bool fixed_last_parameter)

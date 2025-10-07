@@ -17,7 +17,7 @@ namespace detail {
  * appending a value from parameter n-1 to them.
  */
 unsigned long long number_of_combinations_to_cover(
-    unsigned int n, const model &model,
+    unsigned int n, const internal_model &model,
     const std::vector<unsigned int> &parameter_index_map, unsigned int t,
     bool fixed_last_parameter);
 
@@ -31,7 +31,7 @@ unsigned long long number_of_combinations_to_cover(
  * appending a value from parameter n-1 to them.
  */
 unsigned long long number_of_combinations_to_cover(
-    unsigned int n, const model &model,
+    unsigned int n, const internal_model &model,
     const std::vector<unsigned int> &parameter_index_map, unsigned int t,
     bool fixed_last_parameter, thread_pool &tp);
 

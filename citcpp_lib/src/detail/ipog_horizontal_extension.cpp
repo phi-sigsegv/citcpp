@@ -9,7 +9,8 @@ namespace {
 class ipog_horizontal_select_best_value_per_param_combo_functor {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor(
-        const citcpp::detail::model &model, const citcpp::detail::test &test,
+        const citcpp::detail::internal_model &model,
+        const citcpp::detail::test &test,
         std::vector<unsigned long long> &gain_per_value)
         : model_(model), test_(test), gain_per_value_(gain_per_value) {}
 
@@ -67,7 +68,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::test &test_;
     std::vector<unsigned long long> &gain_per_value_;
 };
@@ -75,7 +76,8 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
 class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor_parallel(
-        const citcpp::detail::model &model, const citcpp::detail::test &test,
+        const citcpp::detail::internal_model &model,
+        const citcpp::detail::test &test,
         citcpp::detail::thread_local_vector<
             citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
@@ -141,7 +143,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::test &test_;
     const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
     alignas(std::hardware_destructive_interference_size) citcpp::detail::
@@ -152,7 +154,8 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
 int ipog_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::model &model, const citcpp::detail::test &test,
+    const citcpp::detail::internal_model &model,
+    const citcpp::detail::test &test,
     citcpp::detail::coverage_map_iterator &cov_map_it,
     unsigned int &last_picked_value,
     std::vector<unsigned int> &value_to_num_picked) {
@@ -210,7 +213,8 @@ int ipog_horizontal_select_best_value(
 int ipog_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::model &model, const citcpp::detail::test &test,
+    const citcpp::detail::internal_model &model,
+    const citcpp::detail::test &test,
     citcpp::detail::coverage_map_parallel_iterator &cov_map_it,
     unsigned int &last_picked_value,
     std::vector<unsigned int> &value_to_num_picked) {
@@ -279,7 +283,8 @@ int ipog_horizontal_select_best_value(
 class ipog_horizontal_update_coverage_map_per_param_combo_functor {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor(
-        const citcpp::detail::model &model, const citcpp::detail::test &test)
+        const citcpp::detail::internal_model &model,
+        const citcpp::detail::test &test)
         : model_(model), test_(test), num_new_covered_tuples_(0) {}
 
     bool operator()(
@@ -331,7 +336,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::test &test_;
     unsigned long long num_new_covered_tuples_;
 };
@@ -339,7 +344,8 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
 class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel(
-        const citcpp::detail::model &model, const citcpp::detail::test &test,
+        const citcpp::detail::internal_model &model,
+        const citcpp::detail::test &test,
         const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
         : model_(model),
           test_(test),
@@ -400,7 +406,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::test &test_;
     const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
     alignas(std::hardware_destructive_interference_size)
@@ -409,7 +415,8 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
 };
 
 unsigned long long ipog_horizontal_update_coverage_map(
-    const citcpp::detail::model &model, const citcpp::detail::test &test,
+    const citcpp::detail::internal_model &model,
+    const citcpp::detail::test &test,
     citcpp::detail::coverage_map_iterator &cov_map_it) {
   using namespace citcpp::detail;
 
@@ -421,7 +428,8 @@ unsigned long long ipog_horizontal_update_coverage_map(
 }
 
 unsigned long long ipog_horizontal_update_coverage_map(
-    const citcpp::detail::model &model, const citcpp::detail::test &test,
+    const citcpp::detail::internal_model &model,
+    const citcpp::detail::test &test,
     citcpp::detail::coverage_map_parallel_iterator &cov_map_it) {
   using namespace citcpp::detail;
 
@@ -441,7 +449,7 @@ class
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor {
   public:
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor(
-        const citcpp::detail::model &model,
+        const citcpp::detail::internal_model &model,
         const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
         std::vector<unsigned long long> &gain_per_value,
         const bool enable_coverage_update, const bool enable_gain_computation)
@@ -564,7 +572,7 @@ class
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::test &prev_test_;
     const citcpp::detail::test &test_;
     const bool enable_coverage_update_;
@@ -577,7 +585,7 @@ class
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel(
-        const citcpp::detail::model &model,
+        const citcpp::detail::internal_model &model,
         const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
         citcpp::detail::thread_local_vector<
             citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value,
@@ -711,7 +719,7 @@ class
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::test &prev_test_;
     const citcpp::detail::test &test_;
     const bool enable_coverage_update_;
@@ -729,8 +737,8 @@ new_covered_tuples_and_selected_value
 ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::model &model, const citcpp::detail::test &prev_test,
-    const citcpp::detail::test &test,
+    const citcpp::detail::internal_model &model,
+    const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
     citcpp::detail::coverage_map_iterator &cov_map_it,
     unsigned int &last_picked_value,
     std::vector<unsigned int> &value_to_num_picked) {
@@ -801,8 +809,8 @@ new_covered_tuples_and_selected_value
 ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::model &model, const citcpp::detail::test &prev_test,
-    const citcpp::detail::test &test,
+    const citcpp::detail::internal_model &model,
+    const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
     citcpp::detail::coverage_map_parallel_iterator &cov_map_it,
     unsigned int &last_picked_value,
     std::vector<unsigned int> &value_to_num_picked) {

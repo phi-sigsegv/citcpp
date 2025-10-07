@@ -21,7 +21,7 @@ struct alignas(std::hardware_destructive_interference_size)
 class covm_per_param_combo_functor {
   public:
     covm_per_param_combo_functor(
-        const citcpp::detail::model &model,
+        const citcpp::detail::internal_model &model,
         const citcpp::detail::internal_test_set &test_set,
         const unsigned int bitset_backing_array_size,
         citcpp::detail::covm_exec_handle_impl &exec_handle,
@@ -102,7 +102,7 @@ class covm_per_param_combo_functor {
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::array_wrapper_uint64 bitset_backing_array_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
@@ -113,7 +113,7 @@ class covm_per_param_combo_functor {
 class covm_per_param_combo_functor_parallel {
   public:
     covm_per_param_combo_functor_parallel(
-        const citcpp::detail::model &model,
+        const citcpp::detail::internal_model &model,
         const citcpp::detail::internal_test_set &test_set,
         const unsigned int bitset_backing_array_size,
         citcpp::detail::covm_exec_handle_impl &exec_handle,
@@ -230,7 +230,7 @@ class covm_per_param_combo_functor_parallel {
     }
 
   private:
-    const citcpp::detail::model &model_;
+    const citcpp::detail::internal_model &model_;
     const citcpp::detail::internal_test_set &test_set_;
     citcpp::detail::covm_exec_handle_impl &exec_handle_;
     const citcpp::detail::param_combo_parallel_iterator &param_combo_it_;
@@ -249,7 +249,7 @@ class covm_per_param_combo_functor_parallel {
 namespace citcpp {
 namespace detail {
 
-void measure_coverage(const unsigned int strength, const model &model,
+void measure_coverage(const unsigned int strength, const internal_model &model,
                       const std::vector<unsigned int> &parameter_index_map,
                       const internal_test_set &test_set,
                       covm_exec_handle_impl &exec_handle,
@@ -280,7 +280,7 @@ void measure_coverage(const unsigned int strength, const model &model,
   covm.set_coverered_tuples(std::move(covered_tuples));
 }
 
-void measure_coverage(const unsigned int strength, const model &model,
+void measure_coverage(const unsigned int strength, const internal_model &model,
                       const std::vector<unsigned int> &parameter_index_map,
                       const internal_test_set &test_set,
                       covm_exec_handle_impl &exec_handle,

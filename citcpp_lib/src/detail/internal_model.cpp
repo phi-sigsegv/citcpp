@@ -5,16 +5,16 @@
 namespace citcpp {
 namespace detail {
 
-model::model(const input_model &input_model)
+internal_model::internal_model(const input_model &input_model)
     : input_model_(input_model), parameters_() {
   for (const parameter &p : input_model.get_parameters()) {
     parameters_.push_back(p.get_values().size());
   }
 }
 
-const input_model &model::get_input_model() const { return input_model_; }
+const input_model &internal_model::get_input_model() const { return input_model_; }
 
-test_set model::create_from_internal_test_set(
+test_set internal_model::create_from_internal_test_set(
     const internal_test_set &int_test_set) const {
 
   test_set ret(DEFAULT_VALUE_SEPARATOR);
@@ -24,7 +24,7 @@ test_set model::create_from_internal_test_set(
   return ret;
 }
 
-test_set model::create_from_internal_test_set(
+test_set internal_model::create_from_internal_test_set(
     const internal_test_set &int_test_set,
     std::string_view value_separator) const {
 
@@ -35,7 +35,7 @@ test_set model::create_from_internal_test_set(
   return ret;
 }
 
-void model::convert_test_set(const internal_test_set &src,
+void internal_model::convert_test_set(const internal_test_set &src,
                              test_set &tgt) const {
 
   for (const parameter &param : input_model_.get_parameters()) {
@@ -50,7 +50,7 @@ void model::convert_test_set(const internal_test_set &src,
   }
 }
 
-void model::convert_test(const test &src,
+void internal_model::convert_test(const test &src,
                          std::vector<parameter_value> &tgt) const {
 
   for (test::size_type p = 0; p < src.get_values().size(); ++p) {

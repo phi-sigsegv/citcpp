@@ -33,7 +33,7 @@ get_parameter_indices_ordered_by_number_of_values_desc(
 }
 
 void main_ipog_loop_body(
-    const citcpp::detail::model &model, unsigned int strength,
+    const citcpp::detail::internal_model &model, unsigned int strength,
     const std::vector<unsigned int> &parameter_index_map,
     citcpp::detail::internal_test_set &test_set, bool is_extend_mode,
     unsigned int current_param_idx, const bool with_mt,
@@ -95,7 +95,8 @@ void main_ipog_loop_body(
   exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
 }
 
-void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
+void main_ipog_loop(const citcpp::detail::internal_model &model,
+                    unsigned int strength,
                     citcpp::detail::internal_test_set &test_set,
                     const citcpp::covering_array_computation_config config,
                     citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
@@ -153,7 +154,7 @@ void main_ipog_loop(const citcpp::detail::model &model, unsigned int strength,
 }
 
 void main_ipog_loop_extend_test_set(
-    const citcpp::detail::model &model, unsigned int strength,
+    const citcpp::detail::internal_model &model, unsigned int strength,
     citcpp::detail::internal_test_set &test_set,
     const citcpp::covering_array_computation_config config,
     citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
