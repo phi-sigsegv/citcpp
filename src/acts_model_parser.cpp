@@ -233,7 +233,7 @@ class acts_model_parser::impl : input_model_data_consumer {
       });
     }
 
-    void set_input_model(input_model *model) { model_ = model; }
+    void set_input_model(model *model) { model_ = model; }
 
     void set_system_name(std::string_view name) { model_->set_name(name); }
 
@@ -280,15 +280,14 @@ class acts_model_parser::impl : input_model_data_consumer {
     peg::parser parser_;
     std::string error_message_;
     parameter current_param_;
-    input_model *model_;
+    model *model_;
 };
 
 acts_model_parser::acts_model_parser() : impl_{std::make_unique<impl>()} {}
 
 acts_model_parser::~acts_model_parser() {}
 
-bool acts_model_parser::parse_input_model(std::string_view sv,
-                                          input_model &model) {
+bool acts_model_parser::parse_input_model(std::string_view sv, model &model) {
 
   impl_->set_input_model(&model);
   return impl_->parse_input_model(sv);

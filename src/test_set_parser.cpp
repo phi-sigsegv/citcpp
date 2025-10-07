@@ -124,7 +124,7 @@ namespace detail {
 
 class test_set_parser::impl : test_set_data_consumer {
   public:
-    impl(const input_model &model, std::string_view separator)
+    impl(const model &model, std::string_view separator)
         : test_set_data_consumer(),
           model_(model),
           parameter_to_type_map_(),
@@ -266,7 +266,7 @@ class test_set_parser::impl : test_set_data_consumer {
     std::string_view get_last_error_message() const { return error_message_; }
 
   private:
-    const input_model model_;
+    const model model_;
     std::unordered_map<std::string, parameter_type> parameter_to_type_map_;
     param_identifier_consumer param_identifier_consumer_;
     param_declarations_end_consumer param_declarations_end_consumer_;
@@ -281,8 +281,7 @@ class test_set_parser::impl : test_set_data_consumer {
     test_set *test_set_;
 };
 
-test_set_parser::test_set_parser(const input_model &model,
-                                 std::string_view separator)
+test_set_parser::test_set_parser(const model &model, std::string_view separator)
     : impl_{std::make_unique<impl>(model, separator)} {}
 
 test_set_parser::~test_set_parser() {}

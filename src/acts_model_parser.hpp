@@ -24,7 +24,7 @@ class acts_model_parser {
      * @param model the input_model to put the parsed data into
      * @return \a true if parsing was successful, \a false otherwise
      */
-    bool parse_input_model(std::string_view sv, input_model& model);
+    bool parse_input_model(std::string_view sv, model& model);
 
     /**
      * Returns the last error message of the parser.

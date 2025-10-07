@@ -18,12 +18,12 @@ class internal_model {
     /**
      * Constructs an internal representation of the given input model.
      */
-    internal_model(const input_model &input_model);
+    internal_model(const model &input_model);
 
     /**
      * Returns the input which this internal model has been created from.
      */
-    const input_model &get_input_model() const;
+    const model &get_input_model() const;
 
     /**
      * Returns the list of parameters of this model.
@@ -52,7 +52,7 @@ class internal_model {
     void convert_test(const test &src, std::vector<parameter_value> &tgt) const;
 
   private:
-    const input_model &input_model_;
+    const model &input_model_;
     std::vector<unsigned int> parameters_;
 };
 

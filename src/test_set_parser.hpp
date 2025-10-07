@@ -15,7 +15,7 @@ class test_set_parser {
      * Creates a parser for test sets conforming to the specified model
      * concerning the parameters and their types.
      */
-    test_set_parser(const input_model& model, std::string_view separator);
+    test_set_parser(const model& model, std::string_view separator);
 
     ~test_set_parser();
 

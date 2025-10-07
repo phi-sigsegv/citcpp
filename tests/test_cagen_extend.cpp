@@ -9,10 +9,10 @@
 
 namespace {
 
-citcpp::input_model create_pict_example_model() {
+citcpp::model create_pict_example_model() {
   using namespace citcpp;
 
-  input_model model;
+  model model;
 
   model.add_parameter(parameter()
                           .type(parameter_type::ENUM)
@@ -54,7 +54,7 @@ TEST_CASE(
     "set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(
@@ -102,7 +102,7 @@ TEST_CASE(
     "set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(
@@ -150,7 +150,7 @@ TEST_CASE(
     "set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(
@@ -198,7 +198,7 @@ TEST_CASE(
     "set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(
@@ -246,7 +246,7 @@ TEST_CASE(
     "set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(
@@ -294,7 +294,7 @@ TEST_CASE(
     "set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(
@@ -342,7 +342,7 @@ TEST_CASE(
     "set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(
@@ -390,7 +390,7 @@ TEST_CASE(
     "reduced test set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(model, 1,
@@ -461,7 +461,7 @@ TEST_CASE(
     "reduced test set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(model, 2,
@@ -532,7 +532,7 @@ TEST_CASE(
     "reduced test set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(model, 3,
@@ -603,7 +603,7 @@ TEST_CASE(
     "reduced test set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(model, 4,
@@ -674,7 +674,7 @@ TEST_CASE(
     "reduced test set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(model, 5,
@@ -745,7 +745,7 @@ TEST_CASE(
     "reduced test set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(model, 6,
@@ -816,7 +816,7 @@ TEST_CASE(
     "reduced test set") {
   using namespace citcpp;
 
-  input_model model{create_pict_example_model()};
+  model model{create_pict_example_model()};
 
   std::unique_ptr<cagen_exec_handle_ipog> cagen_handle =
       compute_covering_array_ipog(model, 7,

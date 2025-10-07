@@ -9,7 +9,7 @@
 namespace citcpp {
 
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    input_model input_model, unsigned int t,
+    model input_model, unsigned int t,
     const covering_array_computation_config &config) {
 
   detail::cagen_exec_handle_ipog_impl *handle =
@@ -36,13 +36,13 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
 }
 
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    input_model input_model, unsigned int t) {
+    model input_model, unsigned int t) {
   return compute_covering_array_ipog(input_model, t,
                                      covering_array_computation_config());
 }
 
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    input_model input_model, test_set tests, unsigned int t,
+    model input_model, test_set tests, unsigned int t,
     const covering_array_computation_config &config) {
 
   detail::cagen_exec_handle_ipog_impl *handle =
@@ -69,13 +69,13 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
 }
 
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    input_model input_model, test_set tests, unsigned int t) {
+    model input_model, test_set tests, unsigned int t) {
   return compute_covering_array_ipog(input_model, tests, t,
                                      covering_array_computation_config());
 }
 
 std::unique_ptr<covm_exec_handle> measure_coverage(
-    input_model input_model, test_set tests, unsigned int t,
+    model input_model, test_set tests, unsigned int t,
     const coverage_measurement_config &config) {
 
   auto covm_algo = std::make_unique<detail::citcpp_covm>(
@@ -88,7 +88,7 @@ std::unique_ptr<covm_exec_handle> measure_coverage(
   return std::unique_ptr<covm_exec_handle>(handle);
 }
 
-std::unique_ptr<covm_exec_handle> measure_coverage(input_model input_model,
+std::unique_ptr<covm_exec_handle> measure_coverage(model input_model,
                                                    test_set tests,
                                                    unsigned int t) {
   return measure_coverage(input_model, tests, t, coverage_measurement_config());

@@ -5,14 +5,14 @@
 namespace citcpp {
 namespace detail {
 
-internal_model::internal_model(const input_model &input_model)
+internal_model::internal_model(const model &input_model)
     : input_model_(input_model), parameters_() {
   for (const parameter &p : input_model.get_parameters()) {
     parameters_.push_back(p.get_values().size());
   }
 }
 
-const input_model &internal_model::get_input_model() const { return input_model_; }
+const model &internal_model::get_input_model() const { return input_model_; }
 
 test_set internal_model::create_from_internal_test_set(
     const internal_test_set &int_test_set) const {
@@ -36,7 +36,7 @@ test_set internal_model::create_from_internal_test_set(
 }
 
 void internal_model::convert_test_set(const internal_test_set &src,
-                             test_set &tgt) const {
+                                      test_set &tgt) const {
 
   for (const parameter &param : input_model_.get_parameters()) {
     tgt.add_parameter(
@@ -51,7 +51,7 @@ void internal_model::convert_test_set(const internal_test_set &src,
 }
 
 void internal_model::convert_test(const test &src,
-                         std::vector<parameter_value> &tgt) const {
+                                  std::vector<parameter_value> &tgt) const {
 
   for (test::size_type p = 0; p < src.get_values().size(); ++p) {
     int pv = src.get_values().at(p);

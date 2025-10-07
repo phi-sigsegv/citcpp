@@ -58,7 +58,7 @@ class CagenAlgorithmValidator : public CLI::Validator {
     }
 };
 
-std::unique_ptr<citcpp::input_model> read_model_file(
+std::unique_ptr<citcpp::model> read_model_file(
     const std::string &model_file_path, bool &ok) {
 
   using namespace citcpp;
@@ -73,27 +73,26 @@ std::unique_ptr<citcpp::input_model> read_model_file(
               << std::endl;
 
     ok = false;
-    return std::unique_ptr<citcpp::input_model>();
+    return std::unique_ptr<citcpp::model>();
   }
 
   std::ostringstream model_file_oss{};
   model_file_oss << model_file_is.rdbuf();
 
   acts_model_parser acts_parser;
-  std::unique_ptr<citcpp::input_model> model =
-      std::make_unique<citcpp::input_model>();
+  std::unique_ptr<citcpp::model> model = std::make_unique<citcpp::model>();
   if (!acts_parser.parse_input_model(model_file_oss.view(), *model)) {
     std::cerr << acts_parser.get_last_error_message() << std::endl;
 
     ok = false;
-    return std::unique_ptr<citcpp::input_model>();
+    return std::unique_ptr<citcpp::model>();
   }
 
   return model;
 }
 
 std::unique_ptr<citcpp::test_set> read_test_set_file(
-    const citcpp::input_model &model, const std::string &test_set_file_path,
+    const citcpp::model &model, const std::string &test_set_file_path,
     const std::string &sep, bool optional, bool &ok) {
 
   using namespace citcpp;
@@ -143,7 +142,7 @@ int execute_cagen(const std::string &model_file_path,
   using namespace std::chrono_literals;
 
   bool read_ok = false;
-  std::unique_ptr<citcpp::input_model> model =
+  std::unique_ptr<citcpp::model> model =
       read_model_file(model_file_path, read_ok);
   if (!read_ok) {
     return 1;
@@ -263,7 +262,7 @@ int execute_covm(const std::string &model_file_path,
   using namespace std::chrono_literals;
 
   bool read_ok = false;
-  std::unique_ptr<citcpp::input_model> model =
+  std::unique_ptr<citcpp::model> model =
       read_model_file(model_file_path, read_ok);
   if (!read_ok) {
     return 1;

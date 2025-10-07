@@ -11,7 +11,7 @@ const std::string EMPTY_VALUE_SEPARATOR = "";
 const std::string DEFAULT_VALUE_SEPARATOR = ", ";
 const citcpp::parameter_value DONT_CARE_PARAMETER_VALUE{"*"};
 
-internal_test_set create_internal_test_set(const input_model &input_model,
+internal_test_set create_internal_test_set(const model &input_model,
                                            const test_set &tests) {
 
   struct ParamValueHash {

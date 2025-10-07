@@ -21,14 +21,13 @@ class cagen_exec_handle_ipog_impl;
  */
 class citcpp_ipog_otf : public citcpp_ipog_base {
   public:
-    citcpp_ipog_otf(const input_model &input_model,
+    citcpp_ipog_otf(const model &input_model,
                     const covering_array_computation_config &config);
-    citcpp_ipog_otf(input_model &&input_model,
+    citcpp_ipog_otf(model &&input_model,
                     const covering_array_computation_config &config);
-    citcpp_ipog_otf(const input_model &input_model,
-                    const citcpp::test_set &tests,
+    citcpp_ipog_otf(const model &input_model, const citcpp::test_set &tests,
                     const covering_array_computation_config &config);
-    citcpp_ipog_otf(input_model &&input_model, test_set &&tests,
+    citcpp_ipog_otf(model &&input_model, test_set &&tests,
                     const covering_array_computation_config &config);
 
     /**
@@ -52,7 +51,7 @@ class citcpp_ipog_otf : public citcpp_ipog_base {
 
   private:
     const citcpp::covering_array_computation_config config_;
-    const citcpp::input_model input_model_;
+    const citcpp::model input_model_;
     const internal_model model_;
     const internal_test_set input_tests_;
     unsigned int strength_;

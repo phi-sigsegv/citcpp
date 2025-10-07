@@ -116,7 +116,7 @@ class parameter {
 /**
  * Represents an input model consisting of a list of parameters.
  */
-class input_model {
+class model {
   public:
     const std::string &get_name() const { return name_; }
 
@@ -134,7 +134,7 @@ class input_model {
       parameters_.push_back(std::move(parameter));
     }
 
-    bool operator==(const input_model &other) const {
+    bool operator==(const model &other) const {
       return name_ == other.name_ && parameters_ == other.parameters_;
     }
 
