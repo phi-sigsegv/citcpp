@@ -114,6 +114,77 @@ class parameter {
 };
 
 /**
+ * This class models a non-owning reference to some parameter.
+ */
+class parameter_reference {
+  public:
+    parameter_reference(const parameter &param) : param_(param) {}
+    parameter_reference(const parameter_reference &other) = default;
+    parameter_reference(parameter_reference &&other) = default;
+
+    ~parameter_reference() = default;
+
+    parameter_reference &operator=(const parameter_reference &other) = default;
+    parameter_reference &operator=(parameter_reference &&other) = default;
+
+    const parameter &get() const { return param_; }
+
+    bool operator==(const parameter_reference &other) const {
+      return param_ == other.param_;
+    }
+
+  private:
+    const parameter &param_;
+};
+
+/**
+ * Represents a relation, which is a set of parameters and an interaction
+ * strength.
+ */
+class relation {
+  public:
+    const std::string &get_name() const { return name_; }
+
+    void set_name(std::string_view name) { name_ = name; }
+
+    const std::vector<parameter_reference> &get_parameters() const {
+      return parameters_;
+    }
+
+    std::vector<parameter_reference> &get_parameters() { return parameters_; }
+
+    void add_parameter(const parameter &parameter) {
+      parameters_.push_back(parameter);
+    }
+
+    void add_parameter(const parameter_reference &parameter) {
+      parameters_.push_back(parameter);
+    }
+
+    void add_parameter(parameter_reference &&parameter) {
+      parameters_.push_back(std::move(parameter));
+    }
+
+    unsigned int get_interaction_strength() const {
+      return interaction_strength_;
+    }
+
+    void set_interaction_strength(unsigned int interaction_strength) {
+      interaction_strength_ = interaction_strength;
+    }
+
+    bool operator==(const relation &other) const {
+      return name_ == other.name_ && parameters_ == other.parameters_ &&
+             interaction_strength_ == other.interaction_strength_;
+    }
+
+  private:
+    std::string name_;
+    std::vector<parameter_reference> parameters_;
+    unsigned int interaction_strength_;
+};
+
+/**
  * Represents an input model consisting of a list of parameters.
  */
 class model {
@@ -134,13 +205,23 @@ class model {
       parameters_.push_back(std::move(parameter));
     }
 
+    const std::vector<relation> &get_relations() const { return relations_; }
+
+    std::vector<relation> &get_relations() { return relations_; }
+
+    void add_relation(const relation &r) { relations_.push_back(r); }
+
+    void add_relation(relation &&r) { relations_.push_back(std::move(r)); }
+
     bool operator==(const model &other) const {
-      return name_ == other.name_ && parameters_ == other.parameters_;
+      return name_ == other.name_ && parameters_ == other.parameters_ &&
+             relations_ == other.relations_;
     }
 
   private:
     std::string name_;
     std::vector<parameter> parameters_;
+    std::vector<relation> relations_;
 };
 
 }  // namespace citcpp
