@@ -1,8 +1,39 @@
 #include "ipog_all_value_combinations.hpp"
 
-#include <ranges>
+namespace {
 
-#include "for_each_cross_product_elem.hpp"
+void recursively_add_test_for_each_combination(
+    const citcpp::detail::internal_model &model,
+    const std::vector<unsigned int> &parameter_index_map,
+    unsigned int current_index, std::vector<unsigned int> &values,
+    citcpp::detail::internal_test_set &test_set) {
+  using namespace citcpp::detail;
+
+  if (current_index == values.size()) {
+    // Initialize all values of the test with don't care.
+    test t(model.get_parameters().size(), -1);
+
+    // Replace the first t elements with the cross product element.
+    for (unsigned int index = 0; index < values.size(); ++index) {
+      t.get_values()[parameter_index_map[index]] = values[index];
+    }
+
+    test_set.get_list_of_tests().push_back(std::move(t));
+
+    return;
+  }
+
+  const unsigned int max_val =
+      model.get_parameters()[parameter_index_map[current_index]];
+
+  for (unsigned int i = 0; i < max_val; ++i) {
+    values[current_index] = i;
+    recursively_add_test_for_each_combination(
+        model, parameter_index_map, current_index + 1, values, test_set);
+  }
+}
+
+}  // namespace
 
 namespace citcpp {
 namespace detail {
@@ -12,41 +43,15 @@ create_all_value_combinations_result create_all_value_combinations(
     const std::vector<unsigned int> &parameter_index_map,
     citcpp::detail::internal_test_set &test_set) {
 
-  auto l_map_to_param_idx = [&parameter_index_map](int idx) {
-    return parameter_index_map[idx];
-  };
-
-  auto l_map_to_num_param_values = [&model](unsigned int param_idx) {
-    return model.get_parameters()[param_idx];
-  };
-
-  auto r_param_num_values = std::ranges::iota_view{0u, strength} |
-                            std::views::transform(l_map_to_param_idx) |
-                            std::views::transform(l_map_to_num_param_values);
-
-  std::vector<unsigned int> param_num_values(r_param_num_values.begin(),
-                                             r_param_num_values.end());
-
   create_all_value_combinations_result result{0};
 
-  for_each_cross_product_elem(
-      param_num_values,
-      [&model, &parameter_index_map, &test_set,
-       &result](const std::vector<unsigned int> &next_cross_product_elem) {
-        // Initialize all values of the test with don't care.
-        test t(model.get_parameters().size(), -1);
+  auto previous_test_set_size = test_set.get_list_of_tests().size();
+  std::vector<unsigned int> values(strength);
+  recursively_add_test_for_each_combination(model, parameter_index_map, 0,
+                                            values, test_set);
 
-        // Replace the first t elements with the cross product element.
-        for (unsigned int index = 0; index < next_cross_product_elem.size();
-             ++index) {
-          t.get_values()[parameter_index_map[index]] =
-              next_cross_product_elem[index];
-        }
-
-        test_set.get_list_of_tests().push_back(std::move(t));
-
-        ++result.num_created_combinations;
-      });
+  result.num_created_combinations =
+      test_set.get_list_of_tests().size() - previous_test_set_size;
 
   return result;
 }
