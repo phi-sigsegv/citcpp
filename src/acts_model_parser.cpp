@@ -19,6 +19,10 @@ class input_model_data_consumer {
     virtual void add_param_value(const std::string &value) = 0;
     virtual void add_param_value(int value) = 0;
     virtual void end_param_declaration() = 0;
+    virtual void set_relation_identifier(std::string_view identifier) = 0;
+    virtual void add_param_to_relation(std::string_view identifier, size_t line,
+                                       size_t col) = 0;
+    virtual void set_relation_strength(int strength) = 0;
 };
 
 class system_name_consumer {
@@ -147,24 +151,65 @@ class param_declaration_end_consumer {
     input_model_data_consumer *consumer_;
 };
 
+class relation_identifier_consumer {
+  public:
+    relation_identifier_consumer(input_model_data_consumer *consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues &vs) {
+      consumer_->set_relation_identifier(vs.token_to_string());
+    }
+
+  private:
+    input_model_data_consumer *consumer_;
+};
+
+class relation_param_identifier_consumer {
+  public:
+    relation_param_identifier_consumer(input_model_data_consumer *consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues &vs) {
+      auto line_info = vs.line_info();
+      consumer_->add_param_to_relation(vs.token_to_string(), line_info.first,
+                                       line_info.second);
+    }
+
+  private:
+    input_model_data_consumer *consumer_;
+};
+
+class relation_strength_consumer {
+  public:
+    relation_strength_consumer(input_model_data_consumer *consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues &vs) {
+      consumer_->set_relation_strength(vs.token_to_number<int>());
+    }
+
+  private:
+    input_model_data_consumer *consumer_;
+};
+
 peg::parser create_acts_model_parser() {
   using namespace peg;
 
   parser p(R"(
-Root             <- _ SystemSection ParameterSection
+Root             <- _ SystemSection ParameterSection RelationSection?
 
 SystemSection    <- '[' _ 'System'i _ ']' _ SystemNameRule
 SystemNameRule   <- 'name'i _ ':' _ SystemName _
 SystemName       <- (!Eol .)*
 
-ParameterSection <- '[' _ 'Parameter'i _ ']' _ ParameterRule* _
+ParameterSection <- '[' _ 'Parameter'i _ ']' _ ParameterRule+ _
 ParameterRule    <- (BooleanParam / EnumParam / IntParam)
 
-Identifier       <- [a-zA-Z_] [a-zA-Z0-9_]*
+BooleanParam     <- ParamName _ BooleanType _ ':' _ BooleanValueList SpaceChar* ParamDelcEnd
+EnumParam        <- ParamName _ EnumType _ ':' _ EnumValueList ParamDelcEnd
+IntParam         <- ParamName _ IntType _ ':' _ IntegerValueList SpaceChar* ParamDelcEnd
 
-BooleanParam     <- Identifier _ BooleanType _ ':' _ BooleanValueList SpaceChar* ParamDelcEnd
-EnumParam        <- Identifier _ EnumType _ ':' _ EnumValueList ParamDelcEnd
-IntParam         <- Identifier _ IntType _ ':' _ IntegerValueList SpaceChar* ParamDelcEnd
+ParamName        <- Identifier
 
 BooleanType      <- '(' _ ('boolean'i / 'bool'i) _ ')'
 EnumType         <- '(' _ 'enum'i _ ')'
@@ -180,6 +225,16 @@ EnumValue        <- (!(',' / ';' / SpaceChar / Eol) .) (!(',' / ';' / Eol) .)*
 
 IntegerValueList <- IntegerValue (_ ',' _ IntegerValue)*
 IntegerValue     <- [+-]? [0-9]+
+
+RelationSection  <- '[' _ 'Relation'i _ ']' _ RelationRule*
+RelationRule     <- RelationName _ ':' _ '(' _ RelParamNameList _ ',' _ RelStrength _ ')' _
+
+RelationName     <- Identifier
+RelParamNameList <- RelParamName (_ ',' _ RelParamName)*
+RelParamName     <- Identifier
+RelStrength      <- [0-9]+
+
+Identifier       <- [a-zA-Z_] [a-zA-Z0-9_]*
 
 ~_               <- (WhiteSpace / Eol)*
 WhiteSpace       <- SpaceChar / LineComment
@@ -209,13 +264,20 @@ class acts_model_parser::impl : input_model_data_consumer {
           enum_value_consumer_(enum_value_consumer(this)),
           integer_value_consumer_(integer_value_consumer(this)),
           param_declaration_end_consumer_(param_declaration_end_consumer(this)),
+          relation_identifier_consumer_(relation_identifier_consumer(this)),
+          relation_param_identifier_consumer_(
+              relation_param_identifier_consumer(this)),
+          relation_strength_consumer_(relation_strength_consumer(this)),
           parser_(create_acts_model_parser()),
           current_param_(parameter()),
+          current_relation_(relation()),
+          error_occurred_(false),
           error_message_(),
           model_(nullptr) {
 
       parser_["SystemName"] = system_name_consumer_;
-      parser_["Identifier"] = param_identifier_consumer_;
+
+      parser_["ParamName"] = param_identifier_consumer_;
       parser_["BooleanType"] = param_boolean_type_consumer_;
       parser_["EnumType"] = param_enum_type_consumer_;
       parser_["IntType"] = param_integer_type_consumer_;
@@ -223,6 +285,10 @@ class acts_model_parser::impl : input_model_data_consumer {
       parser_["EnumValue"] = enum_value_consumer_;
       parser_["IntegerValue"] = integer_value_consumer_;
       parser_["ParamDelcEnd"] = param_declaration_end_consumer_;
+
+      parser_["RelationName"] = relation_identifier_consumer_;
+      parser_["RelParamName"] = relation_param_identifier_consumer_;
+      parser_["RelStrength"] = relation_strength_consumer_;
 
       parser_.set_logger([this](size_t line, size_t col,
                                 const std::string &msg) {
@@ -259,10 +325,44 @@ class acts_model_parser::impl : input_model_data_consumer {
       current_param_.get_values().clear();
     }
 
+    void set_relation_identifier(std::string_view identifier) {
+      current_relation_.set_name(identifier);
+    }
+
+    void add_param_to_relation(std::string_view identifier, size_t line,
+                               size_t col) {
+      // Search for the parameter in the model
+      for (const parameter &param : model_->get_parameters()) {
+        if (identifier == param.get_name()) {
+          current_relation_.add_parameter(param);
+          return;
+        }
+      }
+
+      // If we reach this point, then we did not find the reference parameter.
+      error_occurred_ = true;
+      std::ostringstream oss;
+      oss << "Error in relation at " << line << ":" << col
+          << " -> Cannot find declaration of parameter " << identifier;
+
+      error_message_ = oss.str();
+    }
+
+    void set_relation_strength(int strength) {
+      current_relation_.set_interaction_strength(strength);
+
+      model_->add_relation(current_relation_);
+      // Reset our relation.
+      current_relation_.get_parameters().clear();
+    }
+
     bool parse_input_model(std::string_view sv) {
+      error_occurred_ = false;
       error_message_.clear();
       current_param_.get_values().clear();
-      return parser_.parse(sv);
+      bool ret = parser_.parse(sv);
+
+      return ret && !error_occurred_;
     }
 
     std::string_view get_last_error_message() const { return error_message_; }
@@ -277,9 +377,14 @@ class acts_model_parser::impl : input_model_data_consumer {
     enum_value_consumer enum_value_consumer_;
     integer_value_consumer integer_value_consumer_;
     param_declaration_end_consumer param_declaration_end_consumer_;
+    relation_identifier_consumer relation_identifier_consumer_;
+    relation_param_identifier_consumer relation_param_identifier_consumer_;
+    relation_strength_consumer relation_strength_consumer_;
     peg::parser parser_;
+    bool error_occurred_;
     std::string error_message_;
     parameter current_param_;
+    relation current_relation_;
     model *model_;
 };
 
