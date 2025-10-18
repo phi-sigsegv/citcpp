@@ -81,10 +81,17 @@ class internal_relation {
       current_interaction_strength_ = interaction_strength;
     }
 
+    unsigned int get_current_param_idx() const { return current_param_idx_; }
+
+    void set_current_param_idx(unsigned int current_param_idx) {
+      current_param_idx_ = current_param_idx;
+    }
+
   private:
     const std::vector<unsigned int> parameters_;
     const unsigned int specified_interaction_strength_;
     unsigned int current_interaction_strength_;
+    unsigned int current_param_idx_;
 };
 
 }  // namespace detail

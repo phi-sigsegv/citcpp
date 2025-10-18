@@ -71,7 +71,8 @@ internal_relation::internal_relation(
     unsigned int specified_interaction_strength)
     : parameters_(parameters),
       specified_interaction_strength_(specified_interaction_strength),
-      current_interaction_strength_(1) {}
+      current_interaction_strength_(1),
+      current_param_idx_(0) {}
 
 }  // namespace detail
 }  // namespace citcpp
