@@ -1,5 +1,6 @@
 #include "ipog_horizontal_extension.hpp"
 
+#include <algorithm>
 #include <new>
 
 #include "citcpp_utils.hpp"
@@ -9,16 +10,16 @@ namespace {
 class ipog_horizontal_select_best_value_per_param_combo_functor {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor(
-        const citcpp::detail::internal_model &model,
-        const citcpp::detail::test &test,
-        std::vector<unsigned long long> &gain_per_value)
+        const citcpp::detail::internal_model& model,
+        const citcpp::detail::test& test,
+        std::vector<unsigned long long>& gain_per_value)
         : model_(model), test_(test), gain_per_value_(gain_per_value) {}
 
-    bool operator()(const citcpp::detail::coverage_map::second_level_type
-                        &value_combinations) {
+    bool operator()(const citcpp::detail::coverage_map::second_level_type&
+                        value_combinations) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all()) {
@@ -68,29 +69,29 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
     }
 
   private:
-    const citcpp::detail::internal_model &model_;
-    const citcpp::detail::test &test_;
-    std::vector<unsigned long long> &gain_per_value_;
+    const citcpp::detail::internal_model& model_;
+    const citcpp::detail::test& test_;
+    std::vector<unsigned long long>& gain_per_value_;
 };
 
 class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor_parallel(
-        const citcpp::detail::internal_model &model,
-        const citcpp::detail::test &test,
+        const citcpp::detail::internal_model& model,
+        const citcpp::detail::test& test,
         citcpp::detail::thread_local_vector<
-            citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value,
-        const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
+            citcpp::detail::aligned_vector<unsigned long long>>& gain_per_value,
+        const citcpp::detail::thread_pool& tp)
         : model_(model),
           test_(test),
-          cov_map_it_(cov_map_it),
+          tp_(tp),
           gain_per_value_(gain_per_value) {}
 
     bool operator()(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all()) {
@@ -129,8 +130,8 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
         // If we have found a don't care value in one of the [0, ...
         // ,current_param_idx - 1] parameters, then we skip the combination in
         // the coverage gain computation.
-        std::vector<unsigned long long> &thread_local_gain_per_value =
-            gain_per_value_[cov_map_it_.get_worker_id()].value;
+        std::vector<unsigned long long>& thread_local_gain_per_value =
+            gain_per_value_[tp_.get_worker_id()].value;
         for (unsigned int value = 0; value < thread_local_gain_per_value.size();
              ++value) {
           if (!value_combinations.test(base_index + value)) {
@@ -143,22 +144,22 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     }
 
   private:
-    const citcpp::detail::internal_model &model_;
-    const citcpp::detail::test &test_;
-    const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
-    alignas(std::hardware_destructive_interference_size) citcpp::detail::
-        thread_local_vector<citcpp::detail::aligned_vector<unsigned long long>>
-            &gain_per_value_;
+    const citcpp::detail::internal_model& model_;
+    const citcpp::detail::test& test_;
+    const citcpp::detail::thread_pool& tp_;
+    alignas(std::hardware_destructive_interference_size)
+        citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
+            unsigned long long>>& gain_per_value_;
 };
 
 int ipog_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::internal_model &model,
-    const citcpp::detail::test &test,
-    citcpp::detail::coverage_map_iterator &cov_map_it,
-    unsigned int &last_picked_value,
-    std::vector<unsigned int> &value_to_num_picked) {
+    const citcpp::detail::internal_model& model,
+    const citcpp::detail::test& test,
+    std::vector<citcpp::detail::coverage_map_iterator>& cov_map_its,
+    unsigned int& last_picked_value,
+    std::vector<unsigned int>& value_to_num_picked) {
   using namespace citcpp::detail;
 
   // We first check whether the test already has a concrete value
@@ -177,7 +178,9 @@ int ipog_horizontal_select_best_value(
 
   ipog_horizontal_select_best_value_per_param_combo_functor
       per_param_combo_functor(model, test, gain_per_value);
-  cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  for (auto& cov_map_it : cov_map_its) {
+    cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  }
 
   int value_with_max_gain = -1;
   unsigned long long max_gain = 0;
@@ -213,11 +216,11 @@ int ipog_horizontal_select_best_value(
 int ipog_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::internal_model &model,
-    const citcpp::detail::test &test,
-    citcpp::detail::coverage_map_parallel_iterator &cov_map_it,
-    unsigned int &last_picked_value,
-    std::vector<unsigned int> &value_to_num_picked) {
+    const citcpp::detail::internal_model& model,
+    const citcpp::detail::test& test,
+    std::vector<citcpp::detail::coverage_map_parallel_iterator>& cov_map_its,
+    const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
+    std::vector<unsigned int>& value_to_num_picked) {
   using namespace citcpp::detail;
 
   // We first check whether the test already has a concrete value
@@ -234,13 +237,14 @@ int ipog_horizontal_select_best_value(
   // parameter.
   citcpp::detail::thread_local_vector<
       citcpp::detail::aligned_vector<unsigned long long>>
-      gain_per_value(
-          cov_map_it.get_num_workers(),
-          aligned_vector<unsigned long long>(num_current_param_values, 0));
+      gain_per_value(tp.get_num_workers(), aligned_vector<unsigned long long>(
+                                               num_current_param_values, 0));
 
   ipog_horizontal_select_best_value_per_param_combo_functor_parallel
-      per_param_combo_functor(model, test, gain_per_value, cov_map_it);
-  cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+      per_param_combo_functor(model, test, gain_per_value, tp);
+  for (auto& cov_map_it : cov_map_its) {
+    cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  }
 
   int value_with_max_gain = -1;
   unsigned long long max_gain = 0;
@@ -250,8 +254,8 @@ int ipog_horizontal_select_best_value(
         (v_index + last_picked_value + 1) % num_current_param_values;
 
     unsigned long long value_gain = 0;
-    for (citcpp::detail::aligned_vector<unsigned long long>
-             &thread_local_gain_per_value : gain_per_value) {
+    for (citcpp::detail::aligned_vector<unsigned long long>&
+             thread_local_gain_per_value : gain_per_value) {
       value_gain += thread_local_gain_per_value.value[value];
     }
 
@@ -283,15 +287,15 @@ int ipog_horizontal_select_best_value(
 class ipog_horizontal_update_coverage_map_per_param_combo_functor {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor(
-        const citcpp::detail::internal_model &model,
-        const citcpp::detail::test &test)
+        const citcpp::detail::internal_model& model,
+        const citcpp::detail::test& test)
         : model_(model), test_(test), num_new_covered_tuples_(0) {}
 
     bool operator()(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all()) {
@@ -336,27 +340,26 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
     }
 
   private:
-    const citcpp::detail::internal_model &model_;
-    const citcpp::detail::test &test_;
+    const citcpp::detail::internal_model& model_;
+    const citcpp::detail::test& test_;
     unsigned long long num_new_covered_tuples_;
 };
 
 class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel(
-        const citcpp::detail::internal_model &model,
-        const citcpp::detail::test &test,
-        const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
+        const citcpp::detail::internal_model& model,
+        const citcpp::detail::test& test, const citcpp::detail::thread_pool& tp)
         : model_(model),
           test_(test),
-          cov_map_it_(cov_map_it),
-          num_new_covered_tuples_(cov_map_it.get_num_workers()) {}
+          tp_(tp),
+          num_new_covered_tuples_(tp.get_num_workers()) {}
 
     bool operator()(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all()) {
@@ -389,7 +392,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
         }
 
         if (!value_combinations.test_and_set(index)) {
-          ++num_new_covered_tuples_[cov_map_it_.get_worker_id()].value;
+          ++num_new_covered_tuples_[tp_.get_worker_id()].value;
         }
       }
 
@@ -398,7 +401,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
 
     unsigned long long get_num_new_covered_tuples() const {
       unsigned long long ret = 0;
-      for (const auto &i : num_new_covered_tuples_) {
+      for (const auto& i : num_new_covered_tuples_) {
         ret += i.value;
       }
 
@@ -406,36 +409,41 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
     }
 
   private:
-    const citcpp::detail::internal_model &model_;
-    const citcpp::detail::test &test_;
-    const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
+    const citcpp::detail::internal_model& model_;
+    const citcpp::detail::test& test_;
+    const citcpp::detail::thread_pool& tp_;
     alignas(std::hardware_destructive_interference_size)
         citcpp::detail::thread_local_vector<
             citcpp::detail::aligned_ull_value> num_new_covered_tuples_;
 };
 
 unsigned long long ipog_horizontal_update_coverage_map(
-    const citcpp::detail::internal_model &model,
-    const citcpp::detail::test &test,
-    citcpp::detail::coverage_map_iterator &cov_map_it) {
+    const citcpp::detail::internal_model& model,
+    const citcpp::detail::test& test,
+    std::vector<citcpp::detail::coverage_map_iterator>& cov_map_its) {
   using namespace citcpp::detail;
 
   ipog_horizontal_update_coverage_map_per_param_combo_functor
       per_param_combo_functor(model, test);
-  cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  for (auto& cov_map_it : cov_map_its) {
+    cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  }
 
   return per_param_combo_functor.get_num_new_covered_tuples();
 }
 
 unsigned long long ipog_horizontal_update_coverage_map(
-    const citcpp::detail::internal_model &model,
-    const citcpp::detail::test &test,
-    citcpp::detail::coverage_map_parallel_iterator &cov_map_it) {
+    const citcpp::detail::internal_model& model,
+    const citcpp::detail::test& test,
+    std::vector<citcpp::detail::coverage_map_parallel_iterator>& cov_map_its,
+    const citcpp::detail::thread_pool& tp) {
   using namespace citcpp::detail;
 
   ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel
-      per_param_combo_functor(model, test, cov_map_it);
-  cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+      per_param_combo_functor(model, test, tp);
+  for (auto& cov_map_it : cov_map_its) {
+    cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  }
 
   return per_param_combo_functor.get_num_new_covered_tuples();
 }
@@ -449,9 +457,9 @@ class
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor {
   public:
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor(
-        const citcpp::detail::internal_model &model,
-        const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
-        std::vector<unsigned long long> &gain_per_value,
+        const citcpp::detail::internal_model& model,
+        const citcpp::detail::test& prev_test, const citcpp::detail::test& test,
+        std::vector<unsigned long long>& gain_per_value,
         const bool enable_coverage_update, const bool enable_gain_computation)
         : model_(model),
           prev_test_(prev_test),
@@ -462,7 +470,7 @@ class
           num_new_covered_tuples_(0) {}
 
     bool operator()(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       if (enable_coverage_update_) {
         update_coverage(value_combinations);
       }
@@ -474,10 +482,10 @@ class
     }
 
     void update_coverage(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all()) {
@@ -516,11 +524,11 @@ class
     }
 
     void compute_gain_per_value(
-        const citcpp::detail::coverage_map::second_level_type
-            &value_combinations) {
+        const citcpp::detail::coverage_map::second_level_type&
+            value_combinations) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all()) {
@@ -572,12 +580,12 @@ class
     }
 
   private:
-    const citcpp::detail::internal_model &model_;
-    const citcpp::detail::test &prev_test_;
-    const citcpp::detail::test &test_;
+    const citcpp::detail::internal_model& model_;
+    const citcpp::detail::test& prev_test_;
+    const citcpp::detail::test& test_;
     const bool enable_coverage_update_;
     const bool enable_gain_computation_;
-    std::vector<unsigned long long> &gain_per_value_;
+    std::vector<unsigned long long>& gain_per_value_;
     unsigned long long num_new_covered_tuples_;
 };
 
@@ -585,23 +593,23 @@ class
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel(
-        const citcpp::detail::internal_model &model,
-        const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
+        const citcpp::detail::internal_model& model,
+        const citcpp::detail::test& prev_test, const citcpp::detail::test& test,
         citcpp::detail::thread_local_vector<
-            citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value,
+            citcpp::detail::aligned_vector<unsigned long long>>& gain_per_value,
         const bool enable_coverage_update, const bool enable_gain_computation,
-        const citcpp::detail::coverage_map_parallel_iterator &cov_map_it)
+        const citcpp::detail::thread_pool& tp)
         : model_(model),
           prev_test_(prev_test),
           test_(test),
           enable_coverage_update_(enable_coverage_update),
           enable_gain_computation_(enable_gain_computation),
-          cov_map_it_(cov_map_it),
+          tp_(tp),
           gain_per_value_(gain_per_value),
-          num_new_covered_tuples_(cov_map_it.get_num_workers()) {}
+          num_new_covered_tuples_(tp.get_num_workers()) {}
 
     bool operator()(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       if (enable_coverage_update_) {
         update_coverage(value_combinations);
       }
@@ -613,10 +621,10 @@ class
     }
 
     void update_coverage(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all()) {
@@ -649,17 +657,17 @@ class
         }
 
         if (!value_combinations.test_and_set(index)) {
-          ++num_new_covered_tuples_[cov_map_it_.get_worker_id()].value;
+          ++num_new_covered_tuples_[tp_.get_worker_id()].value;
         }
       }
     }
 
     void compute_gain_per_value(
-        const citcpp::detail::coverage_map::second_level_type
-            &value_combinations) {
+        const citcpp::detail::coverage_map::second_level_type&
+            value_combinations) {
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all()) {
@@ -698,8 +706,8 @@ class
         // If we have found a don't care value in one of the [0, ...
         // ,current_param_idx - 1] parameters, then we skip the combination in
         // the coverage gain computation.
-        std::vector<unsigned long long> &thread_local_gain_per_value =
-            gain_per_value_[cov_map_it_.get_worker_id()].value;
+        std::vector<unsigned long long>& thread_local_gain_per_value =
+            gain_per_value_[tp_.get_worker_id()].value;
         for (unsigned int value = 0; value < thread_local_gain_per_value.size();
              ++value) {
           if (!value_combinations.test(base_index + value)) {
@@ -711,7 +719,7 @@ class
 
     unsigned long long get_num_new_covered_tuples() const {
       unsigned long long ret = 0;
-      for (const auto &i : num_new_covered_tuples_) {
+      for (const auto& i : num_new_covered_tuples_) {
         ret += i.value;
       }
 
@@ -719,15 +727,15 @@ class
     }
 
   private:
-    const citcpp::detail::internal_model &model_;
-    const citcpp::detail::test &prev_test_;
-    const citcpp::detail::test &test_;
+    const citcpp::detail::internal_model& model_;
+    const citcpp::detail::test& prev_test_;
+    const citcpp::detail::test& test_;
     const bool enable_coverage_update_;
     const bool enable_gain_computation_;
-    const citcpp::detail::coverage_map_parallel_iterator &cov_map_it_;
-    alignas(std::hardware_destructive_interference_size) citcpp::detail::
-        thread_local_vector<citcpp::detail::aligned_vector<unsigned long long>>
-            &gain_per_value_;
+    const citcpp::detail::thread_pool& tp_;
+    alignas(std::hardware_destructive_interference_size)
+        citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
+            unsigned long long>>& gain_per_value_;
     alignas(std::hardware_destructive_interference_size)
         citcpp::detail::thread_local_vector<
             citcpp::detail::aligned_ull_value> num_new_covered_tuples_;
@@ -737,11 +745,11 @@ new_covered_tuples_and_selected_value
 ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::internal_model &model,
-    const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
-    citcpp::detail::coverage_map_iterator &cov_map_it,
-    unsigned int &last_picked_value,
-    std::vector<unsigned int> &value_to_num_picked) {
+    const citcpp::detail::internal_model& model,
+    const citcpp::detail::test& prev_test, const citcpp::detail::test& test,
+    std::vector<citcpp::detail::coverage_map_iterator>& cov_map_its,
+    unsigned int& last_picked_value,
+    std::vector<unsigned int>& value_to_num_picked) {
   using namespace citcpp::detail;
 
   // This is an array containing the coverage gain per value of the current
@@ -766,7 +774,9 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
           model, prev_test, test, gain_per_value,
           prev_test.get_values()[real_current_param_idx] >= 0,
           current_param_value < 0);
-  cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  for (auto& cov_map_it : cov_map_its) {
+    cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  }
 
   new_covered_tuples_and_selected_value res;
   res.num_new_covered_tuples_ =
@@ -809,20 +819,19 @@ new_covered_tuples_and_selected_value
 ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::internal_model &model,
-    const citcpp::detail::test &prev_test, const citcpp::detail::test &test,
-    citcpp::detail::coverage_map_parallel_iterator &cov_map_it,
-    unsigned int &last_picked_value,
-    std::vector<unsigned int> &value_to_num_picked) {
+    const citcpp::detail::internal_model& model,
+    const citcpp::detail::test& prev_test, const citcpp::detail::test& test,
+    std::vector<citcpp::detail::coverage_map_parallel_iterator>& cov_map_its,
+    const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
+    std::vector<unsigned int>& value_to_num_picked) {
   using namespace citcpp::detail;
 
   // This is an array containing the coverage gain per value of the current
   // parameter.
   citcpp::detail::thread_local_vector<
       citcpp::detail::aligned_vector<unsigned long long>>
-      gain_per_value(
-          cov_map_it.get_num_workers(),
-          aligned_vector<unsigned long long>(num_current_param_values, 0));
+      gain_per_value(tp.get_num_workers(), aligned_vector<unsigned long long>(
+                                               num_current_param_values, 0));
 
   // We first check whether the test already has a concrete value
   // for the current parameter, because if so, then there is no
@@ -834,7 +843,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
 
     // The coverage gain computation is disabled in the functor,
     // so that it won't modify this gain info.
-    for (aligned_vector<unsigned long long> &thread_local_gain_per_value :
+    for (aligned_vector<unsigned long long>& thread_local_gain_per_value :
          gain_per_value) {
       thread_local_gain_per_value.value[current_param_value]++;
     }
@@ -844,8 +853,10 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
       per_param_combo_functor(
           model, prev_test, test, gain_per_value,
           prev_test.get_values()[real_current_param_idx] >= 0,
-          current_param_value < 0, cov_map_it);
-  cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+          current_param_value < 0, tp);
+  for (auto& cov_map_it : cov_map_its) {
+    cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  }
 
   new_covered_tuples_and_selected_value res;
   res.num_new_covered_tuples_ =
@@ -859,7 +870,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
         (v_index + last_picked_value + 1) % num_current_param_values;
 
     unsigned long long value_gain = 0;
-    for (aligned_vector<unsigned long long> &thread_local_gain_per_value :
+    for (aligned_vector<unsigned long long>& thread_local_gain_per_value :
          gain_per_value) {
       value_gain += thread_local_gain_per_value.value[value];
     }
@@ -897,14 +908,16 @@ namespace citcpp {
 namespace detail {
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
-    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
-    internal_test_set &test_set, coverage_map &cov_map) {
+    internal_test_set& test_set,
+    std::vector<std::pair<internal_relation, coverage_map>>& relations) {
 
   const unsigned int real_current_param_idx =
-      cov_map.get_parameter_index_map()[current_param_idx];
+      relations[0].second.get_parameter_index_map()
+          [relations[0].first.get_current_param_idx()];
   const int num_current_param_values =
-      cov_map.get_model().get_parameters()[real_current_param_idx];
+      relations[0].second.get_model().get_parameters()[real_current_param_idx];
+  const internal_model& model = relations[0].second.get_model();
 
   // First initialize the result object.
   ipog_horizontal_extension_result result{
@@ -914,19 +927,25 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
-  coverage_map_iterator cov_map_it = cov_map.create_iterator();
+  std::vector<coverage_map_iterator> cov_map_its;
+  for (auto& rel : relations) {
+    cov_map_its.push_back(rel.second.create_iterator());
+  }
 
-  test *previous_test = nullptr;
+  test* previous_test = nullptr;
   int selected_value = 0;
-  for (test &t : test_set.get_list_of_tests()) {
-    if (cov_map.get_number_of_parameters_to_select() > 2) {
+  for (test& t : test_set.get_list_of_tests()) {
+    if (std::ranges::any_of(
+            relations.begin(), relations.end(), [](const auto& p) {
+              return p.first.get_current_interaction_strength() > 2;
+            })) {
       last_picked_value = num_current_param_values - 1;
     }
 
     if (!previous_test) {
       selected_value = ipog_horizontal_select_best_value(
-          real_current_param_idx, num_current_param_values, cov_map.get_model(),
-          t, cov_map_it, last_picked_value, value_to_num_picked);
+          real_current_param_idx, num_current_param_values, model, t,
+          cov_map_its, last_picked_value, value_to_num_picked);
     } else {
       if (selected_value >= 0) {
         // We might not have selected any value. This can happen, if no matter
@@ -954,9 +973,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
       new_covered_tuples_and_selected_value res =
           ipog_horizontal_update_coverage_map_and_select_best_value(
-              real_current_param_idx, num_current_param_values,
-              cov_map.get_model(), *previous_test, t, cov_map_it,
-              last_picked_value, value_to_num_picked);
+              real_current_param_idx, num_current_param_values, model,
+              *previous_test, t, cov_map_its, last_picked_value,
+              value_to_num_picked);
 
       selected_value = res.selected_value_;
 
@@ -998,10 +1017,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         nullptr;
 
     unsigned long long num_new_covered_tuples =
-        selected_value >= 0
-            ? ipog_horizontal_update_coverage_map(cov_map.get_model(),
-                                                  *previous_test, cov_map_it)
-            : 0;
+        selected_value >= 0 ? ipog_horizontal_update_coverage_map(
+                                  model, *previous_test, cov_map_its)
+                            : 0;
 
     // Keep track of how many tuples we have covered in addition.
     result.num_new_covered_tuples += num_new_covered_tuples;
@@ -1011,14 +1029,17 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 }
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
-    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
-    internal_test_set &test_set, coverage_map &cov_map, thread_pool &tp) {
+    internal_test_set& test_set,
+    std::vector<std::pair<internal_relation, coverage_map>>& relations,
+    thread_pool& tp) {
 
   const unsigned int real_current_param_idx =
-      cov_map.get_parameter_index_map()[current_param_idx];
+      relations[0].second.get_parameter_index_map()
+          [relations[0].first.get_current_param_idx()];
   const int num_current_param_values =
-      cov_map.get_model().get_parameters()[real_current_param_idx];
+      relations[0].second.get_model().get_parameters()[real_current_param_idx];
+  const internal_model& model = relations[0].second.get_model();
 
   // First initialize the result object.
   ipog_horizontal_extension_result result{
@@ -1028,20 +1049,25 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
-  coverage_map_parallel_iterator cov_map_it =
-      cov_map.create_parallel_iterator(tp);
+  std::vector<coverage_map_parallel_iterator> cov_map_its;
+  for (auto& rel : relations) {
+    cov_map_its.push_back(rel.second.create_parallel_iterator(tp));
+  }
 
-  test *previous_test = nullptr;
+  test* previous_test = nullptr;
   int selected_value = 0;
-  for (test &t : test_set.get_list_of_tests()) {
-    if (cov_map.get_number_of_parameters_to_select() > 2) {
+  for (test& t : test_set.get_list_of_tests()) {
+    if (std::ranges::any_of(
+            relations.begin(), relations.end(), [](const auto& p) {
+              return p.first.get_current_interaction_strength() > 2;
+            })) {
       last_picked_value = num_current_param_values - 1;
     }
 
     if (!previous_test) {
       selected_value = ipog_horizontal_select_best_value(
-          real_current_param_idx, num_current_param_values, cov_map.get_model(),
-          t, cov_map_it, last_picked_value, value_to_num_picked);
+          real_current_param_idx, num_current_param_values, model, t,
+          cov_map_its, tp, last_picked_value, value_to_num_picked);
     } else {
       if (selected_value >= 0) {
         // We might not have selected any value. This can happen, if no matter
@@ -1069,9 +1095,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
       new_covered_tuples_and_selected_value res =
           ipog_horizontal_update_coverage_map_and_select_best_value(
-              real_current_param_idx, num_current_param_values,
-              cov_map.get_model(), *previous_test, t, cov_map_it,
-              last_picked_value, value_to_num_picked);
+              real_current_param_idx, num_current_param_values, model,
+              *previous_test, t, cov_map_its, tp, last_picked_value,
+              value_to_num_picked);
 
       selected_value = res.selected_value_;
 
@@ -1113,10 +1139,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         nullptr;
 
     unsigned long long num_new_covered_tuples =
-        selected_value >= 0
-            ? ipog_horizontal_update_coverage_map(cov_map.get_model(),
-                                                  *previous_test, cov_map_it)
-            : 0;
+        selected_value >= 0 ? ipog_horizontal_update_coverage_map(
+                                  model, *previous_test, cov_map_its, tp)
+                            : 0;
 
     // Keep track of how many tuples we have covered in addition.
     result.num_new_covered_tuples += num_new_covered_tuples;
