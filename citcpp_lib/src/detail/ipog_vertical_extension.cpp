@@ -7,16 +7,14 @@ namespace {
 class ipog_vertical_extension_tuple_functor {
   public:
     ipog_vertical_extension_tuple_functor(
-        const unsigned int current_param_idx,
-        const citcpp::detail::internal_model &model,
-        citcpp::detail::internal_test_set &test_set,
-        citcpp::detail::ipog_horizontal_extension_result
-            &partitioning_of_tests_according_to_current_values,
+        const citcpp::detail::internal_model& model,
+        citcpp::detail::internal_test_set& test_set,
+        citcpp::detail::ipog_horizontal_extension_result&
+            partitioning_of_tests_according_to_current_values,
         citcpp::detail::list_intrusive<
-            citcpp::detail::test_list_intrusive_integ> &modified_tests,
+            citcpp::detail::test_list_intrusive_integ>& modified_tests,
         const unsigned long long num_missing_combinations_to_cover)
-        : current_param_idx_(current_param_idx),
-          model_(model),
+        : model_(model),
           test_set_(test_set),
           partitioning_of_tests_according_to_current_values_(
               partitioning_of_tests_according_to_current_values),
@@ -25,9 +23,9 @@ class ipog_vertical_extension_tuple_functor {
           num_new_covered_tuples_(0) {}
 
     bool operator()(
-        const citcpp::detail::value_vector &value_indices,
+        const citcpp::detail::value_vector& value_indices,
         citcpp::detail::coverage_map_base::size_type bitpos,
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       using namespace citcpp::detail;
 
       ipog_vertical_extension_func(value_indices, bitpos, value_combinations);
@@ -41,14 +39,14 @@ class ipog_vertical_extension_tuple_functor {
 
   private:
     void ipog_vertical_extension_func(
-        const citcpp::detail::value_vector &value_indices,
+        const citcpp::detail::value_vector& value_indices,
         citcpp::detail::coverage_map_base::size_type bitpos,
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
       using namespace citcpp::detail;
 
       // First we check whether the value combination is covered, because if it
       // is not, then there is no point try to fit it into some test.
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
       if (value_combinations.test_and_set(bitpos)) {
@@ -67,7 +65,7 @@ class ipog_vertical_extension_tuple_functor {
 
       // Iterate over the tests with the same value for the current parameter
       // value we have to cover.
-      for (test_list_intrusive_integ &t :
+      for (test_list_intrusive_integ& t :
            partitioning_of_tests_according_to_current_values_
                .value_to_row_mapping[current_param_value_to_cover]) {
 
@@ -95,7 +93,7 @@ class ipog_vertical_extension_tuple_functor {
            it != partitioning_of_tests_according_to_current_values_
                      .rows_with_current_parameter_dont_care_value.end();
            ++it) {
-        test &t = it->get_test();
+        test& t = it->get_test();
 
         if (ipog_vertical_extension_try_inject_value_combo(param_indices,
                                                            value_indices, t)) {
@@ -144,9 +142,9 @@ class ipog_vertical_extension_tuple_functor {
     }
 
     bool ipog_vertical_extension_try_inject_value_combo(
-        const citcpp::detail::param_vector &param_indices,
-        const citcpp::detail::value_vector &value_indices,
-        citcpp::detail::test &t) {
+        const citcpp::detail::param_vector& param_indices,
+        const citcpp::detail::value_vector& value_indices,
+        citcpp::detail::test& t) {
 
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
@@ -171,13 +169,12 @@ class ipog_vertical_extension_tuple_functor {
     }
 
   private:
-    const unsigned int current_param_idx_;
-    const citcpp::detail::internal_model &model_;
-    citcpp::detail::internal_test_set &test_set_;
-    citcpp::detail::ipog_horizontal_extension_result
-        &partitioning_of_tests_according_to_current_values_;
-    citcpp::detail::list_intrusive<citcpp::detail::test_list_intrusive_integ>
-        &modified_tests_;
+    const citcpp::detail::internal_model& model_;
+    citcpp::detail::internal_test_set& test_set_;
+    citcpp::detail::ipog_horizontal_extension_result&
+        partitioning_of_tests_according_to_current_values_;
+    citcpp::detail::list_intrusive<citcpp::detail::test_list_intrusive_integ>&
+        modified_tests_;
     const unsigned long long num_missing_combinations_to_cover_;
     unsigned long long num_new_covered_tuples_;
 };
@@ -185,24 +182,25 @@ class ipog_vertical_extension_tuple_functor {
 class ipog_vertical_extension_functor {
   public:
     ipog_vertical_extension_functor(
-        const unsigned int current_param_idx, const unsigned int strength,
-        const citcpp::detail::internal_model &model,
-        citcpp::detail::internal_test_set &test_set,
-        citcpp::detail::ipog_horizontal_extension_result
-            &partitioning_of_tests_according_to_current_values,
+        const unsigned int strength,
+        const citcpp::detail::internal_model& model,
+        citcpp::detail::internal_test_set& test_set,
+        citcpp::detail::ipog_horizontal_extension_result&
+            partitioning_of_tests_according_to_current_values,
+        citcpp::detail::list_intrusive<
+            citcpp::detail::test_list_intrusive_integ>& modified_tests,
         const unsigned long long num_missing_combinations_to_cover)
-        : current_param_idx_(current_param_idx),
-          model_(model),
+        : model_(model),
           test_set_(test_set),
           partitioning_of_tests_according_to_current_values_(
               partitioning_of_tests_according_to_current_values),
-          modified_tests_(),
+          modified_tests_(modified_tests),
           value_indices_(strength),
           num_missing_combinations_to_cover_(num_missing_combinations_to_cover),
           num_new_covered_tuples_(0) {}
 
     bool operator()(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
 
       using namespace citcpp::detail;
 
@@ -219,14 +217,14 @@ class ipog_vertical_extension_functor {
 
   private:
     void ipog_vertical_extension_func(
-        citcpp::detail::coverage_map::second_level_type &value_combinations) {
+        citcpp::detail::coverage_map::second_level_type& value_combinations) {
 
       using namespace citcpp::detail;
 
-      const param_vector &param_indices =
+      const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
-      for (test_list_intrusive_integ &t : modified_tests_) {
+      for (test_list_intrusive_integ& t : modified_tests_) {
         // Here we compute an index into the bitset. To do so, we treat the
         // number of values of each parameter as a kind of radix. Consider
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
@@ -263,9 +261,8 @@ class ipog_vertical_extension_functor {
       }
 
       ipog_vertical_extension_tuple_functor tuple_functor(
-          current_param_idx_, model_, test_set_,
-          partitioning_of_tests_according_to_current_values_, modified_tests_,
-          num_missing_combinations_to_cover_);
+          model_, test_set_, partitioning_of_tests_according_to_current_values_,
+          modified_tests_, num_missing_combinations_to_cover_);
 
       visit_all_value_combos_of_param_combo(model_, param_indices,
                                             value_indices_, tuple_functor,
@@ -275,12 +272,11 @@ class ipog_vertical_extension_functor {
     }
 
   private:
-    const unsigned int current_param_idx_;
-    const citcpp::detail::internal_model &model_;
-    citcpp::detail::internal_test_set &test_set_;
-    citcpp::detail::ipog_horizontal_extension_result
-        &partitioning_of_tests_according_to_current_values_;
-    citcpp::detail::list_intrusive<citcpp::detail::test_list_intrusive_integ>
+    const citcpp::detail::internal_model& model_;
+    citcpp::detail::internal_test_set& test_set_;
+    citcpp::detail::ipog_horizontal_extension_result&
+        partitioning_of_tests_according_to_current_values_;
+    citcpp::detail::list_intrusive<citcpp::detail::test_list_intrusive_integ>&
         modified_tests_;
     citcpp::detail::value_vector value_indices_;
     const unsigned long long num_missing_combinations_to_cover_;
@@ -293,25 +289,29 @@ namespace citcpp {
 namespace detail {
 
 ipog_vertical_extension_result ipog_vertical_extension(
-    const unsigned int current_param_idx,
     const unsigned long long num_missing_combinations_to_cover,
-    ipog_horizontal_extension_result
-        &partitioning_of_tests_according_to_current_values,
-    internal_test_set &test_set, coverage_map &cov_map) {
+    ipog_horizontal_extension_result&
+        partitioning_of_tests_according_to_current_values,
+    internal_test_set& test_set,
+    std::vector<std::pair<internal_relation, coverage_map>>& relations) {
 
   // First initialize the result object.
   ipog_vertical_extension_result result = {0};
 
-  coverage_map_iterator cov_map_it = cov_map.create_iterator();
-  ipog_vertical_extension_functor functor(
-      current_param_idx, cov_map.get_number_of_parameters_to_select(),
-      cov_map.get_model(), test_set,
-      partitioning_of_tests_according_to_current_values,
-      num_missing_combinations_to_cover);
+  list_intrusive<test_list_intrusive_integ> modified_tests;
 
-  cov_map_it.visit_all_parameter_combinations(functor);
+  for (auto& rel : relations) {
+    coverage_map_iterator cov_map_it = rel.second.create_iterator();
 
-  result.num_new_covered_tuples = functor.get_num_new_covered_tuples();
+    ipog_vertical_extension_functor functor(
+        rel.second.get_number_of_parameters_to_select(), rel.second.get_model(),
+        test_set, partitioning_of_tests_according_to_current_values,
+        modified_tests, num_missing_combinations_to_cover);
+
+    cov_map_it.visit_all_parameter_combinations(functor);
+
+    result.num_new_covered_tuples += functor.get_num_new_covered_tuples();
+  }
 
   return result;
 }
