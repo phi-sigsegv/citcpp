@@ -15,12 +15,13 @@ struct ipog_measure_testset_result {
 };
 
 ipog_measure_testset_result ipog_measure_testset(
-    const internal_model &model, const internal_test_set &test_set,
-    coverage_map &cov_map);
+    const internal_model& model, const internal_test_set& test_set,
+    std::vector<std::pair<internal_relation, coverage_map>>& relations);
 
 ipog_measure_testset_result ipog_measure_testset(
-    const internal_model &model, const internal_test_set &test_set,
-    coverage_map &cov_map, thread_pool &tp);
+    const internal_model& model, const internal_test_set& test_set,
+    std::vector<std::pair<internal_relation, coverage_map>>& relations,
+    thread_pool& tp);
 
 }  // namespace detail
 }  // namespace citcpp
