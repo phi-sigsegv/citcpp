@@ -63,11 +63,11 @@ class internal_model {
  */
 class internal_relation {
   public:
-    internal_relation(const std::vector<unsigned int>& parameters,
+    internal_relation(const std::vector<unsigned int>& parameter_index_map,
                       unsigned int specified_interaction_strength);
 
-    const std::vector<unsigned int>& get_parameters() const {
-      return parameters_;
+    const std::vector<unsigned int>& get_parameter_index_map() const {
+      return parameter_index_map_;
     }
 
     unsigned int get_specified__interaction_strength() const {
@@ -89,7 +89,7 @@ class internal_relation {
     }
 
   private:
-    const std::vector<unsigned int> parameters_;
+    const std::vector<unsigned int> parameter_index_map_;
     const unsigned int specified_interaction_strength_;
     unsigned int current_interaction_strength_;
     unsigned int current_param_idx_;
