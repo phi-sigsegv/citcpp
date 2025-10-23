@@ -18,17 +18,18 @@ class internal_model {
     /**
      * Constructs an internal representation of the given input model.
      */
-    internal_model(const model &input_model);
+    internal_model(const model& input_model);
 
     /**
      * Returns the input which this internal model has been created from.
      */
-    const model &get_input_model() const;
+    const model& get_input_model() const;
 
     /**
-     * Returns the list of parameters of this model.
+     * Returns the list of number of values for each of the parameters of the
+     * model. The parameter is identified by its index in the input model.
      */
-    const std::vector<unsigned int> &get_parameters() const {
+    const std::vector<unsigned int>& get_parameter_num_values() const {
       return parameters_;
     }
 
@@ -37,22 +38,22 @@ class internal_model {
      * representation.
      */
     test_set create_from_internal_test_set(
-        const internal_test_set &test_set) const;
+        const internal_test_set& test_set) const;
 
     /**
      * Constructs and returns a test set based on the given internal test set
      * representation.
      */
     test_set create_from_internal_test_set(
-        const internal_test_set &test_set,
+        const internal_test_set& test_set,
         std::string_view value_separator) const;
 
   private:
-    void convert_test_set(const internal_test_set &src, test_set &tgt) const;
-    void convert_test(const test &src, std::vector<parameter_value> &tgt) const;
+    void convert_test_set(const internal_test_set& src, test_set& tgt) const;
+    void convert_test(const test& src, std::vector<parameter_value>& tgt) const;
 
   private:
-    const model &input_model_;
+    const model& input_model_;
     std::vector<unsigned int> parameters_;
 };
 
@@ -62,10 +63,10 @@ class internal_model {
  */
 class internal_relation {
   public:
-    internal_relation(const std::vector<unsigned int> &parameters,
+    internal_relation(const std::vector<unsigned int>& parameters,
                       unsigned int specified_interaction_strength);
 
-    const std::vector<unsigned int> &get_parameters() const {
+    const std::vector<unsigned int>& get_parameters() const {
       return parameters_;
     }
 

@@ -7,11 +7,11 @@ namespace {
 unsigned long long recursively_initialize_coverage_map(
     int start_idx_for_next, int current_level,
     unsigned long long num_value_combinations,
-    citcpp::detail::coverage_map_base &cov_map,
-    const citcpp::detail::internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map,
-    citcpp::detail::coverage_map_base::size_type &cov_map_first_level_index,
-    citcpp::detail::param_vector &param_indices) {
+    citcpp::detail::coverage_map_base& cov_map,
+    const citcpp::detail::internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    citcpp::detail::coverage_map_base::size_type& cov_map_first_level_index,
+    citcpp::detail::param_vector& param_indices) {
   using namespace citcpp::detail;
 
   unsigned long long partial_sum = 0;
@@ -21,7 +21,7 @@ unsigned long long recursively_initialize_coverage_map(
     if (current_level == 0) {
       unsigned long long final_num_value_combinations =
           num_value_combinations *
-          model.get_parameters()[parameter_index_map[j]];
+          model.get_parameter_num_values()[parameter_index_map[j]];
       partial_sum += final_num_value_combinations;
 
       cov_map.get_coverage_map()[cov_map_first_level_index] =
@@ -33,7 +33,7 @@ unsigned long long recursively_initialize_coverage_map(
       partial_sum += recursively_initialize_coverage_map(
           j - 1, current_level - 1,
           num_value_combinations *
-              model.get_parameters()[parameter_index_map[j]],
+              model.get_parameter_num_values()[parameter_index_map[j]],
           cov_map, model, parameter_index_map, cov_map_first_level_index,
           param_indices);
     }
@@ -48,9 +48,9 @@ namespace citcpp {
 namespace detail {
 
 coverage_map_base::coverage_map_base(
-    unsigned int n, unsigned int t, const internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map,
-    const binom_coeff_table &binomial_coeffs, bool fixed_last_parameter)
+    unsigned int n, unsigned int t, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    const binom_coeff_table& binomial_coeffs, bool fixed_last_parameter)
     : size_(fixed_last_parameter ? binomial_coeffs.get_coefficient(n - 1, t - 1)
                                  : binomial_coeffs.get_coefficient(n, t)),
       model_(model),
@@ -65,7 +65,7 @@ coverage_map_base::coverage_map_base(
   if (fixed_last_parameter) {
     const unsigned int real_last_param_idx = parameter_index_map[n_ - 1];
     const int num_last_param_values =
-        model.get_parameters()[real_last_param_idx];
+        model.get_parameter_num_values()[real_last_param_idx];
 
     param_indices[t - 1] = real_last_param_idx;
 

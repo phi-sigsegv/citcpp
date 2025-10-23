@@ -8,8 +8,8 @@ namespace {
 // This function will be called by each async task.
 unsigned long long recursive_combine_and_sum(
     int start_idx, int current_level, unsigned long long current_prod_val,
-    const std::vector<unsigned int> &factor_levels,
-    const std::vector<unsigned int> &parameter_index_map) {
+    const std::vector<unsigned int>& factor_levels,
+    const std::vector<unsigned int>& parameter_index_map) {
 
   unsigned long long partial_sum = 0;
   for (int j = start_idx; j >= current_level; --j) {
@@ -47,9 +47,9 @@ class alignas(std::hardware_destructive_interference_size)
     compute_partial_sum_task(
         int start_idx, int end_idx, int num_params_to_select,
         unsigned long long additional_factor,
-        const std::vector<unsigned int> *factor_levels,
-        const std::vector<unsigned int> *parameter_index_map,
-        std::atomic_ullong *num_combinations)
+        const std::vector<unsigned int>* factor_levels,
+        const std::vector<unsigned int>* parameter_index_map,
+        std::atomic_ullong* num_combinations)
         : base_type(),
           start_idx_(start_idx),
           end_idx_(end_idx),
@@ -61,9 +61,9 @@ class alignas(std::hardware_destructive_interference_size)
       setCallable(*this);
     }
 
-    compute_partial_sum_task(const this_type &) = delete;
+    compute_partial_sum_task(const this_type&) = delete;
 
-    compute_partial_sum_task(this_type &&other)
+    compute_partial_sum_task(this_type&& other)
         : base_type(std::move(other)),
           start_idx_(other.start_idx_),
           end_idx_(other.end_idx_),
@@ -77,9 +77,9 @@ class alignas(std::hardware_destructive_interference_size)
 
     virtual ~compute_partial_sum_task() {}
 
-    this_type &operator=(const this_type &) = delete;
+    this_type& operator=(const this_type&) = delete;
 
-    this_type &operator=(this_type &&other) {
+    this_type& operator=(this_type&& other) {
       if (this != &other) {
         base_type::operator=(std::move(other));
         start_idx_ = other.start_idx_;
@@ -119,9 +119,9 @@ class alignas(std::hardware_destructive_interference_size)
     int end_idx_;
     int num_params_to_select_;
     unsigned long long additional_factor_;
-    const std::vector<unsigned int> *factor_levels_;
-    const std::vector<unsigned int> *parameter_index_map_;
-    std::atomic_ullong *num_combinations_;
+    const std::vector<unsigned int>* factor_levels_;
+    const std::vector<unsigned int>* parameter_index_map_;
+    std::atomic_ullong* num_combinations_;
 };
 
 }  // namespace
@@ -130,18 +130,18 @@ namespace citcpp {
 namespace detail {
 
 unsigned long long number_of_combinations_to_cover(
-    unsigned int n, const internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map, unsigned int t,
+    unsigned int n, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter) {
 
   if (fixed_last_parameter) {
     const unsigned int real_last_param_idx = parameter_index_map[n - 1];
     const int num_last_param_values =
-        model.get_parameters()[real_last_param_idx];
+        model.get_parameter_num_values()[real_last_param_idx];
 
     if (t >= 2) {
       return recursive_combine_and_sum(n - 2, t - 2, num_last_param_values,
-                                       model.get_parameters(),
+                                       model.get_parameter_num_values(),
                                        parameter_index_map);
     } else {
       // We have exactly one parameter to select, which is just the one we have
@@ -149,31 +149,32 @@ unsigned long long number_of_combinations_to_cover(
       return num_last_param_values;
     }
   } else {
-    return recursive_combine_and_sum(n - 1, t - 1, 1, model.get_parameters(),
-                                     parameter_index_map);
+    return recursive_combine_and_sum(
+        n - 1, t - 1, 1, model.get_parameter_num_values(), parameter_index_map);
   }
 }
 
 unsigned long long number_of_combinations_to_cover(
-    unsigned int n, const internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map, unsigned int t,
-    bool fixed_last_parameter, thread_pool &tp) {
+    unsigned int n, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map, unsigned int t,
+    bool fixed_last_parameter, thread_pool& tp) {
 
   std::atomic_ullong num_combinations = 0;
 
   if (fixed_last_parameter) {
     const unsigned int real_last_param_idx = parameter_index_map[n - 1];
     const int num_last_param_values =
-        model.get_parameters()[real_last_param_idx];
+        model.get_parameter_num_values()[real_last_param_idx];
 
     if (t >= 2) {
       task_group tg(tp.createTaskGroup());
 
       std::vector<compute_partial_sum_task> tasks(n - t + 1);
       for (unsigned int i = n - 2; i >= (t - 2); --i) {
-        tasks[i - t + 2] = compute_partial_sum_task(
-            i, i, t - 1, num_last_param_values, &model.get_parameters(),
-            &parameter_index_map, &num_combinations);
+        tasks[i - t + 2] =
+            compute_partial_sum_task(i, i, t - 1, num_last_param_values,
+                                     &model.get_parameter_num_values(),
+                                     &parameter_index_map, &num_combinations);
         tg.spawn(i, &tasks[i - t + 2]);
       }
       tg.wait();
@@ -187,9 +188,9 @@ unsigned long long number_of_combinations_to_cover(
 
     std::vector<compute_partial_sum_task> tasks(n - t + 1);
     for (unsigned int i = n - 1; i >= (t - 1); --i) {
-      tasks[i - t + 1] =
-          compute_partial_sum_task(i, i, t, 1, &model.get_parameters(),
-                                   &parameter_index_map, &num_combinations);
+      tasks[i - t + 1] = compute_partial_sum_task(
+          i, i, t, 1, &model.get_parameter_num_values(), &parameter_index_map,
+          &num_combinations);
       tg.spawn(i, &tasks[i - t + 1]);
     }
     tg.wait();

@@ -39,7 +39,7 @@ void measure_coverage(
       coverage_map::second_level_type::size_type addend = param_value;
       for (std::vector<unsigned int>::size_type j = i + 1;
            j < param_indices.size(); ++j) {
-        addend *= model.get_parameters()[param_indices[j]];
+        addend *= model.get_parameter_num_values()[param_indices[j]];
       }
       index += addend;
     }

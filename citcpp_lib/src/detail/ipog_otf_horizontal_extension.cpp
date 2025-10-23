@@ -400,7 +400,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   const unsigned int real_current_param_idx =
       parameter_index_map[current_param_idx];
   const int num_current_param_values =
-      model.get_parameters()[real_current_param_idx];
+      model.get_parameter_num_values()[real_current_param_idx];
 
   // First initialize the result object.
   ipog_horizontal_extension_result result{
@@ -467,7 +467,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   const unsigned int real_current_param_idx =
       parameter_index_map[current_param_idx];
   const int num_current_param_values =
-      model.get_parameters()[real_current_param_idx];
+      model.get_parameter_num_values()[real_current_param_idx];
 
   // First initialize the result object.
   ipog_horizontal_extension_result result{

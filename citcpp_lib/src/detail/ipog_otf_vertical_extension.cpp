@@ -100,7 +100,7 @@ class ipog_vertical_extension_tuple_functor {
       // If we have reached this point, then we did not find a matching test.
       // Thus, we have to add a new one with the value combination.
       // Initialize all values of the test with don't care.
-      test t(model_.get_parameters().size(), -1);
+      test t(model_.get_parameter_num_values().size(), -1);
 
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
@@ -200,7 +200,7 @@ class ipog_vertical_extension_functor {
 
       bitset_non_owning_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
-        bitset_size *= model_.get_parameters()[p];
+        bitset_size *= model_.get_parameter_num_values()[p];
       }
       bitset_non_owning_uint64 values_combo_bitset(bitset_size);
       values_combo_bitset.set_backing_array(bitset_backing_array_.get_array());
@@ -230,7 +230,7 @@ class ipog_vertical_extension_functor {
           bitset_non_owning_uint64::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           base_index += addend;
         }
@@ -280,7 +280,7 @@ ipog_vertical_extension_result ipog_vertical_extension(
   const unsigned int real_current_param_idx =
       parameter_index_map[current_param_idx];
   const int num_current_param_values =
-      model.get_parameters()[real_current_param_idx];
+      model.get_parameter_num_values()[real_current_param_idx];
 
   const unsigned int product_of_max_parameter_sizes =
       num_current_param_values *

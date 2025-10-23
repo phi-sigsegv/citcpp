@@ -3,15 +3,15 @@
 namespace {
 
 void recursively_add_test_for_each_combination(
-    const citcpp::detail::internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map,
-    unsigned int current_index, std::vector<unsigned int> &values,
-    citcpp::detail::internal_test_set &test_set) {
+    const citcpp::detail::internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    unsigned int current_index, std::vector<unsigned int>& values,
+    citcpp::detail::internal_test_set& test_set) {
   using namespace citcpp::detail;
 
   if (current_index == values.size()) {
     // Initialize all values of the test with don't care.
-    test t(model.get_parameters().size(), -1);
+    test t(model.get_parameter_num_values().size(), -1);
 
     // Replace the first t elements with the cross product element.
     for (unsigned int index = 0; index < values.size(); ++index) {
@@ -24,7 +24,7 @@ void recursively_add_test_for_each_combination(
   }
 
   const unsigned int max_val =
-      model.get_parameters()[parameter_index_map[current_index]];
+      model.get_parameter_num_values()[parameter_index_map[current_index]];
 
   for (unsigned int i = 0; i < max_val; ++i) {
     values[current_index] = i;
@@ -39,9 +39,9 @@ namespace citcpp {
 namespace detail {
 
 create_all_value_combinations_result create_all_value_combinations(
-    unsigned int strength, const internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map,
-    citcpp::detail::internal_test_set &test_set) {
+    unsigned int strength, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    citcpp::detail::internal_test_set& test_set) {
 
   create_all_value_combinations_result result{0};
 

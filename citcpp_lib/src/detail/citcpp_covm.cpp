@@ -16,11 +16,11 @@
 
 namespace {
 
-void main_covm_loop(const citcpp::detail::internal_model &model,
-                    const citcpp::detail::internal_test_set &test_set,
-                    const citcpp::coverage_measurement_config &config,
-                    unsigned int strength, citcpp::coverage_measurement &covm,
-                    citcpp::detail::covm_exec_handle_impl &exec_handle) {
+void main_covm_loop(const citcpp::detail::internal_model& model,
+                    const citcpp::detail::internal_test_set& test_set,
+                    const citcpp::coverage_measurement_config& config,
+                    unsigned int strength, citcpp::coverage_measurement& covm,
+                    citcpp::detail::covm_exec_handle_impl& exec_handle) {
   using namespace citcpp::detail;
 
   const bool with_mt = config.multithreading_enabled();
@@ -32,8 +32,10 @@ void main_covm_loop(const citcpp::detail::internal_model &model,
 
   thread_pool tp(num_threads);
 
-  const binom_coeff_table binomial_coeffs(model.get_parameters().size());
-  std::vector<unsigned int> parameter_index_map(model.get_parameters().size());
+  const binom_coeff_table binomial_coeffs(
+      model.get_parameter_num_values().size());
+  std::vector<unsigned int> parameter_index_map(
+      model.get_parameter_num_values().size());
   std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
 
   unsigned long long number_combos_to_cover =
@@ -43,8 +45,8 @@ void main_covm_loop(const citcpp::detail::internal_model &model,
               : number_of_combinations_to_cover(parameter_index_map.size(),
                                                 model, parameter_index_map,
                                                 strength, false);
-  covm.set_number_of_param_combos_to_cover(
-      binomial_coeffs.get_coefficient(model.get_parameters().size(), strength));
+  covm.set_number_of_param_combos_to_cover(binomial_coeffs.get_coefficient(
+      model.get_parameter_num_values().size(), strength));
   covm.set_number_of_combinations_to_cover(number_combos_to_cover);
   exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
 
@@ -68,8 +70,8 @@ void main_covm_loop(const citcpp::detail::internal_model &model,
 namespace citcpp {
 namespace detail {
 
-citcpp_covm::citcpp_covm(const model &input_model, const test_set &tests,
-                         const coverage_measurement_config &config)
+citcpp_covm::citcpp_covm(const model& input_model, const test_set& tests,
+                         const coverage_measurement_config& config)
     : config_(config),
       input_model_(input_model),
       model_(input_model_),
@@ -77,8 +79,8 @@ citcpp_covm::citcpp_covm(const model &input_model, const test_set &tests,
       tests_(create_internal_test_set(input_model_, input_tests_)),
       strength_(1) {}
 
-citcpp_covm::citcpp_covm(model &&input_model, test_set &&tests,
-                         const coverage_measurement_config &config)
+citcpp_covm::citcpp_covm(model&& input_model, test_set&& tests,
+                         const coverage_measurement_config& config)
     : config_(config),
       input_model_(std::move(input_model)),
       model_(input_model_),
@@ -88,7 +90,7 @@ citcpp_covm::citcpp_covm(model &&input_model, test_set &&tests,
 
 void citcpp_covm::set_interaction_strength(unsigned int t) { strength_ = t; }
 
-void citcpp_covm::entry_point(covm_exec_handle_impl &exec_handle) {
+void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
   citcpp::coverage_measurement covm;

@@ -16,22 +16,22 @@ namespace {
 
 template <class T_VISITOR, typename... T_ADDITIONAL_VISITOR_ARGS>
 bool recursively_visit_all_value_combos_of_param_combo(
-    const citcpp::detail::internal_model &model,
-    const citcpp::detail::param_vector &param_indices,
-    citcpp::detail::value_vector &value_indices, int current_index,
+    const citcpp::detail::internal_model& model,
+    const citcpp::detail::param_vector& param_indices,
+    citcpp::detail::value_vector& value_indices, int current_index,
     citcpp::detail::bitset_non_owning_uint64::size_type partial_bit_pos,
-    T_VISITOR &visitor,
-    T_ADDITIONAL_VISITOR_ARGS &&...additional_visitor_args) {
+    T_VISITOR& visitor,
+    T_ADDITIONAL_VISITOR_ARGS&&... additional_visitor_args) {
   using namespace citcpp::detail;
 
   // The current range goes from 0 to max_value[current_index]
   const unsigned int max_val =
-      model.get_parameters()[param_indices[current_index]];
+      model.get_parameter_num_values()[param_indices[current_index]];
 
   bitset_non_owning_uint64::size_type bit_pos_value_factor = 1;
   for (std::vector<unsigned int>::size_type j = current_index + 1;
        j < param_indices.size(); ++j) {
-    bit_pos_value_factor *= model.get_parameters()[param_indices[j]];
+    bit_pos_value_factor *= model.get_parameter_num_values()[param_indices[j]];
   }
 
   for (int i = max_val - 1; i >= 0; --i) {
@@ -70,23 +70,23 @@ extern const std::string EMPTY_VALUE_SEPARATOR;
 extern const std::string DEFAULT_VALUE_SEPARATOR;
 extern const citcpp::parameter_value DONT_CARE_PARAMETER_VALUE;
 
-internal_test_set create_internal_test_set(const model &input_model,
-                                           const citcpp::test_set &tests);
+internal_test_set create_internal_test_set(const model& input_model,
+                                           const citcpp::test_set& tests);
 
-void replace_dont_care_values(internal_test_set &test_set,
-                              const internal_model &model);
+void replace_dont_care_values(internal_test_set& test_set,
+                              const internal_model& model);
 
 unsigned int get_product_of_max_n_parameter_sizes(
     const unsigned int num_parameters, const unsigned int n,
-    const citcpp::detail::internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map);
+    const citcpp::detail::internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map);
 
 template <class T_VISITOR, typename... T_ADDITIONAL_VISITOR_ARGS>
 void visit_all_value_combos_of_param_combo(
-    const citcpp::detail::internal_model &model,
-    const citcpp::detail::param_vector &param_indices,
-    citcpp::detail::value_vector &value_indices, T_VISITOR &visitor,
-    T_ADDITIONAL_VISITOR_ARGS &&...additional_visitor_args) {
+    const citcpp::detail::internal_model& model,
+    const citcpp::detail::param_vector& param_indices,
+    citcpp::detail::value_vector& value_indices, T_VISITOR& visitor,
+    T_ADDITIONAL_VISITOR_ARGS&&... additional_visitor_args) {
   using namespace citcpp::detail;
 
   recursively_visit_all_value_combos_of_param_combo(

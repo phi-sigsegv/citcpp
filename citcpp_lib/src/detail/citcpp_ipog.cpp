@@ -21,13 +21,13 @@ namespace {
 
 std::vector<unsigned int>
 get_parameter_indices_ordered_by_number_of_values_desc(
-    const std::vector<unsigned int> &params) {
+    const std::vector<unsigned int>& params) {
 
   std::vector<unsigned int> parameter_index_map(params.size());
   std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
 
   std::sort(parameter_index_map.begin(), parameter_index_map.end(),
-            [&params](const unsigned int &index1, const unsigned int &index2) {
+            [&params](const unsigned int& index1, const unsigned int& index2) {
               return params[index1] > params[index2];
             });
 
@@ -35,21 +35,23 @@ get_parameter_indices_ordered_by_number_of_values_desc(
 }
 
 void main_ipog_loop_body(
-    const citcpp::detail::internal_model &model, unsigned int strength,
-    const std::vector<unsigned int> &parameter_index_map,
-    citcpp::detail::internal_test_set &test_set, bool is_extend_mode,
+    const citcpp::detail::internal_model& model, unsigned int strength,
+    const std::vector<unsigned int>& parameter_index_map,
+    citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
     unsigned int current_param_idx, const bool with_mt,
-    const citcpp::detail::binom_coeff_table &binomial_coeffs,
-    citcpp::detail::thread_pool &tp,
-    citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
+    const citcpp::detail::binom_coeff_table& binomial_coeffs,
+    citcpp::detail::thread_pool& tp,
+    citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
-  if (model.get_parameters()[parameter_index_map[current_param_idx]] <= 1) {
+  if (model
+          .get_parameter_num_values()[parameter_index_map[current_param_idx]] <=
+      1) {
     // If the current parameter only has only value, then
     // we can treat this situation much simpler: We just have
     // to add that particular value to each test and update
     // the number of covered combinations.
-    for (test &t : test_set.get_list_of_tests()) {
+    for (test& t : test_set.get_list_of_tests()) {
       t.get_values()[parameter_index_map[current_param_idx]] = 0;
     }
 
@@ -111,16 +113,16 @@ void main_ipog_loop_body(
   exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
 }
 
-void main_ipog_loop(const citcpp::detail::internal_model &model,
+void main_ipog_loop(const citcpp::detail::internal_model& model,
                     unsigned int strength,
-                    citcpp::detail::internal_test_set &test_set,
+                    citcpp::detail::internal_test_set& test_set,
                     const citcpp::covering_array_computation_config config,
-                    citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
+                    citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
   std::vector<unsigned int> parameter_index_map(
       get_parameter_indices_ordered_by_number_of_values_desc(
-          model.get_parameters()));
+          model.get_parameter_num_values()));
 
   unsigned int num_threads = std::thread::hardware_concurrency();
   if (num_threads == 0) {
@@ -173,15 +175,15 @@ void main_ipog_loop(const citcpp::detail::internal_model &model,
 }
 
 void main_ipog_loop_extend_test_set(
-    const citcpp::detail::internal_model &model, unsigned int strength,
-    citcpp::detail::internal_test_set &test_set,
+    const citcpp::detail::internal_model& model, unsigned int strength,
+    citcpp::detail::internal_test_set& test_set,
     const citcpp::covering_array_computation_config config,
-    citcpp::detail::cagen_exec_handle_ipog_impl &exec_handle) {
+    citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
   std::vector<unsigned int> parameter_index_map(
       get_parameter_indices_ordered_by_number_of_values_desc(
-          model.get_parameters()));
+          model.get_parameter_num_values()));
 
   unsigned int num_threads = std::thread::hardware_concurrency();
   if (num_threads == 0) {
@@ -230,8 +232,8 @@ void main_ipog_loop_extend_test_set(
 namespace citcpp {
 namespace detail {
 
-citcpp_ipog::citcpp_ipog(const model &input_model,
-                         const covering_array_computation_config &config)
+citcpp_ipog::citcpp_ipog(const model& input_model,
+                         const covering_array_computation_config& config)
     : citcpp_ipog_base(),
       config_(config),
       input_model_(input_model),
@@ -239,8 +241,8 @@ citcpp_ipog::citcpp_ipog(const model &input_model,
       input_tests_(),
       strength_(1) {}
 
-citcpp_ipog::citcpp_ipog(model &&input_model,
-                         const covering_array_computation_config &config)
+citcpp_ipog::citcpp_ipog(model&& input_model,
+                         const covering_array_computation_config& config)
     : citcpp_ipog_base(),
       config_(config),
       input_model_(std::move(input_model)),
@@ -248,9 +250,9 @@ citcpp_ipog::citcpp_ipog(model &&input_model,
       input_tests_(),
       strength_(1) {}
 
-citcpp_ipog::citcpp_ipog(const model &input_model,
-                         const citcpp::test_set &tests,
-                         const covering_array_computation_config &config)
+citcpp_ipog::citcpp_ipog(const model& input_model,
+                         const citcpp::test_set& tests,
+                         const covering_array_computation_config& config)
     : citcpp_ipog_base(),
       config_(config),
       input_model_(input_model),
@@ -258,8 +260,8 @@ citcpp_ipog::citcpp_ipog(const model &input_model,
       input_tests_(create_internal_test_set(input_model_, tests)),
       strength_(1) {}
 
-citcpp_ipog::citcpp_ipog(model &&input_model, test_set &&tests,
-                         const covering_array_computation_config &config)
+citcpp_ipog::citcpp_ipog(model&& input_model, test_set&& tests,
+                         const covering_array_computation_config& config)
     : citcpp_ipog_base(),
       config_(config),
       input_model_(std::move(input_model)),
@@ -269,7 +271,7 @@ citcpp_ipog::citcpp_ipog(model &&input_model, test_set &&tests,
 
 void citcpp_ipog::set_interaction_strength(unsigned int t) { strength_ = t; }
 
-void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl &exec_handle) {
+void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
   internal_test_set tests(input_tests_);

@@ -50,7 +50,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           base_index += addend;
         }
@@ -122,7 +122,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           base_index += addend;
         }
@@ -322,7 +322,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           index += addend;
         }
@@ -386,7 +386,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           index += addend;
         }
@@ -512,7 +512,7 @@ class
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           index += addend;
         }
@@ -559,7 +559,7 @@ class
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           base_index += addend;
         }
@@ -651,7 +651,7 @@ class
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           index += addend;
         }
@@ -698,7 +698,7 @@ class
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           base_index += addend;
         }
@@ -916,7 +916,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       relations[0].second.get_parameter_index_map()
           [relations[0].first.get_current_param_idx()];
   const int num_current_param_values =
-      relations[0].second.get_model().get_parameters()[real_current_param_idx];
+      relations[0]
+          .second.get_model()
+          .get_parameter_num_values()[real_current_param_idx];
   const internal_model& model = relations[0].second.get_model();
 
   // First initialize the result object.
@@ -1038,7 +1040,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       relations[0].second.get_parameter_index_map()
           [relations[0].first.get_current_param_idx()];
   const int num_current_param_values =
-      relations[0].second.get_model().get_parameters()[real_current_param_idx];
+      relations[0]
+          .second.get_model()
+          .get_parameter_num_values()[real_current_param_idx];
   const internal_model& model = relations[0].second.get_model();
 
   // First initialize the result object.

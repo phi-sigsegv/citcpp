@@ -123,7 +123,7 @@ class ipog_vertical_extension_tuple_functor {
       // If we have reached this point, then we did not find a matching test.
       // Thus, we have to add a new one with the value combination.
       // Initialize all values of the test with don't care.
-      test t(model_.get_parameters().size(), -1);
+      test t(model_.get_parameter_num_values().size(), -1);
 
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
@@ -248,7 +248,7 @@ class ipog_vertical_extension_functor {
           coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
-            addend *= model_.get_parameters()[param_indices[j]];
+            addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
           index += addend;
         }
