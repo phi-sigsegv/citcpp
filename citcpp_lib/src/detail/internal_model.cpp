@@ -71,7 +71,13 @@ internal_relation::internal_relation(
     unsigned int specified_interaction_strength)
     : parameter_index_map_(parameter_index_map),
       specified_interaction_strength_(specified_interaction_strength),
-      current_interaction_strength_(1),
+      current_param_idx_(0) {}
+
+internal_relation::internal_relation(
+    std::vector<unsigned int>&& parameter_index_map,
+    unsigned int specified_interaction_strength)
+    : parameter_index_map_(std::move(parameter_index_map)),
+      specified_interaction_strength_(specified_interaction_strength),
       current_param_idx_(0) {}
 
 }  // namespace detail

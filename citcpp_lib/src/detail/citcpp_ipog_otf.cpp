@@ -75,7 +75,7 @@ void main_ipog_loop_body(
     number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
     exec_handle.add_number_of_covered_combinations(
         horizontal_ext_res.num_new_covered_tuples);
-    exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
+    exec_handle.set_testset_size(test_set.get_list_of_tests().size());
 
     if (exec_handle.is_job_aborted()) {
       exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
@@ -90,7 +90,7 @@ void main_ipog_loop_body(
       number_combos_to_cover -= vertical_ext_res.num_new_covered_tuples;
       exec_handle.add_number_of_covered_combinations(
           vertical_ext_res.num_new_covered_tuples);
-      exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
+      exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     }
   }
 
@@ -138,7 +138,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
         strength, model, parameter_index_map, test_set);
     exec_handle.add_number_of_covered_combinations(
         initial_step_res.num_created_combinations);
-    exec_handle.set_testset_size_(test_set.get_list_of_tests().size());
+    exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     exec_handle.set_number_of_processed_parameters(strength);
   }
 

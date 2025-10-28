@@ -7,6 +7,7 @@ find_package(Threads REQUIRED)
 set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/binom_coeff_table.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_algo_common.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_ipog_base.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_ipog.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_ipog_otf.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/coverage_map.cpp

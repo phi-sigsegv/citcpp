@@ -1,6 +1,7 @@
 #ifndef MODEL_HPP_
 #define MODEL_HPP_
 
+#include <algorithm>
 #include <citcpp/model.hpp>
 #include <citcpp/test_set.hpp>
 #include <vector>
@@ -66,20 +67,20 @@ class internal_relation {
     internal_relation(const std::vector<unsigned int>& parameter_index_map,
                       unsigned int specified_interaction_strength);
 
+    internal_relation(std::vector<unsigned int>&& parameter_index_map,
+                      unsigned int specified_interaction_strength);
+
     const std::vector<unsigned int>& get_parameter_index_map() const {
       return parameter_index_map_;
     }
 
-    unsigned int get_specified__interaction_strength() const {
+    unsigned int get_specified_interaction_strength() const {
       return specified_interaction_strength_;
     }
 
     unsigned int get_current_interaction_strength() const {
-      return current_interaction_strength_;
-    }
-
-    void set_current_interaction_strength(unsigned int interaction_strength) {
-      current_interaction_strength_ = interaction_strength;
+      return std::min(get_specified_interaction_strength(),
+                      get_current_param_idx() + 1);
     }
 
     unsigned int get_current_param_idx() const { return current_param_idx_; }
@@ -89,9 +90,8 @@ class internal_relation {
     }
 
   private:
-    const std::vector<unsigned int> parameter_index_map_;
-    const unsigned int specified_interaction_strength_;
-    unsigned int current_interaction_strength_;
+    std::vector<unsigned int> parameter_index_map_;
+    unsigned int specified_interaction_strength_;
     unsigned int current_param_idx_;
 };
 

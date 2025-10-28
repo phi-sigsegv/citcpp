@@ -67,11 +67,11 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
                                       std::memory_order_acq_rel);
     }
 
-    void set_testset_size_(unsigned int testset_size) {
+    void set_testset_size(unsigned int testset_size) {
       testset_size_ = testset_size;
     }
 
-    void add_testset_size_(unsigned int testset_size) {
+    void add_testset_size(unsigned int testset_size) {
       testset_size_.fetch_add(testset_size, std::memory_order_acq_rel);
     }
 
