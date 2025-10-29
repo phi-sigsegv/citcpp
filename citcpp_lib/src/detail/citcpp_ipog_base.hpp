@@ -54,8 +54,7 @@ class citcpp_ipog_base {
      * above.
      */
     static std::vector<internal_relation> create_relations(
-        const model& model, const internal_model& internal_model,
-        unsigned int strength);
+        const model& model, const internal_model& internal_model, int strength);
 };
 
 }  // namespace detail

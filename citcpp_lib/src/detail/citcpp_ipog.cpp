@@ -342,7 +342,7 @@ citcpp_ipog::citcpp_ipog(model&& input_model, test_set&& tests,
       input_tests_(create_internal_test_set(input_model_, tests)),
       strength_(1) {}
 
-void citcpp_ipog::set_interaction_strength(unsigned int t) { strength_ = t; }
+void citcpp_ipog::set_interaction_strength(int t) { strength_ = t; }
 
 void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();

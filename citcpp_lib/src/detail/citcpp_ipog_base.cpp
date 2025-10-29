@@ -70,8 +70,7 @@ std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
 }
 
 std::vector<internal_relation> citcpp_ipog_base::create_relations(
-    const model& model, const internal_model& internal_model,
-    unsigned int strength) {
+    const model& model, const internal_model& internal_model, int strength) {
 
   const std::vector<unsigned int>& param_num_values =
       internal_model.get_parameter_num_values();

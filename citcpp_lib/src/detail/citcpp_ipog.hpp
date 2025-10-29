@@ -21,40 +21,40 @@ class cagen_exec_handle_ipog_impl;
  */
 class citcpp_ipog : public citcpp_ipog_base {
   public:
-    citcpp_ipog(const model &input_model,
-                const covering_array_computation_config &config);
-    citcpp_ipog(model &&input_model,
-                const covering_array_computation_config &config);
-    citcpp_ipog(const model &input_model, const citcpp::test_set &tests,
-                const covering_array_computation_config &config);
-    citcpp_ipog(model &&input_model, test_set &&tests,
-                const covering_array_computation_config &config);
+    citcpp_ipog(const model& input_model,
+                const covering_array_computation_config& config);
+    citcpp_ipog(model&& input_model,
+                const covering_array_computation_config& config);
+    citcpp_ipog(const model& input_model, const citcpp::test_set& tests,
+                const covering_array_computation_config& config);
+    citcpp_ipog(model&& input_model, test_set&& tests,
+                const covering_array_computation_config& config);
 
     /**
      * Too lazy to implement/ensuring that it is well-defined.
      */
-    citcpp_ipog(citcpp_ipog &&) = delete;
-    citcpp_ipog(const citcpp_ipog &) = delete;
+    citcpp_ipog(citcpp_ipog&&) = delete;
+    citcpp_ipog(const citcpp_ipog&) = delete;
 
     /**
      * Too lazy to implement/ensuring that it is well-defined.
      */
-    citcpp_ipog &operator=(citcpp_ipog &&) = delete;
-    citcpp_ipog &operator=(const citcpp_ipog &) = delete;
+    citcpp_ipog& operator=(citcpp_ipog&&) = delete;
+    citcpp_ipog& operator=(const citcpp_ipog&) = delete;
 
-    void set_interaction_strength(unsigned int t);
+    void set_interaction_strength(int t);
 
     /**
      * This is the entry point to be called by a thread.
      */
-    void entry_point(cagen_exec_handle_ipog_impl &exec_handle);
+    void entry_point(cagen_exec_handle_ipog_impl& exec_handle);
 
   private:
     const citcpp::covering_array_computation_config config_;
     const citcpp::model input_model_;
     const internal_model model_;
     const internal_test_set input_tests_;
-    unsigned int strength_;
+    int strength_;
 };
 
 }  // namespace detail
