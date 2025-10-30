@@ -23,6 +23,11 @@ class cagen_exec_handle_ipog : public virtual cagen_exec_handle {
     virtual ~cagen_exec_handle_ipog() {}
 
     /**
+     * Returns the total number of parameters to process.
+     */
+    virtual unsigned int get_number_of_parameters_to_process() const = 0;
+
+    /**
      * Returns the number of parameters completely processed so far.
      */
     virtual unsigned int get_number_of_processed_parameters() const = 0;

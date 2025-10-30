@@ -23,7 +23,7 @@ volatile std::sig_atomic_t g_signal_status;
 class InteractionStrengthValidator : public CLI::Validator {
   public:
     InteractionStrengthValidator() : Validator() {
-      func_ = [](const std::string &input) {
+      func_ = [](const std::string& input) {
         using CLI::detail::lexical_cast;
 
         int val;
@@ -43,7 +43,7 @@ class InteractionStrengthValidator : public CLI::Validator {
 class CagenAlgorithmValidator : public CLI::Validator {
   public:
     CagenAlgorithmValidator() : Validator() {
-      func_ = [](const std::string &input) {
+      func_ = [](const std::string& input) {
         if (input.compare("IPOG") == 0 || input.compare("ipog") == 0 ||
             input.compare("IPOG_OTF") == 0 || input.compare("ipog_otf") == 0) {
 
@@ -59,7 +59,7 @@ class CagenAlgorithmValidator : public CLI::Validator {
 };
 
 std::unique_ptr<citcpp::model> read_model_file(
-    const std::string &model_file_path, bool &ok) {
+    const std::string& model_file_path, bool& ok) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -92,8 +92,8 @@ std::unique_ptr<citcpp::model> read_model_file(
 }
 
 std::unique_ptr<citcpp::test_set> read_test_set_file(
-    const citcpp::model &model, const std::string &test_set_file_path,
-    const std::string &sep, bool optional, bool &ok) {
+    const citcpp::model& model, const std::string& test_set_file_path,
+    const std::string& sep, bool optional, bool& ok) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -130,12 +130,12 @@ std::unique_ptr<citcpp::test_set> read_test_set_file(
   return tests;
 }
 
-int execute_cagen(const std::string &model_file_path,
-                  const std::string &test_set_file_path,
-                  const std::string &seed_test_set_file_path,
+int execute_cagen(const std::string& model_file_path,
+                  const std::string& test_set_file_path,
+                  const std::string& seed_test_set_file_path,
                   citcpp::covering_array_computation_algorithm cagen_algo,
                   int interaction_strength, bool show_progress,
-                  const std::string &sep, bool parallel, bool rand_star) {
+                  const std::string& sep, bool parallel, bool rand_star) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -203,7 +203,7 @@ int execute_cagen(const std::string &model_file_path,
       std::cout << "tuples: (" << num_covered_combos << " / "
                 << num_combos_to_cover << ") " << precent_done << "%, params: ("
                 << handle->get_number_of_processed_parameters() << " / "
-                << model->get_parameters().size() << "), "
+                << handle->get_number_of_parameters_to_process() << "), "
                 << handle->get_testset_size() << " tests" << std::flush;
     }
 
@@ -224,7 +224,7 @@ int execute_cagen(const std::string &model_file_path,
   std::cout << "tuples: (" << num_covered_combos << " / " << num_combos_to_cover
             << ") " << precent_done << "%, params: ("
             << handle->get_number_of_processed_parameters() << " / "
-            << model->get_parameters().size() << "), "
+            << handle->get_number_of_parameters_to_process() << "), "
             << handle->get_testset_size() << " tests\n"
             << std::endl;
 
@@ -251,11 +251,11 @@ int execute_cagen(const std::string &model_file_path,
   return 0;
 }
 
-int execute_covm(const std::string &model_file_path,
-                 const std::string &test_set_file_path,
-                 const std::string &coverage_measurement_file_path,
+int execute_covm(const std::string& model_file_path,
+                 const std::string& test_set_file_path,
+                 const std::string& coverage_measurement_file_path,
                  int interaction_strength, bool show_progress,
-                 const std::string &sep, bool parallel) {
+                 const std::string& sep, bool parallel) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -370,7 +370,7 @@ void signal_handler(int signal) {
   std::signal(SIGINT, SIG_DFL);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   using namespace citcpp;
   using namespace citcpp::detail;
   using namespace std::chrono_literals;
@@ -384,7 +384,7 @@ int main(int argc, char *argv[]) {
   app.add_flag("-v,--version", show_version,
                "Print version information and exit.");
 
-  CLI::App *command_cagen =
+  CLI::App* command_cagen =
       app.add_subcommand("cagen", "This command generates a covering array.");
 
   int interaction_strength = 2;
@@ -446,7 +446,7 @@ int main(int argc, char *argv[]) {
                    "This is the path where the testset shall be written to.")
       ->required();
 
-  CLI::App *command_cov_measure = app.add_subcommand(
+  CLI::App* command_cov_measure = app.add_subcommand(
       "covm", "This command measures the coverage of a given testset.");
 
   command_cov_measure
