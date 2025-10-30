@@ -157,7 +157,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   }
 
   std::vector<unsigned int> parameter_index_map(
-      citcpp_ipog_base::create_parameter_index_map(model));
+      citcpp_ipog_base::create_parameter_index_map(relations, model));
 
   unsigned int first_param_idx = 0;
   for (first_param_idx = 0; first_param_idx < minimum_required_strength;
@@ -197,8 +197,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   }
 
   // Here is the main IPOG loop.
-  const binom_coeff_table binomial_coeffs(
-      model.get_parameter_num_values().size());
+  const binom_coeff_table binomial_coeffs(parameter_index_map.size());
 
   for (unsigned int current_param_idx = first_param_idx;
        current_param_idx < parameter_index_map.size(); ++current_param_idx) {
@@ -266,15 +265,13 @@ void main_ipog_loop_extend_test_set(
   }
 
   std::vector<unsigned int> parameter_index_map(
-      citcpp_ipog_base::create_parameter_index_map(model));
+      citcpp_ipog_base::create_parameter_index_map(relations, model));
 
   // Here is the main IPOG loop.
-  const binom_coeff_table binomial_coeffs(
-      model.get_parameter_num_values().size());
+  const binom_coeff_table binomial_coeffs(parameter_index_map.size());
 
   for (unsigned int current_param_idx = 0;
-       current_param_idx < model.get_parameter_num_values().size();
-       ++current_param_idx) {
+       current_param_idx < parameter_index_map.size(); ++current_param_idx) {
 
     if (exec_handle.is_job_aborted()) {
       return;

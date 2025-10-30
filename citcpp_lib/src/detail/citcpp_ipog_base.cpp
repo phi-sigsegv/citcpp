@@ -14,11 +14,11 @@ bool is_covered_by(const citcpp::detail::internal_relation& rel,
     return false;
   }
 
-  std::unordered_set<unsigned int> params(parameter_index_map.begin(),
-                                          parameter_index_map.end());
+  std::unordered_set<unsigned int> param_indices(parameter_index_map.begin(),
+                                                 parameter_index_map.end());
 
-  for (auto param : rel.get_parameter_index_map()) {
-    if (!params.contains(param)) {
+  for (auto param_idx : rel.get_parameter_index_map()) {
+    if (!param_indices.contains(param_idx)) {
       return false;
     }
   }
@@ -34,11 +34,12 @@ bool is_covered_by(const std::vector<unsigned int>& parameter_index_map,
     return false;
   }
 
-  std::unordered_set<unsigned int> params(rel.get_parameter_index_map().begin(),
-                                          rel.get_parameter_index_map().end());
+  std::unordered_set<unsigned int> param_indices(
+      rel.get_parameter_index_map().begin(),
+      rel.get_parameter_index_map().end());
 
-  for (auto param : parameter_index_map) {
-    if (!params.contains(param)) {
+  for (auto param_idx : parameter_index_map) {
+    if (!param_indices.contains(param_idx)) {
       return false;
     }
   }
@@ -65,6 +66,38 @@ std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
                                 const unsigned int& index2) {
               return param_num_values[index1] > param_num_values[index2];
             });
+
+  return parameter_index_map;
+}
+
+std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
+    const std::vector<internal_relation>& relations,
+    const internal_model& internal_model) {
+
+  std::vector<unsigned int> parameter_index_map(
+      create_parameter_index_map(internal_model));
+
+  // We remove all parameter indices from the index mapping, which
+  // do not appear in any of the parameter index mappings of the relations.
+  // This ensures that all index mappings are consistent regarding their
+  // parameter orders.
+  std::unordered_set<unsigned int> param_indices;
+  for (const auto& relation : relations) {
+    for (unsigned int param_idx : relation.get_parameter_index_map()) {
+      param_indices.insert(param_idx);
+    }
+  }
+
+  auto param_idx_it = parameter_index_map.begin();
+  while (param_idx_it != parameter_index_map.end()) {
+    if (param_indices.contains(*param_idx_it)) {
+      ++param_idx_it;
+    } else {
+      // The parameter is irrelevant concerning coverage, since it does not
+      // appear in any relation.
+      param_idx_it = parameter_index_map.erase(param_idx_it);
+    }
+  }
 
   return parameter_index_map;
 }

@@ -34,6 +34,14 @@ class citcpp_ipog_base {
         const internal_model& internal_model);
 
     /**
+     * Creates an index mapping for the parameters referenced by a given set of
+     * relations.
+     */
+    static std::vector<unsigned int> create_parameter_index_map(
+        const std::vector<internal_relation>& relations,
+        const internal_model& internal_model);
+
+    /**
      * Returns a list of internal relations according to the given model
      * and the specified interaction strength. If that interaction
      * strength is < 1, then the relations from the given model are used
