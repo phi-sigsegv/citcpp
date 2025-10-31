@@ -7,6 +7,7 @@ list(APPEND CITCPP_UNITTESTS
   test_bitset
   test_cagen
   test_cagen_extend
+  test_cagen_relations
   test_cov_measure_result
   test_cov_measure
 )
