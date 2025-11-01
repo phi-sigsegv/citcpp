@@ -49,6 +49,29 @@ citcpp::model create_pict_example_model() {
   return model;
 }
 
+citcpp::model create_simple_four_param_model() {
+  using namespace citcpp;
+
+  model model;
+
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("P1")
+                          .values({{"a"}, {"b"}, {"c"}, {"d"}, {"e"}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("P2")
+                          .values({{"a"}, {"b"}, {"c"}, {"d"}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("P3")
+                          .values({{"a"}, {"b"}, {"c"}}));
+  model.add_parameter(
+      parameter().type(parameter_type::ENUM).name("P4").values({{"a"}, {"b"}}));
+
+  return model;
+}
+
 citcpp::relation create_relation(const citcpp::model& model,
                                  std::string_view name,
                                  std::vector<std::string> param_names,
@@ -261,6 +284,43 @@ TEST_CASE("cagen relations, testing PICT example model, R4") {
 
     CHECK(handle->get_number_of_processed_parameters() == 4);
     CHECK(handle->get_number_of_covered_combinations() == 54);
+  }
+}
+
+TEST_CASE(
+    "cagen relations, testing simple model, mixed strength non-overlapping") {
+  using namespace citcpp;
+
+  model model{create_simple_four_param_model()};
+  model.add_relation(create_relation(model, "R2", {"P1", "P3"}, 2));
+  model.add_relation(create_relation(model, "R1", {"P2"}, 1));
+
+  test_set ipog_test_set;
+  {
+    std::unique_ptr<cagen_exec_handle_ipog> handle =
+        compute_covering_array_ipog(
+            model, -1,
+            covering_array_computation_config().with_replace_dont_care_values(
+                false));
+    auto f = handle->get_test_set();
+    cagen_exec_result result(f.get());
+    ipog_test_set = result.get_result();
+
+    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                          COVERING_ARRAY_GENERATION_COMPLETED);
+
+    const auto duration_seconds = std::chrono::duration<double>(
+        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
+    std::cout << "Test set generated using IPOG in " << duration_seconds
+              << " and has " << ipog_test_set.get_list_of_tests().size()
+              << " rows." << std::endl;
+
+    // Check all values in the created test set and whether they are don't care
+    // for all parameters not contained in the relations.
+    check_non_relation_params_are_dont_care(ipog_test_set, {"P1", "P2", "P3"});
+
+    CHECK(handle->get_number_of_processed_parameters() == 3);
+    CHECK(handle->get_number_of_covered_combinations() == 19);
   }
 }
 
