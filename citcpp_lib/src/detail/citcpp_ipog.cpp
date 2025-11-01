@@ -4,6 +4,7 @@
 #include <chrono>
 #include <numeric>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 
 #include "binom_coeff_table.hpp"
@@ -150,11 +151,14 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   // First we compute the number of combination we have to cover, as well as
   // some key properties of the relations.
+  std::unordered_map<const internal_relation*, unsigned long long>
+      relation_to_combos_to_cover;
   unsigned long long number_combos_to_cover = 0;
   unsigned int maximum_required_strength = 0;
   unsigned int maximum_prefix_length = 0;
   for (const auto& relation : relations) {
-    number_combos_to_cover +=
+
+    const unsigned long long relation_number_combos_to_cover =
         with_mt ? number_of_combinations_to_cover(
                       relation.get_parameter_index_map().size(), model,
                       relation.get_parameter_index_map(),
@@ -163,6 +167,8 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
                       relation.get_parameter_index_map().size(), model,
                       relation.get_parameter_index_map(),
                       relation.get_specified_interaction_strength(), false);
+    number_combos_to_cover += relation_number_combos_to_cover;
+    relation_to_combos_to_cover[&relation] = relation_number_combos_to_cover;
     maximum_required_strength =
         std::max(maximum_required_strength,
                  relation.get_specified_interaction_strength());
@@ -202,6 +208,8 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
         // The relation will already be fully covered during the
         // initialization phase of the testset.
         relation_it = relations.erase(relation_it);
+        exec_handle.add_number_of_covered_combinations(
+            relation_to_combos_to_cover[&relation]);
       } else {
         ++relation_it;
       }
