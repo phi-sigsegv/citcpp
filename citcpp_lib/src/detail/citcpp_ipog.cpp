@@ -114,6 +114,21 @@ void main_ipog_loop_body(
   }
 }
 
+unsigned int length_of_common_param_prefix(
+    const citcpp::detail::internal_relation& rel,
+    const std::vector<unsigned int>& parameter_index_map) {
+
+  for (unsigned int param_idx = 0; param_idx < parameter_index_map.size();
+       ++param_idx) {
+    if (parameter_index_map[param_idx] !=
+        rel.get_parameter_index_map()[param_idx]) {
+      return param_idx;
+    }
+  }
+
+  return parameter_index_map.size();
+}
+
 void main_ipog_loop(const citcpp::detail::internal_model& model,
                     std::vector<citcpp::detail::internal_relation>& relations,
                     citcpp::detail::internal_test_set& test_set,
@@ -130,10 +145,14 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   const bool with_mt = config.multithreading_enabled();
 
-  // First we compute the number of combination we have to cover.
-  unsigned int minimum_required_strength =
-      model.get_parameter_num_values().size();
+  std::vector<unsigned int> parameter_index_map(
+      citcpp_ipog_base::create_parameter_index_map(relations, model));
+
+  // First we compute the number of combination we have to cover, as well as
+  // some key properties of the relations.
   unsigned long long number_combos_to_cover = 0;
+  unsigned int maximum_required_strength = 0;
+  unsigned int maximum_prefix_length = 0;
   for (const auto& relation : relations) {
     number_combos_to_cover +=
         with_mt ? number_of_combinations_to_cover(
@@ -144,58 +163,68 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
                       relation.get_parameter_index_map().size(), model,
                       relation.get_parameter_index_map(),
                       relation.get_specified_interaction_strength(), false);
-    minimum_required_strength =
-        std::min(minimum_required_strength,
+    maximum_required_strength =
+        std::max(maximum_required_strength,
                  relation.get_specified_interaction_strength());
+    maximum_prefix_length =
+        std::max(maximum_prefix_length,
+                 length_of_common_param_prefix(relation, parameter_index_map));
   }
 
   tp.stop_workers();
   exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
+  exec_handle.set_number_of_parameters_to_process(parameter_index_map.size());
 
   if (exec_handle.is_job_aborted()) {
     return;
   }
 
-  std::vector<unsigned int> parameter_index_map(
-      citcpp_ipog_base::create_parameter_index_map(relations, model));
+  const unsigned int first_param_idx =
+      std::min(maximum_required_strength, maximum_prefix_length);
+  for (unsigned int param_idx = 0; param_idx < first_param_idx; ++param_idx) {
 
-  exec_handle.set_number_of_parameters_to_process(parameter_index_map.size());
+    const unsigned int real_current_param_idx = parameter_index_map[param_idx];
 
-  unsigned int first_param_idx = 0;
-  for (first_param_idx = 0; first_param_idx < minimum_required_strength;
-       ++first_param_idx) {
+    auto relation_it = relations.begin();
+    while (relation_it != relations.end()) {
+      internal_relation& relation = *relation_it;
 
-    const unsigned int real_current_param_idx =
-        parameter_index_map[first_param_idx];
-
-    for (auto& relation : relations) {
       if (relation
-              .get_parameter_index_map()[relation.get_current_param_idx()] !=
+              .get_parameter_index_map()[relation.get_current_param_idx()] ==
           real_current_param_idx) {
 
-        // The current parameter is not contained in at least one of the
-        // relations. Thus, it shall not be part of the initialization of the
-        // testset.
-        break;
+        relation.set_current_param_idx(relation.get_current_param_idx() + 1);
       }
-    }
 
-    // If we reach this point, then the current parameter is part of all
-    // relations. Therefore it will be part of the initialization of the
-    // testset, and we have to increment the parameter indices of the relations.
-    for (auto& relation : relations) {
-      relation.set_current_param_idx(relation.get_current_param_idx() + 1);
+      if (relation.get_current_param_idx() >=
+          relation.get_parameter_index_map().size()) {
+
+        // The relation will already be fully covered during the
+        // initialization phase of the testset.
+        relation_it = relations.erase(relation_it);
+      } else {
+        ++relation_it;
+      }
     }
   }
 
   {
     // Step 1: Initialize for the first t parameters.
-    auto initial_step_res = create_all_value_combinations(
-        first_param_idx, model, parameter_index_map, test_set);
-    exec_handle.add_number_of_covered_combinations(
-        initial_step_res.num_created_combinations);
+    create_all_value_combinations(first_param_idx, model, parameter_index_map,
+                                  test_set);
     exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     exec_handle.set_number_of_processed_parameters(first_param_idx);
+  }
+
+  for (const auto& relation : relations) {
+    const unsigned long long number_of_covered_combos =
+        relation.get_current_param_idx() > 0
+            ? number_of_combinations_to_cover(
+                  relation.get_current_param_idx(), model,
+                  relation.get_parameter_index_map(),
+                  relation.get_current_param_idx(), false)
+            : 0;
+    exec_handle.add_number_of_covered_combinations(number_of_covered_combos);
   }
 
   // Here is the main IPOG loop.
@@ -217,12 +246,25 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
     exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
 
-    for (auto& relation : relations) {
+    auto relation_it = relations.begin();
+    while (relation_it != relations.end()) {
+      internal_relation& relation = *relation_it;
+
       if (relation
               .get_parameter_index_map()[relation.get_current_param_idx()] ==
           real_current_param_idx) {
 
         relation.set_current_param_idx(relation.get_current_param_idx() + 1);
+      }
+
+      if (relation.get_current_param_idx() >=
+          relation.get_parameter_index_map().size()) {
+
+        // The relation is fully covered. So we do not have to deal with it
+        // anymore.
+        relation_it = relations.erase(relation_it);
+      } else {
+        ++relation_it;
       }
     }
   }
@@ -290,12 +332,25 @@ void main_ipog_loop_extend_test_set(
 
     exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
 
-    for (auto& relation : relations) {
+    auto relation_it = relations.begin();
+    while (relation_it != relations.end()) {
+      internal_relation& relation = *relation_it;
+
       if (relation
               .get_parameter_index_map()[relation.get_current_param_idx()] ==
           real_current_param_idx) {
 
         relation.set_current_param_idx(relation.get_current_param_idx() + 1);
+      }
+
+      if (relation.get_current_param_idx() >=
+          relation.get_parameter_index_map().size()) {
+
+        // The relation is fully covered. So we do not have to deal with it
+        // anymore.
+        relation_it = relations.erase(relation_it);
+      } else {
+        ++relation_it;
       }
     }
   }

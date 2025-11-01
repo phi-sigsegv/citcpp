@@ -38,22 +38,15 @@ void recursively_add_test_for_each_combination(
 namespace citcpp {
 namespace detail {
 
-create_all_value_combinations_result create_all_value_combinations(
+void create_all_value_combinations(
     unsigned int strength, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map,
     citcpp::detail::internal_test_set& test_set) {
-
-  create_all_value_combinations_result result{0};
 
   auto previous_test_set_size = test_set.get_list_of_tests().size();
   std::vector<unsigned int> values(strength);
   recursively_add_test_for_each_combination(model, parameter_index_map, 0,
                                             values, test_set);
-
-  result.num_created_combinations =
-      test_set.get_list_of_tests().size() - previous_test_set_size;
-
-  return result;
 }
 
 }  // namespace detail

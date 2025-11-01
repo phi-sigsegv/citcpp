@@ -134,10 +134,10 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   {
     // Step 1: Initialize for the first t parameters.
-    auto initial_step_res = create_all_value_combinations(
-        strength, model, parameter_index_map, test_set);
+    create_all_value_combinations(strength, model, parameter_index_map,
+                                  test_set);
     exec_handle.add_number_of_covered_combinations(
-        initial_step_res.num_created_combinations);
+        test_set.get_list_of_tests().size());
     exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     exec_handle.set_number_of_processed_parameters(strength);
   }
