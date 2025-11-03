@@ -61,7 +61,8 @@ void main_ipog_loop_body(
     tp.stop_workers();
     exec_handle.add_number_of_covered_combinations(number_combos_to_cover);
   } else {
-    std::vector<std::pair<internal_relation, coverage_map>> relation_cov_maps;
+    std::vector<std::pair<const internal_relation&, coverage_map>>
+        relation_cov_maps;
     unsigned long long number_combos_to_cover = 0;
     for (const auto& relation : relations) {
       if (relation

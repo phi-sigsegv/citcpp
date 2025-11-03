@@ -125,7 +125,7 @@ namespace detail {
 
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    std::vector<std::pair<internal_relation, coverage_map>>& relations) {
+    std::vector<std::pair<const internal_relation&, coverage_map>>& relations) {
 
   // First initialize the result object.
   ipog_measure_testset_result result = {0};
@@ -146,7 +146,7 @@ ipog_measure_testset_result ipog_measure_testset(
 
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    std::vector<std::pair<internal_relation, coverage_map>>& relations,
+    std::vector<std::pair<const internal_relation&, coverage_map>>& relations,
     thread_pool& tp) {
 
   // First initialize the result object.

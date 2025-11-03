@@ -910,7 +910,7 @@ namespace detail {
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set& test_set,
-    std::vector<std::pair<internal_relation, coverage_map>>& relations) {
+    std::vector<std::pair<const internal_relation&, coverage_map>>& relations) {
 
   const unsigned int real_current_param_idx =
       relations[0].second.get_parameter_index_map()
@@ -1033,7 +1033,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set& test_set,
-    std::vector<std::pair<internal_relation, coverage_map>>& relations,
+    std::vector<std::pair<const internal_relation&, coverage_map>>& relations,
     thread_pool& tp) {
 
   const unsigned int real_current_param_idx =
