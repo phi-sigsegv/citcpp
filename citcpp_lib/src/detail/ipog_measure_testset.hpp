@@ -1,6 +1,8 @@
 #ifndef IPOG_MEASURE_TESTSET_HPP_
 #define IPOG_MEASURE_TESTSET_HPP_
 
+#include <unordered_map>
+
 #include "cagen_exec_handle_base.hpp"
 #include "coverage_map.hpp"
 #include "datatypes_config.hpp"
@@ -11,7 +13,8 @@ namespace citcpp {
 namespace detail {
 
 struct ipog_measure_testset_result {
-    unsigned long long num_covered_tuples;
+    std::unordered_map<const internal_relation*, unsigned long long>
+        num_covered_tuples;
 };
 
 ipog_measure_testset_result ipog_measure_testset(
