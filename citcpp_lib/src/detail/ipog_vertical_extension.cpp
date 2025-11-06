@@ -296,7 +296,7 @@ ipog_vertical_extension_result ipog_vertical_extension(
     std::vector<std::pair<const internal_relation&, coverage_map>>& relations) {
 
   // First initialize the result object.
-  ipog_vertical_extension_result result = {0};
+  ipog_vertical_extension_result result;
 
   list_intrusive<test_list_intrusive_integ> modified_tests;
 
@@ -310,7 +310,8 @@ ipog_vertical_extension_result ipog_vertical_extension(
 
     cov_map_it.visit_all_parameter_combinations(functor);
 
-    result.num_new_covered_tuples += functor.get_num_new_covered_tuples();
+    result.num_new_covered_tuples[&rel.first] =
+        functor.get_num_new_covered_tuples();
   }
 
   return result;

@@ -11,15 +11,13 @@ namespace {
 class ipog_vertical_extension_tuple_functor {
   public:
     ipog_vertical_extension_tuple_functor(
-        const unsigned int current_param_idx,
-        const citcpp::detail::internal_model &model,
-        citcpp::detail::internal_test_set &test_set,
-        citcpp::detail::ipog_horizontal_extension_result
-            &partitioning_of_tests_according_to_current_values,
-        citcpp::detail::bitset_non_owning_uint64 &values_combo_bitset,
+        const citcpp::detail::internal_model& model,
+        citcpp::detail::internal_test_set& test_set,
+        citcpp::detail::ipog_horizontal_extension_result&
+            partitioning_of_tests_according_to_current_values,
+        citcpp::detail::bitset_non_owning_uint64& values_combo_bitset,
         const unsigned long long num_missing_combinations_to_cover)
-        : current_param_idx_(current_param_idx),
-          model_(model),
+        : model_(model),
           test_set_(test_set),
           partitioning_of_tests_according_to_current_values_(
               partitioning_of_tests_according_to_current_values),
@@ -27,9 +25,9 @@ class ipog_vertical_extension_tuple_functor {
           num_missing_combinations_to_cover_(num_missing_combinations_to_cover),
           num_new_covered_tuples_(0) {}
 
-    bool operator()(citcpp::detail::value_vector &value_indices,
+    bool operator()(citcpp::detail::value_vector& value_indices,
                     citcpp::detail::bitset_non_owning_uint64::size_type bit_pos,
-                    const citcpp::detail::param_vector &param_indices) {
+                    const citcpp::detail::param_vector& param_indices) {
       using namespace citcpp::detail;
 
       ipog_vertical_extension_func(value_indices, bit_pos, param_indices);
@@ -38,9 +36,9 @@ class ipog_vertical_extension_tuple_functor {
     }
 
     void ipog_vertical_extension_func(
-        citcpp::detail::value_vector &value_indices,
+        citcpp::detail::value_vector& value_indices,
         citcpp::detail::bitset_non_owning_uint64::size_type bit_pos,
-        const citcpp::detail::param_vector &param_indices) {
+        const citcpp::detail::param_vector& param_indices) {
       using namespace citcpp::detail;
 
       if (values_combo_bitset_.test_and_set(bit_pos)) {
@@ -59,7 +57,7 @@ class ipog_vertical_extension_tuple_functor {
 
       // Iterate over the tests with the same value for the current parameter
       // value we have to cover.
-      for (test_list_intrusive_integ &t :
+      for (test_list_intrusive_integ& t :
            partitioning_of_tests_according_to_current_values_
                .value_to_row_mapping[current_param_value_to_cover]) {
 
@@ -77,7 +75,7 @@ class ipog_vertical_extension_tuple_functor {
            it != partitioning_of_tests_according_to_current_values_
                      .rows_with_current_parameter_dont_care_value.end();
            ++it) {
-        test &t = it->get_test();
+        test& t = it->get_test();
 
         if (ipog_vertical_extension_try_inject_value_combo(param_indices,
                                                            value_indices, t)) {
@@ -124,9 +122,9 @@ class ipog_vertical_extension_tuple_functor {
 
   private:
     bool ipog_vertical_extension_try_inject_value_combo(
-        const citcpp::detail::param_vector &param_indices,
-        const citcpp::detail::value_vector &value_indices,
-        citcpp::detail::test &t) {
+        const citcpp::detail::param_vector& param_indices,
+        const citcpp::detail::value_vector& value_indices,
+        citcpp::detail::test& t) {
 
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
@@ -151,12 +149,11 @@ class ipog_vertical_extension_tuple_functor {
     }
 
   private:
-    const unsigned int current_param_idx_;
-    const citcpp::detail::internal_model &model_;
-    citcpp::detail::internal_test_set &test_set_;
-    citcpp::detail::ipog_horizontal_extension_result
-        &partitioning_of_tests_according_to_current_values_;
-    citcpp::detail::bitset_non_owning_uint64 &values_combo_bitset_;
+    const citcpp::detail::internal_model& model_;
+    citcpp::detail::internal_test_set& test_set_;
+    citcpp::detail::ipog_horizontal_extension_result&
+        partitioning_of_tests_according_to_current_values_;
+    citcpp::detail::bitset_non_owning_uint64& values_combo_bitset_;
     const unsigned long long num_missing_combinations_to_cover_;
     unsigned long long num_new_covered_tuples_;
 };
@@ -164,15 +161,14 @@ class ipog_vertical_extension_tuple_functor {
 class ipog_vertical_extension_functor {
   public:
     ipog_vertical_extension_functor(
-        const unsigned int current_param_idx, const unsigned int strength,
-        const citcpp::detail::internal_model &model,
-        citcpp::detail::internal_test_set &test_set,
-        citcpp::detail::ipog_horizontal_extension_result
-            &partitioning_of_tests_according_to_current_values,
-        citcpp::detail::array_wrapper_uint64 &bitset_backing_array,
+        const unsigned int strength,
+        const citcpp::detail::internal_model& model,
+        citcpp::detail::internal_test_set& test_set,
+        citcpp::detail::ipog_horizontal_extension_result&
+            partitioning_of_tests_according_to_current_values,
+        citcpp::detail::array_wrapper_uint64& bitset_backing_array,
         const unsigned long long num_missing_combinations_to_cover)
-        : current_param_idx_(current_param_idx),
-          model_(model),
+        : model_(model),
           test_set_(test_set),
           partitioning_of_tests_according_to_current_values_(
               partitioning_of_tests_according_to_current_values),
@@ -181,7 +177,7 @@ class ipog_vertical_extension_functor {
           num_missing_combinations_to_cover_(num_missing_combinations_to_cover),
           num_new_covered_tuples_(0) {}
 
-    bool operator()(const citcpp::detail::param_vector &param_indices) {
+    bool operator()(const citcpp::detail::param_vector& param_indices) {
       using namespace citcpp::detail;
 
       ipog_vertical_extension_func(param_indices);
@@ -195,7 +191,7 @@ class ipog_vertical_extension_functor {
 
   private:
     void ipog_vertical_extension_func(
-        const citcpp::detail::param_vector &param_indices) {
+        const citcpp::detail::param_vector& param_indices) {
       using namespace citcpp::detail;
 
       bitset_non_owning_uint64::size_type bitset_size = 1;
@@ -206,7 +202,7 @@ class ipog_vertical_extension_functor {
       values_combo_bitset.set_backing_array(bitset_backing_array_.get_array());
       values_combo_bitset.reset();
 
-      for (test &t : test_set_.get_list_of_tests()) {
+      for (test& t : test_set_.get_list_of_tests()) {
         // Here we compute an index into the bitset. To do so, we treat the
         // number of values of each parameter as a kind of radix. Consider
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
@@ -241,8 +237,7 @@ class ipog_vertical_extension_functor {
       }
 
       ipog_vertical_extension_tuple_functor tuple_functor(
-          current_param_idx_, model_, test_set_,
-          partitioning_of_tests_according_to_current_values_,
+          model_, test_set_, partitioning_of_tests_according_to_current_values_,
           values_combo_bitset, num_missing_combinations_to_cover_);
 
       visit_all_value_combos_of_param_combo(
@@ -252,12 +247,11 @@ class ipog_vertical_extension_functor {
     }
 
   private:
-    const unsigned int current_param_idx_;
-    const citcpp::detail::internal_model &model_;
-    citcpp::detail::internal_test_set &test_set_;
-    citcpp::detail::ipog_horizontal_extension_result
-        &partitioning_of_tests_according_to_current_values_;
-    citcpp::detail::array_wrapper_uint64 &bitset_backing_array_;
+    const citcpp::detail::internal_model& model_;
+    citcpp::detail::internal_test_set& test_set_;
+    citcpp::detail::ipog_horizontal_extension_result&
+        partitioning_of_tests_according_to_current_values_;
+    citcpp::detail::array_wrapper_uint64& bitset_backing_array_;
     citcpp::detail::value_vector value_indices_;
     const unsigned long long num_missing_combinations_to_cover_;
     unsigned long long num_new_covered_tuples_;
@@ -269,41 +263,47 @@ namespace citcpp {
 namespace detail {
 
 ipog_vertical_extension_result ipog_vertical_extension(
-    const unsigned int current_param_idx, const unsigned int strength,
-    const internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map,
     const unsigned long long num_missing_combinations_to_cover,
-    ipog_horizontal_extension_result
-        &partitioning_of_tests_according_to_current_values,
-    internal_test_set &test_set) {
-
-  const unsigned int real_current_param_idx =
-      parameter_index_map[current_param_idx];
-  const int num_current_param_values =
-      model.get_parameter_num_values()[real_current_param_idx];
-
-  const unsigned int product_of_max_parameter_sizes =
-      num_current_param_values *
-      (strength > 1
-           ? get_product_of_max_n_parameter_sizes(
-                 current_param_idx, strength - 1, model, parameter_index_map)
-           : 1);
-
-  array_wrapper_uint64 bitset_backing_array(product_of_max_parameter_sizes);
+    ipog_horizontal_extension_result&
+        partitioning_of_tests_according_to_current_values,
+    internal_test_set& test_set, const internal_model& model,
+    const std::vector<std::reference_wrapper<const internal_relation>>&
+        relations) {
 
   // First initialize the result object.
-  ipog_vertical_extension_result result = {0};
+  ipog_vertical_extension_result result;
 
-  param_combo_iterator param_combo_it(current_param_idx + 1, strength,
-                                      parameter_index_map, true);
-  ipog_vertical_extension_functor functor(
-      current_param_idx, strength, model, test_set,
-      partitioning_of_tests_according_to_current_values, bitset_backing_array,
-      num_missing_combinations_to_cover);
+  for (auto& rel_ref : relations) {
+    const auto& rel = rel_ref.get();
 
-  param_combo_it.visit_all_parameter_combinations(functor);
+    const unsigned int real_current_param_idx =
+        rel.get_parameter_index_map()[rel.get_current_param_idx()];
+    const int num_current_param_values =
+        model.get_parameter_num_values()[real_current_param_idx];
 
-  result.num_new_covered_tuples = functor.get_num_new_covered_tuples();
+    const unsigned int product_of_max_parameter_sizes =
+        num_current_param_values *
+        (rel.get_current_interaction_strength() > 1
+             ? get_product_of_max_n_parameter_sizes(
+                   rel.get_current_param_idx(),
+                   rel.get_current_interaction_strength() - 1, model,
+                   rel.get_parameter_index_map())
+             : 1);
+
+    array_wrapper_uint64 bitset_backing_array(product_of_max_parameter_sizes);
+
+    param_combo_iterator param_combo_it(rel.get_current_param_idx() + 1,
+                                        rel.get_current_interaction_strength(),
+                                        rel.get_parameter_index_map(), true);
+    ipog_vertical_extension_functor functor(
+        rel.get_current_interaction_strength(), model, test_set,
+        partitioning_of_tests_according_to_current_values, bitset_backing_array,
+        num_missing_combinations_to_cover);
+
+    param_combo_it.visit_all_parameter_combinations(functor);
+
+    result.num_new_covered_tuples[&rel] = functor.get_num_new_covered_tuples();
+  }
 
   return result;
 }
