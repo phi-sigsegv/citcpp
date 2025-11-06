@@ -1,6 +1,8 @@
 #ifndef IPOG_HORIZONTAL_EXTENSION_COMMON_HPP_
 #define IPOG_HORIZONTAL_EXTENSION_COMMON_HPP_
 
+#include <unordered_map>
+
 #include "internal_test_set.hpp"
 
 namespace citcpp {
@@ -10,7 +12,8 @@ struct ipog_horizontal_extension_result {
     std::vector<list_intrusive<test_list_intrusive_integ>> value_to_row_mapping;
     list_intrusive<test_list_intrusive_integ>
         rows_with_current_parameter_dont_care_value;
-    unsigned long long num_new_covered_tuples;
+    std::unordered_map<const internal_relation*, unsigned long long>
+        num_new_covered_tuples;
 };
 
 }  // namespace detail
