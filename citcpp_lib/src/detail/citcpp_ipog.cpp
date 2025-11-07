@@ -46,7 +46,7 @@ void main_ipog_loop_body(
               .get_parameter_index_map()[relation.get_current_param_idx()] ==
           real_current_param_idx) {
 
-        number_combos_to_cover +=
+        const unsigned long long relation_number_combos_to_cover =
             with_mt ? number_of_combinations_to_cover(
                           relation.get_current_param_idx() + 1, model,
                           relation.get_parameter_index_map(),
@@ -55,6 +55,14 @@ void main_ipog_loop_body(
                           relation.get_current_param_idx() + 1, model,
                           relation.get_parameter_index_map(),
                           relation.get_current_interaction_strength(), true);
+
+        // We only report the combinations as covered, after we have reached
+        // the full interaction strength. This is because otherwise we could
+        // count too many interactions.
+        if (relation.get_current_interaction_strength() >=
+            relation.get_specified_interaction_strength()) {
+          number_combos_to_cover += relation_number_combos_to_cover;
+        }
       }
     }
 
@@ -84,7 +92,21 @@ void main_ipog_loop_body(
           with_mt ? ipog_measure_testset(model, test_set, relation_cov_maps, tp)
                   : ipog_measure_testset(model, test_set, relation_cov_maps);
 
-      number_combos_to_cover -= measure_coverage_res.num_covered_tuples;
+      for (const auto& relation_cov_result :
+           measure_coverage_res.num_covered_tuples) {
+
+        number_combos_to_cover -= relation_cov_result.second;
+
+        // We only report the combinations as covered, after we have reached
+        // the full interaction strength. This is because otherwise we could
+        // count too many interactions.
+        if (relation_cov_result.first->get_current_interaction_strength() >=
+            relation_cov_result.first->get_specified_interaction_strength()) {
+
+          exec_handle.add_number_of_covered_combinations(
+              relation_cov_result.second);
+        }
+      }
     }
 
     auto horizontal_ext_res =
@@ -94,9 +116,22 @@ void main_ipog_loop_body(
                                             relation_cov_maps);
     tp.stop_workers();
 
-    number_combos_to_cover -= horizontal_ext_res.num_new_covered_tuples;
-    exec_handle.add_number_of_covered_combinations(
-        horizontal_ext_res.num_new_covered_tuples);
+    for (const auto& relation_cov_result :
+         horizontal_ext_res.num_new_covered_tuples) {
+
+      number_combos_to_cover -= relation_cov_result.second;
+
+      // We only report the combinations as covered, after we have reached
+      // the full interaction strength. This is because otherwise we could
+      // count too many interactions.
+      if (relation_cov_result.first->get_current_interaction_strength() >=
+          relation_cov_result.first->get_specified_interaction_strength()) {
+
+        exec_handle.add_number_of_covered_combinations(
+            relation_cov_result.second);
+      }
+    }
+
     exec_handle.set_testset_size(test_set.get_list_of_tests().size());
 
     if (exec_handle.is_job_aborted()) {
@@ -108,9 +143,22 @@ void main_ipog_loop_body(
           ipog_vertical_extension(number_combos_to_cover, horizontal_ext_res,
                                   test_set, relation_cov_maps);
 
-      number_combos_to_cover -= vertical_ext_res.num_new_covered_tuples;
-      exec_handle.add_number_of_covered_combinations(
-          vertical_ext_res.num_new_covered_tuples);
+      for (const auto& relation_cov_result :
+           vertical_ext_res.num_new_covered_tuples) {
+
+        number_combos_to_cover -= relation_cov_result.second;
+
+        // We only report the combinations as covered, after we have reached
+        // the full interaction strength. This is because otherwise we could
+        // count too many interactions.
+        if (relation_cov_result.first->get_current_interaction_strength() >=
+            relation_cov_result.first->get_specified_interaction_strength()) {
+
+          exec_handle.add_number_of_covered_combinations(
+              relation_cov_result.second);
+        }
+      }
+
       exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     }
   }
@@ -158,7 +206,6 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   unsigned int maximum_required_strength = 0;
   unsigned int maximum_prefix_length = 0;
   for (const auto& relation : relations) {
-
     const unsigned long long relation_number_combos_to_cover =
         with_mt ? number_of_combinations_to_cover(
                       relation.get_parameter_index_map().size(), model,
@@ -227,7 +274,8 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   for (const auto& relation : relations) {
     const unsigned long long number_of_covered_combos =
-        relation.get_current_param_idx() > 0
+        (relation.get_current_interaction_strength() >=
+         relation.get_specified_interaction_strength())
             ? number_of_combinations_to_cover(
                   relation.get_current_param_idx(), model,
                   relation.get_parameter_index_map(),
