@@ -32,7 +32,7 @@ class bitset_operations : public T_BASE {
     /**
      * Swaps this and the given other bitset.
      */
-    void swap(bitset_operations &other) {
+    void swap(bitset_operations& other) {
       T_BASE::swap(other);
       std::swap(num_ones_, other.num_ones_);
     }
@@ -200,28 +200,6 @@ class bitset_operations : public T_BASE {
       num_ones_ = 0;
     }
 
-    /**
-     * Flips the bit at the given position.
-     */
-    void flip(size_type bit_pos) {
-      const size_type storage_block_index =
-          calculate_storage_block_index(bit_pos);
-      const storage_type mask = bit_mask(bit_pos);
-
-      this->bits_[storage_block_index] ^= mask;
-    }
-
-    /**
-     * Flips all bits (like operator~ but in place).
-     */
-    void flip() {
-      const size_type number_of_storage_blocks = calculate_num_storage_blocks();
-
-      for (size_type i = 0; i < number_of_storage_blocks; ++i) {
-        this->bits_[i] = ~this->bits_[i];
-      }
-    }
-
   public:
     static size_type calculate_num_storage_blocks_from_num_bits(
         size_type num_bits) {
@@ -268,7 +246,7 @@ class array_owning_wrapper {
                                          num_bits)]{}),
           size_(num_bits) {}
 
-    array_owning_wrapper(const array_owning_wrapper &other)
+    array_owning_wrapper(const array_owning_wrapper& other)
         : bits_(new storage_type[bitset_operations<
               storage_type, array_owning_wrapper<storage_type>>::
                                      calculate_num_storage_blocks_from_num_bits(
@@ -281,7 +259,7 @@ class array_owning_wrapper {
               sizeof(storage_type));
     }
 
-    array_owning_wrapper(array_owning_wrapper &&other)
+    array_owning_wrapper(array_owning_wrapper&& other)
         : bits_(other.bits_), size_(other.size_) {
       other.bits_ = nullptr;
       other.size_ = 0;
@@ -289,7 +267,7 @@ class array_owning_wrapper {
 
     ~array_owning_wrapper() { delete[] bits_; }
 
-    array_owning_wrapper &operator=(const array_owning_wrapper &other) {
+    array_owning_wrapper& operator=(const array_owning_wrapper& other) {
       if (&other != this) {
         delete[] bits_;
         size_ = other.size_;
@@ -305,7 +283,7 @@ class array_owning_wrapper {
       return *this;
     }
 
-    array_owning_wrapper &operator=(array_owning_wrapper &&other) {
+    array_owning_wrapper& operator=(array_owning_wrapper&& other) {
       if (&other != this) {
         delete[] bits_;
         bits_ = other.bits_;
@@ -317,18 +295,18 @@ class array_owning_wrapper {
       return *this;
     }
 
-    void swap(array_owning_wrapper &other) {
+    void swap(array_owning_wrapper& other) {
       std::swap(bits_, other.bits_);
       std::swap(size_, other.size_);
     }
 
-    storage_type *get_array() const { return bits_; }
+    storage_type* get_array() const { return bits_; }
 
   protected:
     static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>,
                   "The underlying type must be a fundamental type");
 
-    storage_type *bits_;
+    storage_type* bits_;
     size_type size_;
 };
 
@@ -344,18 +322,18 @@ class array_non_owning_wrapper {
     array_non_owning_wrapper(size_type num_bits)
         : bits_(nullptr), size_(num_bits) {}
 
-    array_non_owning_wrapper(const array_non_owning_wrapper &other) = delete;
+    array_non_owning_wrapper(const array_non_owning_wrapper& other) = delete;
 
-    array_non_owning_wrapper(array_non_owning_wrapper &&other)
+    array_non_owning_wrapper(array_non_owning_wrapper&& other)
         : bits_(other.bits_), size_(other.size_) {
       other.bits_ = nullptr;
       other.size_ = 0;
     }
 
-    array_non_owning_wrapper &operator=(const array_non_owning_wrapper &other) =
+    array_non_owning_wrapper& operator=(const array_non_owning_wrapper& other) =
         delete;
 
-    array_non_owning_wrapper &operator=(array_non_owning_wrapper &&other) {
+    array_non_owning_wrapper& operator=(array_non_owning_wrapper&& other) {
       if (&other != this) {
         bits_ = other.bits_;
         size_ = other.size_;
@@ -366,18 +344,18 @@ class array_non_owning_wrapper {
       return *this;
     }
 
-    void swap(array_non_owning_wrapper &other) {
+    void swap(array_non_owning_wrapper& other) {
       std::swap(bits_, other.bits_);
       std::swap(size_, other.size_);
     }
 
-    void set_backing_array(storage_type *bits) { bits_ = bits; }
+    void set_backing_array(storage_type* bits) { bits_ = bits; }
 
   protected:
     static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>,
                   "The underlying type must be a fundamental type");
 
-    storage_type *bits_;
+    storage_type* bits_;
     size_type size_;
 };
 
