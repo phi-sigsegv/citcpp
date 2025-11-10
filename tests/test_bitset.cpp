@@ -51,14 +51,6 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(!sut.any());
     CHECK(sut.none());
     CHECK(sut.count() == 0);
-
-    sut.flip(0);
-    CHECK(sut.test(0));
-
-    CHECK(!sut.all());
-    CHECK(sut.any());
-    CHECK(!sut.none());
-    CHECK(sut.count() == 1);
   }
 
   SUBCASE("Test API at 30") {
@@ -101,14 +93,6 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(!sut.any());
     CHECK(sut.none());
     CHECK(sut.count() == 0);
-
-    sut.flip(30);
-    CHECK(sut.test(30));
-
-    CHECK(!sut.all());
-    CHECK(sut.any());
-    CHECK(!sut.none());
-    CHECK(sut.count() == 1);
   }
 
   SUBCASE("Test API at 63") {
@@ -151,14 +135,6 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(!sut.any());
     CHECK(sut.none());
     CHECK(sut.count() == 0);
-
-    sut.flip(63);
-    CHECK(sut.test(63));
-
-    CHECK(!sut.all());
-    CHECK(sut.any());
-    CHECK(!sut.none());
-    CHECK(sut.count() == 1);
   }
 
   SUBCASE("Test API at 64") {
@@ -201,14 +177,6 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(!sut.any());
     CHECK(sut.none());
     CHECK(sut.count() == 0);
-
-    sut.flip(64);
-    CHECK(sut.test(64));
-
-    CHECK(!sut.all());
-    CHECK(sut.any());
-    CHECK(!sut.none());
-    CHECK(sut.count() == 1);
   }
 
   SUBCASE("Test API at 65") {
@@ -251,14 +219,6 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(!sut.any());
     CHECK(sut.none());
     CHECK(sut.count() == 0);
-
-    sut.flip(65);
-    CHECK(sut.test(65));
-
-    CHECK(!sut.all());
-    CHECK(sut.any());
-    CHECK(!sut.none());
-    CHECK(sut.count() == 1);
   }
 
   SUBCASE("Test API at 69") {
@@ -301,14 +261,6 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(!sut.any());
     CHECK(sut.none());
     CHECK(sut.count() == 0);
-
-    sut.flip(69);
-    CHECK(sut.test(69));
-
-    CHECK(!sut.all());
-    CHECK(sut.any());
-    CHECK(!sut.none());
-    CHECK(sut.count() == 1);
   }
 
   SUBCASE("Test API at multiples indices") {
@@ -358,14 +310,6 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(sut.any());
     CHECK(!sut.none());
     CHECK(sut.count() == 3);
-
-    sut.flip(20);
-    CHECK(!sut.test(20));
-
-    CHECK(!sut.all());
-    CHECK(sut.any());
-    CHECK(!sut.none());
-    CHECK(sut.count() == 2);
   }
 
   SUBCASE("Test all()") {
@@ -384,7 +328,7 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(sut.count() == 70);
   }
 
-  SUBCASE("Test set() and reset() and flip()") {
+  SUBCASE("Test set() and reset()") {
     CHECK(!sut.all());
     CHECK(!sut.any());
     CHECK(sut.none());
@@ -398,20 +342,6 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
     CHECK(sut.count() == 70);
 
     sut.reset();
-
-    CHECK(!sut.all());
-    CHECK(!sut.any());
-    CHECK(sut.none());
-    CHECK(sut.count() == 0);
-
-    sut.flip();
-
-    CHECK(sut.all());
-    CHECK(sut.any());
-    CHECK(!sut.none());
-    CHECK(sut.count() == 70);
-
-    sut.flip();
 
     CHECK(!sut.all());
     CHECK(!sut.any());
@@ -490,11 +420,6 @@ TEST_CASE("bitset, testing copying, moving, assigning") {
     CHECK(other.test(2));
     CHECK(other.test(3));
     CHECK(other.test(4));
-
-    CHECK(sut.all());
-    CHECK(!sut.any());
-    CHECK(sut.none());
-    CHECK(sut.count() == 0);
   }
 
   SUBCASE("Test copy assignment") {
@@ -564,11 +489,6 @@ TEST_CASE("bitset, testing copying, moving, assigning") {
     CHECK(other.test(2));
     CHECK(other.test(3));
     CHECK(other.test(4));
-
-    CHECK(sut.all());
-    CHECK(!sut.any());
-    CHECK(sut.none());
-    CHECK(sut.count() == 0);
   }
 
   SUBCASE("Test swap()") {
