@@ -33,6 +33,17 @@ target_include_directories(citcpp_exe PUBLIC "${PROJECT_BINARY_DIR}" "${CITCPP_3
 target_link_libraries(citcpp_exe PUBLIC citcpp_lib)
 set_property(TARGET citcpp_exe PROPERTY OUTPUT_NAME citcpp)
 
+# /Zc:__cplusplus is required to make __cplusplus accurate
+# /Zc:__cplusplus is available starting with Visual Studio 2017 version 15.7
+# (according to https://learn.microsoft.com/en-us/cpp/build/reference/zc-cplusplus)
+# That version is equivalent to _MSC_VER==1914
+# (according to https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019)
+# CMake's ${MSVC_VERSION} is equivalent to _MSC_VER
+# (according to https://cmake.org/cmake/help/latest/variable/MSVC_VERSION.html#variable:MSVC_VERSION)
+if ((MSVC) AND (MSVC_VERSION GREATER_EQUAL 1914))
+    target_compile_options(citcpp_exe PRIVATE "/Zc:__cplusplus" "/utf-8")
+endif()
+
 # -----------------------------------------------------------------------------
 # Unittest
 # -----------------------------------------------------------------------------
