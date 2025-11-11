@@ -41,7 +41,7 @@ set_property(TARGET citcpp_exe PROPERTY OUTPUT_NAME citcpp)
 # CMake's ${MSVC_VERSION} is equivalent to _MSC_VER
 # (according to https://cmake.org/cmake/help/latest/variable/MSVC_VERSION.html#variable:MSVC_VERSION)
 if ((MSVC) AND (MSVC_VERSION GREATER_EQUAL 1914))
-    target_compile_options(citcpp_exe PRIVATE "/Zc:__cplusplus")
+    target_compile_options(citcpp_exe PRIVATE "/Zc:__cplusplus /utf-8")
 endif()
 
 # -----------------------------------------------------------------------------
