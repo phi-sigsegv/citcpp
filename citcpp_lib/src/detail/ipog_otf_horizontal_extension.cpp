@@ -1,5 +1,6 @@
 #include "ipog_otf_horizontal_extension.hpp"
 
+#include <algorithm>
 #include <new>
 
 #include "citcpp_utils.hpp"
@@ -11,9 +12,9 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor(
         const unsigned int real_current_param_idx,
-        const citcpp::detail::test &test, unsigned int current_test_index,
-        const citcpp::detail::internal_test_set &test_set, bool is_extend_mode,
-        std::vector<unsigned long long> &gain_per_value)
+        const citcpp::detail::test& test, unsigned int current_test_index,
+        const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
+        std::vector<unsigned long long>& gain_per_value)
         : real_current_param_idx_(real_current_param_idx),
           test_(test),
           current_test_index_(current_test_index),
@@ -22,7 +23,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
           param_combo_gain_per_value_(gain_per_value.size()),
           gain_per_value_(gain_per_value) {}
 
-    bool operator()(const citcpp::detail::param_vector &param_indices) {
+    bool operator()(const citcpp::detail::param_vector& param_indices) {
       using namespace citcpp::detail;
 
       const int current_param_value =
@@ -43,7 +44,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
       }
 
       unsigned int test_index = 0;
-      for (const test &t : test_set_.get_list_of_tests()) {
+      for (const test& t : test_set_.get_list_of_tests()) {
         if (test_index != current_test_index_) {
           bool is_same_tuple_prefix = true;
 
@@ -118,12 +119,12 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
 
   private:
     const unsigned int real_current_param_idx_;
-    const citcpp::detail::test &test_;
+    const citcpp::detail::test& test_;
     const unsigned int current_test_index_;
-    const citcpp::detail::internal_test_set &test_set_;
+    const citcpp::detail::internal_test_set& test_set_;
     const bool is_extend_mode_;
     std::vector<unsigned int> param_combo_gain_per_value_;
-    std::vector<unsigned long long> &gain_per_value_;
+    std::vector<unsigned long long>& gain_per_value_;
 };
 
 class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
@@ -131,30 +132,30 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     ipog_horizontal_select_best_value_per_param_combo_functor_parallel(
         const unsigned int real_current_param_idx,
         const unsigned int num_current_param_values,
-        const citcpp::detail::test &test, unsigned int current_test_index,
-        const citcpp::detail::internal_test_set &test_set, bool is_extend_mode,
+        const citcpp::detail::test& test, unsigned int current_test_index,
+        const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
         citcpp::detail::thread_local_vector<
-            citcpp::detail::aligned_vector<unsigned long long>> &gain_per_value,
-        const citcpp::detail::param_combo_parallel_iterator &param_combo_it)
+            citcpp::detail::aligned_vector<unsigned long long>>& gain_per_value,
+        const citcpp::detail::thread_pool& tp)
         : real_current_param_idx_(real_current_param_idx),
           test_(test),
           current_test_index_(current_test_index),
           test_set_(test_set),
           is_extend_mode_(is_extend_mode),
-          param_combo_it_(param_combo_it),
+          tp_(tp),
           param_combo_gain_per_value_(
-              param_combo_it.get_num_workers(),
+              tp.get_num_workers(),
               citcpp::detail::aligned_vector<unsigned int>(
                   num_current_param_values, 0)),
           gain_per_value_(gain_per_value) {}
 
-    bool operator()(const citcpp::detail::param_vector &param_indices) {
+    bool operator()(const citcpp::detail::param_vector& param_indices) {
       using namespace citcpp::detail;
 
-      std::vector<unsigned int> &thread_local_param_combo_gain_per_value =
-          param_combo_gain_per_value_[param_combo_it_.get_worker_id()].value;
-      std::vector<unsigned long long> &thread_local_gain_per_value =
-          gain_per_value_[param_combo_it_.get_worker_id()].value;
+      std::vector<unsigned int>& thread_local_param_combo_gain_per_value =
+          param_combo_gain_per_value_[tp_.get_worker_id()].value;
+      std::vector<unsigned long long>& thread_local_gain_per_value =
+          gain_per_value_[tp_.get_worker_id()].value;
 
       // We first check whether the test already has a concrete value
       // for the current parameter, because if so, then there is no
@@ -173,7 +174,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
       }
 
       unsigned int test_index = 0;
-      for (const test &t : test_set_.get_list_of_tests()) {
+      for (const test& t : test_set_.get_list_of_tests()) {
         if (test_index != current_test_index_) {
           bool is_same_tuple_prefix = true;
 
@@ -239,17 +240,17 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
 
   private:
     const unsigned int real_current_param_idx_;
-    const citcpp::detail::test &test_;
+    const citcpp::detail::test& test_;
     const unsigned int current_test_index_;
-    const citcpp::detail::internal_test_set &test_set_;
+    const citcpp::detail::internal_test_set& test_set_;
     const bool is_extend_mode_;
-    const citcpp::detail::param_combo_parallel_iterator &param_combo_it_;
+    const citcpp::detail::thread_pool& tp_;
     alignas(std::hardware_destructive_interference_size)
         citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
             unsigned int>> param_combo_gain_per_value_;
-    alignas(std::hardware_destructive_interference_size) citcpp::detail::
-        thread_local_vector<citcpp::detail::aligned_vector<unsigned long long>>
-            &gain_per_value_;
+    alignas(std::hardware_destructive_interference_size)
+        citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
+            unsigned long long>>& gain_per_value_;
 };
 
 struct new_covered_tuples_and_selected_value {
@@ -260,85 +261,35 @@ struct new_covered_tuples_and_selected_value {
 new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::test &test, unsigned int current_test_index,
-    const citcpp::detail::internal_test_set &test_set, bool is_extend_mode,
-    citcpp::detail::param_combo_iterator &param_combo_it,
-    unsigned int &last_picked_value,
-    std::vector<unsigned int> &value_to_num_picked) {
+    const citcpp::detail::test& test, unsigned int current_test_index,
+    const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
+    std::vector<std::pair<const citcpp::detail::internal_relation&,
+                          citcpp::detail::param_combo_iterator>>&
+        param_combo_its,
+    unsigned int& last_picked_value,
+    std::vector<unsigned int>& value_to_num_picked,
+    std::unordered_map<const citcpp::detail::internal_relation*,
+                       unsigned long long>& num_covered_tuples) {
   using namespace citcpp::detail;
 
   new_covered_tuples_and_selected_value res;
 
-  // This is an array containing the coverage gain per value of the current
-  // parameter.
-  std::vector<unsigned long long> gain_per_value(num_current_param_values);
+  // In the following vector we track for each relation, the coverage
+  // gain per value of the current parameter.
+  std::vector<std::vector<unsigned long long>> relation_gain_per_value(
+      param_combo_its.size(),
+      std::vector<unsigned long long>(num_current_param_values, 0));
 
-  ipog_horizontal_select_best_value_per_param_combo_functor
-      per_param_combo_functor(real_current_param_idx, test, current_test_index,
-                              test_set, is_extend_mode, gain_per_value);
-  param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
+  for (int relation_idx = 0; relation_idx < param_combo_its.size();
+       relation_idx++) {
 
-  int value_with_max_gain = -1;
-  unsigned long long max_gain = 0;
-  for (unsigned int v_index = 0; v_index < num_current_param_values;
-       ++v_index) {
-
-    unsigned int value =
-        (v_index + last_picked_value + 1) % num_current_param_values;
-
-    if (gain_per_value[value] > max_gain) {
-      value_with_max_gain = value;
-      max_gain = gain_per_value[value];
-    } else if (gain_per_value[value] == max_gain) {
-      // We use a simple tie breaking strategy: We do not favor one value
-      // over the other. If two values have the same gain, then we pick the
-      // one which we have picked less so far. Since also this could be a
-      // tie (we have picked the value the same number of times, we remember
-      // the value we have picked before, and choose the next one in this
-      // case.
-      if (value_with_max_gain >= 0 &&
-          value_to_num_picked[value] <
-              value_to_num_picked[value_with_max_gain]) {
-
-        value_with_max_gain = value;
-      }
-    }
+    ipog_horizontal_select_best_value_per_param_combo_functor
+        per_param_combo_functor(real_current_param_idx, test,
+                                current_test_index, test_set, is_extend_mode,
+                                relation_gain_per_value[relation_idx]);
+    param_combo_its[relation_idx].second.visit_all_parameter_combinations(
+        per_param_combo_functor);
   }
-
-  if (value_with_max_gain >= 0) {
-    last_picked_value = value_with_max_gain;
-    value_to_num_picked[value_with_max_gain]++;
-  }
-
-  res.num_new_covered_tuples_ = max_gain;
-  res.selected_value_ = value_with_max_gain;
-
-  return res;
-}
-
-new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
-    const unsigned int real_current_param_idx,
-    const unsigned int num_current_param_values,
-    const citcpp::detail::test &test, unsigned int current_test_index,
-    const citcpp::detail::internal_test_set &test_set, bool is_extend_mode,
-    citcpp::detail::param_combo_parallel_iterator &param_combo_it,
-    unsigned int &last_picked_value,
-    std::vector<unsigned int> &value_to_num_picked) {
-  using namespace citcpp::detail;
-
-  new_covered_tuples_and_selected_value res;
-
-  // This is an array containing the coverage gain per value of the current
-  // parameter.
-  thread_local_vector<aligned_vector<unsigned long long>> gain_per_value(
-      param_combo_it.get_num_workers(),
-      aligned_vector<unsigned long long>(num_current_param_values, 0));
-
-  ipog_horizontal_select_best_value_per_param_combo_functor_parallel
-      per_param_combo_functor(real_current_param_idx, num_current_param_values,
-                              test, current_test_index, test_set,
-                              is_extend_mode, gain_per_value, param_combo_it);
-  param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   int value_with_max_gain = -1;
   unsigned long long max_gain = 0;
@@ -349,10 +300,10 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
         (v_index + last_picked_value + 1) % num_current_param_values;
 
     unsigned long long value_gain = 0;
-    for (aligned_vector<unsigned long long> &thread_local_gain_per_value :
-         gain_per_value) {
+    for (int relation_idx = 0; relation_idx < param_combo_its.size();
+         relation_idx++) {
 
-      value_gain += thread_local_gain_per_value.value[value];
+      value_gain += relation_gain_per_value[relation_idx][value];
     }
 
     if (value_gain > max_gain) {
@@ -377,6 +328,113 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
   if (value_with_max_gain >= 0) {
     last_picked_value = value_with_max_gain;
     value_to_num_picked[value_with_max_gain]++;
+
+    for (int relation_idx = 0; relation_idx < param_combo_its.size();
+         relation_idx++) {
+
+      num_covered_tuples[&param_combo_its[relation_idx].first] +=
+          relation_gain_per_value[relation_idx][value_with_max_gain];
+    }
+  }
+
+  res.num_new_covered_tuples_ = max_gain;
+  res.selected_value_ = value_with_max_gain;
+
+  return res;
+}
+
+new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
+    const unsigned int real_current_param_idx,
+    const unsigned int num_current_param_values,
+    const citcpp::detail::test& test, unsigned int current_test_index,
+    const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
+    std::vector<std::pair<const citcpp::detail::internal_relation&,
+                          citcpp::detail::param_combo_parallel_iterator>>&
+        param_combo_its,
+    const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
+    std::vector<unsigned int>& value_to_num_picked,
+    std::unordered_map<const citcpp::detail::internal_relation*,
+                       unsigned long long>& num_covered_tuples) {
+  using namespace citcpp::detail;
+
+  new_covered_tuples_and_selected_value res;
+
+  // In the following vector we track the same information, but specific
+  // to the relation.
+  // In the following vector we track for each relation, the thread-specific
+  // coverage gain per value of the current parameter.
+  std::vector<thread_local_vector<aligned_vector<unsigned long long>>>
+      relation_gain_per_value(
+          param_combo_its.size(),
+          thread_local_vector<aligned_vector<unsigned long long>>(
+              tp.get_num_workers(),
+              aligned_vector<unsigned long long>(num_current_param_values, 0)));
+
+  for (int relation_idx = 0; relation_idx < param_combo_its.size();
+       relation_idx++) {
+    ipog_horizontal_select_best_value_per_param_combo_functor_parallel
+        per_param_combo_functor(real_current_param_idx,
+                                num_current_param_values, test,
+                                current_test_index, test_set, is_extend_mode,
+                                relation_gain_per_value[relation_idx], tp);
+    param_combo_its[relation_idx].second.visit_all_parameter_combinations(
+        per_param_combo_functor);
+  }
+
+  int value_with_max_gain = -1;
+  unsigned long long max_gain = 0;
+  for (unsigned int v_index = 0; v_index < num_current_param_values;
+       ++v_index) {
+
+    unsigned int value =
+        (v_index + last_picked_value + 1) % num_current_param_values;
+
+    unsigned long long value_gain = 0;
+    for (int relation_idx = 0; relation_idx < param_combo_its.size();
+         relation_idx++) {
+
+      for (const aligned_vector<unsigned long long>&
+               thread_local_gain_per_value :
+           relation_gain_per_value[relation_idx]) {
+
+        value_gain += thread_local_gain_per_value.value[value];
+      }
+    }
+
+    if (value_gain > max_gain) {
+      value_with_max_gain = value;
+      max_gain = value_gain;
+    } else if (value_gain == max_gain) {
+      // We use a simple tie breaking strategy: We do not favor one value
+      // over the other. If two values have the same gain, then we pick the
+      // one which we have picked less so far. Since also this could be a
+      // tie (we have picked the value the same number of times, we remember
+      // the value we have picked before, and choose the next one in this
+      // case.
+      if (value_with_max_gain >= 0 &&
+          value_to_num_picked[value] <
+              value_to_num_picked[value_with_max_gain]) {
+
+        value_with_max_gain = value;
+      }
+    }
+  }
+
+  if (value_with_max_gain >= 0) {
+    last_picked_value = value_with_max_gain;
+    value_to_num_picked[value_with_max_gain]++;
+
+    for (int relation_idx = 0; relation_idx < param_combo_its.size();
+         relation_idx++) {
+
+      for (const aligned_vector<unsigned long long>&
+               thread_local_gain_per_value :
+           relation_gain_per_value[relation_idx]) {
+
+        num_covered_tuples[&param_combo_its[relation_idx].first] +=
+            thread_local_gain_per_value.value[value_with_max_gain];
+      }
+    }
   }
 
   res.num_new_covered_tuples_ = max_gain;
@@ -391,14 +449,15 @@ namespace citcpp {
 namespace detail {
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
-    const unsigned int current_param_idx, const unsigned int strength,
-    const internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map,
     const unsigned long long num_missing_combinations_to_cover,
-    internal_test_set &test_set, bool is_extend_mode) {
+    internal_test_set& test_set, const internal_model& model,
+    const std::vector<std::reference_wrapper<const internal_relation>>&
+        relations,
+    bool is_extend_mode) {
 
   const unsigned int real_current_param_idx =
-      parameter_index_map[current_param_idx];
+      relations[0].get().get_parameter_index_map()
+          [relations[0].get().get_current_param_idx()];
   const int num_current_param_values =
       model.get_parameter_num_values()[real_current_param_idx];
 
@@ -406,24 +465,36 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   ipog_horizontal_extension_result result{
       std::vector<list_intrusive<test_list_intrusive_integ>>(
           num_current_param_values),
-      list_intrusive<test_list_intrusive_integ>(), 0};
+      list_intrusive<test_list_intrusive_integ>(),
+      std::unordered_map<const internal_relation*, unsigned long long>()};
 
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
-  param_combo_iterator param_combo_it(current_param_idx + 1, strength,
-                                      parameter_index_map, true);
+  std::vector<std::pair<const internal_relation&, param_combo_iterator>>
+      param_combo_its;
+  for (auto& rel : relations) {
+    param_combo_its.emplace_back(
+        rel.get(),
+        param_combo_iterator(rel.get().get_current_param_idx() + 1,
+                             rel.get().get_current_interaction_strength(),
+                             rel.get().get_parameter_index_map(), true));
+  }
 
   unsigned int test_index = 0;
-  for (test &t : test_set.get_list_of_tests()) {
-    if (strength > 2) {
+  unsigned long long num_new_covered_tuples = 0;
+  for (test& t : test_set.get_list_of_tests()) {
+    if (std::ranges::any_of(
+            relations.begin(), relations.end(), [](const auto& p) {
+              return p.get().get_current_interaction_strength() > 2;
+            })) {
       last_picked_value = num_current_param_values - 1;
     }
 
     new_covered_tuples_and_selected_value res =
         ipog_horizontal_select_best_value(
             real_current_param_idx, num_current_param_values, t, test_index,
-            test_set, is_extend_mode, param_combo_it, last_picked_value,
-            value_to_num_picked);
+            test_set, is_extend_mode, param_combo_its, last_picked_value,
+            value_to_num_picked, result.num_new_covered_tuples);
 
     if (res.selected_value_ >= 0) {
       // We might not have selected any value. This can happen, if no matter
@@ -445,9 +516,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     }
 
     // Keep track of how many tuples we have covered in addition.
-    result.num_new_covered_tuples += res.num_new_covered_tuples_;
+    num_new_covered_tuples += res.num_new_covered_tuples_;
 
-    if (result.num_new_covered_tuples >= num_missing_combinations_to_cover) {
+    if (num_new_covered_tuples >= num_missing_combinations_to_cover) {
       return result;
     }
 
@@ -458,14 +529,15 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 }
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
-    const unsigned int current_param_idx, const unsigned int strength,
-    const internal_model &model,
-    const std::vector<unsigned int> &parameter_index_map,
     const unsigned long long num_missing_combinations_to_cover,
-    internal_test_set &test_set, bool is_extend_mode, thread_pool &tp) {
+    internal_test_set& test_set, const internal_model& model,
+    const std::vector<std::reference_wrapper<const internal_relation>>&
+        relations,
+    bool is_extend_mode, thread_pool& tp) {
 
   const unsigned int real_current_param_idx =
-      parameter_index_map[current_param_idx];
+      relations[0].get().get_parameter_index_map()
+          [relations[0].get().get_current_param_idx()];
   const int num_current_param_values =
       model.get_parameter_num_values()[real_current_param_idx];
 
@@ -473,24 +545,37 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   ipog_horizontal_extension_result result{
       std::vector<list_intrusive<test_list_intrusive_integ>>(
           num_current_param_values),
-      list_intrusive<test_list_intrusive_integ>(), 0};
+      list_intrusive<test_list_intrusive_integ>(),
+      std::unordered_map<const internal_relation*, unsigned long long>()};
 
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
-  param_combo_parallel_iterator param_combo_it(current_param_idx + 1, strength,
-                                               parameter_index_map, true, tp);
+  std::vector<
+      std::pair<const internal_relation&, param_combo_parallel_iterator>>
+      param_combo_its;
+  for (auto& rel : relations) {
+    param_combo_its.emplace_back(
+        rel.get(), param_combo_parallel_iterator(
+                       rel.get().get_current_param_idx() + 1,
+                       rel.get().get_current_interaction_strength(),
+                       rel.get().get_parameter_index_map(), true, tp));
+  }
 
   unsigned int test_index = 0;
-  for (test &t : test_set.get_list_of_tests()) {
-    if (strength > 2) {
+  unsigned long long num_new_covered_tuples = 0;
+  for (test& t : test_set.get_list_of_tests()) {
+    if (std::ranges::any_of(
+            relations.begin(), relations.end(), [](const auto& p) {
+              return p.get().get_current_interaction_strength() > 2;
+            })) {
       last_picked_value = num_current_param_values - 1;
     }
 
     new_covered_tuples_and_selected_value res =
         ipog_horizontal_select_best_value(
             real_current_param_idx, num_current_param_values, t, test_index,
-            test_set, is_extend_mode, param_combo_it, last_picked_value,
-            value_to_num_picked);
+            test_set, is_extend_mode, param_combo_its, tp, last_picked_value,
+            value_to_num_picked, result.num_new_covered_tuples);
 
     if (res.selected_value_ >= 0) {
       // We might not have selected any value. This can happen, if no matter
@@ -512,9 +597,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     }
 
     // Keep track of how many tuples we have covered in addition.
-    result.num_new_covered_tuples += res.num_new_covered_tuples_;
+    num_new_covered_tuples += res.num_new_covered_tuples_;
 
-    if (result.num_new_covered_tuples >= num_missing_combinations_to_cover) {
+    if (num_new_covered_tuples >= num_missing_combinations_to_cover) {
       return result;
     }
 
