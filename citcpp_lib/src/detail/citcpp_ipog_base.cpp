@@ -183,5 +183,20 @@ std::vector<internal_relation> citcpp_ipog_base::create_relations(
   return relations;
 }
 
+unsigned int citcpp_ipog_base::length_of_common_param_prefix(
+    const citcpp::detail::internal_relation& rel,
+    const std::vector<unsigned int>& parameter_index_map) {
+
+  for (unsigned int param_idx = 0; param_idx < parameter_index_map.size();
+       ++param_idx) {
+    if (parameter_index_map[param_idx] !=
+        rel.get_parameter_index_map()[param_idx]) {
+      return param_idx;
+    }
+  }
+
+  return parameter_index_map.size();
+}
+
 }  // namespace detail
 }  // namespace citcpp

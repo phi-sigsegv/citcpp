@@ -63,6 +63,15 @@ class citcpp_ipog_base {
      */
     static std::vector<internal_relation> create_relations(
         const model& model, const internal_model& internal_model, int strength);
+
+    /**
+     * Returns the length of the common prefix in terms of parameter
+     * indices referenced by the given pair of parameter index mapping and
+     * relation.
+     */
+    static unsigned int length_of_common_param_prefix(
+        const citcpp::detail::internal_relation& rel,
+        const std::vector<unsigned int>& parameter_index_map);
 };
 
 }  // namespace detail

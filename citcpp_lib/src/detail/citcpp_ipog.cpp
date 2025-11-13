@@ -164,21 +164,6 @@ void main_ipog_loop_body(
   }
 }
 
-unsigned int length_of_common_param_prefix(
-    const citcpp::detail::internal_relation& rel,
-    const std::vector<unsigned int>& parameter_index_map) {
-
-  for (unsigned int param_idx = 0; param_idx < parameter_index_map.size();
-       ++param_idx) {
-    if (parameter_index_map[param_idx] !=
-        rel.get_parameter_index_map()[param_idx]) {
-      return param_idx;
-    }
-  }
-
-  return parameter_index_map.size();
-}
-
 void main_ipog_loop(const citcpp::detail::internal_model& model,
                     std::vector<citcpp::detail::internal_relation>& relations,
                     citcpp::detail::internal_test_set& test_set,
@@ -220,9 +205,9 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
     maximum_required_strength =
         std::max(maximum_required_strength,
                  relation.get_specified_interaction_strength());
-    maximum_prefix_length =
-        std::max(maximum_prefix_length,
-                 length_of_common_param_prefix(relation, parameter_index_map));
+    maximum_prefix_length = std::max(
+        maximum_prefix_length, citcpp_ipog_base::length_of_common_param_prefix(
+                                   relation, parameter_index_map));
   }
 
   tp.stop_workers();
