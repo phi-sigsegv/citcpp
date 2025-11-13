@@ -21,40 +21,40 @@ class cagen_exec_handle_ipog_impl;
  */
 class citcpp_ipog_otf : public citcpp_ipog_base {
   public:
-    citcpp_ipog_otf(const model &input_model,
-                    const covering_array_computation_config &config);
-    citcpp_ipog_otf(model &&input_model,
-                    const covering_array_computation_config &config);
-    citcpp_ipog_otf(const model &input_model, const citcpp::test_set &tests,
-                    const covering_array_computation_config &config);
-    citcpp_ipog_otf(model &&input_model, test_set &&tests,
-                    const covering_array_computation_config &config);
+    citcpp_ipog_otf(const model& input_model,
+                    const covering_array_computation_config& config);
+    citcpp_ipog_otf(model&& input_model,
+                    const covering_array_computation_config& config);
+    citcpp_ipog_otf(const model& input_model, const citcpp::test_set& tests,
+                    const covering_array_computation_config& config);
+    citcpp_ipog_otf(model&& input_model, test_set&& tests,
+                    const covering_array_computation_config& config);
 
     /**
      * Too lazy to implement/ensuring that it is well-defined.
      */
-    citcpp_ipog_otf(citcpp_ipog_otf &&) = delete;
-    citcpp_ipog_otf(const citcpp_ipog_otf &) = delete;
+    citcpp_ipog_otf(citcpp_ipog_otf&&) = delete;
+    citcpp_ipog_otf(const citcpp_ipog_otf&) = delete;
 
     /**
      * Too lazy to implement/ensuring that it is well-defined.
      */
-    citcpp_ipog_otf &operator=(citcpp_ipog_otf &&) = delete;
-    citcpp_ipog_otf &operator=(const citcpp_ipog_otf &) = delete;
+    citcpp_ipog_otf& operator=(citcpp_ipog_otf&&) = delete;
+    citcpp_ipog_otf& operator=(const citcpp_ipog_otf&) = delete;
 
-    void set_interaction_strength(unsigned int t);
+    void set_interaction_strength(int t);
 
     /**
      * This is the entry point to be called by a thread.
      */
-    void entry_point(cagen_exec_handle_ipog_impl &exec_handle);
+    void entry_point(cagen_exec_handle_ipog_impl& exec_handle);
 
   private:
     const citcpp::covering_array_computation_config config_;
     const citcpp::model input_model_;
     const internal_model model_;
     const internal_test_set input_tests_;
-    unsigned int strength_;
+    int strength_;
 };
 
 }  // namespace detail

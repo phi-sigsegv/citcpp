@@ -14,7 +14,7 @@ class param_combo_iterator {
   public:
     param_combo_iterator(unsigned int num_params_to_select_from,
                          unsigned int num_params_to_select,
-                         const std::vector<unsigned int> &parameter_index_map,
+                         const std::vector<unsigned int>& parameter_index_map,
                          bool fixed_last_parameter)
         : num_params_to_select_from_(num_params_to_select_from),
           num_params_to_select_(num_params_to_select),
@@ -22,14 +22,14 @@ class param_combo_iterator {
           fixed_last_parameter_(fixed_last_parameter),
           param_indices_(num_params_to_select) {}
 
-    param_combo_iterator(const param_combo_iterator &other) = default;
-    param_combo_iterator(param_combo_iterator &&other) = default;
+    param_combo_iterator(const param_combo_iterator& other) = default;
+    param_combo_iterator(param_combo_iterator&& other) = default;
 
     ~param_combo_iterator() = default;
 
-    param_combo_iterator &operator=(const param_combo_iterator &other) =
+    param_combo_iterator& operator=(const param_combo_iterator& other) =
         default;
-    param_combo_iterator &operator=(param_combo_iterator &&other) = default;
+    param_combo_iterator& operator=(param_combo_iterator&& other) = default;
 
     unsigned int get_number_of_parameters_to_select_from() const {
       return num_params_to_select_from_;
@@ -40,7 +40,7 @@ class param_combo_iterator {
     }
 
     template <class T_VISITOR>
-    void visit_all_parameter_combinations(T_VISITOR &visitor) {
+    void visit_all_parameter_combinations(T_VISITOR& visitor) {
 
       if (fixed_last_parameter_) {
         const unsigned int real_last_param_idx =
@@ -65,7 +65,7 @@ class param_combo_iterator {
 
   private:
     template <class T_VISITOR>
-    bool recursively_visit_all_param_combos(T_VISITOR &visitor,
+    bool recursively_visit_all_param_combos(T_VISITOR& visitor,
                                             int start_idx_for_next,
                                             int current_level) {
 
@@ -91,7 +91,7 @@ class param_combo_iterator {
   private:
     const unsigned int num_params_to_select_from_;
     const unsigned int num_params_to_select_;
-    const std::vector<unsigned int> &parameter_index_map_;
+    const std::vector<unsigned int>& parameter_index_map_;
     const bool fixed_last_parameter_;
     param_vector param_indices_;
 };
@@ -101,8 +101,8 @@ class param_combo_parallel_iterator {
     param_combo_parallel_iterator(
         unsigned int num_params_to_select_from,
         unsigned int num_params_to_select,
-        const std::vector<unsigned int> &parameter_index_map,
-        bool fixed_last_parameter, thread_pool &tp)
+        const std::vector<unsigned int>& parameter_index_map,
+        bool fixed_last_parameter, thread_pool& tp)
         : num_params_to_select_from_(num_params_to_select_from),
           num_params_to_select_(num_params_to_select),
           parameter_index_map_(parameter_index_map),
@@ -136,17 +136,17 @@ class param_combo_parallel_iterator {
       }
     }
 
-    param_combo_parallel_iterator(const param_combo_parallel_iterator &other) =
+    param_combo_parallel_iterator(const param_combo_parallel_iterator& other) =
         default;
-    param_combo_parallel_iterator(param_combo_parallel_iterator &&other) =
+    param_combo_parallel_iterator(param_combo_parallel_iterator&& other) =
         default;
 
     ~param_combo_parallel_iterator() = default;
 
-    param_combo_parallel_iterator &operator=(
-        const param_combo_parallel_iterator &other) = default;
-    param_combo_parallel_iterator &operator=(
-        param_combo_parallel_iterator &&other) = default;
+    param_combo_parallel_iterator& operator=(
+        const param_combo_parallel_iterator& other) = default;
+    param_combo_parallel_iterator& operator=(
+        param_combo_parallel_iterator&& other) = default;
 
     unsigned int get_number_of_parameters_to_select_from() const {
       return num_params_to_select_from_;
@@ -161,7 +161,7 @@ class param_combo_parallel_iterator {
     unsigned int get_worker_id() const { return tp_.get_worker_id(); }
 
     template <class T_VISITOR>
-    void visit_all_parameter_combinations(T_VISITOR &visitor) {
+    void visit_all_parameter_combinations(T_VISITOR& visitor) {
       visitor_ = visitor;
 
       if (fixed_last_parameter_ && num_params_to_select_ <= 1) {
@@ -171,11 +171,11 @@ class param_combo_parallel_iterator {
       } else {
         task_group tg(tp_.createTaskGroup());
         for (unsigned int i = 1; i < iterate_tasks_.size(); ++i) {
-          iterate_task &task = iterate_tasks_[i];
+          iterate_task& task = iterate_tasks_[i];
           task.reset();
           tg.spawn(i, &task);
         }
-        iterate_task &task = iterate_tasks_[0];
+        iterate_task& task = iterate_tasks_[0];
         task.reset();
         tg.spawn_and_wait(&task);
       }
@@ -191,9 +191,9 @@ class param_combo_parallel_iterator {
       public:
         iterate_task() = delete;
 
-        iterate_task(param_combo_parallel_iterator *iterator, int start_idx,
+        iterate_task(param_combo_parallel_iterator* iterator, int start_idx,
                      int end_idx, int num_params_to_select,
-                     param_vector &&param_indices)
+                     param_vector&& param_indices)
             : base_type(),
               iterator_(iterator),
               start_idx_(start_idx),
@@ -203,9 +203,9 @@ class param_combo_parallel_iterator {
           setCallable(*this);
         }
 
-        iterate_task(const this_type &) = delete;
+        iterate_task(const this_type&) = delete;
 
-        iterate_task(this_type &&other)
+        iterate_task(this_type&& other)
             : base_type(std::move(other)),
               iterator_(other.iterator_),
               start_idx_(other.start_idx_),
@@ -217,8 +217,8 @@ class param_combo_parallel_iterator {
 
         virtual ~iterate_task() {}
 
-        this_type &operator=(const this_type &) = delete;
-        this_type &operator=(this_type &&) = delete;
+        this_type& operator=(const this_type&) = delete;
+        this_type& operator=(this_type&&) = delete;
 
         void operator()() {
           const int current_level = num_params_to_select_ - 1;
@@ -240,7 +240,7 @@ class param_combo_parallel_iterator {
         }
 
       private:
-        param_combo_parallel_iterator *iterator_;
+        param_combo_parallel_iterator* iterator_;
         const int start_idx_;
         const int end_idx_;
         const int num_params_to_select_;
@@ -249,7 +249,7 @@ class param_combo_parallel_iterator {
 
     friend class iterate_task;
 
-    bool recursively_visit_all_param_combos(param_vector &param_indices,
+    bool recursively_visit_all_param_combos(param_vector& param_indices,
                                             int start_idx, int current_level) {
 
       bool cont = true;
@@ -274,12 +274,12 @@ class param_combo_parallel_iterator {
   private:
     const unsigned int num_params_to_select_from_;
     const unsigned int num_params_to_select_;
-    const std::vector<unsigned int> &parameter_index_map_;
+    const std::vector<unsigned int>& parameter_index_map_;
     const bool fixed_last_parameter_;
     param_vector param_indices_;
-    thread_pool &tp_;
+    thread_pool& tp_;
     std::vector<iterate_task> iterate_tasks_;
-    function_ref<bool(const param_vector &)> visitor_;
+    function_ref<bool(const param_vector&)> visitor_;
 };
 
 }  // namespace detail

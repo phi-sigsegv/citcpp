@@ -372,6 +372,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
 
   for (int relation_idx = 0; relation_idx < param_combo_its.size();
        relation_idx++) {
+
     ipog_horizontal_select_best_value_per_param_combo_functor_parallel
         per_param_combo_functor(real_current_param_idx,
                                 num_current_param_values, test,
@@ -554,11 +555,11 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       std::pair<const internal_relation&, param_combo_parallel_iterator>>
       param_combo_its;
   for (auto& rel : relations) {
-    param_combo_its.emplace_back(
+    param_combo_its.push_back(std::make_pair(
         rel.get(), param_combo_parallel_iterator(
                        rel.get().get_current_param_idx() + 1,
                        rel.get().get_current_interaction_strength(),
-                       rel.get().get_parameter_index_map(), true, tp));
+                       rel.get().get_parameter_index_map(), true, tp)));
   }
 
   unsigned int test_index = 0;

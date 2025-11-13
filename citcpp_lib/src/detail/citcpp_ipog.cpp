@@ -23,9 +23,9 @@ namespace {
 
 void main_ipog_loop_body(
     const citcpp::detail::internal_model& model,
-    std::vector<citcpp::detail::internal_relation>& relations,
-    citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
-    unsigned int real_current_param_idx, const bool with_mt,
+    const std::vector<citcpp::detail::internal_relation>& relations,
+    citcpp::detail::internal_test_set& test_set, const bool is_extend_mode,
+    const unsigned int real_current_param_idx, const bool with_mt,
     const citcpp::detail::binom_coeff_table& binomial_coeffs,
     citcpp::detail::thread_pool& tp,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
