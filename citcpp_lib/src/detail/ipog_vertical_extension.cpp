@@ -293,7 +293,7 @@ ipog_vertical_extension_result ipog_vertical_extension(
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values,
     internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation&, coverage_map>>& relations) {
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations) {
 
   // First initialize the result object.
   ipog_vertical_extension_result result;
@@ -310,7 +310,7 @@ ipog_vertical_extension_result ipog_vertical_extension(
 
     cov_map_it.visit_all_parameter_combinations(functor);
 
-    result.num_new_covered_tuples[&rel.first] =
+    result.num_new_covered_tuples[rel.first] =
         functor.get_num_new_covered_tuples();
   }
 

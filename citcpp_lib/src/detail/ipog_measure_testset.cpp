@@ -125,7 +125,7 @@ namespace detail {
 
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation&, coverage_map>>& relations) {
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations) {
 
   // First initialize the result object.
   ipog_measure_testset_result result;
@@ -137,7 +137,7 @@ ipog_measure_testset_result ipog_measure_testset(
                                                                  test_set);
     cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
-    result.num_covered_tuples[&rel.first] =
+    result.num_covered_tuples[rel.first] =
         per_param_combo_functor.get_num_covered_tuples();
   }
 
@@ -146,7 +146,7 @@ ipog_measure_testset_result ipog_measure_testset(
 
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation&, coverage_map>>& relations,
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
     thread_pool& tp) {
 
   // First initialize the result object.
@@ -160,7 +160,7 @@ ipog_measure_testset_result ipog_measure_testset(
         model, test_set, cov_map_it);
     cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
-    result.num_covered_tuples[&rel.first] =
+    result.num_covered_tuples[rel.first] =
         per_param_combo_functor.get_num_covered_tuples();
   }
 

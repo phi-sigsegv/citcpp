@@ -70,17 +70,12 @@ void main_ipog_loop_body(
     exec_handle.add_number_of_covered_combinations(
         reported_number_combos_to_cover);
   } else {
-    std::vector<std::reference_wrapper<const internal_relation>> relation_refs;
-    for (const auto& relation : relations) {
-      relation_refs.emplace_back(relation);
-    }
-
     auto horizontal_ext_res =
         with_mt
             ? ipog_horizontal_extension(number_combos_to_cover, test_set, model,
-                                        relation_refs, is_extend_mode, tp)
+                                        relations, is_extend_mode, tp)
             : ipog_horizontal_extension(number_combos_to_cover, test_set, model,
-                                        relation_refs, is_extend_mode);
+                                        relations, is_extend_mode);
     tp.stop_workers();
 
     for (const auto& relation_cov_result :
@@ -108,7 +103,7 @@ void main_ipog_loop_body(
     if (number_combos_to_cover > 0) {
       auto vertical_ext_res =
           ipog_vertical_extension(number_combos_to_cover, horizontal_ext_res,
-                                  test_set, model, relation_refs);
+                                  test_set, model, relations);
 
       for (const auto& relation_cov_result :
            vertical_ext_res.num_new_covered_tuples) {

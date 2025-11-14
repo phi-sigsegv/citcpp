@@ -267,15 +267,12 @@ ipog_vertical_extension_result ipog_vertical_extension(
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values,
     internal_test_set& test_set, const internal_model& model,
-    const std::vector<std::reference_wrapper<const internal_relation>>&
-        relations) {
+    const std::vector<internal_relation>& relations) {
 
   // First initialize the result object.
   ipog_vertical_extension_result result;
 
-  for (auto& rel_ref : relations) {
-    const auto& rel = rel_ref.get();
-
+  for (auto& rel : relations) {
     const unsigned int real_current_param_idx =
         rel.get_parameter_index_map()[rel.get_current_param_idx()];
     const int num_current_param_values =

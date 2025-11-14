@@ -12,16 +12,13 @@ namespace detail {
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set& test_set, const internal_model& model,
-    const std::vector<std::reference_wrapper<const internal_relation>>&
-        relations,
-    bool is_extend_mode);
+    const std::vector<internal_relation>& relations, bool is_extend_mode);
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set& test_set, const internal_model& model,
-    const std::vector<std::reference_wrapper<const internal_relation>>&
-        relations,
-    bool is_extend_mode, thread_pool& tp);
+    const std::vector<internal_relation>& relations, bool is_extend_mode,
+    thread_pool& tp);
 
 }  // namespace detail
 }  // namespace citcpp

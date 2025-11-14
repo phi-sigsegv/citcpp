@@ -17,8 +17,7 @@ ipog_vertical_extension_result ipog_vertical_extension(
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values,
     internal_test_set& test_set, const internal_model& model,
-    const std::vector<std::reference_wrapper<const internal_relation>>&
-        relations);
+    const std::vector<internal_relation>& relations);
 
 }  // namespace detail
 }  // namespace citcpp

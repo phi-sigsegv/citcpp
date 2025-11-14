@@ -263,7 +263,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
     const unsigned int num_current_param_values,
     const citcpp::detail::test& test, unsigned int current_test_index,
     const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
-    std::vector<std::pair<const citcpp::detail::internal_relation&,
+    std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::param_combo_iterator>>&
         param_combo_its,
     unsigned int& last_picked_value,
@@ -332,7 +332,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
     for (int relation_idx = 0; relation_idx < param_combo_its.size();
          relation_idx++) {
 
-      num_covered_tuples[&param_combo_its[relation_idx].first] +=
+      num_covered_tuples[param_combo_its[relation_idx].first] +=
           relation_gain_per_value[relation_idx][value_with_max_gain];
     }
   }
@@ -348,7 +348,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
     const unsigned int num_current_param_values,
     const citcpp::detail::test& test, unsigned int current_test_index,
     const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
-    std::vector<std::pair<const citcpp::detail::internal_relation&,
+    std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::param_combo_parallel_iterator>>&
         param_combo_its,
     const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
@@ -432,7 +432,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
                thread_local_gain_per_value :
            relation_gain_per_value[relation_idx]) {
 
-        num_covered_tuples[&param_combo_its[relation_idx].first] +=
+        num_covered_tuples[param_combo_its[relation_idx].first] +=
             thread_local_gain_per_value.value[value_with_max_gain];
       }
     }
@@ -452,13 +452,11 @@ namespace detail {
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set& test_set, const internal_model& model,
-    const std::vector<std::reference_wrapper<const internal_relation>>&
-        relations,
-    bool is_extend_mode) {
+    const std::vector<internal_relation>& relations, bool is_extend_mode) {
 
   const unsigned int real_current_param_idx =
-      relations[0].get().get_parameter_index_map()
-          [relations[0].get().get_current_param_idx()];
+      relations[0]
+          .get_parameter_index_map()[relations[0].get_current_param_idx()];
   const int num_current_param_values =
       model.get_parameter_num_values()[real_current_param_idx];
 
@@ -471,23 +469,22 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
-  std::vector<std::pair<const internal_relation&, param_combo_iterator>>
+  std::vector<std::pair<const internal_relation*, param_combo_iterator>>
       param_combo_its;
   for (auto& rel : relations) {
     param_combo_its.emplace_back(
-        rel.get(),
-        param_combo_iterator(rel.get().get_current_param_idx() + 1,
-                             rel.get().get_current_interaction_strength(),
-                             rel.get().get_parameter_index_map(), true));
+        &rel, param_combo_iterator(rel.get_current_param_idx() + 1,
+                                   rel.get_current_interaction_strength(),
+                                   rel.get_parameter_index_map(), true));
   }
 
   unsigned int test_index = 0;
   unsigned long long num_new_covered_tuples = 0;
   for (test& t : test_set.get_list_of_tests()) {
-    if (std::ranges::any_of(
-            relations.begin(), relations.end(), [](const auto& p) {
-              return p.get().get_current_interaction_strength() > 2;
-            })) {
+    if (std::ranges::any_of(relations.begin(), relations.end(),
+                            [](const auto& p) {
+                              return p.get_current_interaction_strength() > 2;
+                            })) {
       last_picked_value = num_current_param_values - 1;
     }
 
@@ -532,13 +529,12 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set& test_set, const internal_model& model,
-    const std::vector<std::reference_wrapper<const internal_relation>>&
-        relations,
-    bool is_extend_mode, thread_pool& tp) {
+    const std::vector<internal_relation>& relations, bool is_extend_mode,
+    thread_pool& tp) {
 
   const unsigned int real_current_param_idx =
-      relations[0].get().get_parameter_index_map()
-          [relations[0].get().get_current_param_idx()];
+      relations[0]
+          .get_parameter_index_map()[relations[0].get_current_param_idx()];
   const int num_current_param_values =
       model.get_parameter_num_values()[real_current_param_idx];
 
@@ -552,23 +548,23 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
   std::vector<
-      std::pair<const internal_relation&, param_combo_parallel_iterator>>
+      std::pair<const internal_relation*, param_combo_parallel_iterator>>
       param_combo_its;
   for (auto& rel : relations) {
-    param_combo_its.push_back(std::make_pair(
-        rel.get(), param_combo_parallel_iterator(
-                       rel.get().get_current_param_idx() + 1,
-                       rel.get().get_current_interaction_strength(),
-                       rel.get().get_parameter_index_map(), true, tp)));
+    param_combo_its.push_back(
+        std::make_pair(&rel, param_combo_parallel_iterator(
+                                 rel.get_current_param_idx() + 1,
+                                 rel.get_current_interaction_strength(),
+                                 rel.get_parameter_index_map(), true, tp)));
   }
 
   unsigned int test_index = 0;
   unsigned long long num_new_covered_tuples = 0;
   for (test& t : test_set.get_list_of_tests()) {
-    if (std::ranges::any_of(
-            relations.begin(), relations.end(), [](const auto& p) {
-              return p.get().get_current_interaction_strength() > 2;
-            })) {
+    if (std::ranges::any_of(relations.begin(), relations.end(),
+                            [](const auto& p) {
+                              return p.get_current_interaction_strength() > 2;
+                            })) {
       last_picked_value = num_current_param_values - 1;
     }
 

@@ -157,7 +157,7 @@ int ipog_horizontal_select_best_value(
     const unsigned int num_current_param_values,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::test& test,
-    std::vector<std::pair<const citcpp::detail::internal_relation&,
+    std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::coverage_map_iterator>>&
         relation_cov_map_its,
     unsigned int& last_picked_value,
@@ -220,7 +220,7 @@ int ipog_horizontal_select_best_value(
     const unsigned int num_current_param_values,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::test& test,
-    std::vector<std::pair<const citcpp::detail::internal_relation&,
+    std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::coverage_map_parallel_iterator>>&
         relation_cov_map_its,
     const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
@@ -432,7 +432,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
 void ipog_horizontal_update_coverage_map(
     const citcpp::detail::internal_model& model,
     const citcpp::detail::test& test,
-    std::vector<std::pair<const citcpp::detail::internal_relation&,
+    std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::coverage_map_iterator>>&
         relation_cov_map_its,
     std::unordered_map<const citcpp::detail::internal_relation*,
@@ -444,7 +444,7 @@ void ipog_horizontal_update_coverage_map(
   for (auto& cov_map_it : relation_cov_map_its) {
     per_param_combo_functor.reset_num_new_covered_tuples();
     cov_map_it.second.visit_all_parameter_combinations(per_param_combo_functor);
-    num_covered_tuples[&cov_map_it.first] +=
+    num_covered_tuples[cov_map_it.first] +=
         per_param_combo_functor.get_num_new_covered_tuples();
   }
 }
@@ -452,7 +452,7 @@ void ipog_horizontal_update_coverage_map(
 void ipog_horizontal_update_coverage_map(
     const citcpp::detail::internal_model& model,
     const citcpp::detail::test& test,
-    std::vector<std::pair<const citcpp::detail::internal_relation&,
+    std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::coverage_map_parallel_iterator>>&
         relation_cov_map_its,
     const citcpp::detail::thread_pool& tp,
@@ -465,7 +465,7 @@ void ipog_horizontal_update_coverage_map(
   for (auto& cov_map_it : relation_cov_map_its) {
     per_param_combo_functor.reset_num_new_covered_tuples();
     cov_map_it.second.visit_all_parameter_combinations(per_param_combo_functor);
-    num_covered_tuples[&cov_map_it.first] +=
+    num_covered_tuples[cov_map_it.first] +=
         per_param_combo_functor.get_num_new_covered_tuples();
   }
 }
@@ -777,7 +777,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int num_current_param_values,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::test& prev_test, const citcpp::detail::test& test,
-    std::vector<std::pair<const citcpp::detail::internal_relation&,
+    std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::coverage_map_iterator>>&
         relation_cov_map_its,
     unsigned int& last_picked_value,
@@ -815,7 +815,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     cov_map_it.second.visit_all_parameter_combinations(per_param_combo_functor);
     const unsigned long long num_new_covered_tuples =
         per_param_combo_functor.get_num_new_covered_tuples();
-    num_covered_tuples[&cov_map_it.first] += num_new_covered_tuples;
+    num_covered_tuples[cov_map_it.first] += num_new_covered_tuples;
     res.num_new_covered_tuples_ += num_new_covered_tuples;
   }
 
@@ -858,7 +858,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int num_current_param_values,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::test& prev_test, const citcpp::detail::test& test,
-    std::vector<std::pair<const citcpp::detail::internal_relation&,
+    std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::coverage_map_parallel_iterator>>&
         relation_cov_map_its,
     const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
@@ -902,7 +902,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     cov_map_it.second.visit_all_parameter_combinations(per_param_combo_functor);
     const unsigned long long num_new_covered_tuples =
         per_param_combo_functor.get_num_new_covered_tuples();
-    num_covered_tuples[&cov_map_it.first] += num_new_covered_tuples;
+    num_covered_tuples[cov_map_it.first] += num_new_covered_tuples;
     res.num_new_covered_tuples_ += num_new_covered_tuples;
   }
 
@@ -954,11 +954,11 @@ namespace detail {
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation&, coverage_map>>& relations) {
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations) {
 
   const unsigned int real_current_param_idx =
       relations[0].second.get_parameter_index_map()
-          [relations[0].first.get_current_param_idx()];
+          [relations[0].first->get_current_param_idx()];
   const int num_current_param_values =
       relations[0]
           .second.get_model()
@@ -974,7 +974,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
-  std::vector<std::pair<const internal_relation&, coverage_map_iterator>>
+  std::vector<std::pair<const internal_relation*, coverage_map_iterator>>
       relation_cov_map_its;
   for (auto& rel : relations) {
     relation_cov_map_its.push_back(
@@ -987,7 +987,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   for (test& t : test_set.get_list_of_tests()) {
     if (std::ranges::any_of(
             relations.begin(), relations.end(), [](const auto& p) {
-              return p.first.get_current_interaction_strength() > 2;
+              return p.first->get_current_interaction_strength() > 2;
             })) {
       last_picked_value = num_current_param_values - 1;
     }
@@ -1079,12 +1079,12 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation&, coverage_map>>& relations,
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
     thread_pool& tp) {
 
   const unsigned int real_current_param_idx =
       relations[0].second.get_parameter_index_map()
-          [relations[0].first.get_current_param_idx()];
+          [relations[0].first->get_current_param_idx()];
   const int num_current_param_values =
       relations[0]
           .second.get_model()
@@ -1101,7 +1101,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   unsigned int last_picked_value = 0;
   std::vector<unsigned int> value_to_num_picked(num_current_param_values);
   std::vector<
-      std::pair<const internal_relation&, coverage_map_parallel_iterator>>
+      std::pair<const internal_relation*, coverage_map_parallel_iterator>>
       relation_cov_map_its;
   for (auto& rel : relations) {
     relation_cov_map_its.push_back(
@@ -1114,7 +1114,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   for (test& t : test_set.get_list_of_tests()) {
     if (std::ranges::any_of(
             relations.begin(), relations.end(), [](const auto& p) {
-              return p.first.get_current_interaction_strength() > 2;
+              return p.first->get_current_interaction_strength() > 2;
             })) {
       last_picked_value = num_current_param_values - 1;
     }

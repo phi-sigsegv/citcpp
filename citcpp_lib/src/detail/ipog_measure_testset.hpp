@@ -19,11 +19,11 @@ struct ipog_measure_testset_result {
 
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation&, coverage_map>>& relations);
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations);
 
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation&, coverage_map>>& relations,
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
     thread_pool& tp);
 
 }  // namespace detail
