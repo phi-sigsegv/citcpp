@@ -99,7 +99,7 @@ TEST_CASE("cagen, testing simple model, strength 1") {
 
   // The parameter with the largest number of values has 3 values.
   // Thus, for 1-way coverage we shall get a testset with exactly
-  // four rows.
+  // three rows.
   CHECK(ipog_test_set.get_list_of_tests().size() == 3);
 
   test_set ipog_otf_test_set;
@@ -125,7 +125,7 @@ TEST_CASE("cagen, testing simple model, strength 1") {
 
   // The parameter with the largest number of values has 3 values.
   // Thus, for 1-way coverage we shall get a testset with exactly
-  // four rows.
+  // three rows.
   CHECK(ipog_otf_test_set.get_list_of_tests().size() == 3);
 
   CHECK(ipog_test_set == ipog_otf_test_set);
