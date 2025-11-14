@@ -803,7 +803,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     gain_per_value[current_param_value]++;
   }
 
-  new_covered_tuples_and_selected_value res;
+  new_covered_tuples_and_selected_value res{0, 0};
 
   ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor
       per_param_combo_functor(
@@ -890,7 +890,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     }
   }
 
-  new_covered_tuples_and_selected_value res;
+  new_covered_tuples_and_selected_value res{0, 0};
 
   ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel
       per_param_combo_functor(

@@ -272,7 +272,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
                        unsigned long long>& num_covered_tuples) {
   using namespace citcpp::detail;
 
-  new_covered_tuples_and_selected_value res;
+  new_covered_tuples_and_selected_value res{0, 0};
 
   // In the following vector we track for each relation, the coverage
   // gain per value of the current parameter.
@@ -357,7 +357,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
                        unsigned long long>& num_covered_tuples) {
   using namespace citcpp::detail;
 
-  new_covered_tuples_and_selected_value res;
+  new_covered_tuples_and_selected_value res{0, 0};
 
   // In the following vector we track the same information, but specific
   // to the relation.
