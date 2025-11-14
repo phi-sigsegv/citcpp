@@ -137,16 +137,16 @@ class param_combo_parallel_iterator {
     }
 
     param_combo_parallel_iterator(const param_combo_parallel_iterator& other) =
-        default;
+        delete;
     param_combo_parallel_iterator(param_combo_parallel_iterator&& other) =
         default;
 
     ~param_combo_parallel_iterator() = default;
 
     param_combo_parallel_iterator& operator=(
-        const param_combo_parallel_iterator& other) = default;
+        const param_combo_parallel_iterator& other) = delete;
     param_combo_parallel_iterator& operator=(
-        param_combo_parallel_iterator&& other) = default;
+        param_combo_parallel_iterator&& other) = delete;
 
     unsigned int get_number_of_parameters_to_select_from() const {
       return num_params_to_select_from_;

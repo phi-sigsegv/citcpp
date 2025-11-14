@@ -19,20 +19,20 @@ class coverage_map_second_level : public bitset_uint64 {
     coverage_map_second_level() : bitset_uint64() {}
 
     coverage_map_second_level(size_type num_bits,
-                              const param_vector &param_indices)
+                              const param_vector& param_indices)
         : bitset_uint64(num_bits), param_indices_(param_indices) {}
 
-    coverage_map_second_level(const coverage_map_second_level &other)
+    coverage_map_second_level(const coverage_map_second_level& other)
         : bitset_uint64(other), param_indices_(other.param_indices_) {}
 
-    coverage_map_second_level(coverage_map_second_level &&other)
+    coverage_map_second_level(coverage_map_second_level&& other)
         : bitset_uint64(std::move(other)),
           param_indices_(std::move(other.param_indices_)) {}
 
     ~coverage_map_second_level() {}
 
-    coverage_map_second_level &operator=(
-        const coverage_map_second_level &other) {
+    coverage_map_second_level& operator=(
+        const coverage_map_second_level& other) {
       if (this != &other) {
         bitset_uint64::operator=(other);
         param_indices_ = other.param_indices_;
@@ -41,7 +41,7 @@ class coverage_map_second_level : public bitset_uint64 {
       return *this;
     }
 
-    coverage_map_second_level &operator=(coverage_map_second_level &&other) {
+    coverage_map_second_level& operator=(coverage_map_second_level&& other) {
       if (this != &other) {
         bitset_uint64::operator=(std::move(other));
         param_indices_ = std::move(other.param_indices_);
@@ -53,12 +53,12 @@ class coverage_map_second_level : public bitset_uint64 {
     /**
      * Swaps this and the given other bitset.
      */
-    void swap(coverage_map_second_level &other) {
+    void swap(coverage_map_second_level& other) {
       bitset_uint64::swap(other);
       std::swap(param_indices_, other.param_indices_);
     }
 
-    const param_vector &get_parameter_indices() const { return param_indices_; }
+    const param_vector& get_parameter_indices() const { return param_indices_; }
 
   private:
     param_vector param_indices_;
@@ -87,22 +87,22 @@ class coverage_map_base {
     typedef coverage_map_second_level second_level_type;
 
     coverage_map_base(unsigned int n, unsigned int t,
-                      const internal_model &model,
-                      const std::vector<unsigned int> &parameter_index_map,
-                      const binom_coeff_table &binomial_coeffs,
+                      const internal_model& model,
+                      const std::vector<unsigned int>& parameter_index_map,
+                      const binom_coeff_table& binomial_coeffs,
                       bool fixed_last_parameter);
 
-    coverage_map_base(const coverage_map_base &other) = default;
-    coverage_map_base(coverage_map_base &&other) = default;
+    coverage_map_base(const coverage_map_base& other) = default;
+    coverage_map_base(coverage_map_base&& other) = default;
 
     ~coverage_map_base() = default;
 
-    coverage_map_base &operator=(const coverage_map_base &other) = default;
-    coverage_map_base &operator=(coverage_map_base &&other) = default;
+    coverage_map_base& operator=(const coverage_map_base& other) = default;
+    coverage_map_base& operator=(coverage_map_base&& other) = default;
 
-    const internal_model &get_model() const { return model_; }
+    const internal_model& get_model() const { return model_; }
 
-    const std::vector<unsigned int> &get_parameter_index_map() const {
+    const std::vector<unsigned int>& get_parameter_index_map() const {
       return parameter_index_map_;
     }
 
@@ -110,11 +110,11 @@ class coverage_map_base {
 
     unsigned int get_number_of_parameters_to_select() const { return t_; }
 
-    std::vector<coverage_map_second_level> &get_coverage_map() {
+    std::vector<coverage_map_second_level>& get_coverage_map() {
       return cov_map_;
     }
 
-    const std::vector<coverage_map_second_level> &get_coverage_map() const {
+    const std::vector<coverage_map_second_level>& get_coverage_map() const {
       return cov_map_;
     }
 
@@ -124,8 +124,8 @@ class coverage_map_base {
 
   protected:
     const unsigned long long size_;
-    const internal_model &model_;
-    const std::vector<unsigned int> &parameter_index_map_;
+    const internal_model& model_;
+    const std::vector<unsigned int>& parameter_index_map_;
     const unsigned int n_;
     const unsigned int t_;
     std::vector<coverage_map_second_level> cov_map_;
@@ -134,20 +134,20 @@ class coverage_map_base {
 
 class coverage_map_iterator {
   public:
-    coverage_map_iterator(coverage_map_base &cov_map) : cov_map_(cov_map) {}
+    coverage_map_iterator(coverage_map_base& cov_map) : cov_map_(cov_map) {}
 
-    coverage_map_iterator(const coverage_map_iterator &other) = default;
-    coverage_map_iterator(coverage_map_iterator &&other) = default;
+    coverage_map_iterator(const coverage_map_iterator& other) = default;
+    coverage_map_iterator(coverage_map_iterator&& other) = default;
 
     ~coverage_map_iterator() = default;
 
-    coverage_map_iterator &operator=(const coverage_map_iterator &other) =
+    coverage_map_iterator& operator=(const coverage_map_iterator& other) =
         default;
-    coverage_map_iterator &operator=(coverage_map_iterator &&other) = default;
+    coverage_map_iterator& operator=(coverage_map_iterator&& other) = default;
 
     template <class T_VISITOR>
-    void visit_all_parameter_combinations(T_VISITOR &visitor) {
-      for (coverage_map_base::second_level_type &value_combinations :
+    void visit_all_parameter_combinations(T_VISITOR& visitor) {
+      for (coverage_map_base::second_level_type& value_combinations :
            cov_map_.get_coverage_map()) {
         if (!visitor(value_combinations)) {
           return;
@@ -156,12 +156,12 @@ class coverage_map_iterator {
     }
 
   private:
-    coverage_map_base &cov_map_;
+    coverage_map_base& cov_map_;
 };
 
 class coverage_map_parallel_iterator {
   public:
-    coverage_map_parallel_iterator(coverage_map_base &cov_map, thread_pool &tp)
+    coverage_map_parallel_iterator(coverage_map_base& cov_map, thread_pool& tp)
         : cov_map_(cov_map), tp_(tp), iterate_tasks_(), visitor_() {
       const unsigned long long total_param_combos =
           cov_map.get_coverage_map().size();
@@ -180,32 +180,32 @@ class coverage_map_parallel_iterator {
     }
 
     coverage_map_parallel_iterator(
-        const coverage_map_parallel_iterator &other) = default;
-    coverage_map_parallel_iterator(coverage_map_parallel_iterator &&other) =
+        const coverage_map_parallel_iterator& other) = delete;
+    coverage_map_parallel_iterator(coverage_map_parallel_iterator&& other) =
         default;
 
     ~coverage_map_parallel_iterator() = default;
 
-    coverage_map_parallel_iterator &operator=(
-        const coverage_map_parallel_iterator &other) = default;
-    coverage_map_parallel_iterator &operator=(
-        coverage_map_parallel_iterator &&other) = default;
+    coverage_map_parallel_iterator& operator=(
+        const coverage_map_parallel_iterator& other) = delete;
+    coverage_map_parallel_iterator& operator=(
+        coverage_map_parallel_iterator&& other) = delete;
 
     unsigned int get_num_workers() const { return tp_.get_num_workers(); }
 
     unsigned int get_worker_id() const { return tp_.get_worker_id(); }
 
     template <class T_VISITOR>
-    void visit_all_parameter_combinations(T_VISITOR &visitor) {
+    void visit_all_parameter_combinations(T_VISITOR& visitor) {
       visitor_ = visitor;
 
       task_group tg(tp_.createTaskGroup());
       for (unsigned int i = 1; i < iterate_tasks_.size(); ++i) {
-        iterate_task &task = iterate_tasks_[i];
+        iterate_task& task = iterate_tasks_[i];
         task.reset();
         tg.spawn(i, &task);
       }
-      iterate_task &task = iterate_tasks_[0];
+      iterate_task& task = iterate_tasks_[0];
       task.reset();
       tg.spawn_and_wait(&task);
     }
@@ -220,7 +220,7 @@ class coverage_map_parallel_iterator {
       public:
         iterate_task() = delete;
 
-        iterate_task(coverage_map_parallel_iterator *iterator,
+        iterate_task(coverage_map_parallel_iterator* iterator,
                      unsigned long long start_index,
                      unsigned long long end_index)
             : base_type(),
@@ -230,9 +230,9 @@ class coverage_map_parallel_iterator {
           setCallable(*this);
         }
 
-        iterate_task(const this_type &) = delete;
+        iterate_task(const this_type&) = delete;
 
-        iterate_task(this_type &&other)
+        iterate_task(this_type&& other)
             : base_type(std::move(other)),
               iterator_(other.iterator_),
               start_index_(other.start_index_),
@@ -242,12 +242,12 @@ class coverage_map_parallel_iterator {
 
         virtual ~iterate_task() {}
 
-        this_type &operator=(const this_type &) = delete;
-        this_type &operator=(this_type &&) = delete;
+        this_type& operator=(const this_type&) = delete;
+        this_type& operator=(this_type&&) = delete;
 
         void operator()() {
           for (unsigned long long i = start_index_; i < end_index_; ++i) {
-            coverage_map_base::second_level_type &value_combinations =
+            coverage_map_base::second_level_type& value_combinations =
                 iterator_->cov_map_.get_coverage_map()[i];
 
             if (!iterator_->visitor_(value_combinations)) {
@@ -257,7 +257,7 @@ class coverage_map_parallel_iterator {
         }
 
       private:
-        coverage_map_parallel_iterator *iterator_;
+        coverage_map_parallel_iterator* iterator_;
         const unsigned long long start_index_;
         const unsigned long long end_index_;
     };
@@ -265,10 +265,10 @@ class coverage_map_parallel_iterator {
     friend class iterate_task;
 
   private:
-    coverage_map_base &cov_map_;
-    thread_pool &tp_;
+    coverage_map_base& cov_map_;
+    thread_pool& tp_;
     std::vector<iterate_task> iterate_tasks_;
-    function_ref<bool(coverage_map_base::second_level_type &)> visitor_;
+    function_ref<bool(coverage_map_base::second_level_type&)> visitor_;
 };
 
 /**
@@ -292,26 +292,26 @@ class coverage_map : public coverage_map_base {
     typedef coverage_map_base base_type;
 
   public:
-    coverage_map(unsigned int n, unsigned int t, const internal_model &model,
-                 const std::vector<unsigned int> &parameter_index_map,
-                 const binom_coeff_table &binomial_coeffs,
+    coverage_map(unsigned int n, unsigned int t, const internal_model& model,
+                 const std::vector<unsigned int>& parameter_index_map,
+                 const binom_coeff_table& binomial_coeffs,
                  bool fixed_last_parameter)
         : base_type(n, t, model, parameter_index_map, binomial_coeffs,
                     fixed_last_parameter) {}
 
-    coverage_map(const coverage_map &other) = default;
-    coverage_map(coverage_map &&other) = default;
+    coverage_map(const coverage_map& other) = default;
+    coverage_map(coverage_map&& other) = default;
 
     ~coverage_map() = default;
 
-    coverage_map &operator=(const coverage_map &other) = default;
-    coverage_map &operator=(coverage_map &&other) = default;
+    coverage_map& operator=(const coverage_map& other) = default;
+    coverage_map& operator=(coverage_map&& other) = default;
 
     coverage_map_iterator create_iterator() {
       return coverage_map_iterator(*this);
     }
 
-    coverage_map_parallel_iterator create_parallel_iterator(thread_pool &tp) {
+    coverage_map_parallel_iterator create_parallel_iterator(thread_pool& tp) {
       return coverage_map_parallel_iterator(*this, tp);
     }
 };

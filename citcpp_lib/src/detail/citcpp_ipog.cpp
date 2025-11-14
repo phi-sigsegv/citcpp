@@ -40,7 +40,7 @@ void main_ipog_loop_body(
       t.get_values()[real_current_param_idx] = 0;
     }
 
-    unsigned long long number_combos_to_cover = 0;
+    unsigned long long reported_number_combos_to_cover = 0;
     for (const auto& relation : relations) {
       if (relation
               .get_parameter_index_map()[relation.get_current_param_idx()] ==
@@ -61,13 +61,14 @@ void main_ipog_loop_body(
         // count too many interactions.
         if (relation.get_current_interaction_strength() >=
             relation.get_specified_interaction_strength()) {
-          number_combos_to_cover += relation_number_combos_to_cover;
+          reported_number_combos_to_cover += relation_number_combos_to_cover;
         }
       }
     }
 
     tp.stop_workers();
-    exec_handle.add_number_of_covered_combinations(number_combos_to_cover);
+    exec_handle.add_number_of_covered_combinations(
+        reported_number_combos_to_cover);
   } else {
     std::vector<std::pair<const internal_relation&, coverage_map>>
         relation_cov_maps;
