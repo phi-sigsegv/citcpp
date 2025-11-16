@@ -111,14 +111,8 @@ std::vector<internal_relation> citcpp_ipog_base::create_relations(
   std::vector<internal_relation> relations;
 
   if (strength >= 1) {
-    std::vector<unsigned int> parameter_index_map(param_num_values.size());
-    std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
-
-    std::sort(parameter_index_map.begin(), parameter_index_map.end(),
-              [&param_num_values](const unsigned int& index1,
-                                  const unsigned int& index2) {
-                return param_num_values[index1] > param_num_values[index2];
-              });
+    std::vector<unsigned int> parameter_index_map =
+        create_parameter_index_map(internal_model);
 
     relations.emplace_back(std::move(parameter_index_map), strength);
   } else {
