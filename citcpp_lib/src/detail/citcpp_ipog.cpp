@@ -260,7 +260,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   for (const auto& relation : relations) {
     const unsigned long long number_of_covered_combos =
-        (relation.get_current_interaction_strength() >=
+        (relation.get_current_param_idx() >=
          relation.get_specified_interaction_strength())
             ? number_of_combinations_to_cover(
                   relation.get_current_param_idx(), model,
