@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace {
@@ -116,19 +117,23 @@ std::vector<internal_relation> citcpp_ipog_base::create_relations(
 
     relations.emplace_back(std::move(parameter_index_map), strength);
   } else {
+    std::unordered_map<std::string, unsigned int> param_name_to_index_map;
+    {
+      unsigned int param_index = 0;
+      for (const auto& param : model.get_parameters()) {
+        param_name_to_index_map[param.get_name()] = param_index;
+        ++param_index;
+      }
+    }
+
     for (const auto& relation : model.get_relations()) {
       std::vector<unsigned int> parameter_index_map;
 
       // Find the indices of referenced parameters and add them to the relation.
       for (const auto& param_ref : relation.get_parameters()) {
-        unsigned int param_idx = 0;
-        for (const auto& param : model.get_parameters()) {
-          if (param.get_name() == param_ref.get().get_name()) {
-            parameter_index_map.push_back(param_idx);
-            break;
-          }
-          ++param_idx;
-        }
+        unsigned int param_idx =
+            param_name_to_index_map[param_ref.get().get_name()];
+        parameter_index_map.push_back(param_idx);
       }
 
       std::sort(parameter_index_map.begin(), parameter_index_map.end(),
