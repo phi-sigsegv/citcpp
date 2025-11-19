@@ -3,19 +3,21 @@
 
 #include <citcpp/coverage_measurement.hpp>
 #include <ostream>
+#include <unordered_map>
 
 namespace citcpp {
 namespace detail {
 
 class coverage_measurement_json {
   public:
-    coverage_measurement_json(const coverage_measurement &covm);
+    coverage_measurement_json(
+        const std::unordered_map<std::string, coverage_measurement>& covm);
 
-    friend std::ostream &operator<<(std::ostream &os,
-                                    const coverage_measurement_json &covm_json);
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const coverage_measurement_json& covm_json);
 
   private:
-    const coverage_measurement &covm_;
+    const std::unordered_map<std::string, coverage_measurement>& covm_;
 };
 
 }  // namespace detail

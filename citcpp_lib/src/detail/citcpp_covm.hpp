@@ -20,29 +20,29 @@ class covm_exec_handle_impl;
  */
 class citcpp_covm {
   public:
-    citcpp_covm(const model &input_model, const test_set &tests,
-                const coverage_measurement_config &config);
-    citcpp_covm(model &&input_model, test_set &&tests,
-                const coverage_measurement_config &config);
+    citcpp_covm(const model& input_model, const test_set& tests,
+                const coverage_measurement_config& config);
+    citcpp_covm(model&& input_model, test_set&& tests,
+                const coverage_measurement_config& config);
 
     /**
      * Too lazy to implement/ensuring that it is well-defined.
      */
-    citcpp_covm(citcpp_covm &&) = delete;
-    citcpp_covm(const citcpp_covm &) = delete;
+    citcpp_covm(citcpp_covm&&) = delete;
+    citcpp_covm(const citcpp_covm&) = delete;
 
     /**
      * Too lazy to implement/ensuring that it is well-defined.
      */
-    citcpp_covm &operator=(citcpp_covm &&) = delete;
-    citcpp_covm &operator=(const citcpp_covm &) = delete;
+    citcpp_covm& operator=(citcpp_covm&&) = delete;
+    citcpp_covm& operator=(const citcpp_covm&) = delete;
 
-    void set_interaction_strength(unsigned int t);
+    void set_interaction_strength(int t);
 
     /**
      * This is the entry point to be called by a thread.
      */
-    void entry_point(covm_exec_handle_impl &exec_handle);
+    void entry_point(covm_exec_handle_impl& exec_handle);
 
   private:
     const coverage_measurement_config config_;
@@ -50,7 +50,7 @@ class citcpp_covm {
     const internal_model model_;
     const test_set input_tests_;
     const internal_test_set tests_;
-    unsigned int strength_;
+    int strength_;
 };
 
 }  // namespace detail

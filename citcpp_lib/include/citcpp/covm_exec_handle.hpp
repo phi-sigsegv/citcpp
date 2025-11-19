@@ -4,6 +4,7 @@
 #include <future>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include "coverage_measurement.hpp"
 
@@ -38,9 +39,14 @@ class covm_exec_result {
     };
 
     /**
-     * Returns the object collecting the results of the coverage measurement.
+     * Returns a map from relation IDs to objects collecting the results
+     * of the coverage measurement.
      */
-    const coverage_measurement &get_result() const { return result_; }
+    const std::unordered_map<std::string, coverage_measurement>& get_result()
+        const {
+
+      return result_;
+    }
 
     /**
      * Returns the status code defining the result of the coverage measurement
@@ -55,7 +61,7 @@ class covm_exec_result {
     std::string_view get_error_message() const { return error_message_; }
 
   protected:
-    coverage_measurement result_;
+    std::unordered_map<std::string, coverage_measurement> result_;
     covm_result_code result_code_;
     std::string error_message_;
 };

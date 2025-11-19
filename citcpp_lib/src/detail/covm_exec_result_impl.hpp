@@ -8,9 +8,13 @@ namespace citcpp {
 
 class covm_exec_result_impl : public covm_exec_result {
   public:
-    void set_result(const coverage_measurement& result) { result_ = result; }
+    void set_result(
+        const std::unordered_map<std::string, coverage_measurement>& result) {
+      result_ = result;
+    }
 
-    void set_result(coverage_measurement&& result) {
+    void set_result(
+        std::unordered_map<std::string, coverage_measurement>&& result) {
       result_ = std::move(result);
     }
 

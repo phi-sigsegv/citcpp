@@ -73,7 +73,7 @@ TEST_CASE("covm, testing PICT example model, strength 1") {
       measure_coverage(model, t, 1, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -114,7 +114,7 @@ TEST_CASE("covm, testing PICT example model, strength 2") {
       measure_coverage(model, t, 2, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -155,7 +155,7 @@ TEST_CASE("covm, testing PICT example model, strength 3") {
       measure_coverage(model, t, 3, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -196,7 +196,7 @@ TEST_CASE("covm, testing PICT example model, strength 4") {
       measure_coverage(model, t, 4, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -237,7 +237,7 @@ TEST_CASE("covm, testing PICT example model, strength 5") {
       measure_coverage(model, t, 5, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -278,7 +278,7 @@ TEST_CASE("covm, testing PICT example model, strength 6") {
       measure_coverage(model, t, 6, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -319,7 +319,7 @@ TEST_CASE("covm, testing PICT example model, strength 7") {
       measure_coverage(model, t, 7, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);

@@ -57,6 +57,12 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
       num_combinations_to_cover_ = num_combinations_to_cover;
     }
 
+    void add_number_of_combinations_to_cover(
+        unsigned long long num_combinations_to_cover) {
+      num_combinations_to_cover_.fetch_add(num_combinations_to_cover,
+                                           std::memory_order_acq_rel);
+    }
+
     void set_number_of_checked_combinations(
         unsigned long long checked_combinations) {
       checked_combinations_ = checked_combinations;

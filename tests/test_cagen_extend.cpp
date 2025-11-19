@@ -440,7 +440,7 @@ TEST_CASE(
       measure_coverage(model, t2, 1, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -511,7 +511,7 @@ TEST_CASE(
       measure_coverage(model, t2, 2, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -582,7 +582,7 @@ TEST_CASE(
       measure_coverage(model, t2, 3, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -653,7 +653,7 @@ TEST_CASE(
       measure_coverage(model, t2, 4, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -724,7 +724,7 @@ TEST_CASE(
       measure_coverage(model, t2, 5, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -795,7 +795,7 @@ TEST_CASE(
       measure_coverage(model, t2, 6, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
@@ -866,7 +866,7 @@ TEST_CASE(
       measure_coverage(model, t2, 7, coverage_measurement_config());
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
-  const coverage_measurement& covm = covm_result.get_result();
+  const coverage_measurement& covm = covm_result.get_result().at("");
 
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
