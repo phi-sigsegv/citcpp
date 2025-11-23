@@ -60,7 +60,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     const citcpp::model& input_model,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::internal_test_set& test_set,
-    const citcpp::coverage_measurement_config& config, unsigned int strength,
+    const citcpp::coverage_measurement_config& config, int strength,
     citcpp::detail::covm_exec_handle_impl& exec_handle) {
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -109,14 +109,18 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
           with_mt
               ? number_of_combinations_to_cover(
                     int_relation.get_parameter_index_map().size(), model,
-                    int_relation.get_parameter_index_map(), strength, false, tp)
+                    int_relation.get_parameter_index_map(),
+                    int_relation.get_specified_interaction_strength(), false,
+                    tp)
               : number_of_combinations_to_cover(
                     int_relation.get_parameter_index_map().size(), model,
-                    int_relation.get_parameter_index_map(), strength, false);
+                    int_relation.get_parameter_index_map(),
+                    int_relation.get_specified_interaction_strength(), false);
 
       covm_per_relation[relation.get_name()]
           .set_number_of_param_combos_to_cover(binomial_coeffs.get_coefficient(
-              model.get_parameter_num_values().size(), strength));
+              int_relation.get_parameter_index_map().size(),
+              int_relation.get_specified_interaction_strength()));
       covm_per_relation[relation.get_name()]
           .set_number_of_combinations_to_cover(number_combos_to_cover);
       exec_handle.add_number_of_combinations_to_cover(number_combos_to_cover);
