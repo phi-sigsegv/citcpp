@@ -10,6 +10,7 @@ list(APPEND CITCPP_UNITTESTS
   test_cagen_relations
   test_cov_measure_result
   test_cov_measure
+  test_cov_measure_relations
 )
 
 foreach(unittest IN LISTS CITCPP_UNITTESTS)
