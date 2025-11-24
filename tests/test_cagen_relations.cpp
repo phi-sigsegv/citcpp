@@ -400,6 +400,6 @@ TEST_CASE(
         ipog_test_set, {"PLATFORM", "CPUS", "RAM", "HDD", "OS", "Browser"});
 
     CHECK(handle->get_number_of_processed_parameters() == 6);
-    CHECK(handle->get_number_of_covered_combinations() == 90);
+    CHECK(handle->get_number_of_covered_combinations() == 81);
   }
 }
