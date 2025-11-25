@@ -47,10 +47,10 @@ jobs:
       # Build your program with the given configuration
       run: |
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-        mv ${{github.workspace}}/build/citcpp ${{github.workspace}}/build/citcpp-linux-x86_64
+        tar czf ${{github.workspace}}/build/citcpp-linux-x86_64.tar.gz ${{github.workspace}}/build/citcpp
 
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ needs.create_release.outputs.tag-name }}
-        files: ${{github.workspace}}/build/citcpp-linux-x86_64
+        files: ${{github.workspace}}/build/citcpp-linux-x86_64.tar.gz
