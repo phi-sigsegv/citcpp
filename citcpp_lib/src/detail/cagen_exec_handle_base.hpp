@@ -41,7 +41,7 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
 
     unsigned int get_testset_size() const { return testset_size_; }
 
-    void abort() { is_aborted_.test_and_set(); }
+    void abort() { is_aborted_.store(true, std::memory_order_relaxed); }
 
     std::future<citcpp::cagen_exec_result> get_test_set() {
       return test_set_.get_future();
@@ -75,7 +75,9 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
       testset_size_.fetch_add(testset_size, std::memory_order_acq_rel);
     }
 
-    bool is_job_aborted() { return is_aborted_.test(); }
+    bool is_job_aborted() {
+      return is_aborted_.load(std::memory_order_relaxed);
+    }
 
     void set_test_set(citcpp::cagen_exec_result&& test_set) {
       test_set_.set_value(std::move(test_set));
@@ -89,7 +91,7 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     std::atomic_ullong num_combinations_to_cover_;
     std::atomic_ullong covered_combinations_;
     std::atomic_uint testset_size_;
-    std::atomic_flag is_aborted_;
+    std::atomic_bool is_aborted_;
     std::promise<citcpp::cagen_exec_result> test_set_;
     std::atomic_uint duration_msec_;
     std::thread thread_;

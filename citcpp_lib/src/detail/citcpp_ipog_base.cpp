@@ -19,7 +19,7 @@ bool is_covered_by(const citcpp::detail::internal_relation& rel,
                                                  parameter_index_map.end());
 
   for (auto param_idx : rel.get_parameter_index_map()) {
-    if (!param_indices.contains(param_idx)) {
+    if (param_indices.find(param_idx) == param_indices.end()) {
       return false;
     }
   }
@@ -40,7 +40,7 @@ bool is_covered_by(const std::vector<unsigned int>& parameter_index_map,
       rel.get_parameter_index_map().end());
 
   for (auto param_idx : parameter_index_map) {
-    if (!param_indices.contains(param_idx)) {
+    if (param_indices.find(param_idx) == param_indices.end()) {
       return false;
     }
   }
@@ -91,7 +91,7 @@ std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
 
   auto param_idx_it = parameter_index_map.begin();
   while (param_idx_it != parameter_index_map.end()) {
-    if (param_indices.contains(*param_idx_it)) {
+    if (param_indices.find(*param_idx_it) != param_indices.end()) {
       ++param_idx_it;
     } else {
       // The parameter is irrelevant concerning coverage, since it does not

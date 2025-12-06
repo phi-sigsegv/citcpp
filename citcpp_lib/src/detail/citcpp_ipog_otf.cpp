@@ -420,7 +420,7 @@ void citcpp_ipog_otf::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
 
   const auto t_end = std::chrono::high_resolution_clock::now();
   const auto duration_in_milli_seconds =
-      duration_cast<std::chrono::milliseconds>(t_end - t_start);
+      std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start);
   exec_handle.set_duration_in_milli_seconds(duration_in_milli_seconds.count());
 
   // Set the generated test set.
