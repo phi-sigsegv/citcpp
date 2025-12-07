@@ -1,6 +1,6 @@
 #include "citcpp_algo_common.hpp"
 
-#include <new>
+#include "shared_constants.hpp"
 
 namespace {
 
@@ -26,7 +26,7 @@ unsigned long long recursive_combine_and_sum(
   return partial_sum;
 }
 
-class alignas(std::hardware_destructive_interference_size)
+class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     compute_partial_sum_task : public citcpp::detail::thread_pool::Task {
     typedef citcpp::detail::thread_pool::Task base_type;
     typedef compute_partial_sum_task this_type;

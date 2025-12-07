@@ -25,9 +25,7 @@ namespace threads {
 
 namespace detail {
 
-struct false_sharing_avoidance_alignment {
-    static constexpr size_t value = std::hardware_destructive_interference_size;
-};
+inline constexpr std::size_t false_sharing_avoidance_alignment = 64;
 
 /**
  * This template stores a tuple of indexes.
@@ -183,7 +181,7 @@ class hybrid_backoff {
 template <typename T_VALUE, std::size_t N>
 class array_fixed_size {
   private:
-    struct alignas(false_sharing_avoidance_alignment::value) aligned_value {
+    struct alignas(false_sharing_avoidance_alignment) aligned_value {
         T_VALUE m_value;
     };
     typedef array_fixed_size<T_VALUE, N> this_type;
@@ -360,7 +358,7 @@ class array_fixed_size {
     }
 
   private:
-    alignas(false_sharing_avoidance_alignment::value) aligned_value m_array[N];
+    alignas(false_sharing_avoidance_alignment) aligned_value m_array[N];
 };
 
 template <typename T_VALUE>
@@ -577,8 +575,7 @@ class concurrent_queue_intrusive_node {
 };
 
 template <typename T_VALUE>
-class alignas(false_sharing_avoidance_alignment::value)
-    concurrent_queue_intrusive {
+class alignas(false_sharing_avoidance_alignment) concurrent_queue_intrusive {
     typedef concurrent_queue_intrusive_node node_type;
     typedef concurrent_queue_intrusive<T_VALUE> this_type;
 
@@ -914,17 +911,14 @@ class alignas(false_sharing_avoidance_alignment::value)
     bool try_pop(reference destination) { return try_pop(&destination); }
 
   private:
-    alignas(false_sharing_avoidance_alignment::value) SpinLock m_lock;
-    alignas(false_sharing_avoidance_alignment::value) node_type m_dummy;
-    alignas(false_sharing_avoidance_alignment::value)
-        std::atomic<node_type*> m_head;
-    alignas(false_sharing_avoidance_alignment::value)
-        std::atomic<node_type*> m_tail;
+    alignas(false_sharing_avoidance_alignment) SpinLock m_lock;
+    alignas(false_sharing_avoidance_alignment) node_type m_dummy;
+    alignas(false_sharing_avoidance_alignment) std::atomic<node_type*> m_head;
+    alignas(false_sharing_avoidance_alignment) std::atomic<node_type*> m_tail;
 };
 
 template <typename T_VALUE, std::size_t MAX_NUM_QUEUES>
-class alignas(false_sharing_avoidance_alignment::value)
-    distributed_queue_intrusive {
+class alignas(false_sharing_avoidance_alignment) distributed_queue_intrusive {
     typedef array_fixed_size<concurrent_queue_intrusive<T_VALUE>,
                              MAX_NUM_QUEUES>
         array_type;

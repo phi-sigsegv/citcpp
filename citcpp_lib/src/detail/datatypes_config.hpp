@@ -1,13 +1,7 @@
-/*
- * compile_time_selected_datatypes.hpp
- *
- *  Created on: Jul 2, 2025
- *      Author: philipp
- */
 #include <cstdint>
-#include <new>
 #include <vector>
 
+#include "shared_constants.hpp"
 #include "small_vector.hpp"
 #include "threading_lib.hpp"
 
@@ -26,8 +20,7 @@ template <class T>
 // using thread_local_vector = std::vector<T>;
 using thread_local_vector = SmallVector<T, 32>;
 
-class alignas(std::hardware_destructive_interference_size)
-    aligned_param_vector {
+class alignas(false_sharing_avoidance_alignment) aligned_param_vector {
 
   public:
     aligned_param_vector() : value() {}
@@ -56,12 +49,12 @@ class alignas(std::hardware_destructive_interference_size)
     param_vector value;
 };
 
-struct alignas(std::hardware_destructive_interference_size) aligned_ull_value {
+struct alignas(false_sharing_avoidance_alignment) aligned_ull_value {
     unsigned long long value;
 };
 
 template <typename T>
-class alignas(std::hardware_destructive_interference_size) aligned_vector {
+class alignas(false_sharing_avoidance_alignment) aligned_vector {
   public:
     aligned_vector() : value() {}
 

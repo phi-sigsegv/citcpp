@@ -1,19 +1,18 @@
 #include "covm_algorithm_uniform_strength.hpp"
 
-#include <new>
-
 #include "bitset.hpp"
 #include "citcpp_utils.hpp"
 #include "param_combo_iteration.hpp"
+#include "shared_constants.hpp"
 
 namespace {
 
-struct alignas(std::hardware_destructive_interference_size)
+struct alignas(citcpp::detail::false_sharing_avoidance_alignment)
     aligned_array_wrapper {
     citcpp::detail::array_wrapper_uint64 value;
 };
 
-struct alignas(std::hardware_destructive_interference_size)
+struct alignas(citcpp::detail::false_sharing_avoidance_alignment)
     aligned_coverage_level_to_num_param_combos {
     citcpp::coverage_measurement::t_coverage_level_to_num_param_combos value;
 };
@@ -234,12 +233,12 @@ class covm_per_param_combo_functor_parallel {
     const citcpp::detail::internal_test_set& test_set_;
     citcpp::detail::covm_exec_handle_impl& exec_handle_;
     const citcpp::detail::param_combo_parallel_iterator& param_combo_it_;
-    alignas(std::hardware_destructive_interference_size) citcpp::detail::
+    alignas(citcpp::detail::false_sharing_avoidance_alignment) citcpp::detail::
         thread_local_vector<aligned_array_wrapper> bitset_backing_array_;
-    alignas(std::hardware_destructive_interference_size)
+    alignas(citcpp::detail::false_sharing_avoidance_alignment)
         citcpp::detail::thread_local_vector<
             citcpp::detail::aligned_vector<unsigned long long>> covered_tuples_;
-    alignas(std::hardware_destructive_interference_size)
+    alignas(citcpp::detail::false_sharing_avoidance_alignment)
         citcpp::detail::thread_local_vector<
             aligned_coverage_level_to_num_param_combos> cov_level_to_num_param_combos_;
 };

@@ -6,6 +6,7 @@
 #include "datatypes_config.hpp"
 #include "function_ref.hpp"
 #include "internal_model.hpp"
+#include "shared_constants.hpp"
 
 namespace citcpp {
 namespace detail {
@@ -182,7 +183,7 @@ class param_combo_parallel_iterator {
     }
 
   private:
-    class alignas(std::hardware_destructive_interference_size) iterate_task
+    class alignas(false_sharing_avoidance_alignment) iterate_task
         : public thread_pool::Task {
       private:
         typedef thread_pool::Task base_type;

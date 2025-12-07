@@ -1,9 +1,9 @@
 #include "ipog_horizontal_extension.hpp"
 
 #include <algorithm>
-#include <new>
 
 #include "citcpp_utils.hpp"
+#include "shared_constants.hpp"
 
 namespace {
 
@@ -147,7 +147,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     const citcpp::detail::internal_model& model_;
     const citcpp::detail::test& test_;
     const citcpp::detail::thread_pool& tp_;
-    alignas(std::hardware_destructive_interference_size)
+    alignas(citcpp::detail::false_sharing_avoidance_alignment)
         citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
             unsigned long long>>& gain_per_value_;
 };
@@ -424,7 +424,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
     const citcpp::detail::internal_model& model_;
     const citcpp::detail::test& test_;
     const citcpp::detail::thread_pool& tp_;
-    alignas(std::hardware_destructive_interference_size)
+    alignas(citcpp::detail::false_sharing_avoidance_alignment)
         citcpp::detail::thread_local_vector<
             citcpp::detail::aligned_ull_value> num_new_covered_tuples_;
 };
@@ -763,10 +763,10 @@ class
     const bool enable_coverage_update_;
     const bool enable_gain_computation_;
     const citcpp::detail::thread_pool& tp_;
-    alignas(std::hardware_destructive_interference_size)
+    alignas(citcpp::detail::false_sharing_avoidance_alignment)
         citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
             unsigned long long>>& gain_per_value_;
-    alignas(std::hardware_destructive_interference_size)
+    alignas(citcpp::detail::false_sharing_avoidance_alignment)
         citcpp::detail::thread_local_vector<
             citcpp::detail::aligned_ull_value> num_new_covered_tuples_;
 };
