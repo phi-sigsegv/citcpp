@@ -43,8 +43,7 @@ std::vector<citcpp::detail::internal_relation> create_relations(
 
       // Find the indices of referenced parameters and add them to the relation.
       for (const auto& param_ref : relation.get_parameters()) {
-        unsigned int param_idx =
-            param_name_to_index_map[param_ref.get().get_name()];
+        unsigned int param_idx = param_name_to_index_map[param_ref.get_name()];
         parameter_index_map.push_back(param_idx);
       }
 
