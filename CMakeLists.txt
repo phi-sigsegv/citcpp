@@ -48,6 +48,7 @@ endif()
 # Unittest
 # -----------------------------------------------------------------------------
 if(CITCPP_BUILD_TESTS)
+  set(CITCPP_MAIN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
   include(CTest)
   add_subdirectory(tests)
 endif(CITCPP_BUILD_TESTS)

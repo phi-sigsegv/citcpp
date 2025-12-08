@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <citcpp/citcpp.hpp>
+#include <duration_wrapper.hpp>
 #include <iostream>
 
 namespace {
@@ -86,9 +87,9 @@ TEST_CASE("covm, testing PICT example model, relation with strength 1") {
   CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                         COVERING_ARRAY_GENERATION_COMPLETED);
 
-  const auto duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-  std::cout << "Test set generated using IPOG in " << duration_seconds
+  std::cout << "Test set generated using IPOG in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   handle->get_duration_in_milli_seconds()))
             << " and has " << ipog_test_set.get_list_of_tests().size()
             << " rows." << std::endl;
 
@@ -101,16 +102,18 @@ TEST_CASE("covm, testing PICT example model, relation with strength 1") {
       create_relation(model, "R1", {"PLATFORM", "CPUS", "RAM", "HDD"}, 1));
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, ipog_test_set, -1);
+
+  std::cout << "Coverage measured in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   covm_handle->get_duration_in_milli_seconds()))
+            << std::endl;
+
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
   const coverage_measurement& covm = covm_result.get_result().at("R1");
-
-  const auto covm_duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
-  std::cout << "Coverage measured in " << covm_duration_seconds << std::endl;
-
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -130,9 +133,9 @@ TEST_CASE("covm, testing PICT example model, relation with strength 2") {
   CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                         COVERING_ARRAY_GENERATION_COMPLETED);
 
-  const auto duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-  std::cout << "Test set generated using IPOG in " << duration_seconds
+  std::cout << "Test set generated using IPOG in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   handle->get_duration_in_milli_seconds()))
             << " and has " << ipog_test_set.get_list_of_tests().size()
             << " rows." << std::endl;
 
@@ -140,16 +143,18 @@ TEST_CASE("covm, testing PICT example model, relation with strength 2") {
       create_relation(model, "R2", {"PLATFORM", "CPUS", "RAM", "HDD"}, 2));
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, ipog_test_set, -1);
+
+  std::cout << "Coverage measured in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   covm_handle->get_duration_in_milli_seconds()))
+            << std::endl;
+
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
   const coverage_measurement& covm = covm_result.get_result().at("R2");
-
-  const auto covm_duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
-  std::cout << "Coverage measured in " << covm_duration_seconds << std::endl;
-
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -169,9 +174,9 @@ TEST_CASE("covm, testing PICT example model, relation with strength 3") {
   CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                         COVERING_ARRAY_GENERATION_COMPLETED);
 
-  const auto duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-  std::cout << "Test set generated using IPOG in " << duration_seconds
+  std::cout << "Test set generated using IPOG in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   handle->get_duration_in_milli_seconds()))
             << " and has " << ipog_test_set.get_list_of_tests().size()
             << " rows." << std::endl;
 
@@ -179,16 +184,18 @@ TEST_CASE("covm, testing PICT example model, relation with strength 3") {
       create_relation(model, "R3", {"PLATFORM", "CPUS", "RAM", "HDD"}, 3));
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, ipog_test_set, -1);
+
+  std::cout << "Coverage measured in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   covm_handle->get_duration_in_milli_seconds()))
+            << std::endl;
+
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
   const coverage_measurement& covm = covm_result.get_result().at("R3");
-
-  const auto covm_duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
-  std::cout << "Coverage measured in " << covm_duration_seconds << std::endl;
-
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -208,9 +215,9 @@ TEST_CASE("covm, testing PICT example model, relation with strength 4") {
   CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                         COVERING_ARRAY_GENERATION_COMPLETED);
 
-  const auto duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-  std::cout << "Test set generated using IPOG in " << duration_seconds
+  std::cout << "Test set generated using IPOG in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   handle->get_duration_in_milli_seconds()))
             << " and has " << ipog_test_set.get_list_of_tests().size()
             << " rows." << std::endl;
 
@@ -218,16 +225,18 @@ TEST_CASE("covm, testing PICT example model, relation with strength 4") {
       create_relation(model, "R4", {"PLATFORM", "CPUS", "RAM", "HDD"}, 4));
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, ipog_test_set, -1);
+
+  std::cout << "Coverage measured in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   covm_handle->get_duration_in_milli_seconds()))
+            << std::endl;
+
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
   const coverage_measurement& covm = covm_result.get_result().at("R4");
-
-  const auto covm_duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
-  std::cout << "Coverage measured in " << covm_duration_seconds << std::endl;
-
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -247,9 +256,9 @@ TEST_CASE("covm, testing PICT example model, mixed strength non-overlapping") {
   CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                         COVERING_ARRAY_GENERATION_COMPLETED);
 
-  const auto duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-  std::cout << "Test set generated using IPOG in " << duration_seconds
+  std::cout << "Test set generated using IPOG in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   handle->get_duration_in_milli_seconds()))
             << " and has " << ipog_test_set.get_list_of_tests().size()
             << " rows." << std::endl;
 
@@ -258,13 +267,16 @@ TEST_CASE("covm, testing PICT example model, mixed strength non-overlapping") {
       create_relation(model, "R3", {"PLATFORM", "OS", "Browser"}, 3));
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, ipog_test_set, -1);
+
+  std::cout << "Coverage measured in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   covm_handle->get_duration_in_milli_seconds()))
+            << std::endl;
+
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
-  const auto covm_duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
-  std::cout << "Coverage measured in " << covm_duration_seconds << std::endl;
 
   {
     const coverage_measurement& covm = covm_result.get_result().at("R2");
@@ -294,9 +306,9 @@ TEST_CASE("covm, testing PICT example model, mixed strength overlapping") {
   CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                         COVERING_ARRAY_GENERATION_COMPLETED);
 
-  const auto duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-  std::cout << "Test set generated using IPOG in " << duration_seconds
+  std::cout << "Test set generated using IPOG in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   handle->get_duration_in_milli_seconds()))
             << " and has " << ipog_test_set.get_list_of_tests().size()
             << " rows." << std::endl;
 
@@ -306,13 +318,16 @@ TEST_CASE("covm, testing PICT example model, mixed strength overlapping") {
       create_relation(model, "R3", {"PLATFORM", "OS", "Browser"}, 3));
   std::unique_ptr<covm_exec_handle> covm_handle =
       measure_coverage(model, ipog_test_set, -1);
+
+  std::cout << "Coverage measured in "
+            << duration_wrapper(std::chrono::milliseconds(
+                   covm_handle->get_duration_in_milli_seconds()))
+            << std::endl;
+
   auto covm_f = covm_handle->get_coverage_measurement();
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
-  const auto covm_duration_seconds = std::chrono::duration<double>(
-      std::chrono::milliseconds(covm_handle->get_duration_in_milli_seconds()));
-  std::cout << "Coverage measured in " << covm_duration_seconds << std::endl;
 
   {
     const coverage_measurement& covm = covm_result.get_result().at("R2");

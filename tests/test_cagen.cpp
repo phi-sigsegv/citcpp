@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <citcpp/citcpp.hpp>
+#include <duration_wrapper.hpp>
 #include <iostream>
 
 namespace {
@@ -90,9 +91,9 @@ TEST_CASE("cagen, testing simple model, strength 1") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -116,9 +117,9 @@ TEST_CASE("cagen, testing simple model, strength 1") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -148,9 +149,9 @@ TEST_CASE("cagen, testing simple model, strength 2") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -169,9 +170,9 @@ TEST_CASE("cagen, testing simple model, strength 2") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -196,9 +197,9 @@ TEST_CASE("cagen, testing simple model, strength 3") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -217,9 +218,9 @@ TEST_CASE("cagen, testing simple model, strength 3") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -244,9 +245,9 @@ TEST_CASE("cagen, testing PICT example model, strength 1") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
 
@@ -270,9 +271,9 @@ TEST_CASE("cagen, testing PICT example model, strength 1") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
 
@@ -302,9 +303,9 @@ TEST_CASE("cagen, testing PICT example model, strength 2") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -323,9 +324,9 @@ TEST_CASE("cagen, testing PICT example model, strength 2") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -350,9 +351,9 @@ TEST_CASE("cagen, testing PICT example model, strength 3") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -371,9 +372,9 @@ TEST_CASE("cagen, testing PICT example model, strength 3") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -398,9 +399,9 @@ TEST_CASE("cagen, testing PICT example model, strength 4") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -419,9 +420,9 @@ TEST_CASE("cagen, testing PICT example model, strength 4") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -446,9 +447,9 @@ TEST_CASE("cagen, testing PICT example model, strength 5") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -467,9 +468,9 @@ TEST_CASE("cagen, testing PICT example model, strength 5") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -494,9 +495,9 @@ TEST_CASE("cagen, testing PICT example model, strength 6") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -515,9 +516,9 @@ TEST_CASE("cagen, testing PICT example model, strength 6") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -542,9 +543,9 @@ TEST_CASE("cagen, testing PICT example model, strength 7") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG in " << duration_seconds
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
@@ -563,9 +564,9 @@ TEST_CASE("cagen, testing PICT example model, strength 7") {
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    const auto duration_seconds = std::chrono::duration<double>(
-        std::chrono::milliseconds(handle->get_duration_in_milli_seconds()));
-    std::cout << "Test set generated using IPOG_OTF in " << duration_seconds
+    std::cout << "Test set generated using IPOG_OTF in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_otf_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
