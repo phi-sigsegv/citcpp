@@ -162,29 +162,36 @@ unsigned long long number_of_combinations_to_cover(
   std::atomic_ullong num_combinations = 0;
 
   if (fixed_last_parameter) {
+    // Parallelization cannot really pay off if we have an interaction strength
+    // <= 2. So resort to the sequential implementation.
+    if (t <= 2) {
+      return number_of_combinations_to_cover(n, model, parameter_index_map, t,
+                                             fixed_last_parameter);
+    }
+
     const unsigned int real_last_param_idx = parameter_index_map[n - 1];
     const int num_last_param_values =
         model.get_parameter_num_values()[real_last_param_idx];
 
-    if (t >= 2) {
-      task_group tg(tp.createTaskGroup());
+    task_group tg(tp.createTaskGroup());
 
-      std::vector<compute_partial_sum_task> tasks(n - t + 1);
-      const int array_offset = t - 2;
-      for (int i = n - 2; i >= array_offset; --i) {
-        tasks[i - array_offset] =
-            compute_partial_sum_task(i, i, t - 1, num_last_param_values,
-                                     &model.get_parameter_num_values(),
-                                     &parameter_index_map, &num_combinations);
-        tg.spawn(i, &tasks[i - array_offset]);
-      }
-      tg.wait();
-    } else {
-      // We have exactly one parameter to select, which is just the one we have
-      // fixed. So we do not have to walk over combinations of parameters here.
-      return num_last_param_values;
+    std::vector<compute_partial_sum_task> tasks(n - t + 1);
+    const int array_offset = t - 2;
+    for (int i = n - 2; i >= array_offset; --i) {
+      tasks[i - array_offset] = compute_partial_sum_task(
+          i, i, t - 1, num_last_param_values, &model.get_parameter_num_values(),
+          &parameter_index_map, &num_combinations);
+      tg.spawn(i, &tasks[i - array_offset]);
     }
+    tg.wait();
   } else {
+    // Parallelization cannot really pay off if we have an interaction strength
+    // <= 1. So resort to the sequential implementation.
+    if (t <= 1) {
+      return number_of_combinations_to_cover(n, model, parameter_index_map, t,
+                                             fixed_last_parameter);
+    }
+
     task_group tg(tp.createTaskGroup());
 
     std::vector<compute_partial_sum_task> tasks(n - t + 1);
