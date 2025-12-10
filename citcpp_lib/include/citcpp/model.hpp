@@ -120,6 +120,9 @@ class parameter {
  */
 class parameter_reference {
   public:
+    parameter_reference() = default;
+    parameter_reference(const std::string& param_name)
+        : param_name_(param_name) {}
     parameter_reference(const parameter& param)
         : param_name_(param.get_name()) {}
     parameter_reference(const parameter_reference& other) = default;

@@ -21,6 +21,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/covm_algorithm_uniform_strength.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_covm.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_evaluator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/coverage_measurement.cpp
