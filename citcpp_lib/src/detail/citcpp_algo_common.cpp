@@ -170,12 +170,13 @@ unsigned long long number_of_combinations_to_cover(
       task_group tg(tp.createTaskGroup());
 
       std::vector<compute_partial_sum_task> tasks(n - t + 1);
-      for (unsigned int i = n - 2; i >= (t - 2); --i) {
-        tasks[i - t + 2] =
+      const int array_offset = t - 2;
+      for (int i = n - 2; i >= array_offset; --i) {
+        tasks[i - array_offset] =
             compute_partial_sum_task(i, i, t - 1, num_last_param_values,
                                      &model.get_parameter_num_values(),
                                      &parameter_index_map, &num_combinations);
-        tg.spawn(i, &tasks[i - t + 2]);
+        tg.spawn(i, &tasks[i - array_offset]);
       }
       tg.wait();
     } else {
@@ -187,11 +188,12 @@ unsigned long long number_of_combinations_to_cover(
     task_group tg(tp.createTaskGroup());
 
     std::vector<compute_partial_sum_task> tasks(n - t + 1);
-    for (unsigned int i = n - 1; i >= (t - 1); --i) {
-      tasks[i - t + 1] = compute_partial_sum_task(
+    const int array_offset = t - 1;
+    for (int i = n - 1; i >= array_offset; --i) {
+      tasks[i - array_offset] = compute_partial_sum_task(
           i, i, t, 1, &model.get_parameter_num_values(), &parameter_index_map,
           &num_combinations);
-      tg.spawn(i, &tasks[i - t + 1]);
+      tg.spawn(i, &tasks[i - array_offset]);
     }
     tg.wait();
   }
