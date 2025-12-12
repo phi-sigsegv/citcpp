@@ -112,6 +112,9 @@ class alignas(false_sharing_avoidance_alignment) aligned_vector {
 using thread_pool = threads::WorkStealingThreadPool<32>;
 using task_group = thread_pool::TaskGroup;
 
+template <class T_DERIVED>
+using functor_task_base = thread_pool::FunctorTaskBase<T_DERIVED>;
+
 }  // namespace detail
 }  // namespace citcpp
 
