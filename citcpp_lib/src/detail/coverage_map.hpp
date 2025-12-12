@@ -161,8 +161,10 @@ class coverage_map_iterator {
 
 class coverage_map_parallel_iterator {
   public:
+    coverage_map_parallel_iterator() = default;
+
     coverage_map_parallel_iterator(coverage_map_base& cov_map, thread_pool& tp)
-        : cov_map_(cov_map), tp_(tp), iterate_tasks_(), visitor_() {
+        : cov_map_(&cov_map), tp_(&tp), iterate_tasks_(), visitor_() {
       const unsigned long long total_param_combos =
           cov_map.get_coverage_map().size();
       const unsigned long long num_tasks = std::min(
@@ -179,27 +181,73 @@ class coverage_map_parallel_iterator {
                                   total_param_combos);
     }
 
-    coverage_map_parallel_iterator(
-        const coverage_map_parallel_iterator& other) = delete;
-    coverage_map_parallel_iterator(coverage_map_parallel_iterator&& other) =
-        default;
+    coverage_map_parallel_iterator(const coverage_map_parallel_iterator& other)
+        : cov_map_(other.cov_map_),
+          tp_(other.tp_),
+          iterate_tasks_(other.iterate_tasks_),
+          visitor_(other.visitor_) {
+
+      for (auto& task : iterate_tasks_) {
+        task.set_iterator(this);
+      }
+    }
+
+    coverage_map_parallel_iterator(coverage_map_parallel_iterator&& other)
+        : cov_map_(other.cov_map_),
+          tp_(other.tp_),
+          iterate_tasks_(std::move(other.iterate_tasks_)),
+          visitor_(std::move(other.visitor_)) {
+
+      for (auto& task : iterate_tasks_) {
+        task.set_iterator(this);
+      }
+    }
 
     ~coverage_map_parallel_iterator() = default;
 
     coverage_map_parallel_iterator& operator=(
-        const coverage_map_parallel_iterator& other) = delete;
+        const coverage_map_parallel_iterator& other) {
+
+      if (this != &other) {
+        cov_map_ = other.cov_map_;
+        tp_ = other.tp_;
+        iterate_tasks_ = other.iterate_tasks_;
+        visitor_ = other.visitor_;
+
+        for (auto& task : iterate_tasks_) {
+          task.set_iterator(this);
+        }
+      }
+
+      return *this;
+    }
+
     coverage_map_parallel_iterator& operator=(
-        coverage_map_parallel_iterator&& other) = delete;
+        coverage_map_parallel_iterator&& other) {
 
-    unsigned int get_num_workers() const { return tp_.get_num_workers(); }
+      if (this != &other) {
+        cov_map_ = other.cov_map_;
+        tp_ = other.tp_;
+        iterate_tasks_ = std::move(other.iterate_tasks_);
+        visitor_ = std::move(other.visitor_);
 
-    unsigned int get_worker_id() const { return tp_.get_worker_id(); }
+        for (auto& task : iterate_tasks_) {
+          task.set_iterator(this);
+        }
+      }
+
+      return *this;
+    }
+
+    unsigned int get_num_workers() const { return tp_->get_num_workers(); }
+
+    unsigned int get_worker_id() const { return tp_->get_worker_id(); }
 
     template <class T_VISITOR>
     void visit_all_parameter_combinations(T_VISITOR& visitor) {
       visitor_ = visitor;
 
-      task_group tg(tp_.createTaskGroup());
+      task_group tg(tp_->createTaskGroup());
       for (unsigned int i = 1; i < iterate_tasks_.size(); ++i) {
         iterate_task& task = iterate_tasks_[i];
         task.reset();
@@ -212,13 +260,13 @@ class coverage_map_parallel_iterator {
 
   private:
     class alignas(false_sharing_avoidance_alignment) iterate_task
-        : public thread_pool::Task {
+        : public functor_task_base<iterate_task> {
       private:
-        typedef thread_pool::Task base_type;
+        typedef functor_task_base<iterate_task> base_type;
         typedef iterate_task this_type;
 
       public:
-        iterate_task() = delete;
+        iterate_task() = default;
 
         iterate_task(coverage_map_parallel_iterator* iterator,
                      unsigned long long start_index,
@@ -226,29 +274,14 @@ class coverage_map_parallel_iterator {
             : base_type(),
               iterator_(iterator),
               start_index_(start_index),
-              end_index_(end_index) {
-          setCallable(*this);
-        }
-
-        iterate_task(const this_type&) = delete;
-
-        iterate_task(this_type&& other)
-            : base_type(std::move(other)),
-              iterator_(other.iterator_),
-              start_index_(other.start_index_),
-              end_index_(other.end_index_) {
-          setCallable(*this);
-        }
+              end_index_(end_index) {}
 
         virtual ~iterate_task() {}
-
-        this_type& operator=(const this_type&) = delete;
-        this_type& operator=(this_type&&) = delete;
 
         void operator()() {
           for (unsigned long long i = start_index_; i < end_index_; ++i) {
             coverage_map_base::second_level_type& value_combinations =
-                iterator_->cov_map_.get_coverage_map()[i];
+                iterator_->cov_map_->get_coverage_map()[i];
 
             if (!iterator_->visitor_(value_combinations)) {
               return;
@@ -256,17 +289,21 @@ class coverage_map_parallel_iterator {
           }
         }
 
+        void set_iterator(coverage_map_parallel_iterator* iterator) {
+          iterator_ = iterator;
+        }
+
       private:
         coverage_map_parallel_iterator* iterator_;
-        const unsigned long long start_index_;
-        const unsigned long long end_index_;
+        unsigned long long start_index_;
+        unsigned long long end_index_;
     };
 
     friend class iterate_task;
 
   private:
-    coverage_map_base& cov_map_;
-    thread_pool& tp_;
+    coverage_map_base* cov_map_;
+    thread_pool* tp_;
     std::vector<iterate_task> iterate_tasks_;
     function_ref<bool(coverage_map_base::second_level_type&)> visitor_;
 };
