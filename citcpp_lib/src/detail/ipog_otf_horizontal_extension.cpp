@@ -551,11 +551,11 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       std::pair<const internal_relation*, param_combo_parallel_iterator>>
       param_combo_its;
   for (auto& rel : relations) {
-    param_combo_its.push_back(
-        std::make_pair(&rel, param_combo_parallel_iterator(
-                                 rel.get_current_param_idx() + 1,
-                                 rel.get_current_interaction_strength(),
-                                 rel.get_parameter_index_map(), true, tp)));
+    param_combo_its.emplace_back(
+        &rel,
+        param_combo_parallel_iterator(rel.get_current_param_idx() + 1,
+                                      rel.get_current_interaction_strength(),
+                                      rel.get_parameter_index_map(), true, tp));
   }
 
   unsigned int test_index = 0;
