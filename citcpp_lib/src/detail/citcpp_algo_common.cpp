@@ -27,22 +27,15 @@ unsigned long long recursive_combine_and_sum(
 }
 
 class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    compute_partial_sum_task : public citcpp::detail::thread_pool::Task {
-    typedef citcpp::detail::thread_pool::Task base_type;
+    compute_partial_sum_task
+    : public citcpp::detail::functor_task_base<compute_partial_sum_task> {
+
+    typedef citcpp::detail::functor_task_base<compute_partial_sum_task>
+        base_type;
     typedef compute_partial_sum_task this_type;
 
   public:
-    compute_partial_sum_task()
-        : base_type(),
-          start_idx_(0),
-          end_idx_(0),
-          num_params_to_select_(0),
-          additional_factor_(0),
-          factor_levels_(nullptr),
-          parameter_index_map_(nullptr),
-          num_combinations_(nullptr) {
-      setCallable(*this);
-    }
+    compute_partial_sum_task() = default;
 
     compute_partial_sum_task(
         int start_idx, int end_idx, int num_params_to_select,
@@ -57,43 +50,9 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
           additional_factor_(additional_factor),
           factor_levels_(factor_levels),
           parameter_index_map_(parameter_index_map),
-          num_combinations_(num_combinations) {
-      setCallable(*this);
-    }
-
-    compute_partial_sum_task(const this_type&) = delete;
-
-    compute_partial_sum_task(this_type&& other)
-        : base_type(std::move(other)),
-          start_idx_(other.start_idx_),
-          end_idx_(other.end_idx_),
-          num_params_to_select_(other.num_params_to_select_),
-          additional_factor_(other.additional_factor_),
-          factor_levels_(other.factor_levels_),
-          parameter_index_map_(other.parameter_index_map_),
-          num_combinations_(other.num_combinations_) {
-      setCallable(*this);
-    }
+          num_combinations_(num_combinations) {}
 
     virtual ~compute_partial_sum_task() {}
-
-    this_type& operator=(const this_type&) = delete;
-
-    this_type& operator=(this_type&& other) {
-      if (this != &other) {
-        base_type::operator=(std::move(other));
-        start_idx_ = other.start_idx_;
-        end_idx_ = other.end_idx_;
-        num_params_to_select_ = other.num_params_to_select_;
-        additional_factor_ = other.additional_factor_;
-        factor_levels_ = other.factor_levels_;
-        parameter_index_map_ = other.parameter_index_map_;
-        num_combinations_ = other.num_combinations_;
-        setCallable(*this);
-      }
-
-      return *this;
-    }
 
     void operator()() {
       const int current_level = num_params_to_select_ - 1;
