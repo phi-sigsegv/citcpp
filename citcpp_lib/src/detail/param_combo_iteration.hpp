@@ -122,16 +122,16 @@ class param_combo_parallel_iterator {
         // If we have fixed the last parameter and shall only select one,
         // then there is nothing to do.
         if (num_params_to_select >= 2) {
-          for (unsigned int j = num_params_to_select_from - 2;
-               j >= (num_params_to_select - 2); --j) {
+          const int loop_lb = num_params_to_select - 2;
+          for (int j = num_params_to_select_from - 2; j >= loop_lb; --j) {
 
             iterate_tasks_.emplace_back(this, j, j, num_params_to_select - 1,
                                         param_vector(param_indices_));
           }
         }
       } else {
-        for (unsigned int j = num_params_to_select_from - 1;
-             j >= (num_params_to_select - 1); --j) {
+        const int loop_lb = num_params_to_select - 1;
+        for (int j = num_params_to_select_from - 1; j >= loop_lb; --j) {
 
           iterate_tasks_.emplace_back(this, j, j, num_params_to_select,
                                       param_vector(param_indices_));
@@ -235,7 +235,7 @@ class param_combo_parallel_iterator {
         visitor(param_indices_);
       } else {
         task_group tg(tp_->createTaskGroup());
-        for (unsigned int i = 1; i < iterate_tasks_.size(); ++i) {
+        for (int i = 1; i < iterate_tasks_.size(); ++i) {
           iterate_task& task = iterate_tasks_[i];
           task.reset();
           tg.spawn(i, &task);
