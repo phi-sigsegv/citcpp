@@ -2701,6 +2701,48 @@ class WorkStealingThreadPool {
         }
     };
 
+    /**
+     * This class can be a used as a base class for tasks, which are functors
+     * themselves. The benefit of using this base class is that no callable
+     * to be executed needs to set. Instead the task automatically sets itself
+     * as the callabe to execute.
+     */
+    template <class T_DERIVED>
+    class FunctorTaskBase : public Task {
+        typedef FunctorTaskBase<T_DERIVED> this_type;
+
+      public:
+        FunctorTaskBase() : Task() {
+          this->setCallable(*static_cast<T_DERIVED*>(this));
+        }
+
+        FunctorTaskBase(const this_type& other) : Task(other) {
+          this->setCallable(*static_cast<T_DERIVED*>(this));
+        }
+
+        FunctorTaskBase(this_type&& other) : Task(std::move(other)) {
+          this->setCallable(*static_cast<T_DERIVED*>(this));
+        }
+
+        virtual ~FunctorTaskBase() = default;
+
+        this_type& operator=(const this_type& other) {
+          if (this != &other) {
+            this->setCallable(*static_cast<T_DERIVED*>(this));
+          }
+
+          return *this;
+        }
+
+        this_type& operator=(this_type&& other) {
+          if (this != &other) {
+            this->setCallable(*static_cast<T_DERIVED*>(this));
+          }
+
+          return *this;
+        }
+    };
+
     typedef typename Task::TaskList TaskList;
 
   public:
