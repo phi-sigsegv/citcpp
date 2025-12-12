@@ -1104,8 +1104,8 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       std::pair<const internal_relation*, coverage_map_parallel_iterator>>
       relation_cov_map_its;
   for (auto& rel : relations) {
-    relation_cov_map_its.push_back(
-        std::make_pair(rel.first, rel.second.create_parallel_iterator(tp)));
+    relation_cov_map_its.emplace_back(rel.first,
+                                      rel.second.create_parallel_iterator(tp));
   }
 
   test* previous_test = nullptr;
