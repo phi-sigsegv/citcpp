@@ -16,6 +16,9 @@ set(CITCPP_3RD_PARTY_DIR ${PROJECT_SOURCE_DIR}/3rd_party)
 
 message(STATUS "CITCPP_BUILD_TESTS: " ${CITCPP_BUILD_TESTS})
 
+add_subdirectory(${CITCPP_3RD_PARTY_DIR}/lace EXCLUDE_FROM_ALL)
+add_subdirectory(${CITCPP_3RD_PARTY_DIR}/sylvan EXCLUDE_FROM_ALL)
+
 add_subdirectory(citcpp_lib)
 
 set(CITCPP_EXE_SOURCES

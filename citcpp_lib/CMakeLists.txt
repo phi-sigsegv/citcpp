@@ -33,7 +33,7 @@ target_include_directories(citcpp_lib PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
-target_link_libraries(citcpp_lib PUBLIC Threads::Threads)
+target_link_libraries(citcpp_lib PUBLIC Threads::Threads PRIVATE sylvan::sylvan)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(citcpp_lib PRIVATE -Wno-interference-size)
