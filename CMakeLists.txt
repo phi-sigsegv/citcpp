@@ -44,6 +44,8 @@ if ((MSVC) AND (MSVC_VERSION GREATER_EQUAL 1914))
     target_compile_options(citcpp_exe PRIVATE "/Zc:__cplusplus" "/utf-8")
 endif()
 
+install(TARGETS citcpp_exe)
+
 # -----------------------------------------------------------------------------
 # Unittest
 # -----------------------------------------------------------------------------

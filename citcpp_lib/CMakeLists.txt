@@ -28,9 +28,10 @@ set(CITCPP_LIB_SOURCES
 )
 
 add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
+
 target_include_directories(citcpp_lib PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
 target_link_libraries(citcpp_lib PUBLIC Threads::Threads)
 
@@ -38,3 +39,35 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(citcpp_lib PRIVATE -Wno-interference-size)
 endif()
 
+install(TARGETS citcpp_lib
+  EXPORT citcpp-targets
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/citcpp
+  TYPE INCLUDE
+)
+
+install(EXPORT citcpp-targets
+  FILE citcpp-targets.cmake
+  NAMESPACE citcpp::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+)
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/citcpp-config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/cmake/citcpp-config.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+)
+
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/citcpp-config-version.cmake
+  VERSION ${citcpp_VERSION}
+  COMPATIBILITY SameMinorVersion
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/citcpp-config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/citcpp-config-version.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake
+)
