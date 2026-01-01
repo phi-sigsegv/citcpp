@@ -2,12 +2,12 @@
 #define DETAIL_COVERAGE_MAP_HPP_
 
 #include <algorithm>
+#include <citcpp/function_ref.hpp>
 #include <vector>
 
 #include "binom_coeff_table.hpp"
 #include "bitset.hpp"
 #include "datatypes_config.hpp"
-#include "function_ref.hpp"
 #include "internal_model.hpp"
 #include "shared_constants.hpp"
 

@@ -1,10 +1,10 @@
 #ifndef DETAIL_PARAM_COMBO_ITERATION_HPP_
 #define DETAIL_PARAM_COMBO_ITERATION_HPP_
 
+#include <citcpp/function_ref.hpp>
 #include <vector>
 
 #include "datatypes_config.hpp"
-#include "function_ref.hpp"
 #include "internal_model.hpp"
 #include "shared_constants.hpp"
 

@@ -1,18 +1,10 @@
-/*
- * function_ref.hpp
- *
- *  Created on: Jul 15, 2025
- *      Author: philipp
- */
-
-#ifndef DETAIL_FUNCTION_REF_HPP_
-#define DETAIL_FUNCTION_REF_HPP_
+#ifndef FUNCTION_REF_HPP_
+#define FUNCTION_REF_HPP_
 
 #include <cstdint>
 #include <utility>
 
 namespace citcpp {
-namespace detail {
 
 /**
  * This is a type copied from LLVM. It is an efficient, type-erasing, non-owning
@@ -75,7 +67,6 @@ class function_ref<Ret(Params...)> {
     operator bool() const { return callback; }
 };
 
-}  // namespace detail
 }  // namespace citcpp
 
-#endif /* DETAIL_FUNCTION_REF_HPP_ */
+#endif /* FUNCTION_REF_HPP_ */
