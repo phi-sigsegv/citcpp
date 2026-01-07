@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <memory>
 #include <numeric>
 #include <thread>
 #include <unordered_map>
@@ -12,12 +13,20 @@
 #include "cagen_exec_result_impl.hpp"
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
+#include "constraint_handler_void.hpp"
 #include "datatypes_config.hpp"
 #include "ipog_all_value_combinations.hpp"
 #include "ipog_otf_horizontal_extension.hpp"
 #include "ipog_otf_vertical_extension.hpp"
 
 namespace {
+
+std::unique_ptr<citcpp::detail::constraint_handler> create_constraint_handler(
+    const citcpp::detail::internal_model& model) {
+  using namespace citcpp::detail;
+
+  return std::make_unique<constraint_handler_void>(model);
+}
 
 void main_ipog_loop_body(
     const citcpp::detail::internal_model& model,
@@ -180,6 +189,9 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
     return;
   }
 
+  std::unique_ptr<constraint_handler> c_handler =
+      create_constraint_handler(model);
+
   const unsigned int first_param_idx =
       std::min(maximum_required_strength, maximum_prefix_length);
   for (unsigned int param_idx = 0; param_idx < first_param_idx; ++param_idx) {
@@ -213,8 +225,12 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   {
     // Step 1: Initialize for the first t parameters.
-    create_all_value_combinations(first_param_idx, model, parameter_index_map,
-                                  test_set);
+    with_mt ? create_all_value_combinations(first_param_idx, model,
+                                            parameter_index_map,
+                                            *c_handler.get(), test_set, tp)
+            : create_all_value_combinations(first_param_idx, model,
+                                            parameter_index_map,
+                                            *c_handler.get(), test_set);
     exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     exec_handle.set_number_of_processed_parameters(first_param_idx);
   }
