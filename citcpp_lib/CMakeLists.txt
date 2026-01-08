@@ -22,6 +22,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_covm.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_evaluator.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_void.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_concurrent.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp

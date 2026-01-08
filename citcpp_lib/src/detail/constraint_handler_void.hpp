@@ -28,14 +28,15 @@ class constraint_handler_void : public constraint_handler {
     bool is_valid_partial_test(const test& t) const override;
 
     /**
-     * This method reads the given partial test, in particular the assignments
-     * of values to parameters, and returns a list of feasible assignments
-     * of values to the given parameter in terms of a bitset.
-     * The bitset has bits enabled at indices corresponding to the indices
-     * of values in the domain definition of the parameter.
+     * See constraint_handler interface.
      */
     bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void replace_dont_care_values(test& t) const override;
 
   private:
     const internal_model& model_;

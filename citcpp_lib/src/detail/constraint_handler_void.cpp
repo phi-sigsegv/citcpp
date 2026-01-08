@@ -22,5 +22,16 @@ bitset_uint64 constraint_handler_void::get_valid_parameter_assignments(
   return values;
 }
 
+void constraint_handler_void::replace_dont_care_values(test& t) const {
+  for (unsigned int i = 0; i < t.get_values().size(); ++i) {
+    int& value = t.get_values()[i];
+    if (value < 0) {
+      // Found don't care value. We simply replace it with the
+      // first value of the respective parameter.
+      value = 0;
+    }
+  }
+}
+
 }  // namespace detail
 }  // namespace citcpp

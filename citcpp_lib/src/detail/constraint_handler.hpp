@@ -39,6 +39,20 @@ class constraint_handler {
      */
     virtual bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) const = 0;
+
+    /**
+     * This method reads the given test, in particular the parameters
+     * with don't care values, and replaces all of them by concrete
+     * values such that the resulting test is valid.
+     */
+    virtual void replace_dont_care_values(test& t) const = 0;
+
+    /**
+     * This method reads the given tests, in particular the parameters
+     * with don't care values, and replaces all of them by concrete
+     * values such that the resulting tests are all valid.
+     */
+    void replace_dont_care_values(internal_test_set& test_set) const;
 };
 
 }  // namespace detail

@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "constraint_handler_void.hpp"
+
 namespace {
 
 bool is_covered_by(const citcpp::detail::internal_relation& rel,
@@ -194,6 +196,12 @@ unsigned int citcpp_ipog_base::length_of_common_param_prefix(
   }
 
   return parameter_index_map.size();
+}
+
+std::unique_ptr<constraint_handler> citcpp_ipog_base::create_constraint_handler(
+    const internal_model& model) {
+
+  return std::make_unique<constraint_handler_void>(model);
 }
 
 }  // namespace detail

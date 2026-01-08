@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <memory>
 #include <numeric>
 #include <thread>
 #include <unordered_map>
@@ -13,7 +12,6 @@
 #include "cagen_exec_result_impl.hpp"
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
-#include "constraint_handler_void.hpp"
 #include "coverage_map.hpp"
 #include "datatypes_config.hpp"
 #include "ipog_all_value_combinations.hpp"
@@ -22,13 +20,6 @@
 #include "ipog_vertical_extension.hpp"
 
 namespace {
-
-std::unique_ptr<citcpp::detail::constraint_handler> create_constraint_handler(
-    const citcpp::detail::internal_model& model) {
-  using namespace citcpp::detail;
-
-  return std::make_unique<constraint_handler_void>(model);
-}
 
 void main_ipog_loop_body(
     const citcpp::detail::internal_model& model,
@@ -177,6 +168,7 @@ void main_ipog_loop_body(
 void main_ipog_loop(const citcpp::detail::internal_model& model,
                     std::vector<citcpp::detail::internal_relation>& relations,
                     citcpp::detail::internal_test_set& test_set,
+                    const citcpp::detail::constraint_handler& c_handler,
                     const citcpp::covering_array_computation_config config,
                     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
@@ -228,9 +220,6 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
     return;
   }
 
-  std::unique_ptr<constraint_handler> c_handler =
-      create_constraint_handler(model);
-
   const unsigned int first_param_idx =
       std::min(maximum_required_strength, maximum_prefix_length);
   for (unsigned int param_idx = 0; param_idx < first_param_idx; ++param_idx) {
@@ -264,12 +253,12 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   {
     // Step 1: Initialize for the first t parameters.
-    with_mt ? create_all_value_combinations(first_param_idx, model,
-                                            parameter_index_map,
-                                            *c_handler.get(), test_set, tp)
-            : create_all_value_combinations(first_param_idx, model,
-                                            parameter_index_map,
-                                            *c_handler.get(), test_set);
+    with_mt
+        ? create_all_value_combinations(first_param_idx, model,
+                                        parameter_index_map, c_handler,
+                                        test_set, tp)
+        : create_all_value_combinations(
+              first_param_idx, model, parameter_index_map, c_handler, test_set);
     exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     exec_handle.set_number_of_processed_parameters(first_param_idx);
   }
@@ -333,6 +322,7 @@ void main_ipog_loop_extend_test_set(
     const citcpp::detail::internal_model& model,
     std::vector<citcpp::detail::internal_relation>& relations,
     citcpp::detail::internal_test_set& test_set,
+    const citcpp::detail::constraint_handler& c_handler,
     const citcpp::covering_array_computation_config config,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
@@ -465,15 +455,18 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   std::vector<internal_relation> relations(
       create_relations(input_model_, model_, strength_));
 
+  std::unique_ptr<constraint_handler> c_handler =
+      create_constraint_handler(model_);
+
   internal_test_set tests(input_tests_);
   if (tests.get_list_of_tests().empty()) {
-    main_ipog_loop(model_, relations, tests, config_, exec_handle);
+    main_ipog_loop(model_, relations, tests, *c_handler, config_, exec_handle);
   } else {
-    main_ipog_loop_extend_test_set(model_, relations, tests, config_,
-                                   exec_handle);
+    main_ipog_loop_extend_test_set(model_, relations, tests, *c_handler,
+                                   config_, exec_handle);
   }
   if (config_.replace_dont_care_values()) {
-    replace_dont_care_values(tests, model_);
+    c_handler->replace_dont_care_values(tests);
   }
   test_set ts(
       model_.create_from_internal_test_set(tests, config_.value_separator()));

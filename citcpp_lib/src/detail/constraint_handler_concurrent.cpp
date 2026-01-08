@@ -91,6 +91,31 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     std::vector<citcpp::detail::bitset_uint64>* results_;
 };
 
+class alignas(citcpp::detail::false_sharing_avoidance_alignment)
+    replace_dont_care_values_task
+    : public citcpp::detail::functor_task_base<replace_dont_care_values_task> {
+
+    typedef citcpp::detail::functor_task_base<replace_dont_care_values_task>
+        base_type;
+    typedef replace_dont_care_values_task this_type;
+
+  public:
+    replace_dont_care_values_task() = default;
+
+    replace_dont_care_values_task(
+        citcpp::detail::test* test,
+        const citcpp::detail::constraint_handler* handler)
+        : base_type(), test_(test), handler_(handler) {}
+
+    virtual ~replace_dont_care_values_task() {}
+
+    void operator()() { handler_->replace_dont_care_values(*test_); }
+
+  private:
+    citcpp::detail::test* test_;
+    const citcpp::detail::constraint_handler* handler_;
+};
+
 }  // namespace
 
 namespace citcpp {
@@ -110,6 +135,10 @@ bitset_uint64 concurrent_constraint_handler::get_valid_parameter_assignments(
     const test& t, unsigned int param_idx) const {
 
   return handler_.get_valid_parameter_assignments(t, param_idx);
+}
+
+void concurrent_constraint_handler::replace_dont_care_values(test& t) const {
+  handler_.replace_dont_care_values(t);
 }
 
 bitset_uint64 concurrent_constraint_handler::check_validity_of_partial_tests(
@@ -153,6 +182,21 @@ concurrent_constraint_handler::get_valid_parameter_assignments(
   tg.wait();
 
   return result;
+}
+
+void concurrent_constraint_handler::replace_dont_care_values(
+    internal_test_set& test_set, thread_pool& tp) const {
+
+  task_group tg(tp.createTaskGroup());
+  std::vector<replace_dont_care_values_task> tasks(
+      test_set.get_list_of_tests().size());
+  unsigned int test_index = 0;
+  for (auto& t : test_set.get_list_of_tests()) {
+    tasks[test_index] = replace_dont_care_values_task(&t, &handler_);
+    tg.spawn(test_index, &tasks[test_index]);
+    ++test_index;
+  }
+  tg.wait();
 }
 
 }  // namespace detail

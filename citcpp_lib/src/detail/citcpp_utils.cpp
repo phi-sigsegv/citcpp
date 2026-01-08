@@ -99,21 +99,6 @@ internal_test_set create_internal_test_set(const model& input_model,
   return internal_test_set;
 }
 
-void replace_dont_care_values(internal_test_set& test_set,
-                              const internal_model& model) {
-
-  for (test& t : test_set.get_list_of_tests()) {
-    for (unsigned int i = 0; i < t.get_values().size(); ++i) {
-      int& value = t.get_values()[i];
-      if (value < 0) {
-        // Found don't care value. We simply replace it with the
-        // first value of the respective parameter.
-        value = 0;
-      }
-    }
-  }
-}
-
 unsigned int get_product_of_max_n_parameter_sizes(
     const unsigned int num_parameters, const unsigned int n,
     const citcpp::detail::internal_model& model,
