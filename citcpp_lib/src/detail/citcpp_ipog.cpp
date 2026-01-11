@@ -24,8 +24,10 @@ namespace {
 void main_ipog_loop_body(
     const citcpp::detail::internal_model& model,
     const std::vector<citcpp::detail::internal_relation>& relations,
-    citcpp::detail::internal_test_set& test_set, const bool is_extend_mode,
-    const unsigned int real_current_param_idx, const bool with_mt,
+    citcpp::detail::internal_test_set& test_set,
+    const citcpp::detail::constraint_handler& constr_handler,
+    const bool is_extend_mode, const unsigned int real_current_param_idx,
+    const bool with_mt,
     const citcpp::detail::binom_coeff_table& binomial_coeffs,
     citcpp::detail::thread_pool& tp,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
@@ -111,10 +113,11 @@ void main_ipog_loop_body(
     }
 
     auto horizontal_ext_res =
-        with_mt ? ipog_horizontal_extension(number_combos_to_cover, test_set,
-                                            relation_cov_maps, tp)
-                : ipog_horizontal_extension(number_combos_to_cover, test_set,
-                                            relation_cov_maps);
+        with_mt
+            ? ipog_horizontal_extension(number_combos_to_cover, constr_handler,
+                                        test_set, relation_cov_maps, tp)
+            : ipog_horizontal_extension(number_combos_to_cover, constr_handler,
+                                        test_set, relation_cov_maps);
     tp.stop_workers();
 
     for (const auto& relation_cov_result :
@@ -168,7 +171,7 @@ void main_ipog_loop_body(
 void main_ipog_loop(const citcpp::detail::internal_model& model,
                     std::vector<citcpp::detail::internal_relation>& relations,
                     citcpp::detail::internal_test_set& test_set,
-                    const citcpp::detail::constraint_handler& c_handler,
+                    const citcpp::detail::constraint_handler& constr_handler,
                     const citcpp::covering_array_computation_config config,
                     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
@@ -253,12 +256,12 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   {
     // Step 1: Initialize for the first t parameters.
-    with_mt
-        ? create_all_value_combinations(first_param_idx, model,
-                                        parameter_index_map, c_handler,
-                                        test_set, tp)
-        : create_all_value_combinations(
-              first_param_idx, model, parameter_index_map, c_handler, test_set);
+    with_mt ? create_all_value_combinations(first_param_idx, model,
+                                            parameter_index_map, constr_handler,
+                                            test_set, tp)
+            : create_all_value_combinations(first_param_idx, model,
+                                            parameter_index_map, constr_handler,
+                                            test_set);
     exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     exec_handle.set_number_of_processed_parameters(first_param_idx);
   }
@@ -288,7 +291,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
     const unsigned int real_current_param_idx =
         parameter_index_map[current_param_idx];
 
-    main_ipog_loop_body(model, relations, test_set, false,
+    main_ipog_loop_body(model, relations, test_set, constr_handler, false,
                         real_current_param_idx, with_mt, binomial_coeffs, tp,
                         exec_handle);
 
@@ -322,7 +325,7 @@ void main_ipog_loop_extend_test_set(
     const citcpp::detail::internal_model& model,
     std::vector<citcpp::detail::internal_relation>& relations,
     citcpp::detail::internal_test_set& test_set,
-    const citcpp::detail::constraint_handler& c_handler,
+    const citcpp::detail::constraint_handler& constr_handler,
     const citcpp::covering_array_computation_config config,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
@@ -375,7 +378,7 @@ void main_ipog_loop_extend_test_set(
     const unsigned int real_current_param_idx =
         parameter_index_map[current_param_idx];
 
-    main_ipog_loop_body(model, relations, test_set, true,
+    main_ipog_loop_body(model, relations, test_set, constr_handler, true,
                         real_current_param_idx, with_mt, binomial_coeffs, tp,
                         exec_handle);
 
@@ -455,18 +458,19 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   std::vector<internal_relation> relations(
       create_relations(input_model_, model_, strength_));
 
-  std::unique_ptr<constraint_handler> c_handler =
+  std::unique_ptr<constraint_handler> constr_handler =
       create_constraint_handler(model_);
 
   internal_test_set tests(input_tests_);
   if (tests.get_list_of_tests().empty()) {
-    main_ipog_loop(model_, relations, tests, *c_handler, config_, exec_handle);
+    main_ipog_loop(model_, relations, tests, *constr_handler, config_,
+                   exec_handle);
   } else {
-    main_ipog_loop_extend_test_set(model_, relations, tests, *c_handler,
+    main_ipog_loop_extend_test_set(model_, relations, tests, *constr_handler,
                                    config_, exec_handle);
   }
   if (config_.replace_dont_care_values()) {
-    c_handler->replace_dont_care_values(tests);
+    constr_handler->replace_dont_care_values(tests);
   }
   test_set ts(
       model_.create_from_internal_test_set(tests, config_.value_separator()));

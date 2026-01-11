@@ -31,6 +31,20 @@ class constraint_handler {
     virtual bool is_valid_partial_test(const test& t) const = 0;
 
     /**
+     * This method reads the given partial tests, in particular the
+     * assignments of values to parameters, and returns for each such test,
+     * whether the respective combination of those assignments is valid.
+     * This method is similar to the method #is_valid_partial_test,
+     * but instead of evaluating the validity of a single given test,
+     * a whole set of tests is checked in parallel. The returned bitset has
+     * bits enabled at indices corresponding to the indices of test
+     * in the given test set. A bit is enabled, if the correponding test
+     * is valid.
+     */
+    bitset_uint64 check_validity_of_partial_tests(
+        const internal_test_set& test_set) const;
+
+    /**
      * This method reads the given partial test, in particular the
      * assignments of values to parameters, and returns a list of feasible
      * assignments of values to the given parameter in terms of a bitset.
@@ -39,6 +53,16 @@ class constraint_handler {
      */
     virtual bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) const = 0;
+
+    /**
+     * This method reads the given partial tests, in particular the
+     * assignments of values to parameters, and returns for each such test,
+     * a list of feasible assignments of values to the given parameter in terms
+     * of a bitset. The bitset has bits enabled at indices corresponding to the
+     * indices of values in the domain definition of the parameter.
+     */
+    std::vector<bitset_uint64> get_valid_parameter_assignments(
+        const internal_test_set& test_set, unsigned int param_idx) const;
 
     /**
      * This method reads the given test, in particular the parameters
