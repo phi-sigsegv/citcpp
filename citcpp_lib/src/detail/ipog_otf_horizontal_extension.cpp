@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "citcpp_utils.hpp"
+#include "constraint_handler_concurrent.hpp"
 #include "param_combo_iteration.hpp"
 #include "shared_constants.hpp"
 
@@ -12,11 +13,14 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor(
         const unsigned int real_current_param_idx,
-        const citcpp::detail::test& test, unsigned int current_test_index,
+        const citcpp::detail::test& test,
+        const citcpp::detail::bitset_uint64& valid_values,
+        unsigned int current_test_index,
         const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
         std::vector<unsigned long long>& gain_per_value)
         : real_current_param_idx_(real_current_param_idx),
           test_(test),
+          valid_values_(valid_values),
           current_test_index_(current_test_index),
           test_set_(test_set),
           is_extend_mode_(is_extend_mode),
@@ -111,7 +115,9 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
       for (std::vector<unsigned int>::size_type i = 0;
            i < param_combo_gain_per_value_.size(); ++i) {
 
-        gain_per_value_[i] += param_combo_gain_per_value_[i];
+        if (valid_values_.test(i)) {
+          gain_per_value_[i] += param_combo_gain_per_value_[i];
+        }
       }
 
       return true;
@@ -120,6 +126,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
   private:
     const unsigned int real_current_param_idx_;
     const citcpp::detail::test& test_;
+    const citcpp::detail::bitset_uint64& valid_values_;
     const unsigned int current_test_index_;
     const citcpp::detail::internal_test_set& test_set_;
     const bool is_extend_mode_;
@@ -132,13 +139,16 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     ipog_horizontal_select_best_value_per_param_combo_functor_parallel(
         const unsigned int real_current_param_idx,
         const unsigned int num_current_param_values,
-        const citcpp::detail::test& test, unsigned int current_test_index,
+        const citcpp::detail::test& test,
+        const citcpp::detail::bitset_uint64& valid_values,
+        unsigned int current_test_index,
         const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
         citcpp::detail::thread_local_vector<
             citcpp::detail::aligned_vector<unsigned long long>>& gain_per_value,
         const citcpp::detail::thread_pool& tp)
         : real_current_param_idx_(real_current_param_idx),
           test_(test),
+          valid_values_(valid_values),
           current_test_index_(current_test_index),
           test_set_(test_set),
           is_extend_mode_(is_extend_mode),
@@ -231,8 +241,10 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
       for (std::vector<unsigned int>::size_type i = 0;
            i < thread_local_param_combo_gain_per_value.size(); ++i) {
 
-        thread_local_gain_per_value[i] +=
-            thread_local_param_combo_gain_per_value[i];
+        if (valid_values_.test(i)) {
+          thread_local_gain_per_value[i] +=
+              thread_local_param_combo_gain_per_value[i];
+        }
       }
 
       return true;
@@ -241,6 +253,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
   private:
     const unsigned int real_current_param_idx_;
     const citcpp::detail::test& test_;
+    const citcpp::detail::bitset_uint64& valid_values_;
     const unsigned int current_test_index_;
     const citcpp::detail::internal_test_set& test_set_;
     const bool is_extend_mode_;
@@ -261,6 +274,7 @@ struct new_covered_tuples_and_selected_value {
 new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
+    const citcpp::detail::bitset_uint64& valid_values,
     const citcpp::detail::test& test, unsigned int current_test_index,
     const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
     std::vector<std::pair<const citcpp::detail::internal_relation*,
@@ -284,7 +298,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
        relation_idx++) {
 
     ipog_horizontal_select_best_value_per_param_combo_functor
-        per_param_combo_functor(real_current_param_idx, test,
+        per_param_combo_functor(real_current_param_idx, test, valid_values,
                                 current_test_index, test_set, is_extend_mode,
                                 relation_gain_per_value[relation_idx]);
     param_combo_its[relation_idx].second.visit_all_parameter_combinations(
@@ -346,6 +360,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
 new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
+    const citcpp::detail::bitset_uint64& valid_values,
     const citcpp::detail::test& test, unsigned int current_test_index,
     const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
     std::vector<std::pair<const citcpp::detail::internal_relation*,
@@ -375,7 +390,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
 
     ipog_horizontal_select_best_value_per_param_combo_functor_parallel
         per_param_combo_functor(real_current_param_idx,
-                                num_current_param_values, test,
+                                num_current_param_values, test, valid_values,
                                 current_test_index, test_set, is_extend_mode,
                                 relation_gain_per_value[relation_idx], tp);
     param_combo_its[relation_idx].second.visit_all_parameter_combinations(
@@ -451,7 +466,8 @@ namespace detail {
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
-    internal_test_set& test_set, const internal_model& model,
+    const constraint_handler& constr_handler, internal_test_set& test_set,
+    const internal_model& model,
     const std::vector<internal_relation>& relations, bool is_extend_mode) {
 
   const unsigned int real_current_param_idx =
@@ -478,6 +494,12 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
                                    rel.get_parameter_index_map(), true));
   }
 
+  // Call the constraint handler and ask for a mapping from tests to possible
+  // extension values.
+  std::vector<bitset_uint64> valid_values(
+      constr_handler.get_valid_parameter_assignments(test_set,
+                                                     real_current_param_idx));
+
   unsigned int test_index = 0;
   unsigned long long num_new_covered_tuples = 0;
   for (test& t : test_set.get_list_of_tests()) {
@@ -490,9 +512,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
     new_covered_tuples_and_selected_value res =
         ipog_horizontal_select_best_value(
-            real_current_param_idx, num_current_param_values, t, test_index,
-            test_set, is_extend_mode, param_combo_its, last_picked_value,
-            value_to_num_picked, result.num_new_covered_tuples);
+            real_current_param_idx, num_current_param_values,
+            valid_values[test_index], t, test_index, test_set, is_extend_mode,
+            param_combo_its, last_picked_value, value_to_num_picked,
+            result.num_new_covered_tuples);
 
     if (res.selected_value_ >= 0) {
       // We might not have selected any value. This can happen, if no matter
@@ -528,7 +551,8 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
-    internal_test_set& test_set, const internal_model& model,
+    const constraint_handler& constr_handler, internal_test_set& test_set,
+    const internal_model& model,
     const std::vector<internal_relation>& relations, bool is_extend_mode,
     thread_pool& tp) {
 
@@ -558,6 +582,16 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
                                       rel.get_parameter_index_map(), true, tp));
   }
 
+  // Call the constraint handler and ask for a mapping from tests to possible
+  // extension values.
+  std::vector<bitset_uint64> valid_values(
+      constr_handler.is_thread_safe()
+          ? concurrent_constraint_handler(constr_handler)
+                .get_valid_parameter_assignments(test_set,
+                                                 real_current_param_idx, tp)
+          : constr_handler.get_valid_parameter_assignments(
+                test_set, real_current_param_idx));
+
   unsigned int test_index = 0;
   unsigned long long num_new_covered_tuples = 0;
   for (test& t : test_set.get_list_of_tests()) {
@@ -570,9 +604,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
     new_covered_tuples_and_selected_value res =
         ipog_horizontal_select_best_value(
-            real_current_param_idx, num_current_param_values, t, test_index,
-            test_set, is_extend_mode, param_combo_its, tp, last_picked_value,
-            value_to_num_picked, result.num_new_covered_tuples);
+            real_current_param_idx, num_current_param_values,
+            valid_values[test_index], t, test_index, test_set, is_extend_mode,
+            param_combo_its, tp, last_picked_value, value_to_num_picked,
+            result.num_new_covered_tuples);
 
     if (res.selected_value_ >= 0) {
       // We might not have selected any value. This can happen, if no matter
