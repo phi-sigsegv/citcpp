@@ -174,8 +174,7 @@ int ipog_horizontal_select_best_value(
     std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::coverage_map_iterator>>&
         relation_cov_map_its,
-    unsigned int& last_picked_value,
-    std::vector<unsigned int>& value_to_num_picked) {
+    unsigned int& last_picked_value, std::vector<int>& value_to_valid_options) {
   using namespace citcpp::detail;
 
   // We first check whether the test already has a concrete value
@@ -183,7 +182,7 @@ int ipog_horizontal_select_best_value(
   // point in evaluating a coverage gain.
   if (test.get_values()[real_current_param_idx] >= 0) {
     last_picked_value = test.get_values()[real_current_param_idx];
-    value_to_num_picked[last_picked_value]++;
+    value_to_valid_options[last_picked_value]--;
 
     return last_picked_value;
   }
@@ -214,8 +213,8 @@ int ipog_horizontal_select_best_value(
       // picked the value the same number of times, we remember the value we
       // have picked before, and choose the next one in this case.
       if (value_with_max_gain >= 0 &&
-          value_to_num_picked[value] <
-              value_to_num_picked[value_with_max_gain]) {
+          value_to_valid_options[value] >
+              value_to_valid_options[value_with_max_gain]) {
         value_with_max_gain = value;
       }
     }
@@ -223,7 +222,7 @@ int ipog_horizontal_select_best_value(
 
   if (value_with_max_gain >= 0) {
     last_picked_value = value_with_max_gain;
-    value_to_num_picked[value_with_max_gain]++;
+    value_to_valid_options[value_with_max_gain]--;
   }
 
   return value_with_max_gain;
@@ -239,7 +238,7 @@ int ipog_horizontal_select_best_value(
                           citcpp::detail::coverage_map_parallel_iterator>>&
         relation_cov_map_its,
     const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
-    std::vector<unsigned int>& value_to_num_picked) {
+    std::vector<int>& value_to_valid_options) {
   using namespace citcpp::detail;
 
   // We first check whether the test already has a concrete value
@@ -247,7 +246,7 @@ int ipog_horizontal_select_best_value(
   // point in evaluating a coverage gain.
   if (test.get_values()[real_current_param_idx] >= 0) {
     last_picked_value = test.get_values()[real_current_param_idx];
-    value_to_num_picked[last_picked_value]++;
+    value_to_valid_options[last_picked_value]--;
 
     return last_picked_value;
   }
@@ -288,8 +287,8 @@ int ipog_horizontal_select_best_value(
       // picked the value the same number of times, we remember the value we
       // have picked before, and choose the next one in this case.
       if (value_with_max_gain >= 0 &&
-          value_to_num_picked[value] <
-              value_to_num_picked[value_with_max_gain]) {
+          value_to_valid_options[value] >
+              value_to_valid_options[value_with_max_gain]) {
         value_with_max_gain = value;
       }
     }
@@ -297,7 +296,7 @@ int ipog_horizontal_select_best_value(
 
   if (value_with_max_gain >= 0) {
     last_picked_value = value_with_max_gain;
-    value_to_num_picked[value_with_max_gain]++;
+    value_to_valid_options[value_with_max_gain]--;
   }
 
   return value_with_max_gain;
@@ -806,8 +805,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::coverage_map_iterator>>&
         relation_cov_map_its,
-    unsigned int& last_picked_value,
-    std::vector<unsigned int>& value_to_num_picked,
+    unsigned int& last_picked_value, std::vector<int>& value_to_valid_options,
     std::unordered_map<const citcpp::detail::internal_relation*,
                        unsigned long long>& num_covered_tuples) {
   using namespace citcpp::detail;
@@ -822,7 +820,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
   const int current_param_value = test.get_values()[real_current_param_idx];
   if (current_param_value >= 0) {
     last_picked_value = current_param_value;
-    value_to_num_picked[current_param_value]++;
+    value_to_valid_options[current_param_value]--;
 
     // The coverage gain computation is disabled in the functor,
     // so that it won't modify this gain info.
@@ -861,8 +859,8 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
       // picked the value the same number of times, we remember the value we
       // have picked before, and choose the next one in this case.
       if (value_with_max_gain >= 0 &&
-          value_to_num_picked[value] <
-              value_to_num_picked[value_with_max_gain]) {
+          value_to_valid_options[value] >
+              value_to_valid_options[value_with_max_gain]) {
         value_with_max_gain = value;
       }
     }
@@ -870,7 +868,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
 
   if (value_with_max_gain >= 0) {
     last_picked_value = value_with_max_gain;
-    value_to_num_picked[value_with_max_gain]++;
+    value_to_valid_options[value_with_max_gain]--;
   }
 
   res.selected_value_ = value_with_max_gain;
@@ -889,7 +887,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
                           citcpp::detail::coverage_map_parallel_iterator>>&
         relation_cov_map_its,
     const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
-    std::vector<unsigned int>& value_to_num_picked,
+    std::vector<int>& value_to_valid_options,
     std::unordered_map<const citcpp::detail::internal_relation*,
                        unsigned long long>& num_covered_tuples) {
   using namespace citcpp::detail;
@@ -907,7 +905,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
   const int current_param_value = test.get_values()[real_current_param_idx];
   if (current_param_value >= 0) {
     last_picked_value = current_param_value;
-    value_to_num_picked[current_param_value]++;
+    value_to_valid_options[current_param_value]--;
 
     // The coverage gain computation is disabled in the functor,
     // so that it won't modify this gain info.
@@ -956,8 +954,8 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
       // picked the value the same number of times, we remember the value we
       // have picked before, and choose the next one in this case.
       if (value_with_max_gain >= 0 &&
-          value_to_num_picked[value] <
-              value_to_num_picked[value_with_max_gain]) {
+          value_to_valid_options[value] >
+              value_to_valid_options[value_with_max_gain]) {
         value_with_max_gain = value;
       }
     }
@@ -965,12 +963,29 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
 
   if (value_with_max_gain >= 0) {
     last_picked_value = value_with_max_gain;
-    value_to_num_picked[value_with_max_gain]++;
+    value_to_valid_options[value_with_max_gain]--;
   }
 
   res.selected_value_ = value_with_max_gain;
 
   return res;
+}
+
+std::vector<int> get_value_to_valid_options(
+    int num_current_param_values,
+    const std::vector<citcpp::detail::bitset_uint64>& valid_values) {
+
+  std::vector<int> valid_value_options(num_current_param_values, 0);
+
+  for (const auto& test_valid_values : valid_values) {
+    for (int v = 0; v < num_current_param_values; ++v) {
+      if (test_valid_values.test(v)) {
+        valid_value_options[v] += 1;
+      }
+    }
+  }
+
+  return valid_value_options;
 }
 
 }  // namespace
@@ -999,8 +1014,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       list_intrusive<test_list_intrusive_integ>(),
       std::unordered_map<const internal_relation*, unsigned long long>()};
 
-  unsigned int last_picked_value = 0;
-  std::vector<unsigned int> value_to_num_picked(num_current_param_values);
   std::vector<std::pair<const internal_relation*, coverage_map_iterator>>
       relation_cov_map_its;
   for (auto& rel : relations) {
@@ -1013,6 +1026,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   std::vector<bitset_uint64> valid_values(
       constr_handler.get_valid_parameter_assignments(test_set,
                                                      real_current_param_idx));
+
+  unsigned int last_picked_value = 0;
+  std::vector<int> value_to_valid_options(
+      get_value_to_valid_options(num_current_param_values, valid_values));
 
   test* previous_test = nullptr;
   int selected_value = 0;
@@ -1030,7 +1047,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       selected_value = ipog_horizontal_select_best_value(
           real_current_param_idx, num_current_param_values, model,
           valid_values[test_index], t, relation_cov_map_its, last_picked_value,
-          value_to_num_picked);
+          value_to_valid_options);
     } else {
       if (selected_value >= 0) {
         // We might not have selected any value. This can happen, if no matter
@@ -1060,7 +1077,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
           ipog_horizontal_update_coverage_map_and_select_best_value(
               real_current_param_idx, num_current_param_values, model,
               valid_values[test_index], *previous_test, t, relation_cov_map_its,
-              last_picked_value, value_to_num_picked,
+              last_picked_value, value_to_valid_options,
               result.num_new_covered_tuples);
 
       selected_value = res.selected_value_;
@@ -1135,8 +1152,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       list_intrusive<test_list_intrusive_integ>(),
       std::unordered_map<const internal_relation*, unsigned long long>()};
 
-  unsigned int last_picked_value = 0;
-  std::vector<unsigned int> value_to_num_picked(num_current_param_values);
   std::vector<
       std::pair<const internal_relation*, coverage_map_parallel_iterator>>
       relation_cov_map_its;
@@ -1155,6 +1170,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
           : constr_handler.get_valid_parameter_assignments(
                 test_set, real_current_param_idx));
 
+  unsigned int last_picked_value = 0;
+  std::vector<int> value_to_valid_options(
+      get_value_to_valid_options(num_current_param_values, valid_values));
+
   test* previous_test = nullptr;
   int selected_value = 0;
   unsigned long long num_new_covered_tuples = 0;
@@ -1171,7 +1190,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       selected_value = ipog_horizontal_select_best_value(
           real_current_param_idx, num_current_param_values, model,
           valid_values[test_index], t, relation_cov_map_its, tp,
-          last_picked_value, value_to_num_picked);
+          last_picked_value, value_to_valid_options);
     } else {
       if (selected_value >= 0) {
         // We might not have selected any value. This can happen, if no matter
@@ -1201,7 +1220,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
           ipog_horizontal_update_coverage_map_and_select_best_value(
               real_current_param_idx, num_current_param_values, model,
               valid_values[test_index], *previous_test, t, relation_cov_map_its,
-              tp, last_picked_value, value_to_num_picked,
+              tp, last_picked_value, value_to_valid_options,
               result.num_new_covered_tuples);
 
       selected_value = res.selected_value_;
