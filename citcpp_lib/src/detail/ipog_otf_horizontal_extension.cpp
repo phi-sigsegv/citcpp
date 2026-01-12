@@ -280,8 +280,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
     std::vector<std::pair<const citcpp::detail::internal_relation*,
                           citcpp::detail::param_combo_iterator>>&
         param_combo_its,
-    unsigned int& last_picked_value,
-    std::vector<unsigned int>& value_to_num_picked,
+    unsigned int& last_picked_value, std::vector<int>& value_to_valid_options,
     std::unordered_map<const citcpp::detail::internal_relation*,
                        unsigned long long>& num_covered_tuples) {
   using namespace citcpp::detail;
@@ -331,8 +330,8 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
       // the value we have picked before, and choose the next one in this
       // case.
       if (value_with_max_gain >= 0 &&
-          value_to_num_picked[value] <
-              value_to_num_picked[value_with_max_gain]) {
+          value_to_valid_options[value] >
+              value_to_valid_options[value_with_max_gain]) {
 
         value_with_max_gain = value;
       }
@@ -341,7 +340,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
 
   if (value_with_max_gain >= 0) {
     last_picked_value = value_with_max_gain;
-    value_to_num_picked[value_with_max_gain]++;
+    value_to_valid_options[value_with_max_gain]--;
 
     for (int relation_idx = 0; relation_idx < param_combo_its.size();
          relation_idx++) {
@@ -367,7 +366,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
                           citcpp::detail::param_combo_parallel_iterator>>&
         param_combo_its,
     const citcpp::detail::thread_pool& tp, unsigned int& last_picked_value,
-    std::vector<unsigned int>& value_to_num_picked,
+    std::vector<int>& value_to_valid_options,
     std::unordered_map<const citcpp::detail::internal_relation*,
                        unsigned long long>& num_covered_tuples) {
   using namespace citcpp::detail;
@@ -428,8 +427,8 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
       // the value we have picked before, and choose the next one in this
       // case.
       if (value_with_max_gain >= 0 &&
-          value_to_num_picked[value] <
-              value_to_num_picked[value_with_max_gain]) {
+          value_to_valid_options[value] >
+              value_to_valid_options[value_with_max_gain]) {
 
         value_with_max_gain = value;
       }
@@ -438,7 +437,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
 
   if (value_with_max_gain >= 0) {
     last_picked_value = value_with_max_gain;
-    value_to_num_picked[value_with_max_gain]++;
+    value_to_valid_options[value_with_max_gain]--;
 
     for (int relation_idx = 0; relation_idx < param_combo_its.size();
          relation_idx++) {
@@ -457,6 +456,23 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
   res.selected_value_ = value_with_max_gain;
 
   return res;
+}
+
+std::vector<int> get_value_to_valid_options(
+    int num_current_param_values,
+    const std::vector<citcpp::detail::bitset_uint64>& valid_values) {
+
+  std::vector<int> valid_value_options(num_current_param_values, 0);
+
+  for (const auto& test_valid_values : valid_values) {
+    for (int v = 0; v < num_current_param_values; ++v) {
+      if (test_valid_values.test(v)) {
+        valid_value_options[v] += 1;
+      }
+    }
+  }
+
+  return valid_value_options;
 }
 
 }  // namespace
@@ -483,8 +499,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       list_intrusive<test_list_intrusive_integ>(),
       std::unordered_map<const internal_relation*, unsigned long long>()};
 
-  unsigned int last_picked_value = 0;
-  std::vector<unsigned int> value_to_num_picked(num_current_param_values);
   std::vector<std::pair<const internal_relation*, param_combo_iterator>>
       param_combo_its;
   for (auto& rel : relations) {
@@ -500,6 +514,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       constr_handler.get_valid_parameter_assignments(test_set,
                                                      real_current_param_idx));
 
+  unsigned int last_picked_value = 0;
+  std::vector<int> value_to_valid_options(
+      get_value_to_valid_options(num_current_param_values, valid_values));
+
   unsigned int test_index = 0;
   unsigned long long num_new_covered_tuples = 0;
   for (test& t : test_set.get_list_of_tests()) {
@@ -514,7 +532,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         ipog_horizontal_select_best_value(
             real_current_param_idx, num_current_param_values,
             valid_values[test_index], t, test_index, test_set, is_extend_mode,
-            param_combo_its, last_picked_value, value_to_num_picked,
+            param_combo_its, last_picked_value, value_to_valid_options,
             result.num_new_covered_tuples);
 
     if (res.selected_value_ >= 0) {
@@ -569,8 +587,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       list_intrusive<test_list_intrusive_integ>(),
       std::unordered_map<const internal_relation*, unsigned long long>()};
 
-  unsigned int last_picked_value = 0;
-  std::vector<unsigned int> value_to_num_picked(num_current_param_values);
   std::vector<
       std::pair<const internal_relation*, param_combo_parallel_iterator>>
       param_combo_its;
@@ -592,6 +608,10 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
           : constr_handler.get_valid_parameter_assignments(
                 test_set, real_current_param_idx));
 
+  unsigned int last_picked_value = 0;
+  std::vector<int> value_to_valid_options(
+      get_value_to_valid_options(num_current_param_values, valid_values));
+
   unsigned int test_index = 0;
   unsigned long long num_new_covered_tuples = 0;
   for (test& t : test_set.get_list_of_tests()) {
@@ -606,7 +626,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         ipog_horizontal_select_best_value(
             real_current_param_idx, num_current_param_values,
             valid_values[test_index], t, test_index, test_set, is_extend_mode,
-            param_combo_its, tp, last_picked_value, value_to_num_picked,
+            param_combo_its, tp, last_picked_value, value_to_valid_options,
             result.num_new_covered_tuples);
 
     if (res.selected_value_ >= 0) {
