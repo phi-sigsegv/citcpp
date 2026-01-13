@@ -54,8 +54,8 @@ void create_all_value_combinations(
   std::vector<unsigned int> values(strength);
   recursively_add_test_for_each_combination(
       model, parameter_index_map, 0, values, test_set,
-      [&constr_handler](const test& t) {
-        return constr_handler.is_valid_partial_test(t);
+      [&strength, &constr_handler](const test& t) {
+        return constr_handler.is_valid_partial_test(t, strength);
       });
 }
 
@@ -85,7 +85,8 @@ void create_all_value_combinations(
 
   concurrent_constraint_handler concurrent_handler(constr_handler);
   bitset_uint64 test_validity_info(
-      concurrent_handler.check_validity_of_partial_tests(test_set, tp));
+      concurrent_handler.check_validity_of_partial_tests(test_set, strength,
+                                                         tp));
 
   // Now that we have the info which of the partial tests is valid,
   // we simply remove the invalid ones.

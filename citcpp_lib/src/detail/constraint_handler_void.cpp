@@ -8,7 +8,9 @@ constraint_handler_void::constraint_handler_void(const internal_model& model)
 
 bool constraint_handler_void::is_thread_safe() const { return true; }
 
-bool constraint_handler_void::is_valid_partial_test(const test& t) const {
+bool constraint_handler_void::is_valid_partial_test(
+    const test& t, unsigned int param_index_range_end) const {
+
   return true;
 }
 

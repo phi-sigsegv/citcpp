@@ -17,12 +17,14 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
 
     check_test_validity_task(const citcpp::detail::test* test,
                              unsigned int test_index,
+                             unsigned int param_index_range_end,
                              const citcpp::detail::constraint_handler* handler,
                              citcpp::detail::bitset_uint64* result,
                              std::mutex* mut)
         : base_type(),
           test_(test),
           test_index_(test_index),
+          param_index_range_end_(param_index_range_end),
           handler_(handler),
           result_(result),
           mut_(mut) {}
@@ -30,7 +32,8 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     virtual ~check_test_validity_task() {}
 
     void operator()() {
-      const bool is_valid = handler_->is_valid_partial_test(*test_);
+      const bool is_valid =
+          handler_->is_valid_partial_test(*test_, param_index_range_end_);
 
       if (is_valid) {
         mark_test_as_valid();
@@ -46,6 +49,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
   private:
     const citcpp::detail::test* test_;
     unsigned int test_index_;
+    unsigned int param_index_range_end_;
     const citcpp::detail::constraint_handler* handler_;
     citcpp::detail::bitset_uint64* result_;
     std::mutex* mut_;
@@ -127,8 +131,10 @@ concurrent_constraint_handler::concurrent_constraint_handler(
 
 bool concurrent_constraint_handler::is_thread_safe() const { return true; }
 
-bool concurrent_constraint_handler::is_valid_partial_test(const test& t) const {
-  return handler_.is_valid_partial_test(t);
+bool concurrent_constraint_handler::is_valid_partial_test(
+    const test& t, unsigned int param_index_range_end) const {
+
+  return handler_.is_valid_partial_test(t, param_index_range_end);
 }
 
 bitset_uint64 concurrent_constraint_handler::get_valid_parameter_assignments(
@@ -142,7 +148,8 @@ void concurrent_constraint_handler::replace_dont_care_values(test& t) const {
 }
 
 bitset_uint64 concurrent_constraint_handler::check_validity_of_partial_tests(
-    const internal_test_set& test_set, thread_pool& tp) const {
+    const internal_test_set& test_set, unsigned int param_index_range_end,
+    thread_pool& tp) const {
 
   bitset_uint64 result(test_set.get_list_of_tests().size());
   std::mutex mut;
@@ -152,8 +159,8 @@ bitset_uint64 concurrent_constraint_handler::check_validity_of_partial_tests(
       test_set.get_list_of_tests().size());
   unsigned int test_index = 0;
   for (const auto& t : test_set.get_list_of_tests()) {
-    tasks[test_index] =
-        check_test_validity_task(&t, test_index, &handler_, &result, &mut);
+    tasks[test_index] = check_test_validity_task(
+        &t, test_index, param_index_range_end, &handler_, &result, &mut);
     tg.spawn(test_index, &tasks[test_index]);
     ++test_index;
   }

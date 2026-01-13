@@ -143,9 +143,9 @@ void main_ipog_loop_body(
     }
 
     if (number_combos_to_cover > 0) {
-      auto vertical_ext_res =
-          ipog_vertical_extension(number_combos_to_cover, horizontal_ext_res,
-                                  test_set, relation_cov_maps);
+      auto vertical_ext_res = ipog_vertical_extension(
+          number_combos_to_cover, constr_handler, horizontal_ext_res, test_set,
+          relation_cov_maps);
 
       for (const auto& relation_cov_result :
            vertical_ext_res.num_new_covered_tuples) {

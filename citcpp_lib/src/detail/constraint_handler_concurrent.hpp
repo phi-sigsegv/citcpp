@@ -28,7 +28,8 @@ class concurrent_constraint_handler : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
-    bool is_valid_partial_test(const test& t) const override;
+    bool is_valid_partial_test(
+        const test& t, unsigned int param_index_range_end) const override;
 
     /**
      * See constraint_handler interface.
@@ -51,9 +52,13 @@ class concurrent_constraint_handler : public constraint_handler {
      * bits enabled at indices corresponding to the indices of test
      * in the given test set. A bit is enabled, if the correponding test
      * is valid.
+     * The given upper bound limits the region of the given partial
+     * test to check to the parameter in the index range [0, UB[,
+     * so exclusive.
      */
     bitset_uint64 check_validity_of_partial_tests(
-        const internal_test_set& test_set, thread_pool& tp) const;
+        const internal_test_set& test_set, unsigned int param_index_range_end,
+        thread_pool& tp) const;
 
     /**
      * This method reads the given partial tests, in particular the
