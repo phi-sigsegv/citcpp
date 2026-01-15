@@ -3,6 +3,7 @@
 
 #include <functional>
 
+#include "constraint_handler.hpp"
 #include "coverage_map.hpp"
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
@@ -14,6 +15,7 @@ namespace detail {
 
 ipog_vertical_extension_result ipog_vertical_extension(
     const unsigned long long num_missing_combinations_to_cover,
+    const constraint_handler& constr_handler,
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values,
     internal_test_set& test_set, const internal_model& model,
