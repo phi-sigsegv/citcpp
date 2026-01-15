@@ -13,6 +13,8 @@ namespace detail {
 
 typedef std::uint16_t param_index;
 
+// using param_vector = std::vector<param_index>;
+// using value_vector = std::vector<int>;
 using param_vector = SmallVector<param_index, 6>;
 using value_vector = SmallVector<int, 6>;
 
