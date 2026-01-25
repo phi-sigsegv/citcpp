@@ -4,14 +4,13 @@ namespace citcpp {
 namespace detail {
 
 bitset_uint64 constraint_handler::check_validity_of_partial_tests(
-    const internal_test_set& test_set,
-    unsigned int param_index_range_end) const {
+    const internal_test_set& test_set) const {
 
   bitset_uint64 result(test_set.get_list_of_tests().size());
 
   unsigned int test_index = 0;
   for (const auto& t : test_set.get_list_of_tests()) {
-    if (is_valid_partial_test(t, param_index_range_end)) {
+    if (is_valid_partial_test(t)) {
       result.set(test_index);
     }
     ++test_index;

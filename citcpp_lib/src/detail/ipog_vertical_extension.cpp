@@ -222,11 +222,9 @@ class ipog_vertical_extension_functor {
         const citcpp::detail::value_vector& value_indices,
         citcpp::detail::test& t) {
 
-      unsigned int max_param_idx = 0;
       bool covers_combo = true;
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
-        max_param_idx = std::max(max_param_idx, param_idx);
         const int param_value_to_cover = value_indices[i];
         const int param_value_in_test = t.get_values()[param_idx];
 
@@ -241,8 +239,7 @@ class ipog_vertical_extension_functor {
         }
       }
 
-      covers_combo = covers_combo && constr_handler_.is_valid_partial_test(
-                                         t, max_param_idx + 1);
+      covers_combo = covers_combo && constr_handler_.is_valid_partial_test(t);
 
       if (!covers_combo) {
         // We need to rollback the changes we did to the test.
@@ -260,16 +257,13 @@ class ipog_vertical_extension_functor {
     bool is_valid_tuple(const citcpp::detail::param_vector& param_indices,
                         const citcpp::detail::value_vector& value_indices) {
 
-      unsigned int max_param_idx = 0;
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
-        max_param_idx = std::max(max_param_idx, param_idx);
         const int param_value_to_cover = value_indices[i];
         scratch_test_.get_values()[param_idx] = param_value_to_cover;
       }
 
-      bool res = constr_handler_.is_valid_partial_test(scratch_test_,
-                                                       max_param_idx + 1);
+      bool res = constr_handler_.is_valid_partial_test(scratch_test_);
 
       return res;
     }

@@ -25,8 +25,7 @@ class constraint_handler_void : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
-    bool is_valid_partial_test(
-        const test& t, unsigned int param_index_range_end) const override;
+    bool is_valid_partial_test(const test& t) const override;
 
     /**
      * See constraint_handler interface.

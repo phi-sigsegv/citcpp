@@ -27,12 +27,8 @@ class constraint_handler {
      * This method reads the given partial test, in particular the
      * assignments of values to parameters, and returns whether the
      * combination of those assignments is valid.
-     * The given upper bound limits the region of the given partial
-     * test to check to the parameter in the index range [0, UB[,
-     * so exclusive.
      */
-    virtual bool is_valid_partial_test(
-        const test& t, unsigned int param_index_range_end) const = 0;
+    virtual bool is_valid_partial_test(const test& t) const = 0;
 
     /**
      * This method reads the given partial tests, in particular the
@@ -44,13 +40,9 @@ class constraint_handler {
      * bits enabled at indices corresponding to the indices of test
      * in the given test set. A bit is enabled, if the correponding test
      * is valid.
-     * The given upper bound limits the region of the given partial
-     * test to check to the parameter in the index range [0, UB[,
-     * so exclusive.
      */
     bitset_uint64 check_validity_of_partial_tests(
-        const internal_test_set& test_set,
-        unsigned int param_index_range_end) const;
+        const internal_test_set& test_set) const;
 
     /**
      * This method reads the given partial test, in particular the
