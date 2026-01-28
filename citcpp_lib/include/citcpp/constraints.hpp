@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "function_ref.hpp"
-#include "model.hpp"
+#include "parameter.hpp"
 
 namespace citcpp {
 

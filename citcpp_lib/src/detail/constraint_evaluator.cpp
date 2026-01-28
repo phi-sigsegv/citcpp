@@ -6,7 +6,7 @@ class constraint_eval_visitor {
   public:
     constraint_eval_visitor(
         const std::unordered_map<citcpp::parameter_reference, int,
-                                 citcpp::detail::parameter_reference_hash>&
+                                 citcpp::parameter_reference_hash>&
             param_to_index,
         const std::vector<citcpp::parameter_value>& test)
         : param_to_index_(param_to_index), test_(test) {}
@@ -122,8 +122,7 @@ class constraint_eval_visitor {
 
   private:
     const std::unordered_map<citcpp::parameter_reference, int,
-                             citcpp::detail::parameter_reference_hash>&
-        param_to_index_;
+                             citcpp::parameter_reference_hash>& param_to_index_;
     const std::vector<citcpp::parameter_value>& test_;
 };
 

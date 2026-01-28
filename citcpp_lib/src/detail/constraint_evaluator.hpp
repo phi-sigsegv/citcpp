@@ -9,12 +9,6 @@
 namespace citcpp {
 namespace detail {
 
-struct parameter_reference_hash {
-    std::size_t operator()(const parameter_reference& param) const noexcept {
-      return std::hash<std::string>{}(param.get_name());
-    }
-};
-
 /**
  * This class provides means to evaluate satisfaction of constraints
  * by a given test.
