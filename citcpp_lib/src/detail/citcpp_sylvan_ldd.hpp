@@ -124,6 +124,67 @@ class sylvan_ldd {
     std::vector<uint32_t> variables_;
 };
 
+class sylvan {
+  public:
+    /**
+     * Initializes the Sylvan framework, call this only once in your
+     * program.
+     *
+     * @param initialTableSize the initial size of the nodes table. Must be a
+     * power of two.
+     * @param maxTableSize the maximum size of the nodes table. Must be a power
+     * of two.
+     * @param initialCacheSize the initial size of the operation cache. Must be
+     * a power of two.
+     * @param maxCacheSize the maximum size of the operation cache. Must be a
+     * power of two.
+     */
+    static void init_package(size_t initialTableSize, size_t maxTableSize,
+                             size_t initialCacheSize, size_t maxCacheSize);
+
+    /**
+     * Initializes the Sylvan framework, call this only once in your
+     * program.
+     * This function computes max_tablesize and max_cachesize to fit the memory
+     * cap. The memory cap is in bytes.
+     *
+     * The parameter table_ratio controls the ratio between the nodes table and
+     * the cache. For the value 0, both tables are of the same size. For values
+     * 1, 2, 3 ... the nodes table will be 2x, 4x, 8x ... as big as the cache
+     * For values -1, -2, -3 ... the cache will be 2x, 4x, 8x ... as big as the
+     * nodes table
+     *
+     * The parameter initial_ratio controls how much smaller the initial table
+     * sizes are. For values of 1, 2, 3, 4 the tables will initially be 2, 4, 8,
+     * 16 times smaller.
+     *
+     * @param memory_cap the memory cap in bytes
+     * @param table_ratio controls how much bigger the nodes table is compared
+     * to the cache table
+     * @param initial_ratio controls how much smaller the initial tables are
+     * with respect to their maximum size limit
+     */
+    static void init_package(size_t memory_cap, int table_ratio,
+                             int initial_ratio);
+
+    /**
+     * Initializes the MTBDD module of the Sylvan framework.
+     */
+    static void init_mtbdd();
+
+    /**
+     * Initializes the LDD module of the Sylvan framework.
+     */
+    static void init_ldd();
+
+    /**
+     * Frees all memory in use by Sylvan.
+     * Warning: if you have any BDD or LDD objects which are not the trivial
+     * terminal nodes after this, your program may crash!
+     */
+    static void quit_package();
+};
+
 }  // namespace detail
 }  // namespace citcpp
 

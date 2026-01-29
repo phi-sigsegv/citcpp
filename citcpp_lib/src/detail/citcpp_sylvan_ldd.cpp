@@ -820,5 +820,26 @@ void sylvan_ldd::get_sat_one(std::vector<int>& assignment) const {
   }
 }
 
+void sylvan::init_package(size_t initialTableSize, size_t maxTableSize,
+                          size_t initialCacheSize, size_t maxCacheSize) {
+
+  sylvan_set_sizes(initialTableSize, maxTableSize, initialCacheSize,
+                   maxCacheSize);
+  sylvan_init_package();
+}
+
+void sylvan::init_package(size_t memory_cap, int table_ratio,
+                          int initial_ratio) {
+
+  sylvan_set_limits(memory_cap, table_ratio, initial_ratio);
+  sylvan_init_package();
+}
+
+void sylvan::init_mtbdd() { sylvan_init_mtbdd(); }
+
+void sylvan::init_ldd() { sylvan_init_ldd(); }
+
+void sylvan::quit_package() { sylvan_quit(); }
+
 }  // namespace detail
 }  // namespace citcpp
