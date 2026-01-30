@@ -127,6 +127,13 @@ class sylvan_ldd {
 class sylvan {
   public:
     /**
+     * Start Lace with <n_workers> workers and a a task deque size of <dqsize>
+     * per worker. If <n_workers> is set to 0, automatically detects available
+     * cores. If <dqsize> is est to 0, uses a reasonable default value.
+     */
+    static void init_lace(unsigned int n_workers, size_t dqsize);
+
+    /**
      * Initializes the Sylvan framework, call this only once in your
      * program.
      *

@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "constraint_handler_sylvan_ldd.hpp"
 #include "constraint_handler_void.hpp"
 
 namespace {
@@ -199,9 +200,14 @@ unsigned int citcpp_ipog_base::length_of_common_param_prefix(
 }
 
 std::unique_ptr<constraint_handler> citcpp_ipog_base::create_constraint_handler(
-    const internal_model& model) {
+    const internal_model& model, int num_worker_threads) {
 
-  return std::make_unique<constraint_handler_void>(model);
+  if (model.get_input_model().get_constraints().empty()) {
+    return std::make_unique<constraint_handler_void>(model);
+  } else {
+    return std::make_unique<constraint_handler_sylvan_ldd>(model,
+                                                           num_worker_threads);
+  }
 }
 
 }  // namespace detail

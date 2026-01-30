@@ -820,6 +820,10 @@ void sylvan_ldd::get_sat_one(std::vector<int>& assignment) const {
   }
 }
 
+void sylvan::init_lace(unsigned int n_workers, size_t dqsize) {
+  lace_start(n_workers, dqsize);
+}
+
 void sylvan::init_package(size_t initialTableSize, size_t maxTableSize,
                           size_t initialCacheSize, size_t maxCacheSize) {
 

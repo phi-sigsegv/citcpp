@@ -1,5 +1,7 @@
 #include "constraint_handler_sylvan_ldd.hpp"
 
+#include <mutex>
+
 namespace {
 
 class constraint_to_ldd_visitor {
@@ -284,14 +286,65 @@ class constraint_to_ldd_visitor {
     bool negate_;
 };
 
+std::mutex& get_global_sylvan_init_mutex() {
+  static std::mutex mut;
+  return mut;
+}
+
+int& get_lobal_sylan_init_counter() {
+  static int count = 0;
+  return count;
+}
+
+void maybe_initialize_sylvan(int num_workers) {
+  using namespace citcpp::detail;
+  using namespace citcpp;
+
+  std::lock_guard<std::mutex> lock(get_global_sylvan_init_mutex());
+
+  int& instance_cnt = get_lobal_sylan_init_counter();
+  if (instance_cnt == 0) {
+    sylvan::init_lace(num_workers, 0);
+    sylvan::init_package((size_t)8 * 1024 * 1024 * 1024, 3, 3);
+    sylvan::init_ldd();
+  }
+
+  instance_cnt++;
+}
+
+void maybe_shutdown_sylvan() {
+  using namespace citcpp::detail;
+  using namespace citcpp;
+
+  std::lock_guard<std::mutex> lock(get_global_sylvan_init_mutex());
+
+  int& instance_cnt = get_lobal_sylan_init_counter();
+  instance_cnt--;
+  if (instance_cnt == 0) {
+    sylvan::quit_package();
+  }
+}
+
 }  // namespace
 
 namespace citcpp {
 namespace detail {
 
+constraint_handler_sylvan_ldd::number_of_instances_tracker::
+    number_of_instances_tracker(int num_workers) {
+
+  maybe_initialize_sylvan(num_workers);
+}
+
+constraint_handler_sylvan_ldd::number_of_instances_tracker::
+    ~number_of_instances_tracker() {
+
+  maybe_shutdown_sylvan();
+}
+
 constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
-    const internal_model& model)
-    : model_(model), ldd_() {
+    const internal_model& model, int num_workers)
+    : instances_tracker_(num_workers), model_(model), ldd_() {
 
   constraint_to_ldd_visitor visitor(model);
   sylvan_ldd ldd_true = sylvan_ldd::lddTrue();

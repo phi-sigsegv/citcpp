@@ -15,8 +15,15 @@ namespace detail {
 class constraint_handler_sylvan_ldd : public constraint_handler {
     typedef constraint_handler base_type;
 
+  private:
+    class number_of_instances_tracker {
+      public:
+        number_of_instances_tracker(int num_workers);
+        ~number_of_instances_tracker();
+    };
+
   public:
-    constraint_handler_sylvan_ldd(const internal_model& model);
+    constraint_handler_sylvan_ldd(const internal_model& model, int num_workers);
 
     /**
      * See constraint_handler interface.
@@ -40,6 +47,7 @@ class constraint_handler_sylvan_ldd : public constraint_handler {
     void replace_dont_care_values(test& t) const override;
 
   private:
+    const number_of_instances_tracker instances_tracker_;
     const internal_model& model_;
     sylvan_ldd ldd_;
 };

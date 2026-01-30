@@ -133,13 +133,9 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
                     citcpp::detail::internal_test_set& test_set,
                     const citcpp::detail::constraint_handler& constr_handler,
                     const citcpp::covering_array_computation_config config,
+                    unsigned int num_threads,
                     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
-
-  unsigned int num_threads = std::thread::hardware_concurrency();
-  if (num_threads == 0) {
-    num_threads = 4;
-  }
 
   thread_pool tp(num_threads);
 
@@ -284,13 +280,9 @@ void main_ipog_loop_extend_test_set(
     citcpp::detail::internal_test_set& test_set,
     const citcpp::detail::constraint_handler& constr_handler,
     const citcpp::covering_array_computation_config config,
+    unsigned int num_threads,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
-
-  unsigned int num_threads = std::thread::hardware_concurrency();
-  if (num_threads == 0) {
-    num_threads = 4;
-  }
 
   thread_pool tp(num_threads);
 
@@ -410,19 +402,24 @@ void citcpp_ipog_otf::set_interaction_strength(int t) { strength_ = t; }
 void citcpp_ipog_otf::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
+  unsigned int num_threads = std::thread::hardware_concurrency();
+  if (num_threads == 0) {
+    num_threads = 4;
+  }
+
   std::vector<internal_relation> relations(
       create_relations(input_model_, model_, strength_));
 
   std::unique_ptr<constraint_handler> constr_handler =
-      create_constraint_handler(model_);
+      create_constraint_handler(model_, num_threads);
 
   internal_test_set tests(input_tests_);
   if (tests.get_list_of_tests().empty()) {
     main_ipog_loop(model_, relations, tests, *constr_handler, config_,
-                   exec_handle);
+                   num_threads, exec_handle);
   } else {
     main_ipog_loop_extend_test_set(model_, relations, tests, *constr_handler,
-                                   config_, exec_handle);
+                                   config_, num_threads, exec_handle);
   }
   if (config_.replace_dont_care_values()) {
     constr_handler->replace_dont_care_values(tests);
