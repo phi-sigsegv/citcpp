@@ -113,6 +113,11 @@ class constraint {
       }
     }
 
+    /**
+     * Creates a copy of this constraint.
+     */
+    std::unique_ptr<constraint> create_copy() const;
+
   protected:
     /**
      * A virtual function allowing a callback to be executed with a reference
@@ -121,6 +126,39 @@ class constraint {
     virtual void dispatch(function_ref<void(mutable_constraint_view)> cb) = 0;
     virtual void dispatch(
         function_ref<void(const_constraint_view)> cb) const = 0;
+};
+
+/**
+ * This is a wrapper class around a constraint, which provides
+ * means to copy it.
+ */
+class constraint_holder {
+  public:
+    constraint_holder() : constr_() {}
+    constraint_holder(std::unique_ptr<constraint> constr)
+        : constr_(std::move(constr)) {}
+
+    constraint_holder(constraint_holder&& other) = default;
+    constraint_holder(const constraint_holder& other)
+        : constr_(other.get()->create_copy()) {}
+
+    ~constraint_holder() = default;
+
+    constraint_holder& operator=(constraint_holder&& other) = default;
+    constraint_holder& operator=(const constraint_holder& other) {
+      if (this != &other) {
+        constr_ = std::move(get()->create_copy());
+      }
+
+      return *this;
+    }
+
+    constraint* get() const { return constr_.get(); }
+    constraint& operator*() const { return *constr_; }
+    constraint* operator->() const { return get(); }
+
+  private:
+    std::unique_ptr<constraint> constr_;
 };
 
 enum class relational_operator { EQ, NEQ, LT, LE, GE, GT };
@@ -222,8 +260,8 @@ enum class binary_operator { IMPL };
  */
 class binary_operation : public constraint {
   public:
-    binary_operation(std::unique_ptr<constraint> lhs, binary_operator op,
-                     std::unique_ptr<constraint> rhs)
+    binary_operation(constraint_holder lhs, binary_operator op,
+                     constraint_holder rhs)
         : lhs_(std::move(lhs)), op_(op), rhs_(std::move(rhs)) {}
 
     binary_operator get_operator() const { return op_; }
@@ -235,8 +273,8 @@ class binary_operation : public constraint {
 
   protected:
     binary_operator op_;
-    std::unique_ptr<constraint> lhs_;
-    std::unique_ptr<constraint> rhs_;
+    constraint_holder lhs_;
+    constraint_holder rhs_;
 };
 
 /**
@@ -244,8 +282,7 @@ class binary_operation : public constraint {
  */
 class implication : public binary_operation {
   public:
-    implication(std::unique_ptr<constraint> lhs,
-                std::unique_ptr<constraint> rhs)
+    implication(constraint_holder lhs, constraint_holder rhs)
         : binary_operation(std::move(lhs), binary_operator::IMPL,
                            std::move(rhs)) {}
 
@@ -265,23 +302,20 @@ enum class nray_operator { AND, OR };
  */
 class nary_operation : public constraint {
   public:
-    nary_operation(nray_operator op,
-                   std::vector<std::unique_ptr<constraint>>&& operands)
+    nary_operation(nray_operator op, std::vector<constraint_holder> operands)
         : op_(op), operands_(std::move(operands)) {}
 
     nray_operator get_operator() const { return op_; }
 
-    std::vector<std::unique_ptr<constraint>>& get_operands() {
-      return operands_;
-    }
+    std::vector<constraint_holder>& get_operands() { return operands_; }
 
-    const std::vector<std::unique_ptr<constraint>>& get_operands() const {
+    const std::vector<constraint_holder>& get_operands() const {
       return operands_;
     }
 
   protected:
     nray_operator op_;
-    std::vector<std::unique_ptr<constraint>> operands_;
+    std::vector<constraint_holder> operands_;
 };
 
 /**
@@ -289,7 +323,7 @@ class nary_operation : public constraint {
  */
 class and_expression : public nary_operation {
   public:
-    and_expression(std::vector<std::unique_ptr<constraint>>&& operands)
+    and_expression(std::vector<constraint_holder> operands)
         : nary_operation(nray_operator::AND, std::move(operands)) {}
 
   protected:
@@ -306,7 +340,7 @@ class and_expression : public nary_operation {
  */
 class or_expression : public nary_operation {
   public:
-    or_expression(std::vector<std::unique_ptr<constraint>>&& operands)
+    or_expression(std::vector<constraint_holder> operands)
         : nary_operation(nray_operator::OR, std::move(operands)) {}
 
   protected:

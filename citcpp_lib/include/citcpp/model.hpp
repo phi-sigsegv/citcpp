@@ -18,19 +18,21 @@ class model {
   public:
     model() = default;
     model(const model& other)
-        : name_(other.get_name()),
-          parameters_(other.get_parameters()),
+        : name_(other.name_),
+          parameters_(other.parameters_),
           parameter_name_map_(),
-          relations_(other.get_relations()) {
+          relations_(other.relations_),
+          constraints_(other.constraints_) {
       for (auto& param : parameters_) {
         parameter_name_map_[param.get_name()] = &param;
       }
     }
     model(model&& other)
-        : name_(std::move(other.get_name())),
-          parameters_(std::move(other.get_parameters())),
+        : name_(std::move(other.name_)),
+          parameters_(std::move(other.parameters_)),
           parameter_name_map_(),
-          relations_(std::move(other.get_relations())) {
+          relations_(std::move(other.relations_)),
+          constraints_(std::move(other.constraints_)) {
       for (auto& param : parameters_) {
         parameter_name_map_[param.get_name()] = &param;
       }
@@ -40,26 +42,28 @@ class model {
 
     model& operator=(const model& other) {
       if (&other != this) {
-        name_ = other.get_name();
-        parameters_ = other.get_parameters();
+        name_ = other.name_;
+        parameters_ = other.parameters_;
         parameter_name_map_.clear();
         for (auto& param : parameters_) {
           parameter_name_map_[param.get_name()] = &param;
         }
-        relations_ = other.get_relations();
+        relations_ = other.relations_;
+        constraints_ = other.constraints_;
       }
 
       return *this;
     }
     model& operator=(model&& other) {
       if (&other != this) {
-        name_ = std::move(other.get_name());
-        parameters_ = std::move(other.get_parameters());
+        name_ = std::move(other.name_);
+        parameters_ = std::move(other.parameters_);
         parameter_name_map_.clear();
         for (auto& param : parameters_) {
           parameter_name_map_[param.get_name()] = &param;
         }
-        relations_ = std::move(other.get_relations());
+        relations_ = std::move(other.relations_);
+        constraints_ = std::move(other.constraints_);
       }
 
       return *this;
@@ -95,11 +99,15 @@ class model {
 
     void add_relation(relation&& r) { relations_.push_back(std::move(r)); }
 
-    const std::vector<std::unique_ptr<constraint>>& get_constraints() const {
+    const std::vector<constraint_holder>& get_constraints() const {
       return constraints_;
     }
 
-    void add_constraint(std::unique_ptr<constraint>&& constraint) {
+    void add_constraint(constraint_holder constraint) {
+      constraints_.push_back(std::move(constraint));
+    }
+
+    void add_constraint(std::unique_ptr<constraint> constraint) {
       constraints_.push_back(std::move(constraint));
     }
 
@@ -108,7 +116,7 @@ class model {
     std::vector<parameter> parameters_;
     std::unordered_map<std::string, parameter*> parameter_name_map_;
     std::vector<relation> relations_;
-    std::vector<std::unique_ptr<constraint>> constraints_;
+    std::vector<constraint_holder> constraints_;
 };
 
 }  // namespace citcpp

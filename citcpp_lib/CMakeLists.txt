@@ -31,6 +31,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/coverage_measurement.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/constraints.cpp
 )
 
 add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
