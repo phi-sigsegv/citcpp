@@ -139,7 +139,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   thread_pool tp(num_threads);
 
-  const bool with_mt = config.multithreading_enabled();
+  const bool with_mt = num_threads > 1;
 
   std::vector<unsigned int> parameter_index_map(
       citcpp_ipog_base::create_parameter_index_map(relations, model));
@@ -286,7 +286,7 @@ void main_ipog_loop_extend_test_set(
 
   thread_pool tp(num_threads);
 
-  const bool with_mt = config.multithreading_enabled();
+  const bool with_mt = num_threads > 1;
 
   // First we compute the number of combination we have to cover.
   unsigned long long number_combos_to_cover = 0;
@@ -402,9 +402,12 @@ void citcpp_ipog_otf::set_interaction_strength(int t) { strength_ = t; }
 void citcpp_ipog_otf::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  unsigned int num_threads = std::thread::hardware_concurrency();
+  unsigned int num_threads = config_.number_of_threads();
   if (num_threads == 0) {
-    num_threads = 4;
+    num_threads = std::thread::hardware_concurrency();
+    if (num_threads == 0) {
+      num_threads = 1;
+    }
   }
 
   std::vector<internal_relation> relations(

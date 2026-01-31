@@ -136,7 +136,8 @@ int execute_cagen(const std::string& model_file_path,
                   const std::string& seed_test_set_file_path,
                   citcpp::covering_array_computation_algorithm cagen_algo,
                   int interaction_strength, bool show_progress,
-                  const std::string& sep, bool parallel, bool rand_star) {
+                  const std::string& sep, unsigned int num_threads,
+                  bool rand_star) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -176,14 +177,14 @@ int execute_cagen(const std::string& model_file_path,
                           covering_array_computation_config()
                               .with_algorithm(cagen_algo)
                               .with_replace_dont_care_values(rand_star)
-                              .with_multithreading_enabled(parallel)
+                              .with_number_of_threads(num_threads)
                               .with_value_separator(sep))
                     : compute_covering_array_ipog(
                           *model, interaction_strength,
                           covering_array_computation_config()
                               .with_algorithm(cagen_algo)
                               .with_replace_dont_care_values(rand_star)
-                              .with_multithreading_enabled(parallel)
+                              .with_number_of_threads(num_threads)
                               .with_value_separator(sep));
 
   const auto default_precision{std::cout.precision()};
@@ -257,7 +258,7 @@ int execute_covm(const std::string& model_file_path,
                  const std::string& test_set_file_path,
                  const std::string& coverage_measurement_file_path,
                  int interaction_strength, bool show_progress,
-                 const std::string& sep, bool parallel) {
+                 const std::string& sep, unsigned int num_threads) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -294,7 +295,7 @@ int execute_covm(const std::string& model_file_path,
   std::unique_ptr<covm_exec_handle> handle =
       measure_coverage(*model, *tests, interaction_strength,
                        coverage_measurement_config()
-                           .with_multithreading_enabled(parallel)
+                           .with_number_of_threads(num_threads)
                            .with_value_separator(sep));
 
   const auto default_precision{std::cout.precision()};
@@ -398,10 +399,11 @@ int main(int argc, char* argv[]) {
                    "default value is 2.")
       ->check(InteractionStrengthValidator());
 
-  bool parallel = false;
-  command_cagen->add_flag("--parallel", parallel,
-                          "Set this flag to enable parallelization of the "
-                          "algorithm execution.");
+  unsigned int num_threads = 1;
+  command_cagen->add_option(
+      "--num-theads", num_threads,
+      "Sets the number of threads to use. The value 0 means that the number of "
+      "threads is chosen automatically. The default value is 1.");
 
   bool show_progress = false;
   command_cagen->add_flag(
@@ -460,10 +462,10 @@ int main(int argc, char* argv[]) {
           "default value is 2.")
       ->check(InteractionStrengthValidator());
 
-  command_cov_measure->add_flag(
-      "--parallel", parallel,
-      "Set this flag to enable parallelization of the "
-      "algorithm execution.");
+  command_cov_measure->add_option(
+      "--num-theads", num_threads,
+      "Sets the number of threads to use. The value 0 means that the number of "
+      "threads is chosen automatically. The default value is 1.");
 
   command_cov_measure->add_flag(
       "--progress", show_progress,
@@ -523,12 +525,12 @@ int main(int argc, char* argv[]) {
 
     return execute_cagen(model_file_path, test_set_file_path,
                          seed_test_set_file_path, cagen_algo,
-                         interaction_strength, show_progress, sep, parallel,
+                         interaction_strength, show_progress, sep, num_threads,
                          rand_star);
   }
   if (command_cov_measure->parsed()) {
     return execute_covm(model_file_path, test_set_file_path,
                         coverage_measurement_file_path, interaction_strength,
-                        show_progress, sep, parallel);
+                        show_progress, sep, num_threads);
   }
 }

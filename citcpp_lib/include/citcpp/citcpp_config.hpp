@@ -44,10 +44,10 @@ class covering_array_computation_config {
     bool replace_dont_care_values() const { return replace_dont_care_values_; }
 
     /**
-     * Returns whether multithreading shall be used when computing the covering
-     * array.
+     * Returns the number of threads to use. The value 0 means that the
+     * number of threads is chosen automatically.
      */
-    bool multithreading_enabled() const { return multithreading_enabled_; }
+    unsigned int number_of_threads() const { return number_of_threads_; }
 
     /**
      * Returns the value separator to use in the produced test set, as well
@@ -72,12 +72,13 @@ class covering_array_computation_config {
     }
 
     /**
-     * Sets whether multithreading shall be used when computing the covering
+     * Sets the number of threads that shall be used when computing the covering
      * array.
+     * The value 0 means that the number of threads is chosen automatically.
      */
-    covering_array_computation_config& with_multithreading_enabled(
-        bool multithreading_enabled) {
-      multithreading_enabled_ = multithreading_enabled;
+    covering_array_computation_config& with_number_of_threads(
+        unsigned int number_of_threads) {
+      number_of_threads_ = number_of_threads;
 
       return *this;
     }
@@ -105,7 +106,7 @@ class covering_array_computation_config {
 
   private:
     bool replace_dont_care_values_;
-    bool multithreading_enabled_;
+    unsigned int number_of_threads_;
     std::string value_seperator_;
     covering_array_computation_algorithm algo_;
 };
@@ -118,10 +119,10 @@ class coverage_measurement_config {
     coverage_measurement_config();
 
     /**
-     * Returns whether multithreading shall be used when measuring
-     * coverage.
+     * Returns the number of threads to use. The value 0 means that the
+     * number of threads is chosen automatically.
      */
-    bool multithreading_enabled() const { return multithreading_enabled_; }
+    unsigned int number_of_threads() const { return number_of_threads_; }
 
     /**
      * Returns the value separator to assume when parsing the test set whose
@@ -130,12 +131,13 @@ class coverage_measurement_config {
     const std::string& value_separator() const { return value_seperator_; }
 
     /**
-     * Sets whether multithreading shall be used when measuring
+     * Sets the number of threads that shall be used when measuring
      * coverage.
+     * The value 0 means that the number of threads is chosen automatically.
      */
-    coverage_measurement_config& with_multithreading_enabled(
-        bool multithreading_enabled) {
-      multithreading_enabled_ = multithreading_enabled;
+    coverage_measurement_config& with_number_of_threads(
+        unsigned int number_of_threads) {
+      number_of_threads_ = number_of_threads;
 
       return *this;
     }
@@ -152,7 +154,7 @@ class coverage_measurement_config {
     }
 
   private:
-    bool multithreading_enabled_;
+    unsigned int number_of_threads_;
     std::string value_seperator_;
 };
 

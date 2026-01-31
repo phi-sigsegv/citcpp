@@ -59,17 +59,13 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     const citcpp::model& input_model,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::internal_test_set& test_set,
-    const citcpp::coverage_measurement_config& config, int strength,
+    const citcpp::coverage_measurement_config& config,
+    const unsigned int num_threads, int strength,
     citcpp::detail::covm_exec_handle_impl& exec_handle) {
   using namespace citcpp;
   using namespace citcpp::detail;
 
-  const bool with_mt = config.multithreading_enabled();
-
-  unsigned int num_threads = std::thread::hardware_concurrency();
-  if (num_threads == 0) {
-    num_threads = 4;
-  }
+  const bool with_mt = num_threads > 1;
 
   thread_pool tp(num_threads);
 
@@ -194,9 +190,17 @@ void citcpp_covm::set_interaction_strength(int t) { strength_ = t; }
 void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
+  unsigned int num_threads = config_.number_of_threads();
+  if (num_threads == 0) {
+    num_threads = std::thread::hardware_concurrency();
+    if (num_threads == 0) {
+      num_threads = 1;
+    }
+  }
+
   std::unordered_map<std::string, coverage_measurement> covm_per_relation(
-      main_covm_loop(input_model_, model_, tests_, config_, strength_,
-                     exec_handle));
+      main_covm_loop(input_model_, model_, tests_, config_, num_threads,
+                     strength_, exec_handle));
 
   const auto t_end = std::chrono::high_resolution_clock::now();
   const auto duration_in_milli_seconds =
