@@ -601,7 +601,6 @@ sylvan_ldd::sylvan_ldd(sylvan_ldd&& other)
     : ldd_(other.ldd_), variables_(std::move(other.variables_)) {
 
   lddmc_protect(&ldd_);
-  lddmc_unprotect(&other.ldd_);
 }
 
 sylvan_ldd::sylvan_ldd(uint64_t ldd, const std::vector<uint32_t>& variables)
@@ -630,7 +629,6 @@ sylvan_ldd& sylvan_ldd::operator=(sylvan_ldd&& other) {
   if (this != &other) {
     ldd_ = other.ldd_;
     variables_ = std::move(other.variables_);
-    lddmc_unprotect(&other.ldd_);
   }
   return *this;
 }
@@ -642,11 +640,11 @@ sylvan_ldd sylvan_ldd::lddTrue() {
 sylvan_ldd sylvan_ldd::lddFalse() { return sylvan_ldd(); }
 
 bool sylvan_ldd::operator==(const sylvan_ldd& other) const {
-  return ldd_ == other.ldd_;
+  return ldd_ == other.ldd_ && variables_ == other.variables_;
 }
 
 bool sylvan_ldd::operator!=(const sylvan_ldd& other) const {
-  return ldd_ != other.ldd_;
+  return ldd_ != other.ldd_ || variables_ != other.variables_;
 }
 
 uint32_t sylvan_ldd::get_value() const {
@@ -719,7 +717,6 @@ sylvan_ldd& sylvan_ldd::operator*=(const sylvan_ldd& other) {
 }
 
 sylvan_ldd operator+(const sylvan_ldd& lhs, const sylvan_ldd& rhs) {
-  if (lhs.ldd_ == rhs.ldd_) return lhs;
   if (lhs.ldd_ == lddmc_false) return rhs;
   if (rhs.ldd_ == lddmc_false) return lhs;
 
@@ -746,7 +743,6 @@ sylvan_ldd operator+(const sylvan_ldd& lhs, const sylvan_ldd& rhs) {
 }
 
 sylvan_ldd& sylvan_ldd::operator+=(const sylvan_ldd& other) {
-  if (ldd_ == other.ldd_) return *this;
   if (other.ldd_ == lddmc_false) return *this;
   if (ldd_ == lddmc_false) {
     *this = other;
