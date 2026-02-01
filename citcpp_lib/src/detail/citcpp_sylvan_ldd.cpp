@@ -445,7 +445,7 @@ TASK_6(MDD, sylvan_get_valid_variable_assignments, MDD, ldd, const uint32_t*,
        variables, int, num_variables, const int*, values, int, num_values,
        uint32_t, variable) {
 
-  // First we create cubes that specifies which variable we have assignments
+  // First we create cubes that specify which variable we have assignments
   // for, and what are the assigned values.
   MDD variables_cube = lddmc_true;
   MDD values_cube = lddmc_true;
@@ -819,7 +819,7 @@ void sylvan_ldd::get_sat_one(std::vector<int>& assignment) const {
 
   MDD cube = ldd_;
   int var_idx = 0;
-  while (cube != lddmc_true) {
+  while (cube != lddmc_true && cube != lddmc_false) {
     mddnode_t node = LDD_GETNODE(cube);
     uint32_t value = mddnode_getvalue(node);
     assignment[variables_[var_idx]] = value;
