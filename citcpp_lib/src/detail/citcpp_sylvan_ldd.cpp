@@ -463,6 +463,12 @@ TASK_6(MDD, sylvan_get_valid_variable_assignments, MDD, ldd, const uint32_t*,
     }
   }
 
+  if (variable_index < 0) {
+    // The variable which we want to search values for is unconstrained.
+    // We report this by returning true.
+    return lddmc_true;
+  }
+
   lddmc_refs_push(variables_cube);
   lddmc_refs_push(values_cube);
 
@@ -572,10 +578,10 @@ sylvan_ldd::sylvan_ldd(const std::vector<int>& assignments)
                                                assignments.size())),
       variables_() {
 
-  for (int var = 0; var < assignments.size(); +var) {
+  for (int var = 0; var < assignments.size(); ++var) {
     const int value = assignments[var];
     if (value >= 0) {
-      variables_.push_back(value);
+      variables_.push_back(var);
     }
   }
 
@@ -793,11 +799,17 @@ bitset_uint64 sylvan_ldd::get_valid_variable_assignments(
       ldd_, variables_.data(), variables_.size(), partial_assignment.data(),
       partial_assignment.size(), variable);
 
-  while (valid_values_as_ldd != lddmc_false) {
-    mddnode_t node = LDD_GETNODE(valid_values_as_ldd);
-    uint32_t value = mddnode_getvalue(node);
-    valid_values_as_bitset.set(value);
-    valid_values_as_ldd = mddnode_getright(node);
+  if (valid_values_as_ldd == lddmc_true) {
+    for (uint32_t v = 0; v < domain_size; ++v) {
+      valid_values_as_bitset.set(v);
+    }
+  } else {
+    while (valid_values_as_ldd != lddmc_false) {
+      mddnode_t node = LDD_GETNODE(valid_values_as_ldd);
+      uint32_t value = mddnode_getvalue(node);
+      valid_values_as_bitset.set(value);
+      valid_values_as_ldd = mddnode_getright(node);
+    }
   }
 
   return valid_values_as_bitset;
