@@ -115,6 +115,18 @@ class sylvan_ldd {
      */
     void get_sat_one(std::vector<int>& assignment) const;
 
+    /**
+     * Gets a full satisfying assignment, wrting it to the given
+     * vector. The vector is expected to be large enough such that
+     * for each variable of this LDD a value can be written to it.
+     *
+     * Compared to {@link #get_sat_one}, this method analyzes the
+     * given vector for a partial assignment, such that the extracted
+     * full assignment is guaranteed to be consistent with it.
+     */
+    void get_sat_one_under_partial_assignment(
+        std::vector<int>& assignment) const;
+
   private:
     sylvan_ldd(uint64_t ldd, const std::vector<uint32_t>& variables);
     sylvan_ldd(uint64_t ldd, std::vector<uint32_t>&& variables);

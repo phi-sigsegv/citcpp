@@ -3,6 +3,7 @@
 #include <sylvan.h>
 #include <sylvan_int.h>
 
+#include <algorithm>
 #include <utility>
 
 using namespace ::sylvan;
@@ -494,6 +495,128 @@ TASK_2(MDD, sylvan_create_cube_from_assignments, const int*, assignments, int,
   return cube;
 }
 
+static const uint64_t CACHE_MDD_FULL_SAT_ONE_PART_ASSIGN = (38LL << 40);
+
+TASK_4(MDD, sylvan_full_sat_one_under_partial_assignment_recursive, MDD, ldd,
+       uint32_t, var_idx, MDD, variables_cube, MDD, values_cube) {
+
+  if (ldd == lddmc_true) {
+    return lddmc_true;
+  }
+  if (ldd == lddmc_false) {
+    return lddmc_false;
+  }
+
+  mddnode_t var_node = LDD_GETNODE(variables_cube);
+
+  if (variables_cube != lddmc_true && mddnode_getvalue(var_node) == var_idx) {
+    // We reached a variable which we have an assignment for.
+    mddnode_t value_node = LDD_GETNODE(values_cube);
+    uint32_t value = mddnode_getvalue(value_node);
+    // Now we scan the right nodes for a node with a corresponding value.
+    // Only if we can find such, the path which we are currently following
+    // can lead to a full assignment consistent with the partial assignment.
+    while (ldd != lddmc_false) {
+      const mddnode_t nldd = LDD_GETNODE(ldd);
+      const uint32_t v = mddnode_getvalue(nldd);
+      if (v == value) {
+        // We have found the value we are looking for. So recurse from here.
+        // Use cached result if possible.
+        MDD full_sat_one_cube;
+        if (!cache_get3(CACHE_MDD_FULL_SAT_ONE_PART_ASSIGN, ldd, variables_cube,
+                        values_cube, &full_sat_one_cube)) {
+          full_sat_one_cube =
+              CALL(sylvan_full_sat_one_under_partial_assignment_recursive,
+                   mddnode_getdown(nldd), var_idx + 1,
+                   mddnode_getdown(var_node), mddnode_getdown(value_node));
+          // Prepend the current assignment to the cube.
+          if (full_sat_one_cube != lddmc_false) {
+            full_sat_one_cube =
+                lddmc_makenode(value, full_sat_one_cube, lddmc_false);
+          }
+          cache_put3(CACHE_MDD_FULL_SAT_ONE_PART_ASSIGN, ldd, variables_cube,
+                     values_cube, full_sat_one_cube);
+        }
+
+        return full_sat_one_cube;
+      }
+      if (v > value) {
+        // The value is greater then the one we are searching for.
+        // That means that the current path cannot lead to a full assignment
+        // consistent with the partial assignment.
+        break;
+      }
+
+      // The value we are looking for might still be on this level, move
+      // to the right (where higher values are stored).
+      ldd = mddnode_getright(nldd);
+    }
+
+    return lddmc_false;
+  } else {
+    // We do not have an assignment for the current variable, hence we have
+    // to follow all paths.
+    const mddnode_t nldd = LDD_GETNODE(ldd);
+    MDD full_sat_one_cube;
+    // Use cached result if possible.
+    if (!cache_get3(CACHE_MDD_FULL_SAT_ONE_PART_ASSIGN, ldd, variables_cube,
+                    values_cube, &full_sat_one_cube)) {
+      /* right = */ SPAWN(
+          sylvan_full_sat_one_under_partial_assignment_recursive,
+          mddnode_getright(nldd), var_idx, variables_cube, values_cube);
+      MDD down_full_sat_one_cube =
+          CALL(sylvan_full_sat_one_under_partial_assignment_recursive,
+               mddnode_getdown(nldd), var_idx + 1, variables_cube, values_cube);
+      MDD right_full_sat_one_cube =
+          SYNC(sylvan_full_sat_one_under_partial_assignment_recursive);
+
+      if (right_full_sat_one_cube != lddmc_false) {
+        full_sat_one_cube = right_full_sat_one_cube;
+      } else if (down_full_sat_one_cube != lddmc_false) {
+        full_sat_one_cube = lddmc_makenode(mddnode_getvalue(nldd),
+                                           down_full_sat_one_cube, lddmc_false);
+      } else {
+        full_sat_one_cube = lddmc_false;
+      }
+
+      cache_put3(CACHE_MDD_FULL_SAT_ONE_PART_ASSIGN, ldd, variables_cube,
+                 values_cube, full_sat_one_cube);
+    }
+
+    return full_sat_one_cube;
+  }
+}
+
+TASK_5(MDD, sylvan_full_sat_one_under_partial_assignment, MDD, ldd,
+       const uint32_t*, variables, int, num_variables, const int*, values, int,
+       num_values) {
+
+  // First we create cubes that specifies which variable we have assignments
+  // for, and what are the assigned values.
+  MDD variables_cube = lddmc_true;
+  MDD values_cube = lddmc_true;
+  for (int v = num_variables - 1; v >= 0; --v) {
+    const uint32_t var = variables[v];
+    const int value = values[var];
+
+    if (value >= 0) {
+      variables_cube = lddmc_makenode(v, variables_cube, lddmc_false);
+      values_cube = lddmc_makenode(value, values_cube, lddmc_false);
+    }
+  }
+
+  lddmc_refs_push(variables_cube);
+  lddmc_refs_push(values_cube);
+
+  MDD full_sat_one_cube =
+      CALL(sylvan_full_sat_one_under_partial_assignment_recursive, ldd, 0,
+           variables_cube, values_cube);
+
+  lddmc_refs_pop(2);
+
+  return full_sat_one_cube;
+}
+
 #define sylvan_make_node(value, ifeq, ifneq) \
   RUN(sylvan_make_node, value, ifeq, ifneq)
 
@@ -520,6 +643,11 @@ TASK_2(MDD, sylvan_create_cube_from_assignments, const int*, assignments, int,
 
 #define sylvan_create_cube_from_assignments(assignments, num_assignments) \
   RUN(sylvan_create_cube_from_assignments, assignments, num_assignments)
+
+#define sylvan_full_sat_one_under_partial_assignment(               \
+    ldd, variables, num_variables, values, num_values)              \
+  RUN(sylvan_full_sat_one_under_partial_assignment, ldd, variables, \
+      num_variables, values, num_values)
 
 std::vector<uint32_t> get_common_variables(
     const std::vector<uint32_t>& lhs_vars,
@@ -718,6 +846,8 @@ sylvan_ldd& sylvan_ldd::operator*=(const sylvan_ldd& other) {
   lddmc_unprotect(&this_cube);
   lddmc_unprotect(&other_cube);
 
+  variables_ = common_variables;
+
   return *this;
 }
 
@@ -773,6 +903,8 @@ sylvan_ldd& sylvan_ldd::operator+=(const sylvan_ldd& other) {
   lddmc_unprotect(&this_cube);
   lddmc_unprotect(&other_cube);
 
+  variables_ = common_variables;
+
   return *this;
 }
 
@@ -815,8 +947,25 @@ bitset_uint64 sylvan_ldd::get_valid_variable_assignments(
 }
 
 void sylvan_ldd::get_sat_one(std::vector<int>& assignment) const {
-
   MDD cube = ldd_;
+
+  int var_idx = 0;
+  while (cube != lddmc_true && cube != lddmc_false) {
+    mddnode_t node = LDD_GETNODE(cube);
+    uint32_t value = mddnode_getvalue(node);
+    assignment[variables_[var_idx]] = value;
+    cube = mddnode_getdown(node);
+    ++var_idx;
+  }
+}
+
+void sylvan_ldd::get_sat_one_under_partial_assignment(
+    std::vector<int>& assignment) const {
+
+  MDD cube = sylvan_full_sat_one_under_partial_assignment(
+      ldd_, variables_.data(), variables_.size(), assignment.data(),
+      assignment.size());
+
   int var_idx = 0;
   while (cube != lddmc_true && cube != lddmc_false) {
     mddnode_t node = LDD_GETNODE(cube);

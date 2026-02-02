@@ -113,16 +113,14 @@ class constraint_to_ldd_visitor {
 
       switch (prop.get_operator()) {
         case relational_operator::EQ: {
-          int value_index = 0;
-          for (const auto& value : param.get_values()) {
-            int value_as_int = value;
+          for (int v = 0; v < param.get_values().size(); ++v) {
+            int value_as_int = param.get_values()[v];
             if (value_as_int == prop.get_compared_value()) {
               return sylvan_ldd(
                   param_idx,
                   negate_ ? relational_operator::NEQ : relational_operator::EQ,
-                  value_index, domain_size);
+                  v, domain_size);
             }
-            ++value_index;
           }
 
           return negate_ ? sylvan_ldd::lddTrue() : sylvan_ldd::lddFalse();
@@ -154,9 +152,12 @@ class constraint_to_ldd_visitor {
           for (int v = param.get_values().size() - 1; v >= 0; --v) {
             int value_as_int = param.get_values()[v];
             if (value_as_int < prop.get_compared_value()) {
+              // We create and LDD, which represents that X <= value_as_int,
+              // which means that X <= value_as_int < a,
+              // where a is the upper bound from the proposition.
               return sylvan_ldd(
                   param_idx,
-                  negate_ ? relational_operator::GE : relational_operator::LT,
+                  negate_ ? relational_operator::GT : relational_operator::LE,
                   v, domain_size);
             }
           }
@@ -188,9 +189,12 @@ class constraint_to_ldd_visitor {
           for (int v = 0; v < param.get_values().size(); ++v) {
             int value_as_int = param.get_values()[v];
             if (value_as_int > prop.get_compared_value()) {
+              // We create and LDD, which represents that X >= value_as_int,
+              // which means that X >= value_as_int > a,
+              // where a is the lower bound from the proposition.
               return sylvan_ldd(
                   param_idx,
-                  negate_ ? relational_operator::LE : relational_operator::GT,
+                  negate_ ? relational_operator::LT : relational_operator::GE,
                   v, domain_size);
             }
           }
@@ -198,16 +202,14 @@ class constraint_to_ldd_visitor {
           return negate_ ? sylvan_ldd::lddTrue() : sylvan_ldd::lddFalse();
         }
         default: {
-          int value_index = 0;
-          for (const auto& value : param.get_values()) {
-            int value_as_int = value;
+          for (int v = 0; v < param.get_values().size(); ++v) {
+            int value_as_int = param.get_values()[v];
             if (value_as_int == prop.get_compared_value()) {
               return sylvan_ldd(
                   param_idx,
                   negate_ ? relational_operator::EQ : relational_operator::NEQ,
-                  value_index, domain_size);
+                  v, domain_size);
             }
-            ++value_index;
           }
 
           return negate_ ? sylvan_ldd::lddFalse() : sylvan_ldd::lddTrue();
@@ -374,11 +376,17 @@ bitset_uint64 constraint_handler_sylvan_ldd::get_valid_parameter_assignments(
 }
 
 void constraint_handler_sylvan_ldd::replace_dont_care_values(test& t) const {
-  // Conjunct the LDD with a one representing the assignments
-  // found in the given test.
-  // On the resulting LDD we just extract an arbitrary full
-  // assignment.
-  (ldd_ * sylvan_ldd(t.get_values())).get_sat_one(t.get_values());
+  ldd_.get_sat_one_under_partial_assignment(t.get_values());
+  // The call above only replaces don't care values for constrained variables.
+  // So the test may still contain  don't care values for unconstrained
+  // variables, which we also need to replace. This is easy however, since we
+  // can simply replace all of them by the first value of the respective domain.
+  for (unsigned int i = 0; i < t.get_values().size(); ++i) {
+    int& value = t.get_values()[i];
+    if (value < 0) {
+      value = 0;
+    }
+  }
 }
 
 }  // namespace detail
