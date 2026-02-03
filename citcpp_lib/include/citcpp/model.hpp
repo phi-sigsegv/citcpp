@@ -78,7 +78,8 @@ class model {
     }
 
     void add_constraint(std::unique_ptr<constraint> constraint) {
-      constraints_.push_back(std::move(constraint));
+      constraints_.push_back(
+          std::move(constraint_holder(std::move(constraint))));
     }
 
   private:
