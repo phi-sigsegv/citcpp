@@ -327,6 +327,7 @@ void maybe_shutdown_sylvan() {
   instance_cnt--;
   if (instance_cnt == 0) {
     sylvan::quit_package();
+    sylvan::quit_lace();
   }
 }
 

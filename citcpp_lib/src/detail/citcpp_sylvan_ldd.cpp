@@ -999,6 +999,8 @@ void sylvan::init_mtbdd() { sylvan_init_mtbdd(); }
 
 void sylvan::init_ldd() { sylvan_init_ldd(); }
 
+void sylvan::quit_lace() { lace_stop(); }
+
 void sylvan::quit_package() { sylvan_quit(); }
 
 }  // namespace detail

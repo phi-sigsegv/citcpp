@@ -197,6 +197,11 @@ class sylvan {
     static void init_ldd();
 
     /**
+     * Stops all Lace workers.
+     */
+    static void quit_lace();
+
+    /**
      * Frees all memory in use by Sylvan.
      * Warning: if you have any BDD or LDD objects which are not the trivial
      * terminal nodes after this, your program may crash!
