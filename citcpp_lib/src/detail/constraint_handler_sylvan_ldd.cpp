@@ -11,6 +11,7 @@ class constraint_to_ldd_visitor {
 
       int idx = 0;
       for (const auto& param : model_.get_input_model().get_parameters()) {
+        parameter_name_map_[param.get_name()] = &param;
         param_to_index_.emplace(param.get_name(), idx);
         ++idx;
       }
@@ -22,8 +23,8 @@ class constraint_to_ldd_visitor {
       using namespace citcpp::detail;
       using namespace citcpp;
 
-      const parameter& param = model_.get_input_model().get_parameter(
-          prop.get_parameter().get_name());
+      const parameter& param =
+          *parameter_name_map_.at(prop.get_parameter().get_name());
       const int param_idx = param_to_index_.at(param.get_name());
       const int domain_size = param.get_values().size();
 
@@ -64,8 +65,8 @@ class constraint_to_ldd_visitor {
       using namespace citcpp::detail;
       using namespace citcpp;
 
-      const parameter& param = model_.get_input_model().get_parameter(
-          prop.get_parameter().get_name());
+      const parameter& param =
+          *parameter_name_map_.at(prop.get_parameter().get_name());
       const int param_idx = param_to_index_.at(param.get_name());
       const int domain_size = param.get_values().size();
 
@@ -106,8 +107,8 @@ class constraint_to_ldd_visitor {
       using namespace citcpp::detail;
       using namespace citcpp;
 
-      const parameter& param = model_.get_input_model().get_parameter(
-          prop.get_parameter().get_name());
+      const parameter& param =
+          *parameter_name_map_.at(prop.get_parameter().get_name());
       const int param_idx = param_to_index_.at(param.get_name());
       const int domain_size = param.get_values().size();
 
@@ -282,6 +283,8 @@ class constraint_to_ldd_visitor {
 
   private:
     const citcpp::detail::internal_model& model_;
+    std::unordered_map<std::string, const citcpp::parameter*>
+        parameter_name_map_;
     std::unordered_map<citcpp::parameter_reference, int,
                        citcpp::parameter_reference_hash>
         param_to_index_;

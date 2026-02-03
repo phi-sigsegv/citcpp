@@ -20,23 +20,13 @@ class model {
     model(const model& other)
         : name_(other.name_),
           parameters_(other.parameters_),
-          parameter_name_map_(),
           relations_(other.relations_),
-          constraints_(other.constraints_) {
-      for (auto& param : parameters_) {
-        parameter_name_map_[param.get_name()] = &param;
-      }
-    }
+          constraints_(other.constraints_) {}
     model(model&& other)
         : name_(std::move(other.name_)),
           parameters_(std::move(other.parameters_)),
-          parameter_name_map_(),
           relations_(std::move(other.relations_)),
-          constraints_(std::move(other.constraints_)) {
-      for (auto& param : parameters_) {
-        parameter_name_map_[param.get_name()] = &param;
-      }
-    }
+          constraints_(std::move(other.constraints_)) {}
 
     ~model() = default;
 
@@ -44,10 +34,6 @@ class model {
       if (&other != this) {
         name_ = other.name_;
         parameters_ = other.parameters_;
-        parameter_name_map_.clear();
-        for (auto& param : parameters_) {
-          parameter_name_map_[param.get_name()] = &param;
-        }
         relations_ = other.relations_;
         constraints_ = other.constraints_;
       }
@@ -58,10 +44,6 @@ class model {
       if (&other != this) {
         name_ = std::move(other.name_);
         parameters_ = std::move(other.parameters_);
-        parameter_name_map_.clear();
-        for (auto& param : parameters_) {
-          parameter_name_map_[param.get_name()] = &param;
-        }
         relations_ = std::move(other.relations_);
         constraints_ = std::move(other.constraints_);
       }
@@ -75,22 +57,10 @@ class model {
 
     const std::vector<parameter>& get_parameters() const { return parameters_; }
 
-    const parameter& get_parameter(const std::string& name) const {
-      return *parameter_name_map_.at(name);
-    }
-
-    parameter& get_parameter(const std::string& name) {
-      return *parameter_name_map_.at(name);
-    }
-
-    void add_parameter(const parameter& param) {
-      parameters_.push_back(param);
-      parameter_name_map_[param.get_name()] = &parameters_.back();
-    }
+    void add_parameter(const parameter& param) { parameters_.push_back(param); }
 
     void add_parameter(parameter&& param) {
       parameters_.push_back(std::move(param));
-      parameter_name_map_[param.get_name()] = &parameters_.back();
     }
 
     const std::vector<relation>& get_relations() const { return relations_; }
@@ -114,7 +84,6 @@ class model {
   private:
     std::string name_;
     std::vector<parameter> parameters_;
-    std::unordered_map<std::string, parameter*> parameter_name_map_;
     std::vector<relation> relations_;
     std::vector<constraint_holder> constraints_;
 };
