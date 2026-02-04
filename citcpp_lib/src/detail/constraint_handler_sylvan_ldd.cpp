@@ -241,10 +241,11 @@ class constraint_to_ldd_visitor {
       using namespace citcpp::detail;
       using namespace citcpp;
 
-      sylvan_ldd ldd_false = sylvan_ldd::lddTrue();
-      sylvan_ldd ldd = ldd_false;
+      sylvan_ldd additive_identify =
+          negate_ ? sylvan_ldd::lddFalse() : sylvan_ldd::lddTrue();
+      sylvan_ldd ldd = additive_identify;
       for (const auto& operand : and_expr.get_operands()) {
-        if (ldd == ldd_false) {
+        if (ldd == additive_identify) {
           ldd = operand->accept<sylvan_ldd>(*this);
         } else {
           if (negate_) {
@@ -264,10 +265,11 @@ class constraint_to_ldd_visitor {
       using namespace citcpp::detail;
       using namespace citcpp;
 
-      sylvan_ldd ldd_false = sylvan_ldd::lddFalse();
-      sylvan_ldd ldd = ldd_false;
+      sylvan_ldd additive_identify =
+          negate_ ? sylvan_ldd::lddTrue() : sylvan_ldd::lddFalse();
+      sylvan_ldd ldd = additive_identify;
       for (const auto& operand : or_expr.get_operands()) {
-        if (ldd == ldd_false) {
+        if (ldd == additive_identify) {
           ldd = operand->accept<sylvan_ldd>(*this);
         } else {
           if (negate_) {
