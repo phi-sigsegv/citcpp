@@ -82,15 +82,21 @@ TASK_4(MDD, sylvan_create_projection_cube, const uint32_t*, target_variables,
   MDD cube = lddmc_true;
   int local_var_idx = num_local_variables - 1;
   bool found_last_local_var = false;
+  bool found_non_local_target_var = false;
   for (int i = num_target_variables - 1; i >= 0; --i) {
     uint32_t var = target_variables[i];
 
     if (local_var_idx >= 0 && var == local_variables[local_var_idx]) {
-      cube = lddmc_makenode(1, cube, lddmc_false);
+      if (found_non_local_target_var) {
+        cube = lddmc_makenode(1, cube, lddmc_false);
+      } else {
+        cube = lddmc_makenode(-1, cube, lddmc_false);
+      }
       --local_var_idx;
       found_last_local_var = true;
     } else {
       // var is not part of local variables.
+      found_non_local_target_var = true;
       if (found_last_local_var) {
         cube = lddmc_makenode(0, cube, lddmc_false);
       } else {
