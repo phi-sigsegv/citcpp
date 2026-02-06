@@ -793,7 +793,9 @@ uint32_t sylvan_ldd::get_value() const {
   return value;
 }
 
-sylvan_ldd operator*(const sylvan_ldd& lhs, const sylvan_ldd& rhs) {
+sylvan_ldd sylvan_ldd::project_intersect(const sylvan_ldd& lhs,
+                                         const sylvan_ldd& rhs) {
+
   if (lhs.ldd_ == lddmc_false || rhs.ldd_ == lddmc_false)
     return sylvan_ldd::lddFalse();
   if (lhs.ldd_ == lddmc_true) return rhs;
@@ -821,7 +823,7 @@ sylvan_ldd operator*(const sylvan_ldd& lhs, const sylvan_ldd& rhs) {
   return sylvan_ldd(and_ldd, std::move(common_variables));
 }
 
-sylvan_ldd& sylvan_ldd::operator*=(const sylvan_ldd& other) {
+sylvan_ldd& sylvan_ldd::project_intersect(const sylvan_ldd& other) {
   if (ldd_ == lddmc_false || other.ldd_ == lddmc_false) {
     ldd_ = lddmc_false;
     variables_.clear();
@@ -857,7 +859,10 @@ sylvan_ldd& sylvan_ldd::operator*=(const sylvan_ldd& other) {
   return *this;
 }
 
-sylvan_ldd operator+(const sylvan_ldd& lhs, const sylvan_ldd& rhs) {
+sylvan_ldd sylvan_ldd::project_union(
+    const sylvan_ldd& lhs, const sylvan_ldd& rhs,
+    const std::vector<unsigned int>& domain_sizes) {
+
   if (lhs.ldd_ == lddmc_false) return rhs;
   if (rhs.ldd_ == lddmc_false) return lhs;
 
@@ -883,7 +888,9 @@ sylvan_ldd operator+(const sylvan_ldd& lhs, const sylvan_ldd& rhs) {
   return sylvan_ldd(or_ldd, std::move(common_variables));
 }
 
-sylvan_ldd& sylvan_ldd::operator+=(const sylvan_ldd& other) {
+sylvan_ldd& sylvan_ldd::project_union(
+    const sylvan_ldd& other, const std::vector<unsigned int>& domain_sizes) {
+
   if (other.ldd_ == lddmc_false) return *this;
   if (ldd_ == lddmc_false) {
     *this = other;

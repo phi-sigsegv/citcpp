@@ -230,7 +230,10 @@ class constraint_to_ldd_visitor {
           impl.get_right_operand().accept<sylvan_ldd>(*this);
 
       sylvan_ldd ldd =
-          negate_ ? (premise * consequence) : (premise + consequence);
+          negate_
+              ? sylvan_ldd::project_intersect(premise, consequence)
+              : sylvan_ldd::project_union(premise, consequence,
+                                          model_.get_parameter_num_values());
 
       return ldd;
     }
@@ -249,9 +252,10 @@ class constraint_to_ldd_visitor {
           ldd = operand->accept<sylvan_ldd>(*this);
         } else {
           if (negate_) {
-            ldd += operand->accept<sylvan_ldd>(*this);
+            ldd.project_union(operand->accept<sylvan_ldd>(*this),
+                              model_.get_parameter_num_values());
           } else {
-            ldd *= operand->accept<sylvan_ldd>(*this);
+            ldd.project_intersect(operand->accept<sylvan_ldd>(*this));
           }
         }
       }
@@ -273,9 +277,10 @@ class constraint_to_ldd_visitor {
           ldd = operand->accept<sylvan_ldd>(*this);
         } else {
           if (negate_) {
-            ldd *= operand->accept<sylvan_ldd>(*this);
+            ldd.project_intersect(operand->accept<sylvan_ldd>(*this));
           } else {
-            ldd += operand->accept<sylvan_ldd>(*this);
+            ldd.project_union(operand->accept<sylvan_ldd>(*this),
+                              model_.get_parameter_num_values());
           }
         }
       }
@@ -361,7 +366,7 @@ constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
     if (ldd == ldd_true) {
       ldd = constr->accept<sylvan_ldd>(visitor);
     } else {
-      ldd *= constr->accept<sylvan_ldd>(visitor);
+      ldd.project_intersect(constr->accept<sylvan_ldd>(visitor));
     }
   }
 

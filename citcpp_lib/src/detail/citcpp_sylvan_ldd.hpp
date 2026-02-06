@@ -69,11 +69,15 @@ class sylvan_ldd {
      */
     uint32_t get_value() const;
 
-    friend sylvan_ldd operator*(const sylvan_ldd& lhs, const sylvan_ldd& rhs);
-    sylvan_ldd& operator*=(const sylvan_ldd& other);
+    static sylvan_ldd project_intersect(const sylvan_ldd& lhs,
+                                        const sylvan_ldd& rhs);
+    sylvan_ldd& project_intersect(const sylvan_ldd& other);
 
-    friend sylvan_ldd operator+(const sylvan_ldd& lhs, const sylvan_ldd& rhs);
-    sylvan_ldd& operator+=(const sylvan_ldd& other);
+    static sylvan_ldd project_union(
+        const sylvan_ldd& lhs, const sylvan_ldd& rhs,
+        const std::vector<unsigned int>& domain_sizes);
+    sylvan_ldd& project_union(const sylvan_ldd& other,
+                              const std::vector<unsigned int>& domain_sizes);
 
     /**
      * Return the number of nodes in this LDD.
