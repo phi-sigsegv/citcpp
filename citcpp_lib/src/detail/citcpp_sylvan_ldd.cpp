@@ -10,6 +10,29 @@ using namespace ::sylvan;
 
 namespace {
 
+inline int match_ldds(MDD* one, MDD* two) {
+  MDD m1 = *one, m2 = *two;
+  if (m1 == lddmc_false || m2 == lddmc_false) return 0;
+  mddnode_t n1 = LDD_GETNODE(m1), n2 = LDD_GETNODE(m2);
+  uint32_t v1 = mddnode_getvalue(n1), v2 = mddnode_getvalue(n2);
+  while (v1 != v2) {
+    if (v1 < v2) {
+      m1 = mddnode_getright(n1);
+      if (m1 == lddmc_false) return 0;
+      n1 = LDD_GETNODE(m1);
+      v1 = mddnode_getvalue(n1);
+    } else if (v1 > v2) {
+      m2 = mddnode_getright(n2);
+      if (m2 == lddmc_false) return 0;
+      n2 = LDD_GETNODE(m2);
+      v2 = mddnode_getvalue(n2);
+    }
+  }
+  *one = m1;
+  *two = m2;
+  return 1;
+}
+
 TASK_3(MDD, sylvan_make_node, uint32_t, value, MDD, ifeq, MDD, ifneq) {
   return lddmc_makenode(value, ifeq, ifneq);
 }
@@ -106,120 +129,6 @@ TASK_4(MDD, sylvan_create_projection_cube, const uint32_t*, target_variables,
   }
 
   return cube;
-}
-
-static const uint64_t CACHE_MDD_UNION_JOIN = (35LL << 40);
-
-TASK_4(MDD, sylvan_join_union, MDD, a, MDD, b, MDD, a_proj, MDD, b_proj) {
-  if (a == lddmc_false) return b;
-  if (b == lddmc_false) return a;
-
-  /* Test gc */
-  sylvan_gc_test();
-
-  /* Improve cache behavior */
-  if (a < b) {
-    MDD tmp = b;
-    b = a;
-    a = tmp;
-
-    tmp = b_proj;
-    b_proj = a_proj;
-    a_proj = tmp;
-  }
-
-  mddnode_t n_a_proj = LDD_GETNODE(a_proj);
-  mddnode_t n_b_proj = LDD_GETNODE(b_proj);
-  uint32_t a_proj_val = mddnode_getvalue(n_a_proj);
-  uint32_t b_proj_val = mddnode_getvalue(n_b_proj);
-
-  while (a_proj_val == 0 && b_proj_val == 0) {
-    a_proj = mddnode_getdown(n_a_proj);
-    b_proj = mddnode_getdown(n_b_proj);
-    n_a_proj = LDD_GETNODE(a_proj);
-    n_b_proj = LDD_GETNODE(b_proj);
-    a_proj_val = mddnode_getvalue(n_a_proj);
-    b_proj_val = mddnode_getvalue(n_b_proj);
-  }
-
-  if (a_proj_val == (uint32_t)-2) return b;  // no a left
-  if (b_proj_val == (uint32_t)-2) return a;  // no b left
-  if (a_proj_val == (uint32_t)-1 && b_proj_val == (uint32_t)-1)
-    return CALL(lddmc_union, a, b);
-
-  /* Access cache */
-  MDD result;
-  if (cache_get4(CACHE_MDD_UNION_JOIN, a, b, a_proj, b_proj, &result)) {
-    return result;
-  }
-
-  // At this point, only proj_val {-1, 0, 1}; max one with -1; max one with 0.
-  const int keep_a = a_proj_val != 0;
-  const int keep_b = b_proj_val != 0;
-
-  /* Perform recursive calculation */
-  const mddnode_t na = LDD_GETNODE(a);
-  const mddnode_t nb = LDD_GETNODE(b);
-
-  // Make copies (for cache)
-  MDD _a_proj = a_proj, _b_proj = b_proj;
-  if (keep_a && keep_b) {
-    const uint32_t na_value = mddnode_getvalue(na);
-    const uint32_t nb_value = mddnode_getvalue(nb);
-
-    if (na_value < nb_value) {
-      MDD right =
-          CALL(sylvan_join_union, mddnode_getright(na), b, a_proj, b_proj);
-      result = lddmc_makenode(na_value, mddnode_getdown(na), right);
-    } else if (na_value > nb_value) {
-      MDD right =
-          CALL(sylvan_join_union, a, mddnode_getright(nb), a_proj, b_proj);
-      result = lddmc_makenode(nb_value, mddnode_getdown(nb), right);
-    } else /* na_value == nb_value */ {
-      lddmc_refs_spawn(SPAWN(sylvan_join_union, mddnode_getright(na),
-                             mddnode_getright(nb), a_proj, b_proj));
-      if (a_proj_val != (uint32_t)-1) a_proj = mddnode_getdown(n_a_proj);
-      if (b_proj_val != (uint32_t)-1) b_proj = mddnode_getdown(n_b_proj);
-      MDD down = CALL(sylvan_join_union, mddnode_getdown(na),
-                      mddnode_getdown(nb), a_proj, b_proj);
-
-      lddmc_refs_push(down);
-      MDD right = lddmc_refs_sync(SYNC(sylvan_join_union));
-      lddmc_refs_pop(1);
-      result = lddmc_makenode(na_value, down, right);
-    }
-  } else {
-    uint32_t val;
-    MDD down;
-
-    if (keep_a) {
-      // project b
-      val = mddnode_getvalue(na);
-      lddmc_refs_spawn(
-          SPAWN(sylvan_join_union, mddnode_getright(na), b, a_proj, b_proj));
-      if (a_proj_val != (uint32_t)-1) a_proj = mddnode_getdown(n_a_proj);
-      if (b_proj_val != (uint32_t)-1) b_proj = mddnode_getdown(n_b_proj);
-      down = CALL(sylvan_join_union, mddnode_getdown(na), b, a_proj, b_proj);
-    } else {
-      // project a
-      val = mddnode_getvalue(nb);
-      lddmc_refs_spawn(
-          SPAWN(sylvan_join_union, a, mddnode_getright(nb), a_proj, b_proj));
-      if (a_proj_val != (uint32_t)-1) a_proj = mddnode_getdown(n_a_proj);
-      if (b_proj_val != (uint32_t)-1) b_proj = mddnode_getdown(n_b_proj);
-      down = CALL(sylvan_join_union, a, mddnode_getdown(nb), a_proj, b_proj);
-    }
-
-    lddmc_refs_push(down);
-    MDD right = lddmc_refs_sync(SYNC(sylvan_join_union));
-    lddmc_refs_pop(1);
-    result = lddmc_makenode(val, down, right);
-  }
-
-  /* Write to cache */
-  cache_put4(CACHE_MDD_UNION_JOIN, a, b, _a_proj, _b_proj, result);
-
-  return result;
 }
 
 static const uint64_t CACHE_MDD_CONTAINS_PART_ASSIGN = (36LL << 40);
@@ -623,6 +532,77 @@ TASK_5(MDD, sylvan_full_sat_one_under_partial_assignment, MDD, ldd,
   return full_sat_one_cube;
 }
 
+TASK_3(MDD, sylvan_create_universe, const uint32_t*, variables, int, count,
+       const unsigned int*, domain_sizes) {
+
+  MDD universe = lddmc_true;
+  for (int var_idx = count - 1; var_idx >= 0; --var_idx) {
+    MDD prepended_universe = false;
+    for (int v = domain_sizes[variables[var_idx]] - 1; v >= 0; --v) {
+      prepended_universe = lddmc_makenode(v, universe, prepended_universe);
+    }
+
+    universe = prepended_universe;
+  }
+
+  return universe;
+}
+
+static const uint64_t CACHE_MDD_INV_PROJ = (39LL << 40);
+
+TASK_3(MDD, sylvan_inv_project, MDD, a, MDD, b, MDD, proj) {
+  if (a == b) return a;
+  if (a == lddmc_false || b == lddmc_false) return lddmc_false;
+
+  mddnode_t p_node = LDD_GETNODE(proj);
+  uint32_t p_val = mddnode_getvalue(p_node);
+  if (p_val == (uint32_t)-2) return a;
+
+  assert(a != lddmc_true);
+
+  if (p_val == (uint32_t)-1) return b;
+
+  if (p_val == 1) assert(b != lddmc_true);
+
+  /* Test gc */
+  sylvan_gc_test();
+
+  if (p_val == 1) {
+    if (!match_ldds(&a, &b)) return lddmc_false;
+  }
+
+  /* Access cache */
+  MDD result;
+  if (cache_get3(CACHE_MDD_INV_PROJ, a, b, proj, &result)) {
+    return result;
+  }
+
+  /* Perform recursive calculation */
+  mddnode_t na = LDD_GETNODE(a);
+  MDD down;
+  if (p_val == 1) {
+    mddnode_t nb = LDD_GETNODE(b);
+    /* right = */ lddmc_refs_spawn(SPAWN(
+        sylvan_inv_project, mddnode_getright(na), mddnode_getright(nb), proj));
+    down = CALL(sylvan_inv_project, mddnode_getdown(na), mddnode_getdown(nb),
+                mddnode_getdown(p_node));
+  } else {
+    /* right = */ lddmc_refs_spawn(
+        SPAWN(sylvan_inv_project, mddnode_getright(na), b, proj));
+    down = CALL(sylvan_inv_project, mddnode_getdown(na), b,
+                mddnode_getdown(p_node));
+  }
+  lddmc_refs_push(down);
+  MDD right = lddmc_refs_sync(SYNC(sylvan_inv_project));
+  lddmc_refs_pop(1);
+  result = lddmc_makenode(mddnode_getvalue(na), down, right);
+
+  /* Write to cache */
+  cache_put3(CACHE_MDD_INV_PROJ, a, b, proj, result);
+
+  return result;
+}
+
 #define sylvan_make_node(value, ifeq, ifneq) \
   RUN(sylvan_make_node, value, ifeq, ifneq)
 
@@ -633,9 +613,6 @@ TASK_5(MDD, sylvan_full_sat_one_under_partial_assignment, MDD, ldd,
                                       local_variables, num_local_variables)   \
   RUN(sylvan_create_projection_cube, target_variables, num_target_variables,  \
       local_variables, num_local_variables)
-
-#define sylvan_join_union(a, b, a_proj, b_proj) \
-  RUN(sylvan_join_union, a, b, a_proj, b_proj)
 
 #define sylvan_sat_with_partial_assignment(ldd, variables, num_variables, \
                                            values, num_values)            \
@@ -654,6 +631,11 @@ TASK_5(MDD, sylvan_full_sat_one_under_partial_assignment, MDD, ldd,
     ldd, variables, num_variables, values, num_values)              \
   RUN(sylvan_full_sat_one_under_partial_assignment, ldd, variables, \
       num_variables, values, num_values)
+
+#define sylvan_create_universe(variables, count, domain_sizes) \
+  RUN(sylvan_create_universe, variables, count, domain_sizes)
+
+#define sylvan_inv_project(a, b, proj) RUN(sylvan_inv_project, a, b, proj)
 
 std::vector<uint32_t> get_common_variables(
     const std::vector<uint32_t>& lhs_vars,
@@ -854,7 +836,7 @@ sylvan_ldd& sylvan_ldd::project_intersect(const sylvan_ldd& other) {
   lddmc_unprotect(&this_cube);
   lddmc_unprotect(&other_cube);
 
-  variables_ = common_variables;
+  variables_ = std::move(common_variables);
 
   return *this;
 }
@@ -879,11 +861,22 @@ sylvan_ldd sylvan_ldd::project_union(
       common_variables.data(), common_variables.size(), rhs_vars.data(),
       rhs_vars.size());
   lddmc_protect(&rhs_cube);
+  MDD universe = sylvan_create_universe(
+      common_variables.data(), common_variables.size(), domain_sizes.data());
+  lddmc_protect(&universe);
 
-  MDD or_ldd = sylvan_join_union(lhs.ldd_, rhs.ldd_, lhs_cube, rhs_cube);
-
+  MDD lhs_projected = sylvan_inv_project(universe, lhs.ldd_, lhs_cube);
+  lddmc_protect(&lhs_projected);
   lddmc_unprotect(&lhs_cube);
+  MDD rhs_projected = sylvan_inv_project(universe, rhs.ldd_, rhs_cube);
+  lddmc_protect(&rhs_projected);
   lddmc_unprotect(&rhs_cube);
+  lddmc_unprotect(&universe);
+
+  MDD or_ldd = lddmc_union(lhs_projected, rhs_projected);
+
+  lddmc_unprotect(&lhs_projected);
+  lddmc_unprotect(&rhs_projected);
 
   return sylvan_ldd(or_ldd, std::move(common_variables));
 }
@@ -910,18 +903,31 @@ sylvan_ldd& sylvan_ldd::project_union(
       common_variables.data(), common_variables.size(), other_vars.data(),
       other_vars.size());
   lddmc_protect(&other_cube);
+  MDD universe = sylvan_create_universe(
+      common_variables.data(), common_variables.size(), domain_sizes.data());
+  lddmc_protect(&universe);
 
-  ldd_ = sylvan_join_union(ldd_, other.ldd_, this_cube, other_cube);
-
+  MDD this_projected = sylvan_inv_project(universe, ldd_, this_cube);
+  lddmc_protect(&this_projected);
   lddmc_unprotect(&this_cube);
+  MDD other_projected = sylvan_inv_project(universe, other.ldd_, other_cube);
+  lddmc_protect(&other_projected);
   lddmc_unprotect(&other_cube);
+  lddmc_unprotect(&universe);
 
-  variables_ = common_variables;
+  ldd_ = lddmc_union(this_projected, other_projected);
+
+  lddmc_unprotect(&this_projected);
+  lddmc_unprotect(&other_projected);
+
+  variables_ = std::move(common_variables);
 
   return *this;
 }
 
 size_t sylvan_ldd::node_count() const { return lddmc_nodecount(ldd_); }
+
+double sylvan_ldd::sat_count() const { return lddmc_satcount(ldd_); }
 
 bool sylvan_ldd::is_sat_with_partial_assignment(
     const std::vector<int>& partial_assignment) const {
@@ -987,6 +993,12 @@ void sylvan_ldd::get_sat_one_under_partial_assignment(
     cube = mddnode_getdown(node);
     ++var_idx;
   }
+}
+
+void sylvan_ldd::print_dot(const std::string& file_path) {
+  FILE* f = fopen(file_path.data(), "w");
+  lddmc_fprintdot(f, ldd_);
+  fclose(f);
 }
 
 void sylvan::init_lace(unsigned int n_workers, size_t dqsize) {
