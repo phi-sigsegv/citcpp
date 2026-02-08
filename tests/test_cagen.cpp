@@ -652,7 +652,7 @@ TEST_CASE("cagen, testing PICT example model, strength 7") {
   CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
-TEST_CASE("cagen, testing ACTS example model, strength 1") {
+TEST_CASE("cagen, testing unconstrained ACTS example model, strength 1") {
   using namespace citcpp;
 
   model model{create_acts_example_model()};
@@ -679,6 +679,23 @@ TEST_CASE("cagen, testing ACTS example model, strength 1") {
     // Thus, for 1-way coverage we shall get a testset with exactly
     // 10 rows.
     CHECK(ipog_test_set.get_list_of_tests().size() == 10);
+
+    std::unique_ptr<covm_exec_handle> covm_handle = measure_coverage(
+        model, ipog_test_set, 1, coverage_measurement_config());
+    auto covm_f = covm_handle->get_coverage_measurement();
+    covm_exec_result covm_result(covm_f.get());
+    const coverage_measurement& covm = covm_result.get_result().at("");
+
+    CHECK(covm_result.get_result_code() ==
+          covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+    std::cout << "Coverage measured in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     covm_handle->get_duration_in_milli_seconds()))
+              << std::endl;
+
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          44);
   }
 
   test_set ipog_otf_test_set;
@@ -710,7 +727,7 @@ TEST_CASE("cagen, testing ACTS example model, strength 1") {
   CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
-TEST_CASE("cagen, testing ACTS example model, strength 2") {
+TEST_CASE("cagen, testing unconstrained ACTS example model, strength 2") {
   using namespace citcpp;
 
   model model{create_acts_example_model()};
@@ -732,6 +749,23 @@ TEST_CASE("cagen, testing ACTS example model, strength 2") {
                      handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
+
+    std::unique_ptr<covm_exec_handle> covm_handle = measure_coverage(
+        model, ipog_test_set, 2, coverage_measurement_config());
+    auto covm_f = covm_handle->get_coverage_measurement();
+    covm_exec_result covm_result(covm_f.get());
+    const coverage_measurement& covm = covm_result.get_result().at("");
+
+    CHECK(covm_result.get_result_code() ==
+          covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+    std::cout << "Coverage measured in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     covm_handle->get_duration_in_milli_seconds()))
+              << std::endl;
+
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          837);
   }
 
   test_set ipog_otf_test_set;
@@ -758,7 +792,7 @@ TEST_CASE("cagen, testing ACTS example model, strength 2") {
   CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
-TEST_CASE("cagen, testing ACTS example model, strength 3") {
+TEST_CASE("cagen, testing unconstrained ACTS example model, strength 3") {
   using namespace citcpp;
 
   model model{create_acts_example_model()};
@@ -780,5 +814,22 @@ TEST_CASE("cagen, testing ACTS example model, strength 3") {
                      handle->get_duration_in_milli_seconds()))
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
+
+    std::unique_ptr<covm_exec_handle> covm_handle = measure_coverage(
+        model, ipog_test_set, 3, coverage_measurement_config());
+    auto covm_f = covm_handle->get_coverage_measurement();
+    covm_exec_result covm_result(covm_f.get());
+    const coverage_measurement& covm = covm_result.get_result().at("");
+
+    CHECK(covm_result.get_result_code() ==
+          covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+    std::cout << "Coverage measured in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     covm_handle->get_duration_in_milli_seconds()))
+              << std::endl;
+
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          9158);
   }
 }
