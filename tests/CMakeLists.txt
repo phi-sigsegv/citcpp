@@ -9,6 +9,7 @@ list(APPEND CITCPP_UNITTESTS
   test_cagen
   test_cagen_extend
   test_cagen_relations
+  test_constrained_cagen
   test_cov_measure_result
   test_cov_measure
   test_cov_measure_relations
