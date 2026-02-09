@@ -57,6 +57,8 @@ class model {
 
     const std::vector<parameter>& get_parameters() const { return parameters_; }
 
+    std::vector<parameter>& get_parameters() { return parameters_; }
+
     void add_parameter(const parameter& param) { parameters_.push_back(param); }
 
     void add_parameter(parameter&& param) {
@@ -65,6 +67,8 @@ class model {
 
     const std::vector<relation>& get_relations() const { return relations_; }
 
+    std::vector<relation>& get_relations() { return relations_; }
+
     void add_relation(const relation& r) { relations_.push_back(r); }
 
     void add_relation(relation&& r) { relations_.push_back(std::move(r)); }
@@ -72,6 +76,8 @@ class model {
     const std::vector<constraint_holder>& get_constraints() const {
       return constraints_;
     }
+
+    std::vector<constraint_holder>& get_constraints() { return constraints_; }
 
     void add_constraint(constraint_holder constraint) {
       constraints_.push_back(std::move(constraint));
