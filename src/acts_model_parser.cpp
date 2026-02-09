@@ -23,6 +23,15 @@ class input_model_data_consumer {
     virtual void add_param_to_relation(std::string_view identifier, size_t line,
                                        size_t col) = 0;
     virtual void set_relation_strength(int strength) = 0;
+    virtual void set_atomic_prop_param(const std::string& param_name, size_t line,
+                                       size_t col) = 0;
+    virtual void set_atomic_prop_rel_op(const std::string& rel_op) = 0;
+    virtual void set_atomic_prop_value(int value) = 0;
+    virtual void set_atomic_prop_value(const std::string& value, size_t line,
+                                       size_t col) = 0;
+    virtual void set_atomic_prop_value(bool value, size_t line,
+                                       size_t col) = 0;
+    virtual void end_constraint() = 0;
 };
 
 class system_name_consumer {
@@ -192,50 +201,143 @@ class relation_strength_consumer {
     input_model_data_consumer* consumer_;
 };
 
+class constr_param_name_consumer {
+  public:
+    constr_param_name_consumer(input_model_data_consumer* consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues& vs) {
+      auto line_info = vs.line_info();
+      consumer_->set_atomic_prop_param(vs.token_to_string(), line_info.first,
+                                       line_info.second);
+    }
+
+  private:
+    input_model_data_consumer* consumer_;
+};
+
+class atomic_prop_rel_op_consumer {
+  public:
+    atomic_prop_rel_op_consumer(input_model_data_consumer* consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues& vs) {
+      consumer_->set_atomic_prop_rel_op(vs.token_to_string());
+    }
+
+  private:
+    input_model_data_consumer* consumer_;
+};
+
+class constr_int_value_consumer {
+  public:
+    constr_int_value_consumer(input_model_data_consumer* consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues& vs) {
+      consumer_->set_atomic_prop_value(vs.token_to_number<int>());
+    }
+
+  private:
+    input_model_data_consumer* consumer_;
+};
+
+class constr_bool_value_consumer {
+  public:
+    constr_bool_value_consumer(input_model_data_consumer* consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues& vs) {
+      auto line_info = vs.line_info();
+      switch (vs.choice()) {
+        case 0:
+          consumer_->set_atomic_prop_value(true, line_info.first,
+                                           line_info.second);
+          return;
+        default:
+          consumer_->set_atomic_prop_value(false, line_info.first,
+                                           line_info.second);
+          return;
+      }
+    }
+
+  private:
+    input_model_data_consumer* consumer_;
+};
+
+class constr_enum_value_consumer {
+  public:
+    constr_enum_value_consumer(input_model_data_consumer* consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues& vs) {
+      auto line_info = vs.line_info();
+      consumer_->set_atomic_prop_value(vs.token_to_string(), line_info.first,
+                                       line_info.second);
+    }
+
+  private:
+    input_model_data_consumer* consumer_;
+};
+
+class constraint_end_consumer {
+  public:
+    constraint_end_consumer(input_model_data_consumer* consumer)
+        : consumer_(consumer) {}
+
+    void operator()(const peg::SemanticValues& vs) {
+      consumer_->end_constraint();
+    }
+
+  private:
+    input_model_data_consumer* consumer_;
+};
+
 peg::parser create_acts_model_parser() {
   using namespace peg;
 
   parser p(R"(
-Root              <- _ SystemSection ParameterSection RelationSection? ConstraintSection?
+Root              <- __ SystemSection ParameterSection RelationSection? ConstraintSection?
 
-SystemSection     <- '[' _ 'System'i _ ']' _ SystemNameRule
-SystemNameRule    <- 'name'i _ ':' _ SystemName _
+SystemSection     <- '[' __ 'System'i __ ']' __ SystemNameRule
+SystemNameRule    <- 'name'i __ ':' __ SystemName __
 SystemName        <- (!Eol .)*
 
-ParameterSection  <- '[' _ 'Parameter'i _ ']' _ ParameterRule+ _
+ParameterSection  <- '[' __ 'Parameter'i __ ']' __ ParameterRule+ __
 ParameterRule     <- (BooleanParam / EnumParam / IntParam)
 
-BooleanParam      <- ParamName _ BooleanType _ ':' _ BooleanValueList SpaceChar* ParamDelcEnd
-EnumParam         <- ParamName _ EnumType _ ':' _ EnumValueList ParamDelcEnd
-IntParam          <- ParamName _ IntType _ ':' _ IntegerValueList SpaceChar* ParamDelcEnd
+BooleanParam      <- ParamName __ BooleanType __ ':' __ BooleanValueList SpaceChar* ParamDelcEnd
+EnumParam         <- ParamName __ EnumType __ ':' __ EnumValueList ParamDelcEnd
+IntParam          <- ParamName __ IntType __ ':' __ IntegerValueList SpaceChar* ParamDelcEnd
 
 ParamName         <- Identifier
 
-BooleanType       <- '(' _ ('boolean'i / 'bool'i) _ ')'
-EnumType          <- '(' _ 'enum'i _ ')'
-IntType           <- '(' _ ('integer'i / 'int'i) _ ')'
+BooleanType       <- '(' __ ('boolean'i / 'bool'i) __ ')'
+EnumType          <- '(' __ 'enum'i __ ')'
+IntType           <- '(' __ ('integer'i / 'int'i) __ ')'
 
 ParamDelcEnd      <- Eol
 
-BooleanValueList  <- BooleanValue (_ ',' _ BooleanValue)*
+BooleanValueList  <- BooleanValue (__ ',' __ BooleanValue)*
 BooleanValue      <- 'true'i / 'false'i
 
-EnumValueList     <- EnumValue (_ ',' _ EnumValue)*
+EnumValueList     <- EnumValue (__ ',' __ EnumValue)*
 EnumValue         <- (!(',' / ';' / SpaceChar / Eol) .) (!(',' / ';' / Eol) .)*
 
-IntegerValueList  <- IntegerValue (_ ',' _ IntegerValue)*
+IntegerValueList  <- IntegerValue (__ ',' __ IntegerValue)*
 IntegerValue      <- [+-]? [0-9]+
 
-RelationSection   <- '[' _ 'Relation'i _ ']' _ RelationRule*
-RelationRule      <- RelationName _ ':' _ '(' _ RelParamNameList _ ',' _ RelStrength _ ')' _
+RelationSection   <- '[' __ 'Relation'i __ ']' __ RelationRule*
+RelationRule      <- RelationName __ ':' __ '(' __ RelParamNameList __ ',' __ RelStrength __ ')' __
 
 RelationName      <- Identifier
-RelParamNameList  <- RelParamName (_ ',' _ RelParamName)*
+RelParamNameList  <- RelParamName (__ ',' __ RelParamName)*
 RelParamName      <- Identifier
 RelStrength       <- [0-9]+
 
-ConstraintSection <- '[' _ 'Constraint'i _ ']' _ ConstraintRule*
-ConstraintRule    <- Implication _
+ConstraintSection <- '[' __ 'Constraint'i __ ']' __ ConstraintRule*
+ConstraintRule    <- Implication ConstraintEnd __
+ConstraintEnd     <- Eol
 Implication       <- OrExpr (_ '=>' _ OrExpr)?
 OrExpr            <- AndExpr (_ '||' _ AndExpr)*
 AndExpr           <- Operand (_ '&&' _ Operand)*
@@ -243,14 +345,15 @@ Operand           <- AtomicProp / ('(' _ Implication _ ')')
 AtomicProp        <- ConstrParamName _ RelOp _ ConstrValue
 ConstrParamName   <- Identifier
 RelOp             <- '=' / '!=' / '>=' / '<=' / '>' / '<'
-ConstrValue       <- (ConstrBoolValue / ConstrIntValue / ('"' ConstrEnumValue '"'))
+ConstrValue       <- ConstrBoolValue / ConstrIntValue / ConstrEnumValue
 ConstrBoolValue   <- 'true'i / 'false'i
 ConstrIntValue    <- [+-]? [0-9]+
-ConstrEnumValue   <- (!(',' / ';' / '"' / SpaceChar / Eol) .) (!(',' / ';' / '"' / Eol) .)*
+ConstrEnumValue   <- '"' < (!(',' / ';' / '"' / SpaceChar / Eol) .) (!(',' / ';' / '"' / Eol) .)* > '"'
 
 Identifier        <- [a-zA-Z_] [a-zA-Z0-9_]*
 
-~_                <- (WhiteSpace / Eol)*
+~__               <- (WhiteSpace / Eol)*
+~_                <- SpaceChar*
 WhiteSpace        <- SpaceChar / LineComment
 SpaceChar         <- ' ' / '\t'
 Eol               <- '\r\n' / '\n' / '\r'
@@ -282,9 +385,17 @@ class acts_model_parser::impl : input_model_data_consumer {
           relation_param_identifier_consumer_(
               relation_param_identifier_consumer(this)),
           relation_strength_consumer_(relation_strength_consumer(this)),
-          parser_(create_acts_model_parser()),
+          constr_param_name_consumer_(constr_param_name_consumer(this)),
+          atomic_prop_rel_op_consumer_(atomic_prop_rel_op_consumer(this)),
+          constr_int_value_consumer_(constr_int_value_consumer(this)),
+          constr_bool_value_consumer_(constr_bool_value_consumer(this)),
+          constr_enum_value_consumer_(constr_enum_value_consumer(this)),
+          constraint_end_consumer_(constraint_end_consumer(this)),
           current_param_(parameter()),
           current_relation_(relation()),
+          constr_param_name_(),
+          atomic_prop_rel_op_(relational_operator::EQ),
+          parser_(create_acts_model_parser()),
           error_occurred_(false),
           error_message_(),
           model_(nullptr) {
@@ -303,6 +414,12 @@ class acts_model_parser::impl : input_model_data_consumer {
       parser_["RelationName"] = relation_identifier_consumer_;
       parser_["RelParamName"] = relation_param_identifier_consumer_;
       parser_["RelStrength"] = relation_strength_consumer_;
+      parser_["ConstrParamName"] = constr_param_name_consumer_;
+      parser_["RelOp"] = atomic_prop_rel_op_consumer_;
+      parser_["ConstrIntValue"] = constr_int_value_consumer_;
+      parser_["ConstrBoolValue"] = constr_bool_value_consumer_;
+      parser_["ConstrEnumValue"] = constr_enum_value_consumer_;
+      parser_["ConstraintEnd"] = constraint_end_consumer_;
 
       parser_.set_logger([this](size_t line, size_t col,
                                 const std::string& msg) {
@@ -370,6 +487,101 @@ class acts_model_parser::impl : input_model_data_consumer {
       current_relation_.get_parameters().clear();
     }
 
+    void set_atomic_prop_param(const std::string& param_name, size_t line,
+                               size_t col) {
+
+      // Search for the parameter in the model
+      for (const parameter& param : model_->get_parameters()) {
+        if (param_name == param.get_name()) {
+          constr_param_name_ = param_name;
+          return;
+        }
+      }
+
+      // If we reach this point, then we did not find the reference parameter.
+      error_occurred_ = true;
+      std::ostringstream oss;
+      oss << "Error in constraint at " << line << ":" << col
+          << " -> Cannot find declaration of parameter " << param_name;
+
+      error_message_ = oss.str();
+    }
+
+    void set_atomic_prop_rel_op(const std::string& rel_op) {
+      if (rel_op == "!=") {
+        atomic_prop_rel_op_ = relational_operator::NEQ;
+      } else if (rel_op == "<") {
+        atomic_prop_rel_op_ = relational_operator::LT;
+      } else if (rel_op == "<=") {
+        atomic_prop_rel_op_ = relational_operator::LE;
+      } else if (rel_op == ">") {
+        atomic_prop_rel_op_ = relational_operator::GT;
+      } else if (rel_op == ">=") {
+        atomic_prop_rel_op_ = relational_operator::GE;
+      } else {
+        atomic_prop_rel_op_ = relational_operator::EQ;
+      }
+    }
+
+    void set_atomic_prop_value(int value) {
+      constraint_holder prop(std::make_unique<int_proposition>(
+          parameter_reference(constr_param_name_), atomic_prop_rel_op_, value));
+      // TODO: Add to parent constraint.
+    }
+
+    void set_atomic_prop_value(const std::string& value, size_t line,
+                               size_t col) {
+
+      switch (atomic_prop_rel_op_) {
+        case relational_operator::GT:
+        case relational_operator::GE:
+        case relational_operator::LT:
+        case relational_operator::LE: {
+          // If we reach this point, then we did not find the reference parameter.
+          error_occurred_ = true;
+          std::ostringstream oss;
+          oss << "Error in constraint at " << line << ":" << col
+              << " -> Cannot have operator for a non-integer parameter that needs an order";
+
+          error_message_ = oss.str();
+          return;
+        }
+        default:
+          break;
+      }
+
+      constraint_holder prop(std::make_unique<enum_proposition>(
+          parameter_reference(constr_param_name_), atomic_prop_rel_op_, value));
+      // TODO: Add to parent constraint.
+    }
+
+    void set_atomic_prop_value(bool value, size_t line, size_t col) {
+
+      switch (atomic_prop_rel_op_) {
+        case relational_operator::GT:
+        case relational_operator::GE:
+        case relational_operator::LT:
+        case relational_operator::LE: {
+          // If we reach this point, then we did not find the reference parameter.
+          error_occurred_ = true;
+          std::ostringstream oss;
+          oss << "Error in constraint at " << line << ":" << col
+              << " -> Cannot have operator for a non-integer parameter that needs an order";
+
+          error_message_ = oss.str();
+          return;
+        }
+        default:
+          break;
+      }
+
+      constraint_holder prop(std::make_unique<boolean_proposition>(
+          parameter_reference(constr_param_name_), atomic_prop_rel_op_, value));
+      // TODO: Add to parent constraint.
+    }
+
+    void end_constraint() {}
+
     bool parse_input_model(std::string_view sv) {
       error_occurred_ = false;
       error_message_.clear();
@@ -394,11 +606,19 @@ class acts_model_parser::impl : input_model_data_consumer {
     relation_identifier_consumer relation_identifier_consumer_;
     relation_param_identifier_consumer relation_param_identifier_consumer_;
     relation_strength_consumer relation_strength_consumer_;
+    constr_param_name_consumer constr_param_name_consumer_;
+    atomic_prop_rel_op_consumer atomic_prop_rel_op_consumer_;
+    constr_int_value_consumer constr_int_value_consumer_;
+    constr_bool_value_consumer constr_bool_value_consumer_;
+    constr_enum_value_consumer constr_enum_value_consumer_;
+    constraint_end_consumer constraint_end_consumer_;
+    parameter current_param_;
+    relation current_relation_;
+    std::string constr_param_name_;
+    relational_operator atomic_prop_rel_op_;
     peg::parser parser_;
     bool error_occurred_;
     std::string error_message_;
-    parameter current_param_;
-    relation current_relation_;
     model* model_;
 };
 

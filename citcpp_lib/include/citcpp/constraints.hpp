@@ -271,6 +271,14 @@ class binary_operation : public constraint {
     constraint& get_right_operand() { return *rhs_; }
     const constraint& get_right_operand() const { return *rhs_; }
 
+    void set_left_operand(constraint_holder lhs) {
+      lhs_ = std::move(lhs);
+    }
+
+    void set_right_operand(constraint_holder rhs) {
+      rhs_ = std::move(rhs);
+    }
+
   protected:
     binary_operator op_;
     constraint_holder lhs_;
