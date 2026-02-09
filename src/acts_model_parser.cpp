@@ -16,7 +16,7 @@ class input_model_data_consumer {
     virtual void set_param_identifier(std::string_view identifier) = 0;
     virtual void set_param_type(citcpp::parameter_type type) = 0;
     virtual void add_param_value(bool value) = 0;
-    virtual void add_param_value(const std::string &value) = 0;
+    virtual void add_param_value(const std::string& value) = 0;
     virtual void add_param_value(int value) = 0;
     virtual void end_param_declaration() = 0;
     virtual void set_relation_identifier(std::string_view identifier) = 0;
@@ -27,75 +27,75 @@ class input_model_data_consumer {
 
 class system_name_consumer {
   public:
-    system_name_consumer(input_model_data_consumer *consumer)
+    system_name_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->set_system_name(vs.token_to_string());
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class param_identifier_consumer {
   public:
-    param_identifier_consumer(input_model_data_consumer *consumer)
+    param_identifier_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->set_param_identifier(vs.token_to_string());
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class param_boolean_type_consumer {
   public:
-    param_boolean_type_consumer(input_model_data_consumer *consumer)
+    param_boolean_type_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->set_param_type(citcpp::parameter_type::BOOLEAN);
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class param_enum_type_consumer {
   public:
-    param_enum_type_consumer(input_model_data_consumer *consumer)
+    param_enum_type_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->set_param_type(citcpp::parameter_type::ENUM);
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class param_integer_type_consumer {
   public:
-    param_integer_type_consumer(input_model_data_consumer *consumer)
+    param_integer_type_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->set_param_type(citcpp::parameter_type::INTEGER);
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class boolean_value_consumer {
   public:
-    boolean_value_consumer(input_model_data_consumer *consumer)
+    boolean_value_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       switch (vs.choice()) {
         case 0:
           consumer_->add_param_value(true);
@@ -107,140 +107,154 @@ class boolean_value_consumer {
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class enum_value_consumer {
   public:
-    enum_value_consumer(input_model_data_consumer *consumer)
+    enum_value_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       std::string str(vs.token_to_string());
       citcpp::detail::trim(str);
       consumer_->add_param_value(str);
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class integer_value_consumer {
   public:
-    integer_value_consumer(input_model_data_consumer *consumer)
+    integer_value_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->add_param_value(vs.token_to_number<int>());
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class param_declaration_end_consumer {
   public:
-    param_declaration_end_consumer(input_model_data_consumer *consumer)
+    param_declaration_end_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->end_param_declaration();
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class relation_identifier_consumer {
   public:
-    relation_identifier_consumer(input_model_data_consumer *consumer)
+    relation_identifier_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->set_relation_identifier(vs.token_to_string());
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class relation_param_identifier_consumer {
   public:
-    relation_param_identifier_consumer(input_model_data_consumer *consumer)
+    relation_param_identifier_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       auto line_info = vs.line_info();
       consumer_->add_param_to_relation(vs.token_to_string(), line_info.first,
                                        line_info.second);
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 class relation_strength_consumer {
   public:
-    relation_strength_consumer(input_model_data_consumer *consumer)
+    relation_strength_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues &vs) {
+    void operator()(const peg::SemanticValues& vs) {
       consumer_->set_relation_strength(vs.token_to_number<int>());
     }
 
   private:
-    input_model_data_consumer *consumer_;
+    input_model_data_consumer* consumer_;
 };
 
 peg::parser create_acts_model_parser() {
   using namespace peg;
 
   parser p(R"(
-Root             <- _ SystemSection ParameterSection RelationSection?
+Root              <- _ SystemSection ParameterSection RelationSection? ConstraintSection?
 
-SystemSection    <- '[' _ 'System'i _ ']' _ SystemNameRule
-SystemNameRule   <- 'name'i _ ':' _ SystemName _
-SystemName       <- (!Eol .)*
+SystemSection     <- '[' _ 'System'i _ ']' _ SystemNameRule
+SystemNameRule    <- 'name'i _ ':' _ SystemName _
+SystemName        <- (!Eol .)*
 
-ParameterSection <- '[' _ 'Parameter'i _ ']' _ ParameterRule+ _
-ParameterRule    <- (BooleanParam / EnumParam / IntParam)
+ParameterSection  <- '[' _ 'Parameter'i _ ']' _ ParameterRule+ _
+ParameterRule     <- (BooleanParam / EnumParam / IntParam)
 
-BooleanParam     <- ParamName _ BooleanType _ ':' _ BooleanValueList SpaceChar* ParamDelcEnd
-EnumParam        <- ParamName _ EnumType _ ':' _ EnumValueList ParamDelcEnd
-IntParam         <- ParamName _ IntType _ ':' _ IntegerValueList SpaceChar* ParamDelcEnd
+BooleanParam      <- ParamName _ BooleanType _ ':' _ BooleanValueList SpaceChar* ParamDelcEnd
+EnumParam         <- ParamName _ EnumType _ ':' _ EnumValueList ParamDelcEnd
+IntParam          <- ParamName _ IntType _ ':' _ IntegerValueList SpaceChar* ParamDelcEnd
 
-ParamName        <- Identifier
+ParamName         <- Identifier
 
-BooleanType      <- '(' _ ('boolean'i / 'bool'i) _ ')'
-EnumType         <- '(' _ 'enum'i _ ')'
-IntType          <- '(' _ ('integer'i / 'int'i) _ ')'
+BooleanType       <- '(' _ ('boolean'i / 'bool'i) _ ')'
+EnumType          <- '(' _ 'enum'i _ ')'
+IntType           <- '(' _ ('integer'i / 'int'i) _ ')'
 
-ParamDelcEnd     <- Eol
+ParamDelcEnd      <- Eol
 
-BooleanValueList <- BooleanValue (_ ',' _ BooleanValue)*
-BooleanValue     <- 'true'i / 'false'i
+BooleanValueList  <- BooleanValue (_ ',' _ BooleanValue)*
+BooleanValue      <- 'true'i / 'false'i
 
-EnumValueList    <- EnumValue (_ ',' _ EnumValue)*
-EnumValue        <- (!(',' / ';' / SpaceChar / Eol) .) (!(',' / ';' / Eol) .)*
+EnumValueList     <- EnumValue (_ ',' _ EnumValue)*
+EnumValue         <- (!(',' / ';' / SpaceChar / Eol) .) (!(',' / ';' / Eol) .)*
 
-IntegerValueList <- IntegerValue (_ ',' _ IntegerValue)*
-IntegerValue     <- [+-]? [0-9]+
+IntegerValueList  <- IntegerValue (_ ',' _ IntegerValue)*
+IntegerValue      <- [+-]? [0-9]+
 
-RelationSection  <- '[' _ 'Relation'i _ ']' _ RelationRule*
-RelationRule     <- RelationName _ ':' _ '(' _ RelParamNameList _ ',' _ RelStrength _ ')' _
+RelationSection   <- '[' _ 'Relation'i _ ']' _ RelationRule*
+RelationRule      <- RelationName _ ':' _ '(' _ RelParamNameList _ ',' _ RelStrength _ ')' _
 
-RelationName     <- Identifier
-RelParamNameList <- RelParamName (_ ',' _ RelParamName)*
-RelParamName     <- Identifier
-RelStrength      <- [0-9]+
+RelationName      <- Identifier
+RelParamNameList  <- RelParamName (_ ',' _ RelParamName)*
+RelParamName      <- Identifier
+RelStrength       <- [0-9]+
 
-Identifier       <- [a-zA-Z_] [a-zA-Z0-9_]*
+ConstraintSection <- '[' _ 'Constraint'i _ ']' _ ConstraintRule*
+ConstraintRule    <- Implication _
+Implication       <- OrExpr (_ '=>' _ OrExpr)?
+OrExpr            <- AndExpr (_ '||' _ AndExpr)*
+AndExpr           <- Operand (_ '&&' _ Operand)*
+Operand           <- AtomicProp / ('(' _ Implication _ ')')
+AtomicProp        <- ConstrParamName _ RelOp _ ConstrValue
+ConstrParamName   <- Identifier
+RelOp             <- '=' / '!=' / '>=' / '<=' / '>' / '<'
+ConstrValue       <- (ConstrBoolValue / ConstrIntValue / ('"' ConstrEnumValue '"'))
+ConstrBoolValue   <- 'true'i / 'false'i
+ConstrIntValue    <- [+-]? [0-9]+
+ConstrEnumValue   <- (!(',' / ';' / '"' / SpaceChar / Eol) .) (!(',' / ';' / '"' / Eol) .)*
 
-~_               <- (WhiteSpace / Eol)*
-WhiteSpace       <- SpaceChar / LineComment
-SpaceChar        <- ' ' / '\t'
-Eol              <- '\r\n' / '\n' / '\r'
-LineComment      <- '--' (!Eol .)* &Eol
+Identifier        <- [a-zA-Z_] [a-zA-Z0-9_]*
+
+~_                <- (WhiteSpace / Eol)*
+WhiteSpace        <- SpaceChar / LineComment
+SpaceChar         <- ' ' / '\t'
+Eol               <- '\r\n' / '\n' / '\r'
+LineComment       <- '--' (!Eol .)* &Eol
   )");
 
   return p;
@@ -291,7 +305,7 @@ class acts_model_parser::impl : input_model_data_consumer {
       parser_["RelStrength"] = relation_strength_consumer_;
 
       parser_.set_logger([this](size_t line, size_t col,
-                                const std::string &msg) {
+                                const std::string& msg) {
         std::ostringstream oss;
         oss << "Error in model file at " << line << ":" << col << " -> " << msg;
 
@@ -299,7 +313,7 @@ class acts_model_parser::impl : input_model_data_consumer {
       });
     }
 
-    void set_input_model(model *model) { model_ = model; }
+    void set_input_model(model* model) { model_ = model; }
 
     void set_system_name(std::string_view name) { model_->set_name(name); }
 
@@ -313,7 +327,7 @@ class acts_model_parser::impl : input_model_data_consumer {
 
     void add_param_value(bool value) { current_param_.add_value(value); }
 
-    void add_param_value(const std::string &value) {
+    void add_param_value(const std::string& value) {
       current_param_.add_value(value);
     }
 
@@ -332,7 +346,7 @@ class acts_model_parser::impl : input_model_data_consumer {
     void add_param_to_relation(std::string_view identifier, size_t line,
                                size_t col) {
       // Search for the parameter in the model
-      for (const parameter &param : model_->get_parameters()) {
+      for (const parameter& param : model_->get_parameters()) {
         if (identifier == param.get_name()) {
           current_relation_.add_parameter(param);
           return;
@@ -385,14 +399,14 @@ class acts_model_parser::impl : input_model_data_consumer {
     std::string error_message_;
     parameter current_param_;
     relation current_relation_;
-    model *model_;
+    model* model_;
 };
 
 acts_model_parser::acts_model_parser() : impl_{std::make_unique<impl>()} {}
 
 acts_model_parser::~acts_model_parser() {}
 
-bool acts_model_parser::parse_input_model(std::string_view sv, model &model) {
+bool acts_model_parser::parse_input_model(std::string_view sv, model& model) {
 
   impl_->set_input_model(&model);
   return impl_->parse_input_model(sv);
