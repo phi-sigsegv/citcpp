@@ -223,11 +223,11 @@ class constraint_to_ldd_visitor {
       using namespace citcpp;
 
       negate_ = !negate_;
-      sylvan_ldd premise = impl.get_left_operand().accept<sylvan_ldd>(*this);
+      sylvan_ldd premise = impl.get_left_operand()->accept<sylvan_ldd>(*this);
       negate_ = !negate_;
 
       sylvan_ldd consequence =
-          impl.get_right_operand().accept<sylvan_ldd>(*this);
+          impl.get_right_operand()->accept<sylvan_ldd>(*this);
 
       sylvan_ldd ldd =
           negate_

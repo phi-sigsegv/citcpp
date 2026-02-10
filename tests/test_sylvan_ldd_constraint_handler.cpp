@@ -45,8 +45,8 @@ TEST_CASE("constraint handler sylvan, testing atomic prop") {
 
   model model(create_simple_five_param_model());
 
-  auto P2_GT_200 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P2"), relational_operator::GT, 200));
+  auto P2_GT_200 = std::make_shared<int_proposition>(
+      parameter_reference("P2"), relational_operator::GT, 200);
   model.add_constraint(std::move(P2_GT_200));
 
   internal_model i_model(model);
@@ -81,8 +81,8 @@ TEST_CASE(
 
   model model(create_simple_five_param_model());
 
-  auto P2_GT_250 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P2"), relational_operator::GT, 250));
+  auto P2_GT_250 = std::make_shared<int_proposition>(
+      parameter_reference("P2"), relational_operator::GT, 250);
   model.add_constraint(std::move(P2_GT_250));
 
   internal_model i_model(model);
@@ -116,16 +116,16 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & AND") {
 
   model model(create_simple_five_param_model());
 
-  auto P2_GT_200 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P2"), relational_operator::GT, 200));
+  auto P2_GT_200 = std::make_shared<int_proposition>(
+      parameter_reference("P2"), relational_operator::GT, 200);
 
-  auto P4_NEQ_6000 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P4"), relational_operator::NEQ, 6000));
+  auto P4_NEQ_6000 = std::make_shared<int_proposition>(
+      parameter_reference("P4"), relational_operator::NEQ, 6000);
 
-  std::vector<constraint_holder> ops;
+  std::vector<std::shared_ptr<constraint>> ops;
   ops.push_back(std::move(P2_GT_200));
   ops.push_back(std::move(P4_NEQ_6000));
-  model.add_constraint(std::make_unique<and_expression>(std::move(ops)));
+  model.add_constraint(std::make_shared<and_expression>(std::move(ops)));
 
   internal_model i_model(model);
 
@@ -158,16 +158,16 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & OR") {
 
   model model(create_simple_five_param_model());
 
-  auto P2_GT_200 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P2"), relational_operator::GT, 200));
+  auto P2_GT_200 = std::make_shared<int_proposition>(
+      parameter_reference("P2"), relational_operator::GT, 200);
 
-  auto P4_NEQ_6000 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P4"), relational_operator::NEQ, 6000));
+  auto P4_NEQ_6000 = std::make_shared<int_proposition>(
+      parameter_reference("P4"), relational_operator::NEQ, 6000);
 
-  std::vector<constraint_holder> ops;
+  std::vector<std::shared_ptr<constraint>> ops;
   ops.push_back(std::move(P2_GT_200));
   ops.push_back(std::move(P4_NEQ_6000));
-  model.add_constraint(std::make_unique<or_expression>(std::move(ops)));
+  model.add_constraint(std::make_shared<or_expression>(std::move(ops)));
 
   internal_model i_model(model);
 
@@ -217,13 +217,13 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & IMPL") {
 
   model model(create_simple_five_param_model());
 
-  auto P2_GT_200 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P2"), relational_operator::GT, 200));
+  auto P2_GT_200 = std::make_shared<int_proposition>(
+      parameter_reference("P2"), relational_operator::GT, 200);
 
-  auto P4_NEQ_5000 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P4"), relational_operator::NEQ, 5000));
+  auto P4_NEQ_5000 = std::make_shared<int_proposition>(
+      parameter_reference("P4"), relational_operator::NEQ, 5000);
 
-  model.add_constraint(std::make_unique<implication>(std::move(P2_GT_200),
+  model.add_constraint(std::make_shared<implication>(std::move(P2_GT_200),
                                                      std::move(P4_NEQ_5000)));
 
   internal_model i_model(model);
@@ -287,19 +287,19 @@ TEST_CASE(
 
   model model(create_simple_five_param_model());
 
-  auto P2_GT_200 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P2"), relational_operator::GT, 200));
+  auto P2_GT_200 = std::make_shared<int_proposition>(
+      parameter_reference("P2"), relational_operator::GT, 200);
 
-  auto P3_GE_7 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P3"), relational_operator::GE, 7));
+  auto P3_GE_7 = std::make_shared<int_proposition>(parameter_reference("P3"),
+                                                   relational_operator::GE, 7);
 
-  auto P4_NEQ_5000 = constraint_holder(std::make_unique<int_proposition>(
-      parameter_reference("P4"), relational_operator::NEQ, 5000));
+  auto P4_NEQ_5000 = std::make_shared<int_proposition>(
+      parameter_reference("P4"), relational_operator::NEQ, 5000);
 
-  auto nested_impl = constraint_holder(
-      std::make_unique<implication>(std::move(P2_GT_200), std::move(P3_GE_7)));
+  auto nested_impl =
+      std::make_shared<implication>(std::move(P2_GT_200), std::move(P3_GE_7));
 
-  model.add_constraint(std::make_unique<implication>(std::move(nested_impl),
+  model.add_constraint(std::make_shared<implication>(std::move(nested_impl),
                                                      std::move(P4_NEQ_5000)));
 
   internal_model i_model(model);

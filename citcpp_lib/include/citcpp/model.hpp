@@ -21,7 +21,11 @@ class model {
         : name_(other.name_),
           parameters_(other.parameters_),
           relations_(other.relations_),
-          constraints_(other.constraints_) {}
+          constraints_(other.constraints_) {
+      for (auto& c : constraints_) {
+        c = c->create_copy();
+      }
+    }
     model(model&& other)
         : name_(std::move(other.name_)),
           parameters_(std::move(other.parameters_)),
@@ -36,6 +40,9 @@ class model {
         parameters_ = other.parameters_;
         relations_ = other.relations_;
         constraints_ = other.constraints_;
+        for (auto& c : constraints_) {
+          c = c->create_copy();
+        }
       }
 
       return *this;
@@ -73,25 +80,23 @@ class model {
 
     void add_relation(relation&& r) { relations_.push_back(std::move(r)); }
 
-    const std::vector<constraint_holder>& get_constraints() const {
+    const std::vector<std::shared_ptr<constraint>>& get_constraints() const {
       return constraints_;
     }
 
-    std::vector<constraint_holder>& get_constraints() { return constraints_; }
-
-    void add_constraint(constraint_holder constraint) {
-      constraints_.push_back(std::move(constraint));
+    std::vector<std::shared_ptr<constraint>>& get_constraints() {
+      return constraints_;
     }
 
-    void add_constraint(std::unique_ptr<constraint>&& constraint) {
-      constraints_.push_back(constraint_holder(std::move(constraint)));
+    void add_constraint(std::shared_ptr<constraint> constraint) {
+      constraints_.push_back(std::move(constraint));
     }
 
   private:
     std::string name_;
     std::vector<parameter> parameters_;
     std::vector<relation> relations_;
-    std::vector<constraint_holder> constraints_;
+    std::vector<std::shared_ptr<constraint>> constraints_;
 };
 
 }  // namespace citcpp

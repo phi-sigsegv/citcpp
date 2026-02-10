@@ -90,8 +90,8 @@ class constraint_eval_visitor {
     }
 
     bool operator()(const citcpp::implication& impl) const {
-      return !impl.get_left_operand().accept<bool>(*this) ||
-             impl.get_right_operand().accept<bool>(*this);
+      return !impl.get_left_operand()->accept<bool>(*this) ||
+             impl.get_right_operand()->accept<bool>(*this);
     }
 
     bool operator()(const citcpp::and_expression& and_expr) const {

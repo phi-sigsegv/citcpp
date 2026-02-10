@@ -84,24 +84,20 @@ citcpp::model create_acts_example_model() {
                           .name("Climb_Inhibit")
                           .values({{true}, {false}}));
 
-  auto Cur_Vertical_Sep_NEQ_299 = constraint_holder(
-      std::make_unique<int_proposition>(parameter_reference("Cur_Vertical_Sep"),
-                                        relational_operator::NEQ, 299));
-  auto Other_Capability_NEQ_OTHER =
-      constraint_holder(std::make_unique<enum_proposition>(
-          parameter_reference("Other_Capability"), relational_operator::NEQ,
-          "OTHER"));
+  auto Cur_Vertical_Sep_NEQ_299 = std::make_shared<int_proposition>(
+      parameter_reference("Cur_Vertical_Sep"), relational_operator::NEQ, 299);
+  auto Other_Capability_NEQ_OTHER = std::make_shared<enum_proposition>(
+      parameter_reference("Other_Capability"), relational_operator::NEQ,
+      "OTHER");
   model.add_constraint(
-      std::make_unique<implication>(std::move(Cur_Vertical_Sep_NEQ_299),
+      std::make_shared<implication>(std::move(Cur_Vertical_Sep_NEQ_299),
                                     std::move(Other_Capability_NEQ_OTHER)));
 
-  auto Climb_Inhibit_EQ_TRUE =
-      constraint_holder(std::make_unique<boolean_proposition>(
-          parameter_reference("Climb_Inhibit"), relational_operator::EQ, true));
-  auto Up_Separation_GT_399 =
-      constraint_holder(std::make_unique<int_proposition>(
-          parameter_reference("Up_Separation"), relational_operator::GT, 399));
-  model.add_constraint(std::make_unique<implication>(
+  auto Climb_Inhibit_EQ_TRUE = std::make_shared<boolean_proposition>(
+      parameter_reference("Climb_Inhibit"), relational_operator::EQ, true);
+  auto Up_Separation_GT_399 = std::make_shared<int_proposition>(
+      parameter_reference("Up_Separation"), relational_operator::GT, 399);
+  model.add_constraint(std::make_shared<implication>(
       std::move(Climb_Inhibit_EQ_TRUE), std::move(Up_Separation_GT_399)));
 
   return model;
