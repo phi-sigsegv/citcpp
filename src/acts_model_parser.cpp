@@ -23,15 +23,6 @@ class input_model_data_consumer {
     virtual void add_param_to_relation(std::string_view identifier, size_t line,
                                        size_t col) = 0;
     virtual void set_relation_strength(int strength) = 0;
-    virtual void set_atomic_prop_param(const std::string& param_name, size_t line,
-                                       size_t col) = 0;
-    virtual void set_atomic_prop_rel_op(const std::string& rel_op) = 0;
-    virtual void set_atomic_prop_value(int value) = 0;
-    virtual void set_atomic_prop_value(const std::string& value, size_t line,
-                                       size_t col) = 0;
-    virtual void set_atomic_prop_value(bool value, size_t line,
-                                       size_t col) = 0;
-    virtual void end_constraint() = 0;
 };
 
 class system_name_consumer {
@@ -201,98 +192,6 @@ class relation_strength_consumer {
     input_model_data_consumer* consumer_;
 };
 
-class constr_param_name_consumer {
-  public:
-    constr_param_name_consumer(input_model_data_consumer* consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues& vs) {
-      auto line_info = vs.line_info();
-      consumer_->set_atomic_prop_param(vs.token_to_string(), line_info.first,
-                                       line_info.second);
-    }
-
-  private:
-    input_model_data_consumer* consumer_;
-};
-
-class atomic_prop_rel_op_consumer {
-  public:
-    atomic_prop_rel_op_consumer(input_model_data_consumer* consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues& vs) {
-      consumer_->set_atomic_prop_rel_op(vs.token_to_string());
-    }
-
-  private:
-    input_model_data_consumer* consumer_;
-};
-
-class constr_int_value_consumer {
-  public:
-    constr_int_value_consumer(input_model_data_consumer* consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues& vs) {
-      consumer_->set_atomic_prop_value(vs.token_to_number<int>());
-    }
-
-  private:
-    input_model_data_consumer* consumer_;
-};
-
-class constr_bool_value_consumer {
-  public:
-    constr_bool_value_consumer(input_model_data_consumer* consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues& vs) {
-      auto line_info = vs.line_info();
-      switch (vs.choice()) {
-        case 0:
-          consumer_->set_atomic_prop_value(true, line_info.first,
-                                           line_info.second);
-          return;
-        default:
-          consumer_->set_atomic_prop_value(false, line_info.first,
-                                           line_info.second);
-          return;
-      }
-    }
-
-  private:
-    input_model_data_consumer* consumer_;
-};
-
-class constr_enum_value_consumer {
-  public:
-    constr_enum_value_consumer(input_model_data_consumer* consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues& vs) {
-      auto line_info = vs.line_info();
-      consumer_->set_atomic_prop_value(vs.token_to_string(), line_info.first,
-                                       line_info.second);
-    }
-
-  private:
-    input_model_data_consumer* consumer_;
-};
-
-class constraint_end_consumer {
-  public:
-    constraint_end_consumer(input_model_data_consumer* consumer)
-        : consumer_(consumer) {}
-
-    void operator()(const peg::SemanticValues& vs) {
-      consumer_->end_constraint();
-    }
-
-  private:
-    input_model_data_consumer* consumer_;
-};
-
 peg::parser create_acts_model_parser() {
   using namespace peg;
 
@@ -337,11 +236,11 @@ RelStrength       <- [0-9]+
 
 ConstraintSection <- '[' __ 'Constraint'i __ ']' __ ConstraintRule*
 ConstraintRule    <- Implication ConstraintEnd __
-ConstraintEnd     <- Eol
+~ConstraintEnd    <- Eol
 Implication       <- OrExpr (_ '=>' _ OrExpr)?
 OrExpr            <- AndExpr (_ '||' _ AndExpr)*
 AndExpr           <- Operand (_ '&&' _ Operand)*
-Operand           <- AtomicProp / ('(' _ Implication _ ')')
+Operand           <- '(' _ Implication _ ')' / AtomicProp
 AtomicProp        <- ConstrParamName _ RelOp _ ConstrValue
 ConstrParamName   <- Identifier
 RelOp             <- '=' / '!=' / '>=' / '<=' / '>' / '<'
@@ -385,12 +284,6 @@ class acts_model_parser::impl : input_model_data_consumer {
           relation_param_identifier_consumer_(
               relation_param_identifier_consumer(this)),
           relation_strength_consumer_(relation_strength_consumer(this)),
-          constr_param_name_consumer_(constr_param_name_consumer(this)),
-          atomic_prop_rel_op_consumer_(atomic_prop_rel_op_consumer(this)),
-          constr_int_value_consumer_(constr_int_value_consumer(this)),
-          constr_bool_value_consumer_(constr_bool_value_consumer(this)),
-          constr_enum_value_consumer_(constr_enum_value_consumer(this)),
-          constraint_end_consumer_(constraint_end_consumer(this)),
           current_param_(parameter()),
           current_relation_(relation()),
           constr_param_name_(),
@@ -414,12 +307,154 @@ class acts_model_parser::impl : input_model_data_consumer {
       parser_["RelationName"] = relation_identifier_consumer_;
       parser_["RelParamName"] = relation_param_identifier_consumer_;
       parser_["RelStrength"] = relation_strength_consumer_;
-      parser_["ConstrParamName"] = constr_param_name_consumer_;
-      parser_["RelOp"] = atomic_prop_rel_op_consumer_;
-      parser_["ConstrIntValue"] = constr_int_value_consumer_;
-      parser_["ConstrBoolValue"] = constr_bool_value_consumer_;
-      parser_["ConstrEnumValue"] = constr_enum_value_consumer_;
-      parser_["ConstraintEnd"] = constraint_end_consumer_;
+      parser_["ConstrParamName"] = [this](const peg::SemanticValues& vs) {
+        auto line_info = vs.line_info();
+        const size_t line = line_info.first;
+        const size_t col = line_info.second;
+        const std::string param_name(vs.token_to_string());
+
+        // Search for the parameter in the model
+        for (const parameter& param : model_->get_parameters()) {
+          if (param_name == param.get_name()) {
+            return parameter_reference(param_name);
+          }
+        }
+
+        // If we reach this point, then we did not find the reference parameter.
+        error_occurred_ = true;
+        std::ostringstream oss;
+        oss << "Error in constraint at " << line << ":" << col
+            << " -> Cannot find declaration of parameter " << param_name;
+        error_message_ = oss.str();
+
+        return parameter_reference();
+      };
+      parser_["RelOp"] = [](const peg::SemanticValues& vs) {
+        const std::string rel_op(vs.token_to_string());
+
+        if (rel_op == "!=") {
+          return relational_operator::NEQ;
+        } else if (rel_op == "<") {
+          return relational_operator::LT;
+        } else if (rel_op == "<=") {
+          ;
+          return relational_operator::LE;
+        } else if (rel_op == ">") {
+          return relational_operator::GT;
+        } else if (rel_op == ">=") {
+          return relational_operator::GE;
+        } else {
+          return relational_operator::EQ;
+        }
+      };
+      parser_["ConstrIntValue"] = [](const peg::SemanticValues& vs) {
+        return parameter_value(vs.token_to_number<int>());
+      };
+      parser_["ConstrBoolValue"] = [](const peg::SemanticValues& vs) {
+        switch (vs.choice()) {
+          case 0:
+            return parameter_value(true);
+          default:
+            return parameter_value(false);
+        }
+      };
+      parser_["ConstrEnumValue"] = [](const peg::SemanticValues& vs) {
+        return parameter_value(vs.token_to_string());
+      };
+      parser_["AtomicProp"] = [this](const peg::SemanticValues& vs) {
+        auto line_info = vs.line_info();
+        const size_t line = line_info.first;
+        const size_t col = line_info.second;
+        parameter_reference param(any_cast<parameter_reference>(vs[0]));
+        relational_operator op(any_cast<relational_operator>(vs[1]));
+        parameter_value value(any_cast<parameter_value>(vs[2]));
+
+        switch (value.get_variant_value().index()) {
+          case 0: {
+            // boolean value
+            switch (op) {
+              case relational_operator::GE:
+              case relational_operator::GT:
+              case relational_operator::LE:
+              case relational_operator::LT:
+                error_occurred_ = true;
+                std::ostringstream oss;
+                oss << "Error in constraint at " << line << ":" << col
+                    << " -> Cannot have operator for a non-integer parameter "
+                       "that needs ordered values";
+                error_message_ = oss.str();
+                break;
+            }
+            std::shared_ptr<constraint> prop =
+                std::make_shared<boolean_proposition>(param, op, value);
+            return prop;
+          }
+          case 1: {
+            // enum value
+            switch (op) {
+              case relational_operator::GE:
+              case relational_operator::GT:
+              case relational_operator::LE:
+              case relational_operator::LT:
+                error_occurred_ = true;
+                std::ostringstream oss;
+                oss << "Error in constraint at " << line << ":" << col
+                    << " -> Cannot have operator for a non-integer parameter "
+                       "that needs ordered values";
+                error_message_ = oss.str();
+                break;
+            }
+            std::shared_ptr<constraint> prop =
+                std::make_shared<enum_proposition>(param, op, value);
+            return prop;
+          }
+          default: {
+            // int value
+            std::shared_ptr<constraint> prop =
+                std::make_shared<int_proposition>(param, op, value);
+            return prop;
+          }
+        }
+      };
+      parser_["Implication"] = [](const peg::SemanticValues& vs) {
+        if (vs.size() == 1) {
+          return any_cast<std::shared_ptr<constraint>>(vs[0]);
+        }
+
+        std::shared_ptr<constraint> impl = std::make_shared<implication>(
+            any_cast<std::shared_ptr<constraint>>(vs[0]),
+            any_cast<std::shared_ptr<constraint>>(vs[1]));
+        return impl;
+      };
+      parser_["OrExpr"] = [](const peg::SemanticValues& vs) {
+        if (vs.size() == 1) {
+          return any_cast<std::shared_ptr<constraint>>(vs[0]);
+        }
+
+        std::vector<std::shared_ptr<constraint>> ops;
+        for (size_t i = 0; i < vs.size(); ++i) {
+          ops.push_back(any_cast<std::shared_ptr<constraint>>(vs[i]));
+        }
+        std::shared_ptr<constraint> or_expr =
+            std::make_shared<or_expression>(std::move(ops));
+        return or_expr;
+      };
+      parser_["AndExpr"] = [](const peg::SemanticValues& vs) {
+        if (vs.size() == 1) {
+          return any_cast<std::shared_ptr<constraint>>(vs[0]);
+        }
+
+        std::vector<std::shared_ptr<constraint>> ops;
+        for (size_t i = 0; i < vs.size(); ++i) {
+          ops.push_back(any_cast<std::shared_ptr<constraint>>(vs[i]));
+        }
+        std::shared_ptr<constraint> and_expr =
+            std::make_shared<and_expression>(std::move(ops));
+        return and_expr;
+      };
+      parser_["ConstraintRule"] = [this](const peg::SemanticValues& vs) {
+        model_->add_constraint(any_cast<std::shared_ptr<constraint>>(vs[0]));
+      };
 
       parser_.set_logger([this](size_t line, size_t col,
                                 const std::string& msg) {
@@ -487,101 +522,6 @@ class acts_model_parser::impl : input_model_data_consumer {
       current_relation_.get_parameters().clear();
     }
 
-    void set_atomic_prop_param(const std::string& param_name, size_t line,
-                               size_t col) {
-
-      // Search for the parameter in the model
-      for (const parameter& param : model_->get_parameters()) {
-        if (param_name == param.get_name()) {
-          constr_param_name_ = param_name;
-          return;
-        }
-      }
-
-      // If we reach this point, then we did not find the reference parameter.
-      error_occurred_ = true;
-      std::ostringstream oss;
-      oss << "Error in constraint at " << line << ":" << col
-          << " -> Cannot find declaration of parameter " << param_name;
-
-      error_message_ = oss.str();
-    }
-
-    void set_atomic_prop_rel_op(const std::string& rel_op) {
-      if (rel_op == "!=") {
-        atomic_prop_rel_op_ = relational_operator::NEQ;
-      } else if (rel_op == "<") {
-        atomic_prop_rel_op_ = relational_operator::LT;
-      } else if (rel_op == "<=") {
-        atomic_prop_rel_op_ = relational_operator::LE;
-      } else if (rel_op == ">") {
-        atomic_prop_rel_op_ = relational_operator::GT;
-      } else if (rel_op == ">=") {
-        atomic_prop_rel_op_ = relational_operator::GE;
-      } else {
-        atomic_prop_rel_op_ = relational_operator::EQ;
-      }
-    }
-
-    void set_atomic_prop_value(int value) {
-      constraint_holder prop(std::make_unique<int_proposition>(
-          parameter_reference(constr_param_name_), atomic_prop_rel_op_, value));
-      // TODO: Add to parent constraint.
-    }
-
-    void set_atomic_prop_value(const std::string& value, size_t line,
-                               size_t col) {
-
-      switch (atomic_prop_rel_op_) {
-        case relational_operator::GT:
-        case relational_operator::GE:
-        case relational_operator::LT:
-        case relational_operator::LE: {
-          // If we reach this point, then we did not find the reference parameter.
-          error_occurred_ = true;
-          std::ostringstream oss;
-          oss << "Error in constraint at " << line << ":" << col
-              << " -> Cannot have operator for a non-integer parameter that needs an order";
-
-          error_message_ = oss.str();
-          return;
-        }
-        default:
-          break;
-      }
-
-      constraint_holder prop(std::make_unique<enum_proposition>(
-          parameter_reference(constr_param_name_), atomic_prop_rel_op_, value));
-      // TODO: Add to parent constraint.
-    }
-
-    void set_atomic_prop_value(bool value, size_t line, size_t col) {
-
-      switch (atomic_prop_rel_op_) {
-        case relational_operator::GT:
-        case relational_operator::GE:
-        case relational_operator::LT:
-        case relational_operator::LE: {
-          // If we reach this point, then we did not find the reference parameter.
-          error_occurred_ = true;
-          std::ostringstream oss;
-          oss << "Error in constraint at " << line << ":" << col
-              << " -> Cannot have operator for a non-integer parameter that needs an order";
-
-          error_message_ = oss.str();
-          return;
-        }
-        default:
-          break;
-      }
-
-      constraint_holder prop(std::make_unique<boolean_proposition>(
-          parameter_reference(constr_param_name_), atomic_prop_rel_op_, value));
-      // TODO: Add to parent constraint.
-    }
-
-    void end_constraint() {}
-
     bool parse_input_model(std::string_view sv) {
       error_occurred_ = false;
       error_message_.clear();
@@ -606,12 +546,6 @@ class acts_model_parser::impl : input_model_data_consumer {
     relation_identifier_consumer relation_identifier_consumer_;
     relation_param_identifier_consumer relation_param_identifier_consumer_;
     relation_strength_consumer relation_strength_consumer_;
-    constr_param_name_consumer constr_param_name_consumer_;
-    atomic_prop_rel_op_consumer atomic_prop_rel_op_consumer_;
-    constr_int_value_consumer constr_int_value_consumer_;
-    constr_bool_value_consumer constr_bool_value_consumer_;
-    constr_enum_value_consumer constr_enum_value_consumer_;
-    constraint_end_consumer constraint_end_consumer_;
     parameter current_param_;
     relation current_relation_;
     std::string constr_param_name_;
