@@ -108,6 +108,8 @@ class parameter {
       return name_ == other.name_;
     }
 
+    friend std::ostream& operator<<(std::ostream& os, const parameter& param);
+
   private:
     std::string name_;
     parameter_type type_;
@@ -137,6 +139,9 @@ class parameter_reference {
     bool operator==(const parameter_reference& other) const {
       return get_name() == other.get_name();
     }
+
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const parameter_reference& param);
 
   private:
     std::string param_name_;
@@ -188,6 +193,8 @@ class relation {
       return name_ == other.name_ && parameters_ == other.parameters_ &&
              interaction_strength_ == other.interaction_strength_;
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const relation& rel);
 
   private:
     std::string name_;

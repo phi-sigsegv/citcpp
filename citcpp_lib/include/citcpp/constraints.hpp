@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -117,6 +118,8 @@ class constraint {
      * Creates a copy of this constraint.
      */
     std::shared_ptr<constraint> create_copy() const;
+
+    friend std::ostream& operator<<(std::ostream& os, const constraint& constr);
 
   protected:
     /**

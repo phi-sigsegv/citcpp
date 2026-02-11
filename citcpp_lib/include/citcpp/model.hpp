@@ -1,6 +1,7 @@
 #ifndef INPUT_MODEL_HPP_
 #define INPUT_MODEL_HPP_
 
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -91,6 +92,8 @@ class model {
     void add_constraint(std::shared_ptr<constraint> constraint) {
       constraints_.push_back(std::move(constraint));
     }
+
+    friend std::ostream& operator<<(std::ostream& os, const model& model);
 
   private:
     std::string name_;

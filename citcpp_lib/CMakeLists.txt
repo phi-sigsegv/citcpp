@@ -27,6 +27,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_sylvan_ldd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_concurrent.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_sylvan_ldd.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/coverage_measurement.cpp
