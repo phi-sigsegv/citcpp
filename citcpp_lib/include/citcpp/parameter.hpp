@@ -4,6 +4,7 @@
 #include <ostream>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -47,7 +48,20 @@ class parameter_value {
     friend std::ostream& operator<<(std::ostream& os,
                                     const parameter_value& param_value) {
 
-      std::visit([&os](auto arg) { os << arg; }, param_value.value_);
+      std::visit(
+          [&os](auto arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, bool>) {
+              if (arg) {
+                os << "true";
+              } else {
+                os << "false";
+              }
+            } else {
+              os << arg;
+            }
+          },
+          param_value.value_);
 
       return os;
     }

@@ -104,7 +104,11 @@ class constraint_streaming_visitor {
     void operator()(const citcpp::boolean_proposition& prop) const {
       os_ << prop.get_parameter() << " ";
       os_ << prop.get_operator() << " ";
-      os_ << prop.get_compared_value();
+      if (prop.get_compared_value()) {
+        os_ << "true";
+      } else {
+        os_ << "false";
+      }
     }
 
     void operator()(const citcpp::enum_proposition& prop) const {
