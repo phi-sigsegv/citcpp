@@ -373,7 +373,7 @@ constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
   ldd_ = ldd;
 }
 
-bool constraint_handler_sylvan_ldd::is_thread_safe() const { return true; }
+bool constraint_handler_sylvan_ldd::is_thread_safe() const { return false; }
 
 bool constraint_handler_sylvan_ldd::is_valid_partial_test(const test& t) const {
   return ldd_.is_sat_with_partial_assignment(t.get_values());
