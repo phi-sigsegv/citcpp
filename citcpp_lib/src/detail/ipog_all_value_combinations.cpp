@@ -54,7 +54,7 @@ void create_all_value_combinations(
   std::vector<unsigned int> values(strength);
   recursively_add_test_for_each_combination(
       model, parameter_index_map, 0, values, test_set,
-      [&strength, &constr_handler](const test& t) {
+      [&constr_handler](const test& t) {
         return constr_handler.is_valid_partial_test(t);
       });
 }

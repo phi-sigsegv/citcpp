@@ -195,15 +195,18 @@ int execute_cagen(const std::string& model_file_path,
   bool aborted = false;
   while (f.wait_for(1s) == std::future_status::timeout) {
     if (show_progress) {
+      unsigned long long num_processed_combos =
+          handle->get_number_of_processed_combinations();
+      unsigned long long num_combos_to_process =
+          handle->get_number_of_combinations_to_process();
+      double precent_done =
+          (double)num_processed_combos / (double)num_combos_to_process * 100.0;
       unsigned long long num_covered_combos =
           handle->get_number_of_covered_combinations();
-      unsigned long long num_combos_to_cover =
-          handle->get_number_of_combinations_to_cover();
-      double precent_done =
-          (double)num_covered_combos / (double)num_combos_to_cover * 100.0;
       std::cout << "\r";
-      std::cout << "tuples: (" << num_covered_combos << " / "
-                << num_combos_to_cover << ") " << precent_done << "%, params: ("
+      std::cout << "tuples: (" << num_processed_combos << " / "
+                << num_combos_to_process << ") " << precent_done
+                << "%, covered: " << num_covered_combos << ", params: ("
                 << handle->get_number_of_processed_parameters() << " / "
                 << handle->get_number_of_parameters_to_process() << "), "
                 << handle->get_testset_size() << " tests" << std::flush;
@@ -215,16 +218,22 @@ int execute_cagen(const std::string& model_file_path,
     }
   }
 
+  unsigned long long num_processed_combos =
+      handle->get_number_of_processed_combinations();
+  unsigned long long num_combos_to_process =
+      handle->get_number_of_combinations_to_process();
+  double precent_done =
+      (double)num_processed_combos / (double)num_combos_to_process * 100.0;
   unsigned long long num_covered_combos =
       handle->get_number_of_covered_combinations();
-  unsigned long long num_combos_to_cover =
-      handle->get_number_of_combinations_to_cover();
-  double precent_done =
-      (double)num_covered_combos / (double)num_combos_to_cover * 100.0;
 
   std::cout << "\r";
-  std::cout << "tuples: (" << num_covered_combos << " / " << num_combos_to_cover
-            << ") " << precent_done << "%, params: ("
+  std::cout << "                                                               "
+               "       ";
+  std::cout << "\r";
+  std::cout << "tuples: (" << num_processed_combos << " / "
+            << num_combos_to_process << ") " << precent_done
+            << "%, covered: " << num_covered_combos << ", params: ("
             << handle->get_number_of_processed_parameters() << " / "
             << handle->get_number_of_parameters_to_process() << "), "
             << handle->get_testset_size() << " tests\n"

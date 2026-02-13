@@ -12,7 +12,8 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
   public:
     cagen_exec_handle_base()
         : cagen_exec_handle(),
-          num_combinations_to_cover_(0),
+          num_combinations_to_process_(0),
+          processed_combinations_(0),
           covered_combinations_(0),
           testset_size_(0),
           is_aborted_(),
@@ -31,29 +32,46 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     }
 
   public:
-    unsigned long long get_number_of_combinations_to_cover() const {
-      return num_combinations_to_cover_;
+    unsigned long long get_number_of_combinations_to_process() const override {
+      return num_combinations_to_process_;
     }
 
-    unsigned long long get_number_of_covered_combinations() const {
+    unsigned long long get_number_of_processed_combinations() const override {
+      return processed_combinations_;
+    }
+
+    unsigned long long get_number_of_covered_combinations() const override {
       return covered_combinations_;
     }
 
-    unsigned int get_testset_size() const { return testset_size_; }
+    unsigned int get_testset_size() const override { return testset_size_; }
 
-    void abort() { is_aborted_.store(true, std::memory_order_relaxed); }
+    void abort() override {
+      is_aborted_.store(true, std::memory_order_relaxed);
+    }
 
-    std::future<citcpp::cagen_exec_result> get_test_set() {
+    std::future<citcpp::cagen_exec_result> get_test_set() override {
       return test_set_.get_future();
     }
 
-    unsigned int get_duration_in_milli_seconds() const {
+    unsigned int get_duration_in_milli_seconds() const override {
       return duration_msec_;
     }
 
-    void set_number_of_combinations_to_cover(
-        unsigned long long num_combinations_to_cover) {
-      num_combinations_to_cover_ = num_combinations_to_cover;
+    void set_number_of_combinations_to_process(
+        unsigned long long num_combinations_to_process) {
+      num_combinations_to_process_ = num_combinations_to_process;
+    }
+
+    void set_number_of_processed_combinations(
+        unsigned long long processed_combinations) {
+      processed_combinations_ = processed_combinations;
+    }
+
+    void add_number_of_processed_combinations(
+        unsigned long long processed_combinations) {
+      processed_combinations_.fetch_add(processed_combinations,
+                                        std::memory_order_acq_rel);
     }
 
     void set_number_of_covered_combinations(
@@ -88,7 +106,8 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     }
 
   public:
-    std::atomic_ullong num_combinations_to_cover_;
+    std::atomic_ullong num_combinations_to_process_;
+    std::atomic_ullong processed_combinations_;
     std::atomic_ullong covered_combinations_;
     std::atomic_uint testset_size_;
     std::atomic_bool is_aborted_;

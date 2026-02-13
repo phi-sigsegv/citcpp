@@ -69,12 +69,14 @@ void main_ipog_loop_body(
     }
 
     tp.stop_workers();
+    exec_handle.add_number_of_processed_combinations(
+        reported_number_combos_to_cover);
     exec_handle.add_number_of_covered_combinations(
         reported_number_combos_to_cover);
   } else {
     std::vector<std::pair<const internal_relation*, coverage_map>>
         relation_cov_maps;
-    unsigned long long number_combos_to_cover = 0;
+    unsigned long long number_combos_to_process = 0;
     for (const auto& relation : relations) {
       if (relation
               .get_parameter_index_map()[relation.get_current_param_idx()] ==
@@ -85,7 +87,7 @@ void main_ipog_loop_body(
                                     relation.get_current_interaction_strength(),
                                     model, relation.get_parameter_index_map(),
                                     binomial_coeffs, true)));
-        number_combos_to_cover +=
+        number_combos_to_process +=
             relation_cov_maps.back().second.get_total_number_of_tuples();
       }
     }
@@ -98,7 +100,7 @@ void main_ipog_loop_body(
       for (const auto& relation_cov_result :
            measure_coverage_res.num_covered_tuples) {
 
-        number_combos_to_cover -= relation_cov_result.second;
+        number_combos_to_process -= relation_cov_result.second;
 
         // We only report the combinations as covered, after we have reached
         // the full interaction strength. This is because otherwise we could
@@ -106,6 +108,8 @@ void main_ipog_loop_body(
         if (relation_cov_result.first->get_current_interaction_strength() >=
             relation_cov_result.first->get_specified_interaction_strength()) {
 
+          exec_handle.add_number_of_processed_combinations(
+              relation_cov_result.second);
           exec_handle.add_number_of_covered_combinations(
               relation_cov_result.second);
         }
@@ -113,17 +117,18 @@ void main_ipog_loop_body(
     }
 
     auto horizontal_ext_res =
-        with_mt
-            ? ipog_horizontal_extension(number_combos_to_cover, constr_handler,
-                                        test_set, relation_cov_maps, tp)
-            : ipog_horizontal_extension(number_combos_to_cover, constr_handler,
-                                        test_set, relation_cov_maps);
+        with_mt ? ipog_horizontal_extension(number_combos_to_process,
+                                            constr_handler, test_set,
+                                            relation_cov_maps, tp)
+                : ipog_horizontal_extension(number_combos_to_process,
+                                            constr_handler, test_set,
+                                            relation_cov_maps);
     tp.stop_workers();
 
     for (const auto& relation_cov_result :
          horizontal_ext_res.num_new_covered_tuples) {
 
-      number_combos_to_cover -= relation_cov_result.second;
+      number_combos_to_process -= relation_cov_result.second;
 
       // We only report the combinations as covered, after we have reached
       // the full interaction strength. This is because otherwise we could
@@ -131,6 +136,8 @@ void main_ipog_loop_body(
       if (relation_cov_result.first->get_current_interaction_strength() >=
           relation_cov_result.first->get_specified_interaction_strength()) {
 
+        exec_handle.add_number_of_processed_combinations(
+            relation_cov_result.second);
         exec_handle.add_number_of_covered_combinations(
             relation_cov_result.second);
       }
@@ -142,15 +149,15 @@ void main_ipog_loop_body(
       return;
     }
 
-    if (number_combos_to_cover > 0) {
+    if (number_combos_to_process > 0) {
       auto vertical_ext_res = ipog_vertical_extension(
-          number_combos_to_cover, constr_handler, horizontal_ext_res, test_set,
-          relation_cov_maps);
+          number_combos_to_process, constr_handler, horizontal_ext_res,
+          test_set, relation_cov_maps);
 
-      for (const auto& relation_cov_result :
-           vertical_ext_res.num_new_covered_tuples) {
+      for (const auto& relation_cov_result : vertical_ext_res) {
 
-        number_combos_to_cover -= relation_cov_result.second;
+        number_combos_to_process -=
+            relation_cov_result.second.num_checked_tuples;
 
         // We only report the combinations as covered, after we have reached
         // the full interaction strength. This is because otherwise we could
@@ -158,8 +165,10 @@ void main_ipog_loop_body(
         if (relation_cov_result.first->get_current_interaction_strength() >=
             relation_cov_result.first->get_specified_interaction_strength()) {
 
+          exec_handle.add_number_of_processed_combinations(
+              relation_cov_result.second.num_checked_tuples);
           exec_handle.add_number_of_covered_combinations(
-              relation_cov_result.second);
+              relation_cov_result.second.num_new_covered_tuples);
         }
       }
 
@@ -188,7 +197,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   // some key properties of the relations.
   std::unordered_map<const internal_relation*, unsigned long long>
       relation_to_combos_to_cover;
-  unsigned long long number_combos_to_cover = 0;
+  unsigned long long number_combos_to_process = 0;
   unsigned int maximum_required_strength = 0;
   unsigned int maximum_prefix_length = 0;
   for (const auto& relation : relations) {
@@ -201,7 +210,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
                       relation.get_parameter_index_map().size(), model,
                       relation.get_parameter_index_map(),
                       relation.get_specified_interaction_strength(), false);
-    number_combos_to_cover += relation_number_combos_to_cover;
+    number_combos_to_process += relation_number_combos_to_cover;
     relation_to_combos_to_cover[&relation] = relation_number_combos_to_cover;
     maximum_required_strength =
         std::max(maximum_required_strength,
@@ -212,7 +221,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   }
 
   tp.stop_workers();
-  exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
+  exec_handle.set_number_of_combinations_to_process(number_combos_to_process);
   exec_handle.set_number_of_parameters_to_process(parameter_index_map.size());
 
   if (exec_handle.is_job_aborted()) {
@@ -221,8 +230,19 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   const unsigned int first_param_idx =
       std::min(maximum_required_strength, maximum_prefix_length);
-  for (unsigned int param_idx = 0; param_idx < first_param_idx; ++param_idx) {
+  {
+    // Step 1: Initialize for the first t parameters.
+    with_mt ? create_all_value_combinations(first_param_idx, model,
+                                            parameter_index_map, constr_handler,
+                                            test_set, tp)
+            : create_all_value_combinations(first_param_idx, model,
+                                            parameter_index_map, constr_handler,
+                                            test_set);
+    exec_handle.set_testset_size(test_set.get_list_of_tests().size());
+    exec_handle.set_number_of_processed_parameters(first_param_idx);
+  }
 
+  for (unsigned int param_idx = 0; param_idx < first_param_idx; ++param_idx) {
     const unsigned int real_current_param_idx = parameter_index_map[param_idx];
 
     auto relation_it = relations.begin();
@@ -237,41 +257,33 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
       }
 
       if (relation.get_current_param_idx() >=
+          relation.get_specified_interaction_strength()) {
+
+        auto num_combos =
+            with_mt ? get_number_of_combinations(
+                          relation.get_current_param_idx(), model,
+                          relation.get_parameter_index_map(),
+                          relation.get_current_param_idx(), false, test_set, tp)
+                    : get_number_of_combinations(
+                          relation.get_current_param_idx(), model,
+                          relation.get_parameter_index_map(),
+                          relation.get_current_param_idx(), false, test_set);
+        exec_handle.add_number_of_processed_combinations(
+            num_combos.num_combos_to_cover);
+        exec_handle.add_number_of_covered_combinations(
+            num_combos.num_covered_combos);
+      }
+
+      if (relation.get_current_param_idx() >=
           relation.get_parameter_index_map().size()) {
 
         // The relation will already be fully covered during the
         // initialization phase of the testset.
         relation_it = relations.erase(relation_it);
-        exec_handle.add_number_of_covered_combinations(
-            relation_to_combos_to_cover[&relation]);
       } else {
         ++relation_it;
       }
     }
-  }
-
-  {
-    // Step 1: Initialize for the first t parameters.
-    with_mt ? create_all_value_combinations(first_param_idx, model,
-                                            parameter_index_map, constr_handler,
-                                            test_set, tp)
-            : create_all_value_combinations(first_param_idx, model,
-                                            parameter_index_map, constr_handler,
-                                            test_set);
-    exec_handle.set_testset_size(test_set.get_list_of_tests().size());
-    exec_handle.set_number_of_processed_parameters(first_param_idx);
-  }
-
-  for (const auto& relation : relations) {
-    const unsigned long long number_of_covered_combos =
-        (relation.get_current_param_idx() >=
-         relation.get_specified_interaction_strength())
-            ? number_of_combinations_to_cover(
-                  relation.get_current_param_idx(), model,
-                  relation.get_parameter_index_map(),
-                  relation.get_current_param_idx(), false)
-            : 0;
-    exec_handle.add_number_of_covered_combinations(number_of_covered_combos);
   }
 
   // Here is the main IPOG loop.
@@ -332,9 +344,9 @@ void main_ipog_loop_extend_test_set(
   const bool with_mt = num_threads > 1;
 
   // First we compute the number of combination we have to cover.
-  unsigned long long number_combos_to_cover = 0;
+  unsigned long long number_combos_to_process = 0;
   for (const auto& relation : relations) {
-    number_combos_to_cover +=
+    number_combos_to_process +=
         with_mt ? number_of_combinations_to_cover(
                       relation.get_parameter_index_map().size(), model,
                       relation.get_parameter_index_map(),
@@ -346,7 +358,7 @@ void main_ipog_loop_extend_test_set(
   }
 
   tp.stop_workers();
-  exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
+  exec_handle.set_number_of_combinations_to_process(number_combos_to_process);
 
   if (exec_handle.is_job_aborted()) {
     return;

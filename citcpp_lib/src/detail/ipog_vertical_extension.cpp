@@ -27,6 +27,7 @@ class ipog_vertical_extension_functor {
           value_indices_(strength),
           scratch_test_(model.get_parameter_num_values().size(), -1),
           num_missing_combinations_to_cover_(num_missing_combinations_to_cover),
+          num_checked_tuples_(0),
           num_new_covered_tuples_(0) {}
 
     bool operator()(
@@ -40,7 +41,7 @@ class ipog_vertical_extension_functor {
         reset_scratch_test(value_combinations);
       }
 
-      return num_new_covered_tuples_ < num_missing_combinations_to_cover_;
+      return num_checked_tuples_ < num_missing_combinations_to_cover_;
     }
 
     bool operator()(
@@ -52,7 +53,11 @@ class ipog_vertical_extension_functor {
       ipog_vertical_extension_value_combo_func(value_indices, bitpos,
                                                value_combinations);
 
-      return num_new_covered_tuples_ < num_missing_combinations_to_cover_;
+      return num_checked_tuples_ < num_missing_combinations_to_cover_;
+    }
+
+    unsigned long long get_num_checked_tuples() const {
+      return num_checked_tuples_;
     }
 
     unsigned long long get_num_new_covered_tuples() const {
@@ -99,6 +104,7 @@ class ipog_vertical_extension_functor {
 
         if (index_valid) {
           if (!value_combinations.test_and_set(index)) {
+            num_checked_tuples_++;
             num_new_covered_tuples_++;
           }
         }
@@ -123,13 +129,15 @@ class ipog_vertical_extension_functor {
         return;
       }
 
-      ++num_new_covered_tuples_;
+      ++num_checked_tuples_;
 
       const bool valid_tuple = is_valid_tuple(param_indices, value_indices);
       if (!valid_tuple) {
         // Value tuple is invalid according to constraints.
         return;
       }
+
+      ++num_new_covered_tuples_;
 
       // Now we iterate over all tests trying to fit the value combination.
       // However, we do not iterate over the entire test test, but instead
@@ -292,6 +300,7 @@ class ipog_vertical_extension_functor {
     citcpp::detail::value_vector value_indices_;
     citcpp::detail::test scratch_test_;
     const unsigned long long num_missing_combinations_to_cover_;
+    unsigned long long num_checked_tuples_;
     unsigned long long num_new_covered_tuples_;
 };
 
@@ -324,7 +333,8 @@ ipog_vertical_extension_result ipog_vertical_extension(
 
     cov_map_it.visit_all_parameter_combinations(functor);
 
-    result.num_new_covered_tuples[rel.first] =
+    result[rel.first].num_checked_tuples = functor.get_num_checked_tuples();
+    result[rel.first].num_new_covered_tuples =
         functor.get_num_new_covered_tuples();
   }
 
