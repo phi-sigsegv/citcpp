@@ -142,7 +142,6 @@ class covm_per_param_combo_functor_parallel {
       values_combo_bitset.reset();
 
       int test_index = 0;
-      bool found_dont_care = false;
       for (const test& test : test_set_.get_list_of_tests()) {
         // Here we compute an index into the bitset. To do so, we treat the
         // number of values of each parameter as a kind of radix. Consider
@@ -150,6 +149,7 @@ class covm_per_param_combo_functor_parallel {
         // values for p_i. If we now have values x_0, x_1, x_2, then the index
         // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
         bitset_non_owning_uint64::size_type index = 0;
+        bool found_dont_care = false;
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size(); ++i) {
           const unsigned int param_idx = param_indices[i];
