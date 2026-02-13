@@ -188,15 +188,18 @@ unsigned int citcpp_ipog_base::length_of_common_param_prefix(
     const citcpp::detail::internal_relation& rel,
     const std::vector<unsigned int>& parameter_index_map) {
 
-  for (unsigned int param_idx = 0; param_idx < parameter_index_map.size();
+  unsigned int param_idx = 0;
+  for (; param_idx < parameter_index_map.size() &&
+         param_idx < rel.get_parameter_index_map().size();
        ++param_idx) {
+
     if (parameter_index_map[param_idx] !=
         rel.get_parameter_index_map()[param_idx]) {
       return param_idx;
     }
   }
 
-  return parameter_index_map.size();
+  return param_idx;
 }
 
 std::unique_ptr<constraint_handler> citcpp_ipog_base::create_constraint_handler(
