@@ -79,7 +79,8 @@ class citcpp_ipog_base {
      * Creates a constraint handler for the given model.
      */
     static std::unique_ptr<constraint_handler> create_constraint_handler(
-        const internal_model& model, int num_worker_threads);
+        const internal_model& model, int num_worker_threads,
+        cagen_exec_handle_ipog_impl& exec_handle);
 };
 
 }  // namespace detail

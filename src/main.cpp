@@ -195,21 +195,42 @@ int execute_cagen(const std::string& model_file_path,
   bool aborted = false;
   while (f.wait_for(1s) == std::future_status::timeout) {
     if (show_progress) {
-      unsigned long long num_processed_combos =
-          handle->get_number_of_processed_combinations();
-      unsigned long long num_combos_to_process =
-          handle->get_number_of_combinations_to_process();
-      double precent_done =
-          (double)num_processed_combos / (double)num_combos_to_process * 100.0;
-      unsigned long long num_covered_combos =
-          handle->get_number_of_covered_combinations();
-      std::cout << "\r";
-      std::cout << "tuples: (" << num_processed_combos << " / "
-                << num_combos_to_process << ") " << precent_done
-                << "%, covered: " << num_covered_combos << ", params: ("
-                << handle->get_number_of_processed_parameters() << " / "
-                << handle->get_number_of_parameters_to_process() << "), "
-                << handle->get_testset_size() << " tests" << std::flush;
+      switch (handle->get_execution_phase()) {
+        case cagen_exec_handle::phase::CONSTRAINT_HANDLER_INIT: {
+          unsigned int constr_init_progress_tgt =
+              handle->get_constraint_handler_init_progress_target();
+          unsigned int constr_init_progress_cur =
+              handle->get_constraint_handler_init_progress_current();
+          double precent_done = constr_init_progress_cur > 0
+                                    ? (double)constr_init_progress_cur /
+                                          (double)constr_init_progress_tgt *
+                                          100.0
+                                    : 0.0;
+          std::cout << "\r";
+          std::cout << "init: " << precent_done << "%" << std::flush;
+          break;
+        }
+        case cagen_exec_handle::phase::COVERING_ARRAY_CONSTRUCTION: {
+          unsigned long long num_processed_combos =
+              handle->get_number_of_processed_combinations();
+          unsigned long long num_combos_to_process =
+              handle->get_number_of_combinations_to_process();
+          double precent_done = num_processed_combos > 0
+                                    ? (double)num_processed_combos /
+                                          (double)num_combos_to_process * 100.0
+                                    : 0.0;
+          unsigned long long num_covered_combos =
+              handle->get_number_of_covered_combinations();
+          std::cout << "\r";
+          std::cout << "tuples: (" << num_processed_combos << " / "
+                    << num_combos_to_process << ") " << precent_done
+                    << "%, covered: " << num_covered_combos << ", params: ("
+                    << handle->get_number_of_processed_parameters() << " / "
+                    << handle->get_number_of_parameters_to_process() << "), "
+                    << handle->get_testset_size() << " tests" << std::flush;
+          break;
+        }
+      }
     }
 
     if (g_signal_status == SIGINT) {
@@ -218,12 +239,18 @@ int execute_cagen(const std::string& model_file_path,
     }
   }
 
+  unsigned int constr_init_progress_tgt =
+      handle->get_constraint_handler_init_progress_target();
+  unsigned int constr_init_progress_cur =
+      handle->get_constraint_handler_init_progress_current();
   unsigned long long num_processed_combos =
       handle->get_number_of_processed_combinations();
   unsigned long long num_combos_to_process =
       handle->get_number_of_combinations_to_process();
   double precent_done =
-      (double)num_processed_combos / (double)num_combos_to_process * 100.0;
+      num_processed_combos > 0
+          ? (double)num_processed_combos / (double)num_combos_to_process * 100.0
+          : 0.0;
   unsigned long long num_covered_combos =
       handle->get_number_of_covered_combinations();
 

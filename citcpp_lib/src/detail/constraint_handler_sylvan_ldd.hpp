@@ -1,6 +1,7 @@
 #ifndef DETAIL_CONSTRAINT_HANDLER_SYLVAN_LDD_HPP_
 #define DETAIL_CONSTRAINT_HANDLER_SYLVAN_LDD_HPP_
 
+#include "cagen_exec_handle_base.hpp"
 #include "citcpp_sylvan_ldd.hpp"
 #include "constraint_handler.hpp"
 #include "internal_model.hpp"
@@ -24,6 +25,9 @@ class constraint_handler_sylvan_ldd : public constraint_handler {
 
   public:
     constraint_handler_sylvan_ldd(const internal_model& model, int num_workers);
+
+    constraint_handler_sylvan_ldd(const internal_model& model, int num_workers,
+                                  cagen_exec_handle_base& exec_handle);
 
     /**
      * See constraint_handler interface.

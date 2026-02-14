@@ -12,6 +12,9 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
   public:
     cagen_exec_handle_base()
         : cagen_exec_handle(),
+          exec_phase_(0),
+          constr_init_progress_tgt_(0),
+          constr_init_progress_cur_(0),
           num_combinations_to_process_(0),
           processed_combinations_(0),
           covered_combinations_(0),
@@ -32,6 +35,19 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     }
 
   public:
+    phase get_execution_phase() const override {
+      unsigned int v = exec_phase_;
+      return static_cast<phase>(v);
+    }
+
+    unsigned int get_constraint_handler_init_progress_target() const override {
+      return constr_init_progress_tgt_;
+    }
+
+    unsigned int get_constraint_handler_init_progress_current() const override {
+      return constr_init_progress_cur_;
+    }
+
     unsigned long long get_number_of_combinations_to_process() const override {
       return num_combinations_to_process_;
     }
@@ -56,6 +72,27 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
 
     unsigned int get_duration_in_milli_seconds() const override {
       return duration_msec_;
+    }
+
+    void set_execution_phase(phase p) {
+      unsigned int v = static_cast<unsigned int>(p);
+      exec_phase_ = v;
+    }
+
+    void set_constraint_handler_init_progress_target(
+        unsigned int constr_init_progress_tgt) {
+      constr_init_progress_tgt_ = constr_init_progress_tgt;
+    }
+
+    void set_constraint_handler_init_progress_current(
+        unsigned int constr_init_progress_cur) {
+      constr_init_progress_cur_ = constr_init_progress_cur;
+    }
+
+    void add_constraint_handler_init_progress_current(
+        unsigned int constr_init_progress_cur) {
+      constr_init_progress_cur_.fetch_add(constr_init_progress_cur,
+                                          std::memory_order_acq_rel);
     }
 
     void set_number_of_combinations_to_process(
@@ -106,6 +143,9 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     }
 
   public:
+    std::atomic_uint exec_phase_;
+    std::atomic_uint constr_init_progress_tgt_;
+    std::atomic_uint constr_init_progress_cur_;
     std::atomic_ullong num_combinations_to_process_;
     std::atomic_ullong processed_combinations_;
     std::atomic_ullong covered_combinations_;

@@ -373,6 +373,26 @@ constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
   ldd_ = ldd;
 }
 
+constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
+    const internal_model& model, int num_workers,
+    cagen_exec_handle_base& exec_handle)
+    : instances_tracker_(num_workers), model_(model), ldd_() {
+
+  constraint_to_ldd_visitor visitor(model);
+  sylvan_ldd ldd_true = sylvan_ldd::lddTrue();
+  sylvan_ldd ldd = ldd_true;
+  for (const auto& constr : model.get_input_model().get_constraints()) {
+    if (ldd == ldd_true) {
+      ldd = constr->accept<sylvan_ldd>(visitor);
+    } else {
+      ldd.project_intersect(constr->accept<sylvan_ldd>(visitor));
+    }
+    exec_handle.add_constraint_handler_init_progress_current(1);
+  }
+
+  ldd_ = ldd;
+}
+
 bool constraint_handler_sylvan_ldd::is_thread_safe() const { return false; }
 
 bool constraint_handler_sylvan_ldd::is_valid_partial_test(const test& t) const {

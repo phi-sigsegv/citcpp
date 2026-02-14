@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "cagen_exec_handle_ipog_impl.hpp"
 #include "constraint_handler_sylvan_ldd.hpp"
 #include "constraint_handler_void.hpp"
 
@@ -203,13 +204,19 @@ unsigned int citcpp_ipog_base::length_of_common_param_prefix(
 }
 
 std::unique_ptr<constraint_handler> citcpp_ipog_base::create_constraint_handler(
-    const internal_model& model, int num_worker_threads) {
+    const internal_model& model, int num_worker_threads,
+    cagen_exec_handle_ipog_impl& exec_handle) {
 
   if (model.get_input_model().get_constraints().empty()) {
+    exec_handle.set_constraint_handler_init_progress_target(0);
+    exec_handle.set_constraint_handler_init_progress_current(0);
     return std::make_unique<constraint_handler_void>(model);
   } else {
-    return std::make_unique<constraint_handler_sylvan_ldd>(model,
-                                                           num_worker_threads);
+    exec_handle.set_constraint_handler_init_progress_target(
+        model.get_input_model().get_constraints().size());
+    exec_handle.set_constraint_handler_init_progress_current(0);
+    return std::make_unique<constraint_handler_sylvan_ldd>(
+        model, num_worker_threads, exec_handle);
   }
 }
 

@@ -423,7 +423,7 @@ void citcpp_ipog_otf::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
       create_relations(input_model_, model_, strength_));
 
   std::unique_ptr<constraint_handler> constr_handler =
-      create_constraint_handler(model_, num_threads);
+      create_constraint_handler(model_, num_threads, exec_handle);
 
   internal_test_set tests(input_tests_);
   if (tests.get_list_of_tests().empty()) {
