@@ -437,7 +437,7 @@ int main(int argc, char* argv[]) {
 
   unsigned int num_threads = 1;
   command_cagen->add_option(
-      "--num-theads", num_threads,
+      "--num-threads", num_threads,
       "Sets the number of threads to use. The value 0 means that the number of "
       "threads is chosen automatically. The default value is 1.");
 
@@ -499,7 +499,7 @@ int main(int argc, char* argv[]) {
       ->check(InteractionStrengthValidator());
 
   command_cov_measure->add_option(
-      "--num-theads", num_threads,
+      "--num-threads", num_threads,
       "Sets the number of threads to use. The value 0 means that the number of "
       "threads is chosen automatically. The default value is 1.");
 
