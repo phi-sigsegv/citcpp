@@ -94,7 +94,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
                                         strength));
     covm_per_relation[""].set_number_of_combinations_to_cover(
         number_combos_to_cover);
-    exec_handle.set_number_of_combinations_to_cover(number_combos_to_cover);
+    exec_handle.set_number_of_combinations_to_process(number_combos_to_cover);
   } else {
     for (int i = 0; i < relations.size(); ++i) {
       const auto& relation = input_model.get_relations()[i];
@@ -118,7 +118,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
               int_relation.get_specified_interaction_strength()));
       covm_per_relation[relation.get_name()]
           .set_number_of_combinations_to_cover(number_combos_to_cover);
-      exec_handle.add_number_of_combinations_to_cover(number_combos_to_cover);
+      exec_handle.add_number_of_combinations_to_process(number_combos_to_cover);
     }
   }
 

@@ -342,15 +342,15 @@ int execute_covm(const std::string& model_file_path,
   bool aborted = false;
   while (f.wait_for(1s) == std::future_status::timeout) {
     if (show_progress) {
-      unsigned long long num_checked_combos =
-          handle->get_number_of_checked_combinations();
-      unsigned long long num_combos_to_cover =
-          handle->get_number_of_combinations_to_cover();
+      unsigned long long num_processed_combos =
+          handle->get_number_of_processed_combinations();
+      unsigned long long num_combos_to_process =
+          handle->get_number_of_combinations_to_process();
       double precent_done =
-          (double)num_checked_combos / (double)num_combos_to_cover * 100.0;
+          (double)num_processed_combos / (double)num_combos_to_process * 100.0;
       std::cout << "\r";
-      std::cout << "tuples: (" << num_checked_combos << " / "
-                << num_combos_to_cover << ") " << precent_done << "%"
+      std::cout << "tuples: (" << num_processed_combos << " / "
+                << num_combos_to_process << ") " << precent_done << "%"
                 << std::flush;
     }
 
@@ -360,16 +360,16 @@ int execute_covm(const std::string& model_file_path,
     }
   }
 
-  unsigned long long num_checked_combos =
-      handle->get_number_of_checked_combinations();
-  unsigned long long num_combos_to_cover =
-      handle->get_number_of_combinations_to_cover();
+  unsigned long long num_processed_combos =
+      handle->get_number_of_processed_combinations();
+  unsigned long long num_combos_to_process =
+      handle->get_number_of_combinations_to_process();
   double precent_done =
-      (double)num_checked_combos / (double)num_combos_to_cover * 100.0;
+      (double)num_processed_combos / (double)num_combos_to_process * 100.0;
 
   std::cout << "\r";
-  std::cout << "tuples: (" << num_checked_combos << " / " << num_combos_to_cover
-            << ") " << precent_done << "%\n"
+  std::cout << "tuples: (" << num_processed_combos << " / "
+            << num_combos_to_process << ") " << precent_done << "%\n"
             << std::endl;
 
   // restore defaults in formatting.

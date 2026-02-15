@@ -15,8 +15,8 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
   public:
     covm_exec_handle_impl()
         : covm_exec_handle(),
-          num_combinations_to_cover_(0),
-          checked_combinations_(0),
+          num_combinations_to_process_(0),
+          processed_combinations_(0),
           is_aborted_(),
           covm_result_(),
           duration_msec_(0),
@@ -34,12 +34,12 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
     }
 
   public:
-    unsigned long long get_number_of_combinations_to_cover() const {
-      return num_combinations_to_cover_;
+    unsigned long long get_number_of_combinations_to_process() const {
+      return num_combinations_to_process_;
     }
 
-    unsigned long long get_number_of_checked_combinations() const {
-      return checked_combinations_;
+    unsigned long long get_number_of_processed_combinations() const {
+      return processed_combinations_;
     }
 
     void abort() { is_aborted_.test_and_set(); }
@@ -52,26 +52,26 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
       return duration_msec_;
     }
 
-    void set_number_of_combinations_to_cover(
-        unsigned long long num_combinations_to_cover) {
-      num_combinations_to_cover_ = num_combinations_to_cover;
+    void set_number_of_combinations_to_process(
+        unsigned long long num_combinations_to_process) {
+      num_combinations_to_process_ = num_combinations_to_process;
     }
 
-    void add_number_of_combinations_to_cover(
-        unsigned long long num_combinations_to_cover) {
-      num_combinations_to_cover_.fetch_add(num_combinations_to_cover,
-                                           std::memory_order_acq_rel);
+    void add_number_of_combinations_to_process(
+        unsigned long long num_combinations_to_process) {
+      num_combinations_to_process_.fetch_add(num_combinations_to_process,
+                                             std::memory_order_acq_rel);
     }
 
-    void set_number_of_checked_combinations(
-        unsigned long long checked_combinations) {
-      checked_combinations_ = checked_combinations;
+    void set_number_of_processed_combinations(
+        unsigned long long processed_combinations) {
+      processed_combinations_ = processed_combinations;
     }
 
-    void add_number_of_checked_combinations(
-        unsigned long long checked_combinations) {
-      checked_combinations_.fetch_add(checked_combinations,
-                                      std::memory_order_acq_rel);
+    void add_number_of_processed_combinations(
+        unsigned long long processed_combinations) {
+      processed_combinations_.fetch_add(processed_combinations,
+                                        std::memory_order_acq_rel);
     }
 
     bool is_job_aborted() { return is_aborted_.test(); }
@@ -96,8 +96,8 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
     }
 
   public:
-    std::atomic_ullong num_combinations_to_cover_;
-    std::atomic_ullong checked_combinations_;
+    std::atomic_ullong num_combinations_to_process_;
+    std::atomic_ullong processed_combinations_;
     std::atomic_flag is_aborted_;
     std::promise<citcpp::covm_exec_result> covm_result_;
     std::atomic_uint duration_msec_;

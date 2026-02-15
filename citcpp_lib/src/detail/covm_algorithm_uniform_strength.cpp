@@ -86,7 +86,7 @@ class covm_per_param_combo_functor {
       double param_coverage_fraction = (double)values_combo_bitset.count() /
                                        (double)values_combo_bitset.size();
       covm_.add_coverage_of_param_combos(1, param_coverage_fraction);
-      exec_handle_.add_number_of_checked_combinations(
+      exec_handle_.add_number_of_processed_combinations(
           values_combo_bitset.size());
 
       if (exec_handle_.is_job_aborted()) {
@@ -204,7 +204,7 @@ class covm_per_param_combo_functor_parallel {
         thread_local_cov_level_to_num_param_combos.value[index]++;
       }
 
-      exec_handle_.add_number_of_checked_combinations(
+      exec_handle_.add_number_of_processed_combinations(
           values_combo_bitset.size());
 
       if (exec_handle_.is_job_aborted()) {
