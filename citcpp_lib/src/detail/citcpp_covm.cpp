@@ -10,6 +10,7 @@
 #include "binom_coeff_table.hpp"
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
+#include "constraint_evaluator.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
 #include "covm_exec_result_impl.hpp"
@@ -188,6 +189,24 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
     }
   }
 
+  // Filter out invalid tests.
+  std::vector<unsigned int> invalid_test_indices;
+  {
+    constraint_evaluator constr_eval(input_model_.get_parameters());
+    unsigned int test_idx = 0;
+    auto test_it = tests_.get_list_of_tests().begin();
+    while (test_it != tests_.get_list_of_tests().end()) {
+      const auto& t = *test_it;
+      if (!constr_eval(t, input_model_)) {
+        test_it = tests_.get_list_of_tests().erase(test_it);
+        invalid_test_indices.push_back(test_idx);
+      } else {
+        ++test_it;
+      }
+      ++test_idx;
+    }
+  }
+
   std::unordered_map<std::string, coverage_measurement> covm_per_relation(
       main_covm_loop(input_model_, model_, tests_, config_, num_threads,
                      strength_, exec_handle));
@@ -209,6 +228,7 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   }
   result.set_error_message("");
   result.set_result(std::move(covm_per_relation));
+  result.set_invalid_test_indices(std::move(invalid_test_indices));
   exec_handle.set_coverage_measurement(std::move(result));
 }
 

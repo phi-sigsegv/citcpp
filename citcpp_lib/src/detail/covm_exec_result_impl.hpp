@@ -9,22 +9,13 @@ namespace citcpp {
 class covm_exec_result_impl : public covm_exec_result {
   public:
     void set_result(
-        const std::unordered_map<std::string, coverage_measurement>& result) {
-      result_ = result;
-    }
-
-    void set_result(
-        std::unordered_map<std::string, coverage_measurement>&& result) {
+        std::unordered_map<std::string, coverage_measurement> result) {
       result_ = std::move(result);
     }
 
-    std::vector<unsigned int>& get_invalid_test_indices() {
-      return invalid_test_indices_;
-    }
-
     void set_invalid_test_indices(
-        const std::vector<unsigned int>& invalid_test_indices) {
-      invalid_test_indices_ = invalid_test_indices;
+        std::vector<unsigned int> invalid_test_indices) {
+      invalid_test_indices_ = std::move(invalid_test_indices);
     }
 
     void set_result_code(covm_result_code result_code) {
