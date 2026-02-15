@@ -21,13 +21,9 @@ class cagen_exec_handle_ipog_impl;
  */
 class citcpp_ipog : public citcpp_ipog_base {
   public:
-    citcpp_ipog(const model& input_model,
+    citcpp_ipog(model input_model,
                 const covering_array_computation_config& config);
-    citcpp_ipog(model&& input_model,
-                const covering_array_computation_config& config);
-    citcpp_ipog(const model& input_model, const citcpp::test_set& tests,
-                const covering_array_computation_config& config);
-    citcpp_ipog(model&& input_model, test_set&& tests,
+    citcpp_ipog(model input_model, test_set tests,
                 const covering_array_computation_config& config);
 
     /**

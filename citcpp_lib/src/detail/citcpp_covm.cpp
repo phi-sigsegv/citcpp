@@ -167,16 +167,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
 namespace citcpp {
 namespace detail {
 
-citcpp_covm::citcpp_covm(const model& input_model, const test_set& tests,
-                         const coverage_measurement_config& config)
-    : config_(config),
-      input_model_(input_model),
-      model_(input_model_),
-      input_tests_(tests),
-      tests_(create_internal_test_set(input_model_, input_tests_)),
-      strength_(1) {}
-
-citcpp_covm::citcpp_covm(model&& input_model, test_set&& tests,
+citcpp_covm::citcpp_covm(model input_model, test_set tests,
                          const coverage_measurement_config& config)
     : config_(config),
       input_model_(std::move(input_model)),

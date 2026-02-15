@@ -369,16 +369,7 @@ namespace citcpp {
 namespace detail {
 
 citcpp_ipog_otf::citcpp_ipog_otf(
-    const model& input_model, const covering_array_computation_config& config)
-    : citcpp_ipog_base(),
-      config_(config),
-      input_model_(input_model),
-      model_(input_model_),
-      input_tests_(),
-      strength_(1) {}
-
-citcpp_ipog_otf::citcpp_ipog_otf(
-    model&& input_model, const covering_array_computation_config& config)
+    model input_model, const covering_array_computation_config& config)
     : citcpp_ipog_base(),
       config_(config),
       input_model_(std::move(input_model)),
@@ -387,17 +378,7 @@ citcpp_ipog_otf::citcpp_ipog_otf(
       strength_(1) {}
 
 citcpp_ipog_otf::citcpp_ipog_otf(
-    const model& input_model, const citcpp::test_set& tests,
-    const covering_array_computation_config& config)
-    : citcpp_ipog_base(),
-      config_(config),
-      input_model_(input_model),
-      model_(input_model_),
-      input_tests_(create_internal_test_set(input_model_, tests)),
-      strength_(1) {}
-
-citcpp_ipog_otf::citcpp_ipog_otf(
-    model&& input_model, test_set&& tests,
+    model input_model, test_set tests,
     const covering_array_computation_config& config)
     : citcpp_ipog_base(),
       config_(config),
