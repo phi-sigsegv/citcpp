@@ -6,6 +6,8 @@
 #include <citcpp/test_set.hpp>
 #include <unordered_map>
 
+#include "internal_test_set.hpp"
+
 namespace citcpp {
 namespace detail {
 
@@ -51,6 +53,24 @@ class constraint_evaluator {
     bool operator()(
         const test_set& tests,
         const std::vector<std::shared_ptr<constraint>>& constraints) const;
+
+    /**
+     * Evaluates whether the given test fulfills the given constraint.
+     */
+    bool operator()(const test& test, const constraint& constr,
+                    const model& model) const;
+
+    /**
+     * Evaluates whether the given test fulfills all the given constraints.
+     */
+    bool operator()(const test& test, const model& model) const;
+
+    /**
+     * Evaluates whether all tests in a given testset fulfill all the given
+     * constraints.
+     */
+    bool operator()(const internal_test_set& tests,
+                    const citcpp::model& model) const;
 
   private:
     std::unordered_map<parameter_reference, int, parameter_reference_hash>
