@@ -42,7 +42,7 @@ class constraint_evaluator {
      */
     bool operator()(
         const std::vector<parameter_value>& test,
-        const std::vector<std::unique_ptr<constraint>>& constraints) const;
+        const std::vector<std::shared_ptr<constraint>>& constraints) const;
 
     /**
      * Evaluates whether all tests in a given testset fulfill all the given
@@ -50,7 +50,7 @@ class constraint_evaluator {
      */
     bool operator()(
         const test_set& tests,
-        const std::vector<std::unique_ptr<constraint>>& constraints) const;
+        const std::vector<std::shared_ptr<constraint>>& constraints) const;
 
   private:
     std::unordered_map<parameter_reference, int, parameter_reference_hash>

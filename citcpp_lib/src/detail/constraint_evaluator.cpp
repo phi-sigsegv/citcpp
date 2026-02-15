@@ -142,7 +142,7 @@ bool constraint_evaluator::operator()(const std::vector<parameter_value>& test,
 
 bool constraint_evaluator::operator()(
     const std::vector<parameter_value>& test,
-    const std::vector<std::unique_ptr<constraint>>& constraints) const {
+    const std::vector<std::shared_ptr<constraint>>& constraints) const {
 
   for (const auto& constr : constraints) {
     if (!(*this)(test, *constr)) {
@@ -155,7 +155,7 @@ bool constraint_evaluator::operator()(
 
 bool constraint_evaluator::operator()(
     const test_set& tests,
-    const std::vector<std::unique_ptr<constraint>>& constraints) const {
+    const std::vector<std::shared_ptr<constraint>>& constraints) const {
 
   for (const auto& test : tests.get_list_of_tests()) {
     if (!(*this)(test, constraints)) {
