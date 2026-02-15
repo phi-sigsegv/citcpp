@@ -49,6 +49,15 @@ class covm_exec_result {
     }
 
     /**
+     * Returns a list of indices of tests which are invalid, i.e. violate
+     * at least one constraint. Invalid tests are ignored during
+     * the coverage measurement.
+     */
+    const std::vector<unsigned int>& get_invalid_test_indices() const {
+      return invalid_test_indices_;
+    }
+
+    /**
      * Returns the status code defining the result of the coverage measurement
      * execution.
      */
@@ -62,6 +71,7 @@ class covm_exec_result {
 
   protected:
     std::unordered_map<std::string, coverage_measurement> result_;
+    std::vector<unsigned int> invalid_test_indices_;
     covm_result_code result_code_;
     std::string error_message_;
 };

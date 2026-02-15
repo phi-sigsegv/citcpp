@@ -4,16 +4,28 @@ namespace citcpp {
 namespace detail {
 
 coverage_measurement_json::coverage_measurement_json(
-    const std::unordered_map<std::string, coverage_measurement>& covm)
-    : covm_(covm) {}
+    const std::unordered_map<std::string, coverage_measurement>& covm,
+    const std::vector<unsigned int>& invalid_test_indices)
+    : covm_(covm), invalid_test_indices_(invalid_test_indices) {}
 
 std::ostream& operator<<(std::ostream& os,
                          const coverage_measurement_json& covm_json) {
 
   const std::unordered_map<std::string, coverage_measurement>& covm =
       covm_json.covm_;
+  const std::vector<unsigned int>& invalid_test_indices =
+      covm_json.invalid_test_indices_;
 
   os << "{\n";
+  os << "  \"invalid_tests\": [\n";
+  for (unsigned int i = 0; i < invalid_test_indices.size(); ++i) {
+    os << "    " << invalid_test_indices[i];
+    if (i < invalid_test_indices.size() - 1) {
+      os << ",";
+    }
+    os << "\n";
+  }
+  os << "  ],\n";
   for (const auto& relation_and_covm : covm) {
     const auto& relation_name = relation_and_covm.first;
     const auto& relation_covm = relation_and_covm.second;

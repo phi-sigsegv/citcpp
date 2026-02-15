@@ -390,8 +390,10 @@ int execute_covm(const std::string& model_file_path,
                    handle->get_duration_in_milli_seconds()))
             << std::endl;
 
-  coverage_measurement_file_os << coverage_measurement_json(result.get_result())
-                               << std::endl;
+  coverage_measurement_file_os
+      << coverage_measurement_json(result.get_result(),
+                                   result.get_invalid_test_indices())
+      << std::endl;
   std::cout << "Output file: " << coverage_measurement_file_path << std::endl;
 
   return 0;
