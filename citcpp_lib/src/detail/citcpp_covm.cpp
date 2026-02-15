@@ -172,8 +172,7 @@ citcpp_covm::citcpp_covm(model input_model, test_set tests,
     : config_(config),
       input_model_(std::move(input_model)),
       model_(input_model_),
-      input_tests_(std::move(tests)),
-      tests_(create_internal_test_set(input_model_, input_tests_)),
+      tests_(create_internal_test_set(input_model_, tests)),
       strength_(1) {}
 
 void citcpp_covm::set_interaction_strength(int t) { strength_ = t; }
