@@ -85,12 +85,46 @@ class covm_exec_result {
 class covm_exec_handle {
   public:
     /**
+     * This enumeration defines the different execution phases of the algorithm
+     * for measuring coverage.
+     */
+    enum class phase {
+      /**
+       * This is a phase where the constraint handler is being initalized.
+       */
+      CONSTRAINT_HANDLER_INIT = 0,
+      /**
+       * This is a phase where the coverage is being measured.
+       */
+      COVERAGE_MEASUREMENT = 1
+    };
+
+    /**
      * The real destructor of this handle calls abort() and joins with
      * the executing thread, in order to ensure a clean termination
      * if this handle is destroyed without the client explicitly waiting
      * for the execution.
      */
     virtual ~covm_exec_handle() {}
+
+    /**
+     * Returns which phase is active.
+     */
+    virtual phase get_execution_phase() const = 0;
+
+    /**
+     * Returns a progress value, which represents the state where the
+     * constraint handler is fully initialized.
+     */
+    virtual unsigned int get_constraint_handler_init_progress_target()
+        const = 0;
+
+    /**
+     * Returns the current progress value with regard to the initialization
+     * of the constraint handler.
+     */
+    virtual unsigned int get_constraint_handler_init_progress_current()
+        const = 0;
 
     /**
      * Returns the number of combinations to process based on the given

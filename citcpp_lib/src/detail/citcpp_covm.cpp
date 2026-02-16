@@ -11,6 +11,7 @@
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
 #include "constraint_evaluator.hpp"
+#include "constraint_handler.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
 #include "covm_exec_result_impl.hpp"
@@ -60,6 +61,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     const citcpp::model& input_model,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::internal_test_set& test_set,
+    const citcpp::detail::constraint_handler& constr_handler,
     const citcpp::coverage_measurement_config& config,
     const unsigned int num_threads, int strength,
     citcpp::detail::covm_exec_handle_impl& exec_handle) {
@@ -133,11 +135,11 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     if (with_mt) {
       measure_coverage(int_relation.get_specified_interaction_strength(), model,
                        int_relation.get_parameter_index_map(), test_set,
-                       exec_handle, covm_per_relation[""], tp);
+                       constr_handler, exec_handle, covm_per_relation[""], tp);
     } else {
       measure_coverage(int_relation.get_specified_interaction_strength(), model,
                        int_relation.get_parameter_index_map(), test_set,
-                       exec_handle, covm_per_relation[""]);
+                       constr_handler, exec_handle, covm_per_relation[""]);
     }
   } else {
     for (int i = 0; i < relations.size(); ++i) {
@@ -147,12 +149,12 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
       if (with_mt) {
         measure_coverage(int_relation.get_specified_interaction_strength(),
                          model, int_relation.get_parameter_index_map(),
-                         test_set, exec_handle,
+                         test_set, constr_handler, exec_handle,
                          covm_per_relation[relation.get_name()], tp);
       } else {
         measure_coverage(int_relation.get_specified_interaction_strength(),
                          model, int_relation.get_parameter_index_map(),
-                         test_set, exec_handle,
+                         test_set, constr_handler, exec_handle,
                          covm_per_relation[relation.get_name()]);
       }
     }
@@ -207,9 +209,20 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
     }
   }
 
+  exec_handle.set_execution_phase(
+      covm_exec_handle_impl::phase::CONSTRAINT_HANDLER_INIT);
+
+  std::unique_ptr<constraint_handler> constr_handler =
+      constraint_handler::create_constraint_handler(
+          model_, num_threads,
+          exec_handle.get_constraint_handler_init_progress());
+
+  exec_handle.set_execution_phase(
+      covm_exec_handle_impl::phase::COVERAGE_MEASUREMENT);
+
   std::unordered_map<std::string, coverage_measurement> covm_per_relation(
-      main_covm_loop(input_model_, model_, tests_, config_, num_threads,
-                     strength_, exec_handle));
+      main_covm_loop(input_model_, model_, tests_, *constr_handler, config_,
+                     num_threads, strength_, exec_handle));
 
   const auto t_end = std::chrono::high_resolution_clock::now();
   const auto duration_in_milli_seconds =

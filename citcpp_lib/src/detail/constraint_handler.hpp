@@ -2,6 +2,7 @@
 #define DETAIL_CONSTRAINT_HANDLER_HPP_
 
 #include "bitset.hpp"
+#include "constraint_handler_init_progress.hpp"
 #include "internal_test_set.hpp"
 
 namespace citcpp {
@@ -77,6 +78,13 @@ class constraint_handler {
      * values such that the resulting tests are all valid.
      */
     void replace_dont_care_values(internal_test_set& test_set) const;
+
+    /**
+     * Creates a constraint handler for the given model.
+     */
+    static std::unique_ptr<constraint_handler> create_constraint_handler(
+        const internal_model& model, int num_worker_threads,
+        constraint_handler_init_progress& exec_handle);
 };
 
 }  // namespace detail

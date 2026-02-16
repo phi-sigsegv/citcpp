@@ -375,7 +375,7 @@ constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
 
 constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
     const internal_model& model, int num_workers,
-    cagen_exec_handle_base& exec_handle)
+    constraint_handler_init_progress& exec_handle)
     : instances_tracker_(num_workers), model_(model), ldd_() {
 
   constraint_to_ldd_visitor visitor(model);

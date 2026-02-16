@@ -12,6 +12,7 @@
 #include "cagen_exec_result_impl.hpp"
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
+#include "constraint_handler.hpp"
 #include "coverage_map.hpp"
 #include "datatypes_config.hpp"
 #include "ipog_all_value_combinations.hpp"
@@ -455,7 +456,9 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
       cagen_exec_handle::phase::CONSTRAINT_HANDLER_INIT);
 
   std::unique_ptr<constraint_handler> constr_handler =
-      create_constraint_handler(model_, num_threads, exec_handle);
+      constraint_handler::create_constraint_handler(
+          model_, num_threads,
+          exec_handle.get_constraint_handler_init_progress());
 
   exec_handle.set_execution_phase(
       cagen_exec_handle::phase::COVERING_ARRAY_CONSTRUCTION);

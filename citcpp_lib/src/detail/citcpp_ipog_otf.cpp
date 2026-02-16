@@ -403,8 +403,16 @@ void citcpp_ipog_otf::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   std::vector<internal_relation> relations(
       create_relations(input_model_, model_, strength_));
 
+  exec_handle.set_execution_phase(
+      cagen_exec_handle::phase::CONSTRAINT_HANDLER_INIT);
+
   std::unique_ptr<constraint_handler> constr_handler =
-      create_constraint_handler(model_, num_threads, exec_handle);
+      constraint_handler::create_constraint_handler(
+          model_, num_threads,
+          exec_handle.get_constraint_handler_init_progress());
+
+  exec_handle.set_execution_phase(
+      cagen_exec_handle::phase::COVERING_ARRAY_CONSTRUCTION);
 
   internal_test_set tests(input_tests_);
   if (tests.get_list_of_tests().empty()) {

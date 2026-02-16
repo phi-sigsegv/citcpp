@@ -5,6 +5,8 @@
 #include <citcpp/cagen_exec_handle.hpp>
 #include <thread>
 
+#include "constraint_handler_init_progress.hpp"
+
 namespace citcpp {
 namespace detail {
 
@@ -13,8 +15,7 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     cagen_exec_handle_base()
         : cagen_exec_handle(),
           exec_phase_(0),
-          constr_init_progress_tgt_(0),
-          constr_init_progress_cur_(0),
+          c_handler_init_progress_(),
           num_combinations_to_process_(0),
           processed_combinations_(0),
           covered_combinations_(0),
@@ -41,11 +42,13 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     }
 
     unsigned int get_constraint_handler_init_progress_target() const override {
-      return constr_init_progress_tgt_;
+      return c_handler_init_progress_
+          .get_constraint_handler_init_progress_target();
     }
 
     unsigned int get_constraint_handler_init_progress_current() const override {
-      return constr_init_progress_cur_;
+      return c_handler_init_progress_
+          .get_constraint_handler_init_progress_current();
     }
 
     unsigned long long get_number_of_combinations_to_process() const override {
@@ -79,20 +82,8 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
       exec_phase_ = v;
     }
 
-    void set_constraint_handler_init_progress_target(
-        unsigned int constr_init_progress_tgt) {
-      constr_init_progress_tgt_ = constr_init_progress_tgt;
-    }
-
-    void set_constraint_handler_init_progress_current(
-        unsigned int constr_init_progress_cur) {
-      constr_init_progress_cur_ = constr_init_progress_cur;
-    }
-
-    void add_constraint_handler_init_progress_current(
-        unsigned int constr_init_progress_cur) {
-      constr_init_progress_cur_.fetch_add(constr_init_progress_cur,
-                                          std::memory_order_acq_rel);
+    constraint_handler_init_progress& get_constraint_handler_init_progress() {
+      return c_handler_init_progress_;
     }
 
     void set_number_of_combinations_to_process(
@@ -144,8 +135,7 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
 
   public:
     std::atomic_uint exec_phase_;
-    std::atomic_uint constr_init_progress_tgt_;
-    std::atomic_uint constr_init_progress_cur_;
+    constraint_handler_init_progress c_handler_init_progress_;
     std::atomic_ullong num_combinations_to_process_;
     std::atomic_ullong processed_combinations_;
     std::atomic_ullong covered_combinations_;

@@ -342,16 +342,35 @@ int execute_covm(const std::string& model_file_path,
   bool aborted = false;
   while (f.wait_for(1s) == std::future_status::timeout) {
     if (show_progress) {
-      unsigned long long num_processed_combos =
-          handle->get_number_of_processed_combinations();
-      unsigned long long num_combos_to_process =
-          handle->get_number_of_combinations_to_process();
-      double precent_done =
-          (double)num_processed_combos / (double)num_combos_to_process * 100.0;
-      std::cout << "\r";
-      std::cout << "tuples: (" << num_processed_combos << " / "
-                << num_combos_to_process << ") " << precent_done << "%"
-                << std::flush;
+      switch (handle->get_execution_phase()) {
+        case covm_exec_handle::phase::CONSTRAINT_HANDLER_INIT: {
+          unsigned int constr_init_progress_tgt =
+              handle->get_constraint_handler_init_progress_target();
+          unsigned int constr_init_progress_cur =
+              handle->get_constraint_handler_init_progress_current();
+          double precent_done = constr_init_progress_cur > 0
+                                    ? (double)constr_init_progress_cur /
+                                          (double)constr_init_progress_tgt *
+                                          100.0
+                                    : 0.0;
+          std::cout << "\r";
+          std::cout << "init: " << precent_done << "%" << std::flush;
+          break;
+        }
+        case covm_exec_handle::phase::COVERAGE_MEASUREMENT: {
+          unsigned long long num_processed_combos =
+              handle->get_number_of_processed_combinations();
+          unsigned long long num_combos_to_process =
+              handle->get_number_of_combinations_to_process();
+          double precent_done = (double)num_processed_combos /
+                                (double)num_combos_to_process * 100.0;
+          std::cout << "\r";
+          std::cout << "tuples: (" << num_processed_combos << " / "
+                    << num_combos_to_process << ") " << precent_done << "%"
+                    << std::flush;
+          break;
+        }
+      }
     }
 
     if (g_signal_status == SIGINT) {
