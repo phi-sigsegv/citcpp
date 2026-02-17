@@ -1,5 +1,9 @@
 #include <algorithm>
 #include <citcpp/citcpp.hpp>
+#include <cstdint>
+#include <limits>
+#include <sstream>
+#include <stdexcept>
 
 #include "detail/cagen_exec_handle_ipog_impl.hpp"
 #include "detail/citcpp_covm.hpp"
@@ -28,6 +32,20 @@ void sort_int_parameter_values(citcpp::model& input_model) {
   }
 }
 
+void check_parameter_domains(citcpp::model& input_model) {
+  using namespace citcpp;
+
+  constexpr int max_num_values = std::numeric_limits<uint16_t>::max() + 1;
+  for (auto& param : input_model.get_parameters()) {
+    if (param.get_values().size() > max_num_values) {
+      std::stringstream s_stream;
+      s_stream << "parameter " << param.get_name() << " has more than "
+               << max_num_values << " values";
+      throw std::invalid_argument(s_stream.str());
+    }
+  }
+}
+
 }  // namespace
 
 namespace citcpp {
@@ -35,6 +53,7 @@ namespace citcpp {
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     model input_model, int t, const covering_array_computation_config& config) {
 
+  check_parameter_domains(input_model);
   sort_int_parameter_values(input_model);
 
   detail::cagen_exec_handle_ipog_impl* handle =
@@ -70,6 +89,7 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     model input_model, test_set tests, int t,
     const covering_array_computation_config& config) {
 
+  check_parameter_domains(input_model);
   sort_int_parameter_values(input_model);
 
   detail::cagen_exec_handle_ipog_impl* handle =
@@ -105,6 +125,7 @@ std::unique_ptr<covm_exec_handle> measure_coverage(
     model input_model, test_set tests, unsigned int t,
     const coverage_measurement_config& config) {
 
+  check_parameter_domains(input_model);
   sort_int_parameter_values(input_model);
 
   auto covm_algo = std::make_unique<detail::citcpp_covm>(
