@@ -88,7 +88,7 @@ class sylvan_ldd {
     /**
      * Returns the number of satisfying assignments.
      */
-    double sat_count() const;
+    long double sat_count() const;
 
     /**
      * Returns whether the given partial assignment is contained in this LDD.
@@ -125,7 +125,7 @@ class sylvan_ldd {
     void get_sat_one(std::vector<int>& assignment) const;
 
     /**
-     * Gets a full satisfying assignment, wrting it to the given
+     * Gets a full satisfying assignment, writing it to the given
      * vector. The vector is expected to be large enough such that
      * for each variable of this LDD a value can be written to it.
      *
@@ -144,6 +144,146 @@ class sylvan_ldd {
   private:
     sylvan_ldd(uint64_t ldd, const std::vector<uint32_t>& variables);
     sylvan_ldd(uint64_t ldd, std::vector<uint32_t>&& variables);
+
+  private:
+    uint64_t ldd_;
+    std::vector<uint32_t> variables_;
+};
+
+class sylvan_idd {
+  public:
+    /**
+     * The default constructor create an IDD representing false.
+     */
+    sylvan_idd();
+
+    /**
+     * Constructs the IDD representing the var = value.
+     */
+    sylvan_idd(uint32_t variable, uint32_t value);
+
+    /**
+     * Constructs the IDD representing the assignments
+     * of variables to the given values, i.e. a cube.
+     * The indices of the given
+     * vector identify a variable and the value at that
+     * index is its value. Negative values are ignored
+     * and are thus skipped in the cube.
+     */
+    sylvan_idd(const std::vector<int>& assignments);
+
+    /**
+     * Create an IDD, which represents the expression X OP value, where OP
+     * is a relational operator. The method needs in addition the size of
+     * the domain of the variable X.
+     */
+    sylvan_idd(uint32_t variable, relational_operator op, uint32_t value,
+               uint32_t variable_domain_size);
+
+    sylvan_idd(const sylvan_idd& other);
+    sylvan_idd(sylvan_idd&& other);
+
+    /**
+     * Destroys this IDD and removes the reference held on it.
+     */
+    ~sylvan_idd();
+
+    sylvan_idd& operator=(const sylvan_idd& other);
+    sylvan_idd& operator=(sylvan_idd&& other);
+
+    /**
+     * Returns the IDD representing "true"
+     */
+    static sylvan_idd iddTrue();
+
+    /**
+     * Returns the IDD representing "false"
+     */
+    static sylvan_idd iddFalse();
+
+    bool operator==(const sylvan_idd& other) const;
+    bool operator!=(const sylvan_idd& other) const;
+
+    /**
+     * Reads the interval of the top-level node of this IDD.
+     */
+    void get_interval(uint32_t& lb, uint32_t& ub) const;
+
+    static sylvan_idd project_intersect(const sylvan_idd& lhs,
+                                        const sylvan_idd& rhs);
+    sylvan_idd& project_intersect(const sylvan_idd& other);
+
+    static sylvan_idd project_union(
+        const sylvan_idd& lhs, const sylvan_idd& rhs,
+        const std::vector<unsigned int>& domain_sizes);
+    sylvan_idd& project_union(const sylvan_idd& other,
+                              const std::vector<unsigned int>& domain_sizes);
+
+    /**
+     * Return the number of nodes in this IDD.
+     * WARNING: This is not thread-safe.
+     */
+    size_t node_count() const;
+
+    /**
+     * Returns the number of satisfying assignments.
+     */
+    long double sat_count() const;
+
+    /**
+     * Returns whether the given partial assignment is contained in this IDD.
+     * Note that although the assignment maybe partial, the size of the given
+     * vector specifying the assignment must be fully defined with respect to
+     * the variables of this IDD. An unassigned/free variable shall be denoted
+     * by a negative values at the corresponding index of the given
+     * assignment specification.
+     */
+    bool is_sat_with_partial_assignment(
+        const std::vector<int>& partial_assignment) const;
+
+    /**
+     * Returns a bitset that represents which values of the specified variable
+     * are valid, in the sense of the existence of a full assignment to all
+     * variables. This collection of valid values of a variable can be
+     * optionally limited to paths that are consistent with the specified
+     * partial assignment with respect to other variables. It is also possible
+     * to pass in an empty partial assignment, in which case the search for
+     * valid values of the specified variable in done in a global manner.
+     *
+     * The returned bitset has bits enabled at indices corresponding to the
+     * indices of values in the domain definition of the variable.
+     */
+    bitset_uint64 get_valid_variable_assignments(
+        uint32_t variable, uint32_t domain_size,
+        const std::vector<int>& partial_assignment) const;
+
+    /**
+     * Gets a full satisfying assignment, writing it to the given
+     * vector. The vector is expected to be large enough such that
+     * for each variable of this IDD a value can be written to it.
+     */
+    void get_sat_one(std::vector<int>& assignment) const;
+
+    /**
+     * Gets a full satisfying assignment, writing it to the given
+     * vector. The vector is expected to be large enough such that
+     * for each variable of this IDD a value can be written to it.
+     *
+     * Compared to {@link #get_sat_one}, this method analyzes the
+     * given vector for a partial assignment, such that the extracted
+     * full assignment is guaranteed to be consistent with it.
+     */
+    void get_sat_one_under_partial_assignment(
+        std::vector<int>& assignment) const;
+
+    /**
+     * Writes this LD to the specified file as a DOT representation.
+     */
+    void print_dot(const std::string& file_path);
+
+  private:
+    sylvan_idd(uint64_t ldd, const std::vector<uint32_t>& variables);
+    sylvan_idd(uint64_t ldd, std::vector<uint32_t>&& variables);
 
   private:
     uint64_t ldd_;
