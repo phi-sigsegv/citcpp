@@ -4,7 +4,7 @@ namespace citcpp {
 namespace detail {
 
 constraint_handler_void::constraint_handler_void(const internal_model& model)
-    : model_(model) {}
+    : base_type(), model_(model) {}
 
 bool constraint_handler_void::is_thread_safe() const { return true; }
 

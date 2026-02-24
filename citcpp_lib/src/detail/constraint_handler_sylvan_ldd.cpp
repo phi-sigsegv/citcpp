@@ -343,21 +343,19 @@ void maybe_shutdown_sylvan() {
 namespace citcpp {
 namespace detail {
 
-constraint_handler_sylvan_ldd::number_of_instances_tracker::
-    number_of_instances_tracker(int num_workers) {
+constraint_handler_sylvan_base::constraint_handler_sylvan_base(int num_workers)
+    : base_type() {
 
   maybe_initialize_sylvan(num_workers);
 }
 
-constraint_handler_sylvan_ldd::number_of_instances_tracker::
-    ~number_of_instances_tracker() {
-
+constraint_handler_sylvan_base::~constraint_handler_sylvan_base() {
   maybe_shutdown_sylvan();
 }
 
 constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
     const internal_model& model, int num_workers)
-    : instances_tracker_(num_workers), model_(model), ldd_() {
+    : base_type(num_workers), model_(model), ldd_() {
 
   constraint_to_ldd_visitor visitor(model);
   sylvan_ldd ldd_true = sylvan_ldd::lddTrue();
@@ -376,7 +374,7 @@ constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
 constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
     const internal_model& model, int num_workers,
     constraint_handler_init_progress& exec_handle)
-    : instances_tracker_(num_workers), model_(model), ldd_() {
+    : constraint_handler_sylvan_base(num_workers), model_(model), ldd_() {
 
   constraint_to_ldd_visitor visitor(model);
   sylvan_ldd ldd_true = sylvan_ldd::lddTrue();

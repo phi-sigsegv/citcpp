@@ -14,6 +14,8 @@ namespace detail {
  */
 class constraint_handler {
   public:
+    virtual ~constraint_handler();
+
     /**
      * Returns whether this constraint handler is thread safe. This
      * method shall return true, if and only if:

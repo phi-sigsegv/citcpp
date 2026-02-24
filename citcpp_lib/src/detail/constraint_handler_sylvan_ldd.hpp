@@ -8,19 +8,20 @@
 namespace citcpp {
 namespace detail {
 
+class constraint_handler_sylvan_base : public constraint_handler {
+    typedef constraint_handler base_type;
+
+  public:
+    constraint_handler_sylvan_base(int num_workers);
+    virtual ~constraint_handler_sylvan_base();
+};
+
 /**
  * This implements the constraint handler interface, specializing for the
  * case where no constraints exist at all.
  */
-class constraint_handler_sylvan_ldd : public constraint_handler {
-    typedef constraint_handler base_type;
-
-  private:
-    class number_of_instances_tracker {
-      public:
-        number_of_instances_tracker(int num_workers);
-        ~number_of_instances_tracker();
-    };
+class constraint_handler_sylvan_ldd : public constraint_handler_sylvan_base {
+    typedef constraint_handler_sylvan_base base_type;
 
   public:
     constraint_handler_sylvan_ldd(const internal_model& model, int num_workers);
@@ -51,7 +52,6 @@ class constraint_handler_sylvan_ldd : public constraint_handler {
     void replace_dont_care_values(test& t) const override;
 
   private:
-    const number_of_instances_tracker instances_tracker_;
     const internal_model& model_;
     sylvan_ldd ldd_;
 };
