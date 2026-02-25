@@ -2252,7 +2252,7 @@ void sylvan_ldd::get_sat_one_under_partial_assignment(
   }
 }
 
-void sylvan_ldd::print_dot(const std::string& file_path) {
+void sylvan_ldd::print_dot(const std::string& file_path) const {
   FILE* f = fopen(file_path.data(), "w");
   lddmc_fprintdot(f, ldd_);
   fclose(f);
@@ -2587,7 +2587,7 @@ void sylvan_idd::get_sat_one_under_partial_assignment(
   }
 }
 
-void sylvan_idd::print_dot(const std::string& file_path) {
+void sylvan_idd::print_dot(const std::string& file_path) const {
   FILE* f = fopen(file_path.data(), "w");
   lddmc_fprintdot(f, ldd_);
   fclose(f);

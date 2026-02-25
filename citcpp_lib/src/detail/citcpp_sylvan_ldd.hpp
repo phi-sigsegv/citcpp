@@ -139,7 +139,7 @@ class sylvan_ldd {
     /**
      * Writes this LD to the specified file as a DOT representation.
      */
-    void print_dot(const std::string& file_path);
+    void print_dot(const std::string& file_path) const;
 
   private:
     sylvan_ldd(uint64_t ldd, const std::vector<uint32_t>& variables);
@@ -279,7 +279,7 @@ class sylvan_idd {
     /**
      * Writes this LD to the specified file as a DOT representation.
      */
-    void print_dot(const std::string& file_path);
+    void print_dot(const std::string& file_path) const;
 
   private:
     sylvan_idd(uint64_t ldd, const std::vector<uint32_t>& variables);
