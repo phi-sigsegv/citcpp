@@ -1624,7 +1624,8 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
       lddmc_refs_spawn(SPAWN(sylvan_idd_inv_project, mddnode_getright(na),
                              mddnode_getright(nb), proj));
     } else if (na_value < nb_value) {
-      // The upper bound of a is lower than the upper bound of b.
+      // The upper bound of a is lower than the upper bound of b,
+      // or if equal, the lower bound is less.
       // Thus, we fetch the next greater interval with respect to values
       // from the variable associated to a.
       // We need to keep the interval b however, since it can happen that
@@ -1633,7 +1634,8 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
       lddmc_refs_spawn(
           SPAWN(sylvan_idd_inv_project, mddnode_getright(na), b, proj));
     } else {
-      // The upper bound of b is lower than the upper bound of a.
+      // The upper bound of b is lower than the upper bound of a,
+      // or if equal, the lower bound is less.
       // Thus, we fetch the next greater interval with respect to values
       // from the variable associated to b.
       // We need to keep the interval a however, since it can happen that
@@ -1714,8 +1716,16 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
     } else {
       // We need to walk over the intersection, as well as the non-intersecting
       // parts.
-      const uint16_t before_intersection_lb = MIN(a_ival.lb, b_ival.lb);
-      const uint16_t before_intersection_ub = MAX(a_ival.lb, b_ival.lb) - 1;
+      uint16_t before_intersection_lb = MIN(a_ival.lb, b_ival.lb);
+      uint16_t before_intersection_ub = MAX(a_ival.lb, b_ival.lb);
+      if (before_intersection_ub > 0) {
+        --before_intersection_ub;
+      } else {
+        // We have to be careful regarding underflow. If the upper bound is
+        // zero, then there is no valid interval before the intersection.
+        before_intersection_lb = 1;
+        before_intersection_ub = 0;
+      }
       interval before_intersection =
           interval{before_intersection_lb, before_intersection_ub};
 
@@ -1724,7 +1734,8 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
 
       MDD right_right;
       if (na_value < nb_value) {
-        // The upper bound of a is lower than the upper bound of b.
+        // The upper bound of a is lower than the upper bound of b,
+        // or if equal, the lower bound is less.
         // Thus, we fetch the next greater interval with respect to values
         // from the variable associated to a.
         // Regarding interval b, we need to modify its interval to exclude
@@ -1746,7 +1757,8 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
                              mddnode_getright(nb));
         }
       } else {
-        // The upper bound of b is lower than the upper bound of a.
+        // The upper bound of b is lower than the upper bound of a,
+        // or if equal, the lower bound is less.
         // Thus, we fetch the next greater interval with respect to values
         // from the variable associated to b.
         // Regarding interval a, we need to modify its interval to exclude
@@ -1816,16 +1828,16 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
       mddnode_t nresult_right = LDD_GETNODE(result_right);
       uint32_t nresult_right_value = mddnode_getvalue(nresult_right);
       interval nresult_right_interval = decode_interval(nresult_right_value);
-      if (nresult_interval.ub + 1 == nresult_right_interval.lb) {
-        // This nodes and the node next right to it have adjacent intervals.
+      if (is_intervals_connected(nresult_interval, nresult_right_interval)) {
+        // This nodes and the node next right to it have connected intervals.
         // Now check whether they point to the very same down node.
         MDD result_down = mddnode_getdown(nresult);
         MDD result_right_down = mddnode_getdown(nresult_right);
         if (result_down == result_right_down) {
           // Ok both down nodes are the same, so let's merge the nodes.
-          interval merged_ival =
-              interval{nresult_interval.lb, nresult_right_interval.ub};
-          result = lddmc_makenode(encode_interval(merged_ival), result_down,
+          interval span =
+              interval_union(nresult_interval, nresult_right_interval);
+          result = lddmc_makenode(encode_interval(span), result_down,
                                   mddnode_getright(nresult_right));
         }
       }

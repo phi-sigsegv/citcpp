@@ -137,7 +137,7 @@ class sylvan_ldd {
         std::vector<int>& assignment) const;
 
     /**
-     * Writes this LD to the specified file as a DOT representation.
+     * Writes this LDD to the specified file as a DOT representation.
      */
     void print_dot(const std::string& file_path) const;
 
@@ -277,7 +277,7 @@ class sylvan_idd {
         std::vector<int>& assignment) const;
 
     /**
-     * Writes this LD to the specified file as a DOT representation.
+     * Writes this IDD to the specified file as a DOT representation.
      */
     void print_dot(const std::string& file_path) const;
 
