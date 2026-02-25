@@ -3,6 +3,7 @@
 #include <doctest.h>
 
 #include <citcpp/citcpp.hpp>
+#include <iostream>
 
 #include "../citcpp_lib/src/detail/constraint_handler_sylvan_ldd.hpp"
 #include "../citcpp_lib/src/detail/internal_model.hpp"
@@ -52,6 +53,9 @@ TEST_CASE("constraint handler sylvan, testing atomic prop") {
   internal_model i_model(model);
 
   constraint_handler_sylvan_ldd c_handler(i_model, 1);
+  std::cout << "Number of nodes: " << c_handler.getLdd().node_count()
+            << std::endl;
+  std::cout << "SAT count: " << c_handler.getLdd().sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -88,6 +92,9 @@ TEST_CASE(
   internal_model i_model(model);
 
   constraint_handler_sylvan_ldd c_handler(i_model, 1);
+  std::cout << "Number of nodes: " << c_handler.getLdd().node_count()
+            << std::endl;
+  std::cout << "SAT count: " << c_handler.getLdd().sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -130,6 +137,9 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & AND") {
   internal_model i_model(model);
 
   constraint_handler_sylvan_ldd c_handler(i_model, 1);
+  std::cout << "Number of nodes: " << c_handler.getLdd().node_count()
+            << std::endl;
+  std::cout << "SAT count: " << c_handler.getLdd().sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -172,6 +182,9 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & OR") {
   internal_model i_model(model);
 
   constraint_handler_sylvan_ldd c_handler(i_model, 1);
+  std::cout << "Number of nodes: " << c_handler.getLdd().node_count()
+            << std::endl;
+  std::cout << "SAT count: " << c_handler.getLdd().sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 1, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -229,6 +242,9 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & IMPL") {
   internal_model i_model(model);
 
   constraint_handler_sylvan_ldd c_handler(i_model, 1);
+  std::cout << "Number of nodes: " << c_handler.getLdd().node_count()
+            << std::endl;
+  std::cout << "SAT count: " << c_handler.getLdd().sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -305,6 +321,9 @@ TEST_CASE(
   internal_model i_model(model);
 
   constraint_handler_sylvan_ldd c_handler(i_model, 1);
+  std::cout << "Number of nodes: " << c_handler.getLdd().node_count()
+            << std::endl;
+  std::cout << "SAT count: " << c_handler.getLdd().sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
