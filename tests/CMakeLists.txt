@@ -6,6 +6,7 @@ list(APPEND CITCPP_UNITTESTS
   test_binom_coeff_table
   test_bitset
   test_sylvan_ldd_constraint_handler
+  test_sylvan_idd_constraint_handler
   test_cagen
   test_cagen_extend
   test_cagen_relations
