@@ -449,6 +449,8 @@ void constraint_handler_sylvan_ldd::replace_dont_care_values(test& t) const {
   }
 }
 
+const sylvan_ldd& constraint_handler_sylvan_ldd::getLdd() const { return ldd_; }
+
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     const internal_model& model, int num_workers)
     : base_type(num_workers), model_(model), idd_() {
@@ -513,6 +515,8 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
     }
   }
 }
+
+const sylvan_idd& constraint_handler_sylvan_idd::getIdd() const { return idd_; }
 
 }  // namespace detail
 }  // namespace citcpp

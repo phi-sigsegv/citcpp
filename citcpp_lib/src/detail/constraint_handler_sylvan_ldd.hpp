@@ -51,6 +51,11 @@ class constraint_handler_sylvan_ldd : public constraint_handler_sylvan_base {
      */
     void replace_dont_care_values(test& t) const override;
 
+    /**
+     * Returns the LDD used by the constraint handler.
+     */
+    const sylvan_ldd& getLdd() const;
+
   private:
     const internal_model& model_;
     sylvan_ldd ldd_;
@@ -90,6 +95,11 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
      * See constraint_handler interface.
      */
     void replace_dont_care_values(test& t) const override;
+
+    /**
+     * Returns the IDD used by the constraint handler.
+     */
+    const sylvan_idd& getIdd() const;
 
   private:
     const internal_model& model_;
