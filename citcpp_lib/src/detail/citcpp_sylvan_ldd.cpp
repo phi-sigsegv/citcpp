@@ -944,8 +944,7 @@ TASK_2(MDD, sylvan_idd_intersect, MDD, a, MDD, b) {
       na = LDD_GETNODE(a);
       na_value = mddnode_getvalue(na);
       a_ival = decode_interval(na_value);
-    }
-    if (nb_value < na_value) {
+    } else if (nb_value < na_value) {
       b = mddnode_getright(nb);
       if (b == lddmc_false) return lddmc_false;
       nb = LDD_GETNODE(b);
@@ -1059,8 +1058,7 @@ TASK_4(MDD, sylvan_idd_join, MDD, a, MDD, b, MDD, a_proj, MDD, b_proj) {
         na = LDD_GETNODE(a);
         na_value = mddnode_getvalue(na);
         a_ival = decode_interval(na_value);
-      }
-      if (nb_value < na_value) {
+      } else if (nb_value < na_value) {
         b = mddnode_getright(nb);
         if (b == lddmc_false) return lddmc_false;
         nb = LDD_GETNODE(b);
@@ -1596,8 +1594,7 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
         na = LDD_GETNODE(a);
         na_value = mddnode_getvalue(na);
         a_ival = decode_interval(na_value);
-      }
-      if (nb_value < na_value) {
+      } else if (nb_value < na_value) {
         b = mddnode_getright(nb);
         if (b == lddmc_false) return lddmc_false;
         nb = LDD_GETNODE(b);
