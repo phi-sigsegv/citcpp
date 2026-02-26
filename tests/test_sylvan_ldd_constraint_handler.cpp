@@ -40,7 +40,7 @@ citcpp::model create_simple_five_param_model() {
   return model;
 }
 
-TEST_CASE("constraint handler sylvan, testing atomic prop") {
+TEST_CASE("constraint handler sylvan LDD, testing atomic prop") {
   using namespace citcpp;
   using namespace citcpp::detail;
 
@@ -79,7 +79,7 @@ TEST_CASE("constraint handler sylvan, testing atomic prop") {
 }
 
 TEST_CASE(
-    "constraint handler sylvan, testing atomic prop, out of domain value") {
+    "constraint handler sylvan LDD, testing atomic prop, out of domain value") {
   using namespace citcpp;
   using namespace citcpp::detail;
 
@@ -117,7 +117,7 @@ TEST_CASE(
   CHECK(values.at(4));
 }
 
-TEST_CASE("constraint handler sylvan, testing atomic prop & AND") {
+TEST_CASE("constraint handler sylvan LDD, testing atomic prop & AND") {
   using namespace citcpp;
   using namespace citcpp::detail;
 
@@ -162,7 +162,7 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & AND") {
   CHECK(values.at(4));
 }
 
-TEST_CASE("constraint handler sylvan, testing atomic prop & OR") {
+TEST_CASE("constraint handler sylvan LDD, testing atomic prop & OR") {
   using namespace citcpp;
   using namespace citcpp::detail;
 
@@ -224,7 +224,7 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & OR") {
   CHECK(test_with_dont_care_2.get_values()[4] == 0);
 }
 
-TEST_CASE("constraint handler sylvan, testing atomic prop & IMPL") {
+TEST_CASE("constraint handler sylvan LDD, testing atomic prop & IMPL") {
   using namespace citcpp;
   using namespace citcpp::detail;
 
@@ -297,7 +297,7 @@ TEST_CASE("constraint handler sylvan, testing atomic prop & IMPL") {
 }
 
 TEST_CASE(
-    "constraint handler sylvan, testing atomic prop & IMPL implies prop") {
+    "constraint handler sylvan LDD, testing atomic prop & IMPL implies prop") {
   using namespace citcpp;
   using namespace citcpp::detail;
 
@@ -397,6 +397,99 @@ TEST_CASE(
   CHECK(test_with_dont_care_3.get_values()[2] == 2);
   CHECK(test_with_dont_care_3.get_values()[3] >= 1);
   CHECK(test_with_dont_care_3.get_values()[4] == 0);
+}
+
+TEST_CASE("constraint handler sylvan LDD, testing more cmplex constraints") {
+  using namespace citcpp;
+  using namespace citcpp::detail;
+
+  model model;
+
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("P1")
+                          .values({{0}, {1}, {2}, {3}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("P2")
+                          .values({{0}, {1}, {2}, {3}}));
+  model.add_parameter(
+      parameter().type(parameter_type::INTEGER).name("P3").values({{0}, {1}}));
+
+  {
+    std::vector<std::shared_ptr<constraint>> ops;
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P3"),
+                                               relational_operator::EQ, 1),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 2)})));
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P3"),
+                                               relational_operator::EQ, 0),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 1)})));
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P3"),
+                                               relational_operator::EQ, 0),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 2)})));
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P3"),
+                                               relational_operator::EQ, 1),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 3)})));
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P3"),
+                                               relational_operator::EQ, 0),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 3)})));
+
+    model.add_constraint(std::make_shared<or_expression>(std::move(ops)));
+  }
+
+  {
+    std::vector<std::shared_ptr<constraint>> ops;
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P1"),
+                                               relational_operator::EQ, 1),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 0)})));
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P1"),
+                                               relational_operator::EQ, 2),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 0)})));
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P1"),
+                                               relational_operator::EQ, 0),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 1)})));
+    ops.push_back(std::make_shared<and_expression>(
+        std::vector<std::shared_ptr<constraint>>(
+            {std::make_shared<int_proposition>(parameter_reference("P1"),
+                                               relational_operator::EQ, 3),
+             std::make_shared<int_proposition>(parameter_reference("P2"),
+                                               relational_operator::EQ, 2)})));
+
+    model.add_constraint(std::make_shared<or_expression>(std::move(ops)));
+  }
+
+  internal_model i_model(model);
+
+  constraint_handler_sylvan_ldd c_handler(i_model, 1);
+  std::cout << "Number of nodes: " << c_handler.getLdd().node_count()
+            << std::endl;
+  std::cout << "SAT count: " << c_handler.getLdd().sat_count() << std::endl;
+
+  CHECK(c_handler.getLdd().sat_count() == 3.0);
 }
 
 }  // namespace
