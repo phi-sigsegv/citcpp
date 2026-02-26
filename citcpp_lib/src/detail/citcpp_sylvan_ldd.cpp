@@ -966,9 +966,10 @@ TASK_2(MDD, sylvan_idd_intersect, MDD, a, MDD, b) {
   }
 
   /* Perform recursive calculation */
-  if (na_value == nb_value) {
-    // The intervals do not just have an intersection, they are precisely the
-    // same.
+  if (a_ival.ub == b_ival.ub) {
+    // The upper bounds of both intervals coincide. So when moving to greater
+    // intervals (the right), there won't be any interval that can have an
+    // intersection with a_ival or b_ival.
     lddmc_refs_spawn(SPAWN(sylvan_idd_intersect, mddnode_getright(na),
                            mddnode_getright(nb)));
   } else if (na_value < nb_value) {
@@ -1088,9 +1089,10 @@ TASK_4(MDD, sylvan_idd_join, MDD, a, MDD, b, MDD, a_proj, MDD, b_proj) {
   if (keep_a) {
     if (keep_b) {
       val = encode_interval(intersection);
-      if (na_value == nb_value) {
-        // The intervals do not just have an intersection, they are precisely
-        // the same.
+      if (a_ival.ub == b_ival.ub) {
+        // The upper bounds of both intervals coincide. So when moving to
+        // greater intervals (the right), there won't be any interval that can
+        // have an intersection with a_ival or b_ival.
         lddmc_refs_spawn(SPAWN(sylvan_idd_join, mddnode_getright(na),
                                mddnode_getright(nb), a_proj, b_proj));
       } else if (na_value < nb_value) {
@@ -1618,14 +1620,14 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
 
   if (p_val == 1) {
     val = encode_interval(intersection);
-    if (na_value == nb_value) {
-      // The intervals do not just have an intersection, they are precisely
-      // the same.
+    if (a_ival.ub == b_ival.ub) {
+      // The upper bounds of both intervals coincide. So when moving to
+      // greater intervals (the right), there won't be any interval that can
+      // have an intersection with a_ival or b_ival.
       lddmc_refs_spawn(SPAWN(sylvan_idd_inv_project, mddnode_getright(na),
                              mddnode_getright(nb), proj));
     } else if (na_value < nb_value) {
-      // The upper bound of a is lower than the upper bound of b,
-      // or if equal, the lower bound is less.
+      // The upper bound of a is lower than the upper bound of b.
       // Thus, we fetch the next greater interval with respect to values
       // from the variable associated to a.
       // We need to keep the interval b however, since it can happen that
@@ -1634,8 +1636,7 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
       lddmc_refs_spawn(
           SPAWN(sylvan_idd_inv_project, mddnode_getright(na), b, proj));
     } else {
-      // The upper bound of b is lower than the upper bound of a,
-      // or if equal, the lower bound is less.
+      // The upper bound of b is lower than the upper bound of a.
       // Thus, we fetch the next greater interval with respect to values
       // from the variable associated to b.
       // We need to keep the interval a however, since it can happen that
