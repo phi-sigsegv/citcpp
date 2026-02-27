@@ -2196,6 +2196,12 @@ size_t sylvan_ldd::node_count() const { return lddmc_nodecount(ldd_); }
 
 long double sylvan_ldd::sat_count() const { return lddmc_satcount(ldd_); }
 
+void sylvan_ldd::print_dot(const std::string& file_path) const {
+  FILE* f = fopen(file_path.data(), "w");
+  lddmc_fprintdot(f, ldd_);
+  fclose(f);
+}
+
 bool sylvan_ldd::is_sat_with_partial_assignment(
     const std::vector<int>& partial_assignment) const {
 
@@ -2260,12 +2266,6 @@ void sylvan_ldd::get_sat_one_under_partial_assignment(
     cube = mddnode_getdown(node);
     ++var_idx;
   }
-}
-
-void sylvan_ldd::print_dot(const std::string& file_path) const {
-  FILE* f = fopen(file_path.data(), "w");
-  lddmc_fprintdot(f, ldd_);
-  fclose(f);
 }
 
 sylvan_idd::sylvan_idd() : ldd_(lddmc_false), variables_() {
@@ -2524,6 +2524,12 @@ size_t sylvan_idd::node_count() const { return lddmc_nodecount(ldd_); }
 
 long double sylvan_idd::sat_count() const { return sylvan_idd_satcount(ldd_); }
 
+void sylvan_idd::print_dot(const std::string& file_path) const {
+  FILE* f = fopen(file_path.data(), "w");
+  lddmc_fprintdot(f, ldd_);
+  fclose(f);
+}
+
 bool sylvan_idd::is_sat_with_partial_assignment(
     const std::vector<int>& partial_assignment) const {
 
@@ -2595,12 +2601,6 @@ void sylvan_idd::get_sat_one_under_partial_assignment(
     cube = mddnode_getdown(node);
     ++var_idx;
   }
-}
-
-void sylvan_idd::print_dot(const std::string& file_path) const {
-  FILE* f = fopen(file_path.data(), "w");
-  lddmc_fprintdot(f, ldd_);
-  fclose(f);
 }
 
 void sylvan::init_lace(unsigned int n_workers, size_t dqsize) {

@@ -91,6 +91,11 @@ class sylvan_ldd {
     long double sat_count() const;
 
     /**
+     * Writes this LDD to the specified file as a DOT representation.
+     */
+    void print_dot(const std::string& file_path) const;
+
+    /**
      * Returns whether the given partial assignment is contained in this LDD.
      * Note that although the assignment maybe partial, the size of the given
      * vector specifying the assignment must be fully defined with respect to
@@ -135,11 +140,6 @@ class sylvan_ldd {
      */
     void get_sat_one_under_partial_assignment(
         std::vector<int>& assignment) const;
-
-    /**
-     * Writes this LDD to the specified file as a DOT representation.
-     */
-    void print_dot(const std::string& file_path) const;
 
   private:
     sylvan_ldd(uint64_t ldd, const std::vector<uint32_t>& variables);
@@ -231,6 +231,11 @@ class sylvan_idd {
     long double sat_count() const;
 
     /**
+     * Writes this IDD to the specified file as a DOT representation.
+     */
+    void print_dot(const std::string& file_path) const;
+
+    /**
      * Returns whether the given partial assignment is contained in this IDD.
      * Note that although the assignment maybe partial, the size of the given
      * vector specifying the assignment must be fully defined with respect to
@@ -275,11 +280,6 @@ class sylvan_idd {
      */
     void get_sat_one_under_partial_assignment(
         std::vector<int>& assignment) const;
-
-    /**
-     * Writes this IDD to the specified file as a DOT representation.
-     */
-    void print_dot(const std::string& file_path) const;
 
   private:
     sylvan_idd(uint64_t ldd, const std::vector<uint32_t>& variables);
