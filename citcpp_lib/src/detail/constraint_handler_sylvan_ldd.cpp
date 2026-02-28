@@ -1,6 +1,10 @@
 #include "constraint_handler_sylvan_ldd.hpp"
 
+#include <lace.h>
+
 #include <mutex>
+
+#include "datatypes_config.hpp"
 
 namespace {
 
@@ -369,6 +373,172 @@ void maybe_shutdown_sylvan() {
   }
 }
 
+class alignas(citcpp::detail::false_sharing_avoidance_alignment)
+    check_validity_task {
+
+  public:
+    check_validity_task() = default;
+
+    check_validity_task(const citcpp::detail::test* test,
+                        unsigned int test_index,
+                        const citcpp::detail::constraint_handler* handler,
+                        citcpp::detail::bitset_uint64* result, std::mutex* mut)
+        : test_(test),
+          test_index_(test_index),
+          handler_(handler),
+          result_(result),
+          mut_(mut) {}
+
+    virtual ~check_validity_task() {}
+
+    void operator()() {
+      const bool is_valid = handler_->is_valid_partial_test(*test_);
+
+      if (is_valid) {
+        mark_test_as_valid();
+      }
+    }
+
+  private:
+    void mark_test_as_valid() {
+      std::lock_guard<std::mutex> guard(*mut_);
+      result_->set(test_index_);
+    }
+
+  private:
+    const citcpp::detail::test* test_;
+    unsigned int test_index_;
+    const citcpp::detail::constraint_handler* handler_;
+    citcpp::detail::bitset_uint64* result_;
+    std::mutex* mut_;
+};
+
+VOID_TASK_1(lace_check_test_validity_task, check_validity_task*, functor) {
+  (*functor)();
+}
+
+VOID_TASK_3(lace_check_validity_of_partial_test, citcpp::detail::bitset_uint64*,
+            result, const citcpp::detail::internal_test_set*, test_set,
+            const citcpp::detail::constraint_handler*, c_handler) {
+
+  std::mutex mut;
+
+  std::vector<check_validity_task> tasks(test_set->get_list_of_tests().size());
+  unsigned int test_index = 0;
+  for (const auto& t : test_set->get_list_of_tests()) {
+    tasks[test_index] =
+        check_validity_task(&t, test_index, c_handler, result, &mut);
+    SPAWN(lace_check_test_validity_task, &tasks[test_index]);
+    ++test_index;
+  }
+
+  for (int i = 0; i < tasks.size(); ++i) {
+    SYNC(lace_check_test_validity_task);
+  }
+}
+
+class alignas(citcpp::detail::false_sharing_avoidance_alignment)
+    get_valid_parameter_assignments_task {
+
+  public:
+    get_valid_parameter_assignments_task() = default;
+
+    get_valid_parameter_assignments_task(
+        const citcpp::detail::test* test, unsigned int param_idx,
+        unsigned int test_index,
+        const citcpp::detail::constraint_handler* handler,
+        std::vector<citcpp::detail::bitset_uint64>* results)
+        : test_(test),
+          param_idx_(param_idx),
+          test_index_(test_index),
+          handler_(handler),
+          results_(results) {}
+
+    virtual ~get_valid_parameter_assignments_task() {}
+
+    void operator()() {
+      (*results_)[test_index_] =
+          handler_->get_valid_parameter_assignments(*test_, param_idx_);
+    }
+
+  private:
+    const citcpp::detail::test* test_;
+    unsigned int param_idx_;
+    unsigned int test_index_;
+    const citcpp::detail::constraint_handler* handler_;
+    std::vector<citcpp::detail::bitset_uint64>* results_;
+};
+
+VOID_TASK_1(lace_get_valid_parameter_assignments_task,
+            get_valid_parameter_assignments_task*, functor) {
+
+  (*functor)();
+}
+
+VOID_TASK_4(lace_get_valid_parameter_assignments_for_testset_task,
+            std::vector<citcpp::detail::bitset_uint64>*, result,
+            const citcpp::detail::internal_test_set*, test_set, unsigned int,
+            param_idx, const citcpp::detail::constraint_handler*, c_handler) {
+
+  std::vector<get_valid_parameter_assignments_task> tasks(
+      test_set->get_list_of_tests().size());
+  unsigned int test_index = 0;
+  for (const auto& t : test_set->get_list_of_tests()) {
+    tasks[test_index] = get_valid_parameter_assignments_task(
+        &t, param_idx, test_index, c_handler, result);
+    SPAWN(lace_get_valid_parameter_assignments_task, &tasks[test_index]);
+    ++test_index;
+  }
+
+  for (int i = 0; i < tasks.size(); ++i) {
+    SYNC(lace_get_valid_parameter_assignments_task);
+  }
+}
+
+class alignas(citcpp::detail::false_sharing_avoidance_alignment)
+    replace_dont_care_values_task {
+
+  public:
+    replace_dont_care_values_task() = default;
+
+    replace_dont_care_values_task(
+        citcpp::detail::test* test,
+        const citcpp::detail::constraint_handler* handler)
+        : test_(test), handler_(handler) {}
+
+    virtual ~replace_dont_care_values_task() {}
+
+    void operator()() { handler_->replace_dont_care_values(*test_); }
+
+  private:
+    citcpp::detail::test* test_;
+    const citcpp::detail::constraint_handler* handler_;
+};
+
+VOID_TASK_1(lace_replace_dont_care_values_task, replace_dont_care_values_task*,
+            functor) {
+
+  (*functor)();
+}
+
+VOID_TASK_2(lace_replace_dont_care_values_in_testset_task,
+            citcpp::detail::internal_test_set*, test_set,
+            const citcpp::detail::constraint_handler*, c_handler) {
+
+  std::vector<replace_dont_care_values_task> tasks(
+      test_set->get_list_of_tests().size());
+  unsigned int test_index = 0;
+  for (auto& t : test_set->get_list_of_tests()) {
+    tasks[test_index] = replace_dont_care_values_task(&t, c_handler);
+    SPAWN(lace_replace_dont_care_values_task, &tasks[test_index]);
+    ++test_index;
+  }
+
+  for (int i = 0; i < tasks.size(); ++i) {
+    SYNC(lace_replace_dont_care_values_task);
+  }
+}
+
 }  // namespace
 
 namespace citcpp {
@@ -428,11 +598,33 @@ bool constraint_handler_sylvan_ldd::is_valid_partial_test(const test& t) const {
   return ldd_.is_sat_with_partial_assignment(t.get_values());
 }
 
+bitset_uint64 constraint_handler_sylvan_ldd::check_validity_of_partial_tests(
+    const internal_test_set& test_set) const {
+
+  bitset_uint64 result(test_set.get_list_of_tests().size());
+
+  RUN(lace_check_validity_of_partial_test, &result, &test_set, this);
+
+  return result;
+}
+
 bitset_uint64 constraint_handler_sylvan_ldd::get_valid_parameter_assignments(
     const test& t, unsigned int param_idx) const {
 
   return ldd_.get_valid_variable_assignments(
       param_idx, model_.get_parameter_num_values()[param_idx], t.get_values());
+}
+
+std::vector<bitset_uint64>
+constraint_handler_sylvan_ldd::get_valid_parameter_assignments(
+    const internal_test_set& test_set, unsigned int param_idx) const {
+
+  std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
+
+  RUN(lace_get_valid_parameter_assignments_for_testset_task, &result, &test_set,
+      param_idx, this);
+
+  return result;
 }
 
 void constraint_handler_sylvan_ldd::replace_dont_care_values(test& t) const {
@@ -447,6 +639,12 @@ void constraint_handler_sylvan_ldd::replace_dont_care_values(test& t) const {
       value = 0;
     }
   }
+}
+
+void constraint_handler_sylvan_ldd::replace_dont_care_values(
+    internal_test_set& test_set) const {
+
+  RUN(lace_replace_dont_care_values_in_testset_task, &test_set, this);
 }
 
 const sylvan_ldd& constraint_handler_sylvan_ldd::getLdd() const { return ldd_; }
@@ -495,11 +693,33 @@ bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
   return idd_.is_sat_with_partial_assignment(t.get_values());
 }
 
+bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
+    const internal_test_set& test_set) const {
+
+  bitset_uint64 result(test_set.get_list_of_tests().size());
+
+  RUN(lace_check_validity_of_partial_test, &result, &test_set, this);
+
+  return result;
+}
+
 bitset_uint64 constraint_handler_sylvan_idd::get_valid_parameter_assignments(
     const test& t, unsigned int param_idx) const {
 
   return idd_.get_valid_variable_assignments(
       param_idx, model_.get_parameter_num_values()[param_idx], t.get_values());
+}
+
+std::vector<bitset_uint64>
+constraint_handler_sylvan_idd::get_valid_parameter_assignments(
+    const internal_test_set& test_set, unsigned int param_idx) const {
+
+  std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
+
+  RUN(lace_get_valid_parameter_assignments_for_testset_task, &result, &test_set,
+      param_idx, this);
+
+  return result;
 }
 
 void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
@@ -514,6 +734,12 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
       value = 0;
     }
   }
+}
+
+void constraint_handler_sylvan_idd::replace_dont_care_values(
+    internal_test_set& test_set) const {
+
+  RUN(lace_replace_dont_care_values_in_testset_task, &test_set, this);
 }
 
 const sylvan_idd& constraint_handler_sylvan_idd::getIdd() const { return idd_; }

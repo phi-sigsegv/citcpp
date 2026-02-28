@@ -43,13 +43,31 @@ class constraint_handler_sylvan_ldd : public constraint_handler_sylvan_base {
     /**
      * See constraint_handler interface.
      */
+    bitset_uint64 check_validity_of_partial_tests(
+        const internal_test_set& test_set) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
     bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) const override;
 
     /**
      * See constraint_handler interface.
      */
+    std::vector<bitset_uint64> get_valid_parameter_assignments(
+        const internal_test_set& test_set,
+        unsigned int param_idx) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
     void replace_dont_care_values(test& t) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void replace_dont_care_values(internal_test_set& test_set) const override;
 
     /**
      * Returns the LDD used by the constraint handler.
@@ -88,13 +106,31 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     /**
      * See constraint_handler interface.
      */
+    bitset_uint64 check_validity_of_partial_tests(
+        const internal_test_set& test_set) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
     bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) const override;
 
     /**
      * See constraint_handler interface.
      */
+    std::vector<bitset_uint64> get_valid_parameter_assignments(
+        const internal_test_set& test_set,
+        unsigned int param_idx) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
     void replace_dont_care_values(test& t) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void replace_dont_care_values(internal_test_set& test_set) const override;
 
     /**
      * Returns the IDD used by the constraint handler.
