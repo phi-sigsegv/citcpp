@@ -122,8 +122,8 @@ namespace citcpp {
 namespace detail {
 
 concurrent_constraint_handler::concurrent_constraint_handler(
-    const constraint_handler& handler)
-    : base_type(), handler_(handler) {}
+    const constraint_handler& handler, thread_pool& tp)
+    : base_type(), handler_(handler), tp_(tp) {}
 
 bool concurrent_constraint_handler::is_thread_safe() const { return true; }
 
@@ -132,23 +132,13 @@ bool concurrent_constraint_handler::is_valid_partial_test(const test& t) const {
   return handler_.is_valid_partial_test(t);
 }
 
-bitset_uint64 concurrent_constraint_handler::get_valid_parameter_assignments(
-    const test& t, unsigned int param_idx) const {
-
-  return handler_.get_valid_parameter_assignments(t, param_idx);
-}
-
-void concurrent_constraint_handler::replace_dont_care_values(test& t) const {
-  handler_.replace_dont_care_values(t);
-}
-
 bitset_uint64 concurrent_constraint_handler::check_validity_of_partial_tests(
-    const internal_test_set& test_set, thread_pool& tp) const {
+    const internal_test_set& test_set) const {
 
   bitset_uint64 result(test_set.get_list_of_tests().size());
   std::mutex mut;
 
-  task_group tg(tp.createTaskGroup());
+  task_group tg(tp_.createTaskGroup());
   std::vector<check_test_validity_task> tasks(
       test_set.get_list_of_tests().size());
   unsigned int test_index = 0;
@@ -163,14 +153,19 @@ bitset_uint64 concurrent_constraint_handler::check_validity_of_partial_tests(
   return result;
 }
 
+bitset_uint64 concurrent_constraint_handler::get_valid_parameter_assignments(
+    const test& t, unsigned int param_idx) const {
+
+  return handler_.get_valid_parameter_assignments(t, param_idx);
+}
+
 std::vector<bitset_uint64>
 concurrent_constraint_handler::get_valid_parameter_assignments(
-    const internal_test_set& test_set, unsigned int param_idx,
-    thread_pool& tp) const {
+    const internal_test_set& test_set, unsigned int param_idx) const {
 
   std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
 
-  task_group tg(tp.createTaskGroup());
+  task_group tg(tp_.createTaskGroup());
   std::vector<get_valid_parameter_assignments_task> tasks(
       test_set.get_list_of_tests().size());
   unsigned int test_index = 0;
@@ -185,10 +180,14 @@ concurrent_constraint_handler::get_valid_parameter_assignments(
   return result;
 }
 
-void concurrent_constraint_handler::replace_dont_care_values(
-    internal_test_set& test_set, thread_pool& tp) const {
+void concurrent_constraint_handler::replace_dont_care_values(test& t) const {
+  handler_.replace_dont_care_values(t);
+}
 
-  task_group tg(tp.createTaskGroup());
+void concurrent_constraint_handler::replace_dont_care_values(
+    internal_test_set& test_set) const {
+
+  task_group tg(tp_.createTaskGroup());
   std::vector<replace_dont_care_values_task> tasks(
       test_set.get_list_of_tests().size());
   unsigned int test_index = 0;

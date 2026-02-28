@@ -12,6 +12,7 @@
 #include "citcpp_utils.hpp"
 #include "constraint_evaluator.hpp"
 #include "constraint_handler.hpp"
+#include "constraint_handler_concurrent.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
 #include "covm_exec_result_impl.hpp"
@@ -63,14 +64,12 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     const citcpp::detail::internal_test_set& test_set,
     const citcpp::detail::constraint_handler& constr_handler,
     const citcpp::coverage_measurement_config& config,
-    const unsigned int num_threads, int strength,
+    citcpp::detail::thread_pool& tp, int strength,
     citcpp::detail::covm_exec_handle_impl& exec_handle) {
   using namespace citcpp;
   using namespace citcpp::detail;
 
-  const bool with_mt = num_threads > 1;
-
-  thread_pool tp(num_threads);
+  const bool with_mt = tp.get_num_workers() > 1;
 
   std::vector<internal_relation> relations(
       create_relations(input_model, strength));
@@ -191,6 +190,8 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
     }
   }
 
+  thread_pool tp(num_threads);
+
   // Filter out invalid tests.
   std::vector<unsigned int> invalid_test_indices;
   {
@@ -212,17 +213,22 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   exec_handle.set_execution_phase(
       covm_exec_handle_impl::phase::CONSTRAINT_HANDLER_INIT);
 
-  std::unique_ptr<constraint_handler> constr_handler =
+  std::shared_ptr<constraint_handler> constr_handler_impl =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
           exec_handle.get_constraint_handler_init_progress());
+  std::shared_ptr<constraint_handler> constr_handler =
+      (constr_handler_impl->is_thread_safe() && num_threads > 1)
+          ? std::make_shared<concurrent_constraint_handler>(
+                *constr_handler_impl, tp)
+          : constr_handler_impl;
 
   exec_handle.set_execution_phase(
       covm_exec_handle_impl::phase::COVERAGE_MEASUREMENT);
 
   std::unordered_map<std::string, coverage_measurement> covm_per_relation(
-      main_covm_loop(input_model_, model_, tests_, *constr_handler, config_,
-                     num_threads, strength_, exec_handle));
+      main_covm_loop(input_model_, model_, tests_, *constr_handler, config_, tp,
+                     strength_, exec_handle));
 
   const auto t_end = std::chrono::high_resolution_clock::now();
   const auto duration_in_milli_seconds =

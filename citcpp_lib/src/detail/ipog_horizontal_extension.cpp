@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include "citcpp_utils.hpp"
-#include "constraint_handler_concurrent.hpp"
 #include "shared_constants.hpp"
 
 namespace {
@@ -1163,12 +1162,8 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   // Call the constraint handler and ask for a mapping from tests to possible
   // extension values.
   std::vector<bitset_uint64> valid_values(
-      constr_handler.is_thread_safe()
-          ? concurrent_constraint_handler(constr_handler)
-                .get_valid_parameter_assignments(test_set,
-                                                 real_current_param_idx, tp)
-          : constr_handler.get_valid_parameter_assignments(
-                test_set, real_current_param_idx));
+      constr_handler.get_valid_parameter_assignments(test_set,
+                                                     real_current_param_idx));
 
   unsigned int last_picked_value = 0;
   std::vector<int> value_to_valid_options(

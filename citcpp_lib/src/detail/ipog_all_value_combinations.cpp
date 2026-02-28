@@ -2,8 +2,6 @@
 
 #include <citcpp/function_ref.hpp>
 
-#include "constraint_handler_concurrent.hpp"
-
 namespace {
 
 void recursively_add_test_for_each_combination(
@@ -54,38 +52,13 @@ void create_all_value_combinations(
   std::vector<unsigned int> values(strength);
   recursively_add_test_for_each_combination(
       model, parameter_index_map, 0, values, test_set,
-      [&constr_handler](const test& t) {
-        return constr_handler.is_valid_partial_test(t);
-      });
-}
-
-void create_all_value_combinations(
-    unsigned int strength, const internal_model& model,
-    const std::vector<unsigned int>& parameter_index_map,
-    const constraint_handler& constr_handler, internal_test_set& test_set,
-    thread_pool& tp) {
-
-  if (!constr_handler.is_thread_safe()) {
-    // We fall back to the sequential algorithm.
-    create_all_value_combinations(strength, model, parameter_index_map,
-                                  constr_handler, test_set);
-
-    return;
-  }
-
-  // If we reach this point, then we know that we can use the parallelized
-  // version, since the constraint handler is thread safe.
-  std::vector<unsigned int> values(strength);
-  recursively_add_test_for_each_combination(
-      model, parameter_index_map, 0, values, test_set,
       // We consider each test to be valid here, and filter out the invalid ones
       // afterwards. This is to exploit parallelization potential
       // in the expensive validity checks.
       [](const test& t) { return true; });
 
-  concurrent_constraint_handler concurrent_handler(constr_handler);
   bitset_uint64 test_validity_info(
-      concurrent_handler.check_validity_of_partial_tests(test_set, tp));
+      constr_handler.check_validity_of_partial_tests(test_set));
 
   // Now that we have the info which of the partial tests is valid,
   // we simply remove the invalid ones.

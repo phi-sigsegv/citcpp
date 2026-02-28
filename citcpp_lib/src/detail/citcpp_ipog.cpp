@@ -13,6 +13,7 @@
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
 #include "constraint_handler.hpp"
+#include "constraint_handler_concurrent.hpp"
 #include "coverage_map.hpp"
 #include "datatypes_config.hpp"
 #include "ipog_all_value_combinations.hpp"
@@ -183,13 +184,11 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
                     citcpp::detail::internal_test_set& test_set,
                     const citcpp::detail::constraint_handler& constr_handler,
                     const citcpp::covering_array_computation_config config,
-                    const unsigned int num_threads,
+                    citcpp::detail::thread_pool& tp,
                     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
-  thread_pool tp(num_threads);
-
-  const bool with_mt = num_threads > 1;
+  const bool with_mt = tp.get_num_workers() > 1;
 
   std::vector<unsigned int> parameter_index_map(
       citcpp_ipog_base::create_parameter_index_map(relations, model));
@@ -233,12 +232,8 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
       std::min(maximum_required_strength, maximum_prefix_length);
   {
     // Step 1: Initialize for the first t parameters.
-    with_mt ? create_all_value_combinations(first_param_idx, model,
-                                            parameter_index_map, constr_handler,
-                                            test_set, tp)
-            : create_all_value_combinations(first_param_idx, model,
-                                            parameter_index_map, constr_handler,
-                                            test_set);
+    create_all_value_combinations(first_param_idx, model, parameter_index_map,
+                                  constr_handler, test_set);
     exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     exec_handle.set_number_of_processed_parameters(first_param_idx);
   }
@@ -336,13 +331,11 @@ void main_ipog_loop_extend_test_set(
     citcpp::detail::internal_test_set& test_set,
     const citcpp::detail::constraint_handler& constr_handler,
     const citcpp::covering_array_computation_config config,
-    const unsigned int num_threads,
+    citcpp::detail::thread_pool& tp,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
-  thread_pool tp(num_threads);
-
-  const bool with_mt = num_threads > 1;
+  const bool with_mt = tp.get_num_workers() > 1;
 
   // First we compute the number of combination we have to cover.
   unsigned long long number_combos_to_process = 0;
@@ -449,27 +442,34 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
     }
   }
 
+  thread_pool tp(num_threads);
+
   std::vector<internal_relation> relations(
       create_relations(input_model_, model_, strength_));
 
   exec_handle.set_execution_phase(
       cagen_exec_handle::phase::CONSTRAINT_HANDLER_INIT);
 
-  std::unique_ptr<constraint_handler> constr_handler =
+  std::shared_ptr<constraint_handler> constr_handler_impl =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
           exec_handle.get_constraint_handler_init_progress());
+  std::shared_ptr<constraint_handler> constr_handler =
+      (constr_handler_impl->is_thread_safe() && num_threads > 1)
+          ? std::make_shared<concurrent_constraint_handler>(
+                *constr_handler_impl, tp)
+          : constr_handler_impl;
 
   exec_handle.set_execution_phase(
       cagen_exec_handle::phase::COVERING_ARRAY_CONSTRUCTION);
 
   internal_test_set tests(input_tests_);
   if (tests.get_list_of_tests().empty()) {
-    main_ipog_loop(model_, relations, tests, *constr_handler, config_,
-                   num_threads, exec_handle);
+    main_ipog_loop(model_, relations, tests, *constr_handler, config_, tp,
+                   exec_handle);
   } else {
     main_ipog_loop_extend_test_set(model_, relations, tests, *constr_handler,
-                                   config_, num_threads, exec_handle);
+                                   config_, tp, exec_handle);
   }
   if (config_.replace_dont_care_values()) {
     constr_handler->replace_dont_care_values(tests);

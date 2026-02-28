@@ -18,7 +18,8 @@ class concurrent_constraint_handler : public constraint_handler {
     typedef constraint_handler base_type;
 
   public:
-    concurrent_constraint_handler(const constraint_handler& handler);
+    concurrent_constraint_handler(const constraint_handler& handler,
+                                  thread_pool& tp);
 
     /**
      * See constraint_handler interface.
@@ -33,8 +34,21 @@ class concurrent_constraint_handler : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
+    bitset_uint64 check_validity_of_partial_tests(
+        const internal_test_set& test_set) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
     bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    std::vector<bitset_uint64> get_valid_parameter_assignments(
+        const internal_test_set& test_set,
+        unsigned int param_idx) const override;
 
     /**
      * See constraint_handler interface.
@@ -42,40 +56,13 @@ class concurrent_constraint_handler : public constraint_handler {
     void replace_dont_care_values(test& t) const override;
 
     /**
-     * This method reads the given partial tests, in particular the
-     * assignments of values to parameters, and returns for each such test,
-     * whether the respective combination of those assignments is valid.
-     * This method is similar to the method #is_valid_partial_test,
-     * but instead of evaluating the validity of a single given test,
-     * a whole set of tests is checked in parallel. The returned bitset has
-     * bits enabled at indices corresponding to the indices of test
-     * in the given test set. A bit is enabled, if the correponding test
-     * is valid.
+     * See constraint_handler interface.
      */
-    bitset_uint64 check_validity_of_partial_tests(
-        const internal_test_set& test_set, thread_pool& tp) const;
-
-    /**
-     * This method reads the given partial tests, in particular the
-     * assignments of values to parameters, and returns for each such test,
-     * a list of feasible assignments of values to the given parameter in terms
-     * of a bitset. The bitset has bits enabled at indices corresponding to the
-     * indices of values in the domain definition of the parameter.
-     */
-    std::vector<bitset_uint64> get_valid_parameter_assignments(
-        const internal_test_set& test_set, unsigned int param_idx,
-        thread_pool& tp) const;
-
-    /**
-     * This method reads the given tests, in particular the parameters
-     * with don't care values, and replaces all of them by concrete
-     * values such that the resulting tests are all valid.
-     */
-    void replace_dont_care_values(internal_test_set& test_set,
-                                  thread_pool& tp) const;
+    void replace_dont_care_values(internal_test_set& test_set) const override;
 
   private:
     const constraint_handler& handler_;
+    thread_pool& tp_;
 };
 
 }  // namespace detail

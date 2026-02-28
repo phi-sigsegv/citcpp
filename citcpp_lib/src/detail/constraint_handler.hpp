@@ -44,7 +44,7 @@ class constraint_handler {
      * in the given test set. A bit is enabled, if the correponding test
      * is valid.
      */
-    bitset_uint64 check_validity_of_partial_tests(
+    virtual bitset_uint64 check_validity_of_partial_tests(
         const internal_test_set& test_set) const;
 
     /**
@@ -64,7 +64,7 @@ class constraint_handler {
      * of a bitset. The bitset has bits enabled at indices corresponding to the
      * indices of values in the domain definition of the parameter.
      */
-    std::vector<bitset_uint64> get_valid_parameter_assignments(
+    virtual std::vector<bitset_uint64> get_valid_parameter_assignments(
         const internal_test_set& test_set, unsigned int param_idx) const;
 
     /**
@@ -79,7 +79,7 @@ class constraint_handler {
      * with don't care values, and replaces all of them by concrete
      * values such that the resulting tests are all valid.
      */
-    void replace_dont_care_values(internal_test_set& test_set) const;
+    virtual void replace_dont_care_values(internal_test_set& test_set) const;
 
     /**
      * Creates a constraint handler for the given model.
