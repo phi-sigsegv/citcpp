@@ -114,11 +114,13 @@ class covm_per_param_combo_functor {
         const citcpp::detail::param_vector& param_indices,
         citcpp::detail::bitset_non_owning_uint64& values_combo_bitset) {
 
-      const bool valid_tuple = is_valid_tuple(param_indices, value_indices);
-      if (!valid_tuple) {
-        values_combo_bitset.set(bitpos);
-        covm_.set_number_of_combinations_to_cover(
-            covm_.get_number_of_combinations_to_cover() - 1);
+      if (!values_combo_bitset.test(bitpos)) {
+        const bool valid_tuple = is_valid_tuple(param_indices, value_indices);
+        if (!valid_tuple) {
+          values_combo_bitset.set(bitpos);
+          covm_.set_number_of_combinations_to_cover(
+              covm_.get_number_of_combinations_to_cover() - 1);
+        }
       }
 
       return !values_combo_bitset.all();
