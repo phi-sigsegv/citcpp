@@ -11,7 +11,6 @@ set(SYLVAN_HDRS
     sylvan_mt.h
     sylvan_mtbdd.h
     sylvan_mtbdd_int.h
-    sylvan_obj.hpp
     sylvan_stats.h
     sylvan_table.h
     sylvan_tls.h
@@ -29,7 +28,6 @@ target_sources(sylvan
     sylvan_ldd.c
     sylvan_mt.c
     sylvan_mtbdd.c
-    sylvan_obj.cpp
     sylvan_refs.c
     sylvan_sl.c
     sylvan_stats.c
@@ -37,6 +35,11 @@ target_sources(sylvan
     sylvan_zdd.c
     ${SYLVAN_HDRS}
 )
+
+if(SYLVAN_BUILD_CPP)
+    list(APPEND SYLVAN_HDRS sylvan_obj.hpp)
+    target_sources(sylvan PRIVATE sylvan_obj.cpp sylvan_obj.hpp)
+endif()
 
 option(SYLVAN_GMP "Include custom MTBDD type GMP")
 if(SYLVAN_GMP)
@@ -98,6 +101,10 @@ endif()
 option(SYLVAN_STATS "Let Sylvan collect statistics at runtime" OFF)
 if(SYLVAN_STATS)
     target_compile_definitions(sylvan PUBLIC SYLVAN_STATS)
+endif()
+
+if(NOT SYLVAN_IS_TOP_PROJECT)
+    mark_as_advanced(SYLVAN_GMP SYLVAN_ENABLE_PIC SYLVAN_NATIVE_OPT SYLVAN_USE_MMAP SYLVAN_STATS)
 endif()
 
 set_target_properties(sylvan PROPERTIES
