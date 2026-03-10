@@ -1,7 +1,7 @@
 #ifndef DETAIL_CITCPP_ALGO_COMMON_HPP_
 #define DETAIL_CITCPP_ALGO_COMMON_HPP_
 
-#include "datatypes_config.hpp"
+#include "functor_executor.hpp"
 #include "internal_model.hpp"
 
 namespace citcpp {
@@ -33,7 +33,7 @@ unsigned long long number_of_combinations_to_cover(
 unsigned long long number_of_combinations_to_cover(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
-    bool fixed_last_parameter, thread_pool& tp);
+    bool fixed_last_parameter, functor_executor& exec);
 
 struct number_of_combinations {
     unsigned long long num_combos_to_cover;
@@ -71,7 +71,7 @@ number_of_combinations get_number_of_combinations(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter, const internal_test_set& test_set,
-    thread_pool& tp);
+    functor_executor& exec);
 
 }  // namespace detail
 }  // namespace citcpp

@@ -30,12 +30,7 @@ unsigned long long recursive_combine_and_sum(
 }
 
 class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    compute_partial_sum_task
-    : public citcpp::detail::functor_task_base<compute_partial_sum_task> {
-
-    typedef citcpp::detail::functor_task_base<compute_partial_sum_task>
-        base_type;
-    typedef compute_partial_sum_task this_type;
+    compute_partial_sum_task {
 
   public:
     compute_partial_sum_task() = default;
@@ -46,8 +41,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
         const std::vector<unsigned int>* factor_levels,
         const std::vector<unsigned int>* parameter_index_map,
         std::atomic_ullong* num_combinations)
-        : base_type(),
-          start_idx_(start_idx),
+        : start_idx_(start_idx),
           end_idx_(end_idx),
           num_params_to_select_(num_params_to_select),
           additional_factor_(additional_factor),
@@ -300,7 +294,7 @@ unsigned long long number_of_combinations_to_cover(
 unsigned long long number_of_combinations_to_cover(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
-    bool fixed_last_parameter, thread_pool& tp) {
+    bool fixed_last_parameter, functor_executor& exec) {
 
   std::atomic_ullong num_combinations = 0;
 
@@ -316,17 +310,19 @@ unsigned long long number_of_combinations_to_cover(
     const int num_last_param_values =
         model.get_parameter_num_values()[real_last_param_idx];
 
-    task_group tg(tp.createTaskGroup());
-
     std::vector<compute_partial_sum_task> tasks(n - t + 1);
-    const int array_offset = t - 2;
-    for (int i = n - 2; i >= array_offset; --i) {
-      tasks[i - array_offset] = compute_partial_sum_task(
-          i, i, t - 1, num_last_param_values, &model.get_parameter_num_values(),
-          &parameter_index_map, &num_combinations);
-      tg.spawn(i, &tasks[i - array_offset]);
+
+    {
+      auto exec_scope(exec.create_execution_scope());
+      const int array_offset = t - 2;
+      for (int i = n - 2; i >= array_offset; --i) {
+        tasks[i - array_offset] =
+            compute_partial_sum_task(i, i, t - 1, num_last_param_values,
+                                     &model.get_parameter_num_values(),
+                                     &parameter_index_map, &num_combinations);
+        exec_scope->spawn_execution(tasks[i - array_offset]);
+      }
     }
-    tg.wait();
   } else {
     // Parallelization cannot really pay off if we have an interaction strength
     // <= 1. So resort to the sequential implementation.
@@ -335,17 +331,18 @@ unsigned long long number_of_combinations_to_cover(
                                              fixed_last_parameter);
     }
 
-    task_group tg(tp.createTaskGroup());
-
     std::vector<compute_partial_sum_task> tasks(n - t + 1);
-    const int array_offset = t - 1;
-    for (int i = n - 1; i >= array_offset; --i) {
-      tasks[i - array_offset] = compute_partial_sum_task(
-          i, i, t, 1, &model.get_parameter_num_values(), &parameter_index_map,
-          &num_combinations);
-      tg.spawn(i, &tasks[i - array_offset]);
+
+    {
+      auto exec_scope(exec.create_execution_scope());
+      const int array_offset = t - 1;
+      for (int i = n - 1; i >= array_offset; --i) {
+        tasks[i - array_offset] = compute_partial_sum_task(
+            i, i, t, 1, &model.get_parameter_num_values(), &parameter_index_map,
+            &num_combinations);
+        exec_scope->spawn_execution(tasks[i - array_offset]);
+      }
     }
-    tg.wait();
   }
 
   return num_combinations;
@@ -374,7 +371,7 @@ number_of_combinations get_number_of_combinations(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter, const internal_test_set& test_set,
-    thread_pool& tp) {
+    functor_executor& exec) {
 
   const unsigned int product_of_max_parameter_sizes =
       get_product_of_max_n_parameter_sizes(parameter_index_map.size(), t, model,
@@ -384,7 +381,7 @@ number_of_combinations get_number_of_combinations(
       model, test_set, product_of_max_parameter_sizes);
 
   param_combo_parallel_iterator param_combo_it(n, t, parameter_index_map,
-                                               fixed_last_parameter, tp);
+                                               fixed_last_parameter, exec);
   param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   return per_param_combo_functor.get_number_of_combos();

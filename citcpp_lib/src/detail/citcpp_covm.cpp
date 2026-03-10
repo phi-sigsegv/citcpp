@@ -17,6 +17,7 @@
 #include "covm_exec_handle_impl.hpp"
 #include "covm_exec_result_impl.hpp"
 #include "datatypes_config.hpp"
+#include "functor_executor_thread_pool.hpp"
 
 namespace {
 
@@ -64,12 +65,13 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     const citcpp::detail::internal_test_set& test_set,
     const citcpp::detail::constraint_handler& constr_handler,
     const citcpp::coverage_measurement_config& config,
-    citcpp::detail::thread_pool& tp, int strength,
+    citcpp::detail::functor_executor& exec, int strength,
     citcpp::detail::covm_exec_handle_impl& exec_handle) {
   using namespace citcpp;
   using namespace citcpp::detail;
 
-  const bool with_mt = tp.get_num_workers() > 1;
+  // const bool with_mt = exec.get_num_workers() > 1;
+  const bool with_mt = true;
 
   std::vector<internal_relation> relations(
       create_relations(input_model, strength));
@@ -86,7 +88,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
         with_mt
             ? number_of_combinations_to_cover(
                   int_relation.get_parameter_index_map().size(), model,
-                  int_relation.get_parameter_index_map(), strength, false, tp)
+                  int_relation.get_parameter_index_map(), strength, false, exec)
             : number_of_combinations_to_cover(
                   int_relation.get_parameter_index_map().size(), model,
                   int_relation.get_parameter_index_map(), strength, false);
@@ -108,7 +110,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
                     int_relation.get_parameter_index_map().size(), model,
                     int_relation.get_parameter_index_map(),
                     int_relation.get_specified_interaction_strength(), false,
-                    tp)
+                    exec)
               : number_of_combinations_to_cover(
                     int_relation.get_parameter_index_map().size(), model,
                     int_relation.get_parameter_index_map(),
@@ -134,7 +136,8 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     if (with_mt) {
       measure_coverage(int_relation.get_specified_interaction_strength(), model,
                        int_relation.get_parameter_index_map(), test_set,
-                       constr_handler, exec_handle, covm_per_relation[""], tp);
+                       constr_handler, exec_handle, covm_per_relation[""],
+                       exec);
     } else {
       measure_coverage(int_relation.get_specified_interaction_strength(), model,
                        int_relation.get_parameter_index_map(), test_set,
@@ -149,7 +152,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
         measure_coverage(int_relation.get_specified_interaction_strength(),
                          model, int_relation.get_parameter_index_map(),
                          test_set, constr_handler, exec_handle,
-                         covm_per_relation[relation.get_name()], tp);
+                         covm_per_relation[relation.get_name()], exec);
       } else {
         measure_coverage(int_relation.get_specified_interaction_strength(),
                          model, int_relation.get_parameter_index_map(),
@@ -158,8 +161,6 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
       }
     }
   }
-
-  tp.stop_workers();
 
   return covm_per_relation;
 }
@@ -191,6 +192,7 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   }
 
   thread_pool tp(num_threads);
+  functor_executor_thread_pool exec(tp);
 
   // Filter out invalid tests.
   std::vector<unsigned int> invalid_test_indices;
@@ -227,8 +229,8 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
       covm_exec_handle_impl::phase::COVERAGE_MEASUREMENT);
 
   std::unordered_map<std::string, coverage_measurement> covm_per_relation(
-      main_covm_loop(input_model_, model_, tests_, *constr_handler, config_, tp,
-                     strength_, exec_handle));
+      main_covm_loop(input_model_, model_, tests_, *constr_handler, config_,
+                     exec, strength_, exec_handle));
 
   const auto t_end = std::chrono::high_resolution_clock::now();
   const auto duration_in_milli_seconds =

@@ -5,7 +5,7 @@
 
 #include "constraint_handler.hpp"
 #include "covm_exec_handle_impl.hpp"
-#include "datatypes_config.hpp"
+#include "functor_executor.hpp"
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
 
@@ -24,7 +24,8 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
                       const internal_test_set& test_set,
                       const constraint_handler& constr_handler,
                       covm_exec_handle_impl& exec_handle,
-                      citcpp::coverage_measurement& covm, thread_pool& tp);
+                      citcpp::coverage_measurement& covm,
+                      functor_executor& exec);
 
 }  // namespace detail
 }  // namespace citcpp

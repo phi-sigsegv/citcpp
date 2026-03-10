@@ -2,7 +2,7 @@
 #define IPOG_OTF_HORIZONTAL_EXTENSION_HPP_
 
 #include "constraint_handler.hpp"
-#include "datatypes_config.hpp"
+#include "functor_executor.hpp"
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
 #include "ipog_horizontal_extension_common.hpp"
@@ -21,7 +21,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     const constraint_handler& constr_handler, internal_test_set& test_set,
     const internal_model& model,
     const std::vector<internal_relation>& relations, bool is_extend_mode,
-    thread_pool& tp);
+    functor_executor& exec);
 
 }  // namespace detail
 }  // namespace citcpp

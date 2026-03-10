@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "datatypes_config.hpp"
+#include "functor_executor.hpp"
 #include "internal_model.hpp"
 #include "shared_constants.hpp"
 
@@ -105,13 +106,13 @@ class param_combo_parallel_iterator {
         unsigned int num_params_to_select_from,
         unsigned int num_params_to_select,
         const std::vector<unsigned int>& parameter_index_map,
-        bool fixed_last_parameter, thread_pool& tp)
+        bool fixed_last_parameter, functor_executor& exec)
         : num_params_to_select_from_(num_params_to_select_from),
           num_params_to_select_(num_params_to_select),
           parameter_index_map_(&parameter_index_map),
           fixed_last_parameter_(fixed_last_parameter),
           param_indices_(num_params_to_select),
-          tp_(&tp),
+          exec_(&exec),
           iterate_tasks_(),
           visitor_() {
 
@@ -145,7 +146,7 @@ class param_combo_parallel_iterator {
           parameter_index_map_(other.parameter_index_map_),
           fixed_last_parameter_(other.fixed_last_parameter_),
           param_indices_(other.param_indices_),
-          tp_(other.tp_),
+          exec_(other.exec_),
           iterate_tasks_(other.iterate_tasks_),
           visitor_(other.visitor_) {
 
@@ -160,7 +161,7 @@ class param_combo_parallel_iterator {
           parameter_index_map_(other.parameter_index_map_),
           fixed_last_parameter_(other.fixed_last_parameter_),
           param_indices_(std::move(other.param_indices_)),
-          tp_(other.tp_),
+          exec_(other.exec_),
           iterate_tasks_(std::move(other.iterate_tasks_)),
           visitor_(std::move(other.visitor_)) {
 
@@ -180,7 +181,7 @@ class param_combo_parallel_iterator {
         parameter_index_map_ = other.parameter_index_map_;
         fixed_last_parameter_ = other.fixed_last_parameter_;
         param_indices_ = other.param_indices_;
-        tp_ = other.tp_;
+        exec_ = other.exec_;
         iterate_tasks_ = other.iterate_tasks_;
         visitor_ = other.visitor_;
 
@@ -201,7 +202,7 @@ class param_combo_parallel_iterator {
         parameter_index_map_ = other.parameter_index_map_;
         fixed_last_parameter_ = other.fixed_last_parameter_;
         param_indices_ = std::move(other.param_indices_);
-        tp_ = other.tp_;
+        exec_ = other.exec_;
         iterate_tasks_ = std::move(other.iterate_tasks_);
         visitor_ = std::move(other.visitor_);
 
@@ -221,9 +222,9 @@ class param_combo_parallel_iterator {
       return num_params_to_select_;
     }
 
-    unsigned int get_num_workers() const { return tp_->get_num_workers(); }
+    unsigned int get_num_workers() const { return exec_->get_num_workers(); }
 
-    unsigned int get_worker_id() const { return tp_->get_worker_id(); }
+    unsigned int get_worker_id() const { return exec_->get_worker_id(); }
 
     template <class T_VISITOR>
     void visit_all_parameter_combinations(T_VISITOR& visitor) {
@@ -234,33 +235,23 @@ class param_combo_parallel_iterator {
         // have fixed.
         visitor(param_indices_);
       } else {
-        task_group tg(tp_->createTaskGroup());
-        for (int i = 1; i < iterate_tasks_.size(); ++i) {
+        auto exec_scope(exec_->create_execution_scope());
+        for (int i = 0; i < iterate_tasks_.size(); ++i) {
           iterate_task& task = iterate_tasks_[i];
-          task.reset();
-          tg.spawn(i, &task);
+          exec_scope->spawn_execution(task);
         }
-        iterate_task& task = iterate_tasks_[0];
-        task.reset();
-        tg.spawn_and_wait(&task);
       }
     }
 
   private:
-    class alignas(false_sharing_avoidance_alignment) iterate_task
-        : public functor_task_base<iterate_task> {
-      private:
-        typedef functor_task_base<iterate_task> base_type;
-        typedef iterate_task this_type;
-
+    class alignas(false_sharing_avoidance_alignment) iterate_task {
       public:
         iterate_task() = default;
 
         iterate_task(param_combo_parallel_iterator* iterator, int start_idx,
                      int end_idx, int num_params_to_select,
                      param_vector&& param_indices)
-            : base_type(),
-              iterator_(iterator),
+            : iterator_(iterator),
               start_idx_(start_idx),
               end_idx_(end_idx),
               num_params_to_select_(num_params_to_select),
@@ -330,7 +321,7 @@ class param_combo_parallel_iterator {
     const std::vector<unsigned int>* parameter_index_map_;
     bool fixed_last_parameter_;
     param_vector param_indices_;
-    thread_pool* tp_;
+    functor_executor* exec_;
     std::vector<iterate_task> iterate_tasks_;
     function_ref<bool(const param_vector&)> visitor_;
 };

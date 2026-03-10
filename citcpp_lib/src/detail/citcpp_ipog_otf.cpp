@@ -15,6 +15,7 @@
 #include "constraint_handler.hpp"
 #include "constraint_handler_concurrent.hpp"
 #include "datatypes_config.hpp"
+#include "functor_executor_thread_pool.hpp"
 #include "ipog_all_value_combinations.hpp"
 #include "ipog_otf_horizontal_extension.hpp"
 #include "ipog_otf_vertical_extension.hpp"
@@ -31,6 +32,8 @@ void main_ipog_loop_body(
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
+  functor_executor_thread_pool exec(tp);
+
   unsigned long long number_combos_to_process = 0;
   unsigned long long reported_number_combos_to_cover = 0;
   for (const auto& relation : relations) {
@@ -41,7 +44,7 @@ void main_ipog_loop_body(
           with_mt ? number_of_combinations_to_cover(
                         relation.get_current_param_idx() + 1, model,
                         relation.get_parameter_index_map(),
-                        relation.get_current_interaction_strength(), true, tp)
+                        relation.get_current_interaction_strength(), true, exec)
                   : number_of_combinations_to_cover(
                         relation.get_current_param_idx() + 1, model,
                         relation.get_parameter_index_map(),
@@ -78,7 +81,7 @@ void main_ipog_loop_body(
     auto horizontal_ext_res =
         with_mt ? ipog_horizontal_extension(number_combos_to_process,
                                             constr_handler, test_set, model,
-                                            relations, is_extend_mode, tp)
+                                            relations, is_extend_mode, exec)
                 : ipog_horizontal_extension(number_combos_to_process,
                                             constr_handler, test_set, model,
                                             relations, is_extend_mode);
@@ -147,6 +150,8 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
 
   const bool with_mt = tp.get_num_workers() > 1;
 
+  functor_executor_thread_pool exec(tp);
+
   std::vector<unsigned int> parameter_index_map(
       citcpp_ipog_base::create_parameter_index_map(relations, model));
 
@@ -159,14 +164,15 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   unsigned int maximum_prefix_length = 0;
   for (const auto& relation : relations) {
     const unsigned long long relation_number_combos_to_cover =
-        with_mt ? number_of_combinations_to_cover(
-                      relation.get_parameter_index_map().size(), model,
-                      relation.get_parameter_index_map(),
-                      relation.get_specified_interaction_strength(), false, tp)
-                : number_of_combinations_to_cover(
-                      relation.get_parameter_index_map().size(), model,
-                      relation.get_parameter_index_map(),
-                      relation.get_specified_interaction_strength(), false);
+        with_mt
+            ? number_of_combinations_to_cover(
+                  relation.get_parameter_index_map().size(), model,
+                  relation.get_parameter_index_map(),
+                  relation.get_specified_interaction_strength(), false, exec)
+            : number_of_combinations_to_cover(
+                  relation.get_parameter_index_map().size(), model,
+                  relation.get_parameter_index_map(),
+                  relation.get_specified_interaction_strength(), false);
     number_combos_to_process += relation_number_combos_to_cover;
     relation_to_combos_to_cover[&relation] = relation_number_combos_to_cover;
     maximum_required_strength =
@@ -213,14 +219,15 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
           relation.get_specified_interaction_strength()) {
 
         auto num_combos =
-            with_mt ? get_number_of_combinations(
-                          relation.get_current_param_idx(), model,
-                          relation.get_parameter_index_map(),
-                          relation.get_current_param_idx(), false, test_set, tp)
-                    : get_number_of_combinations(
-                          relation.get_current_param_idx(), model,
-                          relation.get_parameter_index_map(),
-                          relation.get_current_param_idx(), false, test_set);
+            with_mt
+                ? get_number_of_combinations(
+                      relation.get_current_param_idx(), model,
+                      relation.get_parameter_index_map(),
+                      relation.get_current_param_idx(), false, test_set, exec)
+                : get_number_of_combinations(
+                      relation.get_current_param_idx(), model,
+                      relation.get_parameter_index_map(),
+                      relation.get_current_param_idx(), false, test_set);
         exec_handle.add_number_of_processed_combinations(
             num_combos.num_combos_to_cover);
         exec_handle.add_number_of_covered_combinations(
@@ -291,18 +298,21 @@ void main_ipog_loop_extend_test_set(
 
   const bool with_mt = tp.get_num_workers() > 1;
 
+  functor_executor_thread_pool exec(tp);
+
   // First we compute the number of combination we have to cover.
   unsigned long long number_combos_to_process = 0;
   for (const auto& relation : relations) {
     number_combos_to_process +=
-        with_mt ? number_of_combinations_to_cover(
-                      relation.get_parameter_index_map().size(), model,
-                      relation.get_parameter_index_map(),
-                      relation.get_specified_interaction_strength(), false, tp)
-                : number_of_combinations_to_cover(
-                      relation.get_parameter_index_map().size(), model,
-                      relation.get_parameter_index_map(),
-                      relation.get_specified_interaction_strength(), false);
+        with_mt
+            ? number_of_combinations_to_cover(
+                  relation.get_parameter_index_map().size(), model,
+                  relation.get_parameter_index_map(),
+                  relation.get_specified_interaction_strength(), false, exec)
+            : number_of_combinations_to_cover(
+                  relation.get_parameter_index_map().size(), model,
+                  relation.get_parameter_index_map(),
+                  relation.get_specified_interaction_strength(), false);
   }
 
   tp.stop_workers();

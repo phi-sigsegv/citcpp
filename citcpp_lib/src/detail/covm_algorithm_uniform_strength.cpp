@@ -343,7 +343,8 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
                       const internal_test_set& test_set,
                       const constraint_handler& constr_handler,
                       covm_exec_handle_impl& exec_handle,
-                      citcpp::coverage_measurement& covm, thread_pool& tp) {
+                      citcpp::coverage_measurement& covm,
+                      functor_executor& exec) {
 
   if (!constr_handler.is_thread_safe()) {
     measure_coverage(strength, model, parameter_index_map, test_set,
@@ -356,7 +357,7 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
                                            model, parameter_index_map);
 
   param_combo_parallel_iterator param_combo_it(
-      parameter_index_map.size(), strength, parameter_index_map, false, tp);
+      parameter_index_map.size(), strength, parameter_index_map, false, exec);
 
   covm_per_param_combo_functor_parallel per_param_combo_functor(
       model, test_set, product_of_max_parameter_sizes, exec_handle,
