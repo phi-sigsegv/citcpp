@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "constraint_handler.hpp"
-#include "datatypes_config.hpp"
+#include "functor_executor.hpp"
 
 namespace citcpp {
 namespace detail {
@@ -19,7 +19,7 @@ class concurrent_constraint_handler : public constraint_handler {
 
   public:
     concurrent_constraint_handler(const constraint_handler& handler,
-                                  thread_pool& tp);
+                                  functor_executor& exec);
 
     /**
      * See constraint_handler interface.
@@ -62,7 +62,7 @@ class concurrent_constraint_handler : public constraint_handler {
 
   private:
     const constraint_handler& handler_;
-    thread_pool& tp_;
+    functor_executor& exec_;
 };
 
 }  // namespace detail

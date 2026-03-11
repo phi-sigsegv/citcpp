@@ -405,6 +405,7 @@ void citcpp_ipog_otf::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   }
 
   thread_pool tp(num_threads);
+  functor_executor_thread_pool exec(tp);
 
   std::vector<internal_relation> relations(
       create_relations(input_model_, model_, strength_));
@@ -419,7 +420,7 @@ void citcpp_ipog_otf::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   std::shared_ptr<constraint_handler> constr_handler =
       (constr_handler_impl->is_thread_safe() && num_threads > 1)
           ? std::make_shared<concurrent_constraint_handler>(
-                *constr_handler_impl, tp)
+                *constr_handler_impl, exec)
           : constr_handler_impl;
 
   exec_handle.set_execution_phase(

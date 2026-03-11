@@ -2,15 +2,12 @@
 
 #include <mutex>
 
+#include "shared_constants.hpp"
+
 namespace {
 
 class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    check_test_validity_task
-    : public citcpp::detail::functor_task_base<check_test_validity_task> {
-
-    typedef citcpp::detail::functor_task_base<check_test_validity_task>
-        base_type;
-    typedef check_test_validity_task this_type;
+    check_test_validity_task {
 
   public:
     check_test_validity_task() = default;
@@ -20,8 +17,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
                              const citcpp::detail::constraint_handler* handler,
                              citcpp::detail::bitset_uint64* result,
                              std::mutex* mut)
-        : base_type(),
-          test_(test),
+        : test_(test),
           test_index_(test_index),
           handler_(handler),
           result_(result),
@@ -52,14 +48,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
 };
 
 class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    get_valid_parameter_assignments_task
-    : public citcpp::detail::functor_task_base<
-          get_valid_parameter_assignments_task> {
-
-    typedef citcpp::detail::functor_task_base<
-        get_valid_parameter_assignments_task>
-        base_type;
-    typedef get_valid_parameter_assignments_task this_type;
+    get_valid_parameter_assignments_task {
 
   public:
     get_valid_parameter_assignments_task() = default;
@@ -69,8 +58,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
         unsigned int test_index,
         const citcpp::detail::constraint_handler* handler,
         std::vector<citcpp::detail::bitset_uint64>* results)
-        : base_type(),
-          test_(test),
+        : test_(test),
           param_idx_(param_idx),
           test_index_(test_index),
           handler_(handler),
@@ -92,12 +80,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
 };
 
 class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    replace_dont_care_values_task
-    : public citcpp::detail::functor_task_base<replace_dont_care_values_task> {
-
-    typedef citcpp::detail::functor_task_base<replace_dont_care_values_task>
-        base_type;
-    typedef replace_dont_care_values_task this_type;
+    replace_dont_care_values_task {
 
   public:
     replace_dont_care_values_task() = default;
@@ -105,7 +88,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     replace_dont_care_values_task(
         citcpp::detail::test* test,
         const citcpp::detail::constraint_handler* handler)
-        : base_type(), test_(test), handler_(handler) {}
+        : test_(test), handler_(handler) {}
 
     virtual ~replace_dont_care_values_task() {}
 
@@ -122,8 +105,8 @@ namespace citcpp {
 namespace detail {
 
 concurrent_constraint_handler::concurrent_constraint_handler(
-    const constraint_handler& handler, thread_pool& tp)
-    : base_type(), handler_(handler), tp_(tp) {}
+    const constraint_handler& handler, functor_executor& exec)
+    : base_type(), handler_(handler), exec_(exec) {}
 
 bool concurrent_constraint_handler::is_thread_safe() const { return true; }
 
@@ -138,17 +121,19 @@ bitset_uint64 concurrent_constraint_handler::check_validity_of_partial_tests(
   bitset_uint64 result(test_set.get_list_of_tests().size());
   std::mutex mut;
 
-  task_group tg(tp_.createTaskGroup());
   std::vector<check_test_validity_task> tasks(
       test_set.get_list_of_tests().size());
-  unsigned int test_index = 0;
-  for (const auto& t : test_set.get_list_of_tests()) {
-    tasks[test_index] =
-        check_test_validity_task(&t, test_index, &handler_, &result, &mut);
-    tg.spawn(test_index, &tasks[test_index]);
-    ++test_index;
+
+  {
+    auto exec_scope(exec_.create_execution_scope());
+    unsigned int test_index = 0;
+    for (const auto& t : test_set.get_list_of_tests()) {
+      tasks[test_index] =
+          check_test_validity_task(&t, test_index, &handler_, &result, &mut);
+      exec_scope->spawn_execution(tasks[test_index]);
+      ++test_index;
+    }
   }
-  tg.wait();
 
   return result;
 }
@@ -165,17 +150,19 @@ concurrent_constraint_handler::get_valid_parameter_assignments(
 
   std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
 
-  task_group tg(tp_.createTaskGroup());
   std::vector<get_valid_parameter_assignments_task> tasks(
       test_set.get_list_of_tests().size());
-  unsigned int test_index = 0;
-  for (const auto& t : test_set.get_list_of_tests()) {
-    tasks[test_index] = get_valid_parameter_assignments_task(
-        &t, param_idx, test_index, &handler_, &result);
-    tg.spawn(test_index, &tasks[test_index]);
-    ++test_index;
+
+  {
+    auto exec_scope(exec_.create_execution_scope());
+    unsigned int test_index = 0;
+    for (const auto& t : test_set.get_list_of_tests()) {
+      tasks[test_index] = get_valid_parameter_assignments_task(
+          &t, param_idx, test_index, &handler_, &result);
+      exec_scope->spawn_execution(tasks[test_index]);
+      ++test_index;
+    }
   }
-  tg.wait();
 
   return result;
 }
@@ -187,16 +174,18 @@ void concurrent_constraint_handler::replace_dont_care_values(test& t) const {
 void concurrent_constraint_handler::replace_dont_care_values(
     internal_test_set& test_set) const {
 
-  task_group tg(tp_.createTaskGroup());
   std::vector<replace_dont_care_values_task> tasks(
       test_set.get_list_of_tests().size());
-  unsigned int test_index = 0;
-  for (auto& t : test_set.get_list_of_tests()) {
-    tasks[test_index] = replace_dont_care_values_task(&t, &handler_);
-    tg.spawn(test_index, &tasks[test_index]);
-    ++test_index;
+
+  {
+    auto exec_scope(exec_.create_execution_scope());
+    unsigned int test_index = 0;
+    for (auto& t : test_set.get_list_of_tests()) {
+      tasks[test_index] = replace_dont_care_values_task(&t, &handler_);
+      exec_scope->spawn_execution(tasks[test_index]);
+      ++test_index;
+    }
   }
-  tg.wait();
 }
 
 }  // namespace detail
