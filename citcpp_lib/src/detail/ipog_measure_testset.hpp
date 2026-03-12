@@ -5,7 +5,7 @@
 
 #include "cagen_exec_handle_base.hpp"
 #include "coverage_map.hpp"
-#include "datatypes_config.hpp"
+#include "functor_executor.hpp"
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
 
@@ -24,7 +24,7 @@ ipog_measure_testset_result ipog_measure_testset(
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
-    thread_pool& tp);
+    functor_executor& exec);
 
 }  // namespace detail
 }  // namespace citcpp

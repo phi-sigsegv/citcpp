@@ -70,8 +70,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
   using namespace citcpp;
   using namespace citcpp::detail;
 
-  // const bool with_mt = exec.get_num_workers() > 1;
-  const bool with_mt = true;
+  const bool with_mt = exec.get_num_workers() > 1;
 
   std::vector<internal_relation> relations(
       create_relations(input_model, strength));

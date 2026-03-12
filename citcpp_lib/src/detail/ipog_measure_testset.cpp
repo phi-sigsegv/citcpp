@@ -147,14 +147,14 @@ ipog_measure_testset_result ipog_measure_testset(
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
-    thread_pool& tp) {
+    functor_executor& exec) {
 
   // First initialize the result object.
   ipog_measure_testset_result result;
 
   for (auto& rel : relations) {
     coverage_map_parallel_iterator cov_map_it =
-        rel.second.create_parallel_iterator(tp);
+        rel.second.create_parallel_iterator(exec);
 
     ipog_measure_per_param_combo_functor_parallel per_param_combo_functor(
         model, test_set, cov_map_it);

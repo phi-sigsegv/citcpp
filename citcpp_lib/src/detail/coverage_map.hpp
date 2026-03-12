@@ -8,6 +8,7 @@
 #include "binom_coeff_table.hpp"
 #include "bitset.hpp"
 #include "datatypes_config.hpp"
+#include "functor_executor.hpp"
 #include "internal_model.hpp"
 #include "shared_constants.hpp"
 
@@ -163,8 +164,9 @@ class coverage_map_parallel_iterator {
   public:
     coverage_map_parallel_iterator() = default;
 
-    coverage_map_parallel_iterator(coverage_map_base& cov_map, thread_pool& tp)
-        : cov_map_(&cov_map), tp_(&tp), iterate_tasks_(), visitor_() {
+    coverage_map_parallel_iterator(coverage_map_base& cov_map,
+                                   functor_executor& exec)
+        : cov_map_(&cov_map), exec_(&exec), iterate_tasks_(), visitor_() {
       const unsigned long long total_param_combos =
           cov_map.get_coverage_map().size();
       const unsigned long long num_tasks = std::min(
@@ -183,7 +185,7 @@ class coverage_map_parallel_iterator {
 
     coverage_map_parallel_iterator(const coverage_map_parallel_iterator& other)
         : cov_map_(other.cov_map_),
-          tp_(other.tp_),
+          exec_(other.exec_),
           iterate_tasks_(other.iterate_tasks_),
           visitor_(other.visitor_) {
 
@@ -194,7 +196,7 @@ class coverage_map_parallel_iterator {
 
     coverage_map_parallel_iterator(coverage_map_parallel_iterator&& other)
         : cov_map_(other.cov_map_),
-          tp_(other.tp_),
+          exec_(other.exec_),
           iterate_tasks_(std::move(other.iterate_tasks_)),
           visitor_(std::move(other.visitor_)) {
 
@@ -210,7 +212,7 @@ class coverage_map_parallel_iterator {
 
       if (this != &other) {
         cov_map_ = other.cov_map_;
-        tp_ = other.tp_;
+        exec_ = other.exec_;
         iterate_tasks_ = other.iterate_tasks_;
         visitor_ = other.visitor_;
 
@@ -227,7 +229,7 @@ class coverage_map_parallel_iterator {
 
       if (this != &other) {
         cov_map_ = other.cov_map_;
-        tp_ = other.tp_;
+        exec_ = other.exec_;
         iterate_tasks_ = std::move(other.iterate_tasks_);
         visitor_ = std::move(other.visitor_);
 
@@ -239,40 +241,30 @@ class coverage_map_parallel_iterator {
       return *this;
     }
 
-    unsigned int get_num_workers() const { return tp_->get_num_workers(); }
+    unsigned int get_num_workers() const { return exec_->get_num_workers(); }
 
-    unsigned int get_worker_id() const { return tp_->get_worker_id(); }
+    unsigned int get_worker_id() const { return exec_->get_worker_id(); }
 
     template <class T_VISITOR>
     void visit_all_parameter_combinations(T_VISITOR& visitor) {
       visitor_ = visitor;
 
-      task_group tg(tp_->createTaskGroup());
-      for (unsigned int i = 1; i < iterate_tasks_.size(); ++i) {
+      auto exec_scope(exec_->create_execution_scope());
+      for (unsigned int i = 0; i < iterate_tasks_.size(); ++i) {
         iterate_task& task = iterate_tasks_[i];
-        task.reset();
-        tg.spawn(i, &task);
+        exec_scope->spawn_execution(task);
       }
-      iterate_task& task = iterate_tasks_[0];
-      task.reset();
-      tg.spawn_and_wait(&task);
     }
 
   private:
-    class alignas(false_sharing_avoidance_alignment) iterate_task
-        : public functor_task_base<iterate_task> {
-      private:
-        typedef functor_task_base<iterate_task> base_type;
-        typedef iterate_task this_type;
-
+    class alignas(false_sharing_avoidance_alignment) iterate_task {
       public:
         iterate_task() = default;
 
         iterate_task(coverage_map_parallel_iterator* iterator,
                      unsigned long long start_index,
                      unsigned long long end_index)
-            : base_type(),
-              iterator_(iterator),
+            : iterator_(iterator),
               start_index_(start_index),
               end_index_(end_index) {}
 
@@ -303,7 +295,7 @@ class coverage_map_parallel_iterator {
 
   private:
     coverage_map_base* cov_map_;
-    thread_pool* tp_;
+    functor_executor* exec_;
     std::vector<iterate_task> iterate_tasks_;
     function_ref<bool(coverage_map_base::second_level_type&)> visitor_;
 };
@@ -348,8 +340,10 @@ class coverage_map : public coverage_map_base {
       return coverage_map_iterator(*this);
     }
 
-    coverage_map_parallel_iterator create_parallel_iterator(thread_pool& tp) {
-      return coverage_map_parallel_iterator(*this, tp);
+    coverage_map_parallel_iterator create_parallel_iterator(
+        functor_executor& exec) {
+
+      return coverage_map_parallel_iterator(*this, exec);
     }
 };
 
