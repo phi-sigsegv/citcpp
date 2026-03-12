@@ -38,6 +38,8 @@ class functor_executor_thread_pool : public functor_executor {
 
     unsigned int get_worker_id() const override;
 
+    void suspend_workers() override;
+
     std::unique_ptr<functor_execution_scope> create_execution_scope() override;
 
   private:

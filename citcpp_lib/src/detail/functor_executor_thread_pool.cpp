@@ -29,6 +29,8 @@ unsigned int functor_executor_thread_pool::get_worker_id() const {
   return tp_.get_worker_id();
 }
 
+void functor_executor_thread_pool::suspend_workers() { tp_.stop_workers(); }
+
 std::unique_ptr<functor_execution_scope>
 functor_executor_thread_pool::create_execution_scope() {
   return std::unique_ptr<functor_execution_scope>(

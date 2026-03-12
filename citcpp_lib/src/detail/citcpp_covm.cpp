@@ -161,6 +161,8 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     }
   }
 
+  exec.suspend_workers();
+
   return covm_per_relation;
 }
 

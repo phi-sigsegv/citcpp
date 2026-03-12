@@ -78,6 +78,11 @@ class functor_executor {
     virtual unsigned int get_worker_id() const = 0;
 
     /**
+     * Suspends all worker threads.
+     */
+    virtual void suspend_workers() = 0;
+
+    /**
      * Returns a new scope for usually parallelized execution
      * of a set of function objects.
      * The caller synchronized with those executions at the time

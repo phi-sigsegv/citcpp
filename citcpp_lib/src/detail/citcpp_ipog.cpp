@@ -72,6 +72,7 @@ void main_ipog_loop_body(
       }
     }
 
+    exec.suspend_workers();
     exec_handle.add_number_of_processed_combinations(
         reported_number_combos_to_cover);
     exec_handle.add_number_of_covered_combinations(
@@ -127,6 +128,8 @@ void main_ipog_loop_body(
                 : ipog_horizontal_extension(number_combos_to_process,
                                             constr_handler, test_set,
                                             relation_cov_maps);
+
+    exec.suspend_workers();
 
     for (const auto& relation_cov_result :
          horizontal_ext_res.num_new_covered_tuples) {
@@ -222,6 +225,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
                                    relation, parameter_index_map));
   }
 
+  exec.suspend_workers();
   exec_handle.set_number_of_combinations_to_process(number_combos_to_process);
   exec_handle.set_number_of_parameters_to_process(parameter_index_map.size());
 
@@ -354,6 +358,7 @@ void main_ipog_loop_extend_test_set(
                   relation.get_specified_interaction_strength(), false);
   }
 
+  exec.suspend_workers();
   exec_handle.set_number_of_combinations_to_process(number_combos_to_process);
 
   if (exec_handle.is_job_aborted()) {
