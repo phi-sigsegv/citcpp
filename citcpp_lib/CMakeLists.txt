@@ -12,6 +12,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_ipog_otf.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/coverage_map.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/functor_executor_thread_pool.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/functor_executor_lace.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/internal_model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_all_value_combinations.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_horizontal_extension.cpp
@@ -28,6 +29,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_sylvan_ldd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_concurrent.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_sylvan_ldd.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/lace_lifecycle.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp

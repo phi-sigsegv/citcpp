@@ -25,6 +25,11 @@ class functor_execution_scope {
      * The destructor of actual implementations of this interface is assumed
      * to implement a synchronization logic, that waits for all executions
      * spawned through this scope to terminate.
+     *
+     * NOTE: It is left open to the implementation of this interface, whether
+     * the asynchronous functor executions already start at the point
+     * when the method spawn_execution is called, or whether the functors
+     * will be executed when this scope is about to be destructed.
      */
     virtual ~functor_execution_scope() = default;
 
@@ -33,6 +38,16 @@ class functor_execution_scope {
      * is given by reference. The caller must ensure that the lifetime
      * of the function object extends to the point in time after
      * this scope is destroyed.
+     *
+     * IMPORTANT: You must guarantee that this method is NOT called from
+     * different threads, and you must guarantee that the thread calling this
+     * method is the same one that also destroys this object (thereby
+     * synchronizing with the asynchronouly executed functors).
+     *
+     * NOTE: It is left open to the implementation of this interface, whether
+     * the asynchronous functor executions already start at the point
+     * when the method spawn_execution is called, or whether the functors
+     * will be executed when this scope is about to be destructed.
      */
     virtual void spawn_execution(function_ref<void()> functor_ref) = 0;
 };

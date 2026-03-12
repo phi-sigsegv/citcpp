@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <utility>
 
+#include "lace_lifecycle.hpp"
+
 using namespace ::sylvan;
 
 namespace {
@@ -2993,7 +2995,7 @@ void sylvan_idd::get_sat_one_under_partial_assignment(
 }
 
 void sylvan::init_lace(unsigned int n_workers, size_t dqsize) {
-  lace_start(n_workers, dqsize);
+  citcpp::detail::lace_init(n_workers, dqsize);
 }
 
 void sylvan::init_package(size_t initialTableSize, size_t maxTableSize,
@@ -3015,7 +3017,7 @@ void sylvan::init_mtbdd() { sylvan_init_mtbdd(); }
 
 void sylvan::init_ldd() { sylvan_init_ldd(); }
 
-void sylvan::quit_lace() { lace_stop(); }
+void sylvan::quit_lace() { citcpp::detail::lace_quit(); }
 
 void sylvan::quit_package() { sylvan_quit(); }
 
