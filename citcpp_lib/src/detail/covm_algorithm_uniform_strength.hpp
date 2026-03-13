@@ -30,4 +30,6 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
 }  // namespace detail
 }  // namespace citcpp
 
+#include "covm_algorithm_uniform_strength.tpp"
+
 #endif /* DETAIL_COVM_ALGORITHM_UNIFORM_STRENGTH_HPP_ */

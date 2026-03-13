@@ -2,6 +2,7 @@
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
 #include "param_combo_iteration.hpp"
+#include "shared_aux_types.hpp"
 #include "shared_constants.hpp"
 
 namespace citcpp {
@@ -29,8 +30,7 @@ inline unsigned long long recursive_combine_and_sum(
   return partial_sum;
 }
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    compute_partial_sum_task {
+class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task {
 
   public:
     compute_partial_sum_task() = default;
@@ -83,15 +83,14 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
 class num_combos_per_param_combo_functor {
   public:
     num_combos_per_param_combo_functor(
-        const citcpp::detail::internal_model& model,
-        const citcpp::detail::internal_test_set& test_set,
+        const internal_model& model, const internal_test_set& test_set,
         const unsigned int bitset_backing_array_size)
         : model_(model),
           test_set_(test_set),
           bitset_backing_array_(bitset_backing_array_size),
           num_combos_{0, 0} {}
 
-    bool operator()(const citcpp::detail::param_vector& param_indices) {
+    bool operator()(const param_vector& param_indices) {
       using namespace citcpp::detail;
 
       bitset_non_owning_uint64::size_type bitset_size = 1;
@@ -144,43 +143,35 @@ class num_combos_per_param_combo_functor {
       return true;
     }
 
-    citcpp::detail::number_of_combinations get_number_of_combos() {
-      return num_combos_;
-    }
+    number_of_combinations get_number_of_combos() { return num_combos_; }
 
   private:
-    const citcpp::detail::internal_model& model_;
-    const citcpp::detail::internal_test_set& test_set_;
-    citcpp::detail::array_wrapper_uint64 bitset_backing_array_;
-    citcpp::detail::number_of_combinations num_combos_;
+    const internal_model& model_;
+    const internal_test_set& test_set_;
+    array_wrapper_uint64 bitset_backing_array_;
+    number_of_combinations num_combos_;
 };
 
-struct alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    aligned_array_wrapper {
-    citcpp::detail::array_wrapper_uint64 value;
-};
-
-struct alignas(citcpp::detail::false_sharing_avoidance_alignment)
+struct alignas(false_sharing_avoidance_alignment)
     aligned_number_of_combinations {
-    citcpp::detail::number_of_combinations value;
+    number_of_combinations value;
 };
 
 class num_combos_per_param_combo_functor_parallel {
   public:
     num_combos_per_param_combo_functor_parallel(
-        const citcpp::detail::internal_model& model,
-        const citcpp::detail::internal_test_set& test_set,
+        const internal_model& model, const internal_test_set& test_set,
         const unsigned int bitset_backing_array_size,
-        const citcpp::detail::param_combo_parallel_iterator& param_combo_it)
+        const param_combo_parallel_iterator& param_combo_it)
         : model_(model),
           test_set_(test_set),
           param_combo_it_(param_combo_it),
           bitset_backing_array_(param_combo_it.get_num_workers(),
                                 {{bitset_backing_array_size}}),
           num_combos_(param_combo_it.get_num_workers(),
-                      {citcpp::detail::number_of_combinations{0, 0}}) {}
+                      {number_of_combinations{0, 0}}) {}
 
-    bool operator()(const citcpp::detail::param_vector& param_indices) {
+    bool operator()(const param_vector& param_indices) {
       using namespace citcpp::detail;
 
       bitset_non_owning_uint64::size_type bitset_size = 1;
@@ -238,8 +229,8 @@ class num_combos_per_param_combo_functor_parallel {
       return true;
     }
 
-    citcpp::detail::number_of_combinations get_number_of_combos() {
-      citcpp::detail::number_of_combinations result{0, 0};
+    number_of_combinations get_number_of_combos() {
+      number_of_combinations result{0, 0};
 
       for (const auto& thread_local_num_combos : num_combos_) {
         result.num_combos_to_cover +=
@@ -252,12 +243,12 @@ class num_combos_per_param_combo_functor_parallel {
     }
 
   private:
-    const citcpp::detail::internal_model& model_;
-    const citcpp::detail::internal_test_set& test_set_;
-    const citcpp::detail::param_combo_parallel_iterator& param_combo_it_;
-    alignas(citcpp::detail::false_sharing_avoidance_alignment) citcpp::detail::
+    const internal_model& model_;
+    const internal_test_set& test_set_;
+    const param_combo_parallel_iterator& param_combo_it_;
+    alignas(false_sharing_avoidance_alignment)
         thread_local_vector<aligned_array_wrapper> bitset_backing_array_;
-    alignas(citcpp::detail::false_sharing_avoidance_alignment) citcpp::detail::
+    alignas(false_sharing_avoidance_alignment)
         thread_local_vector<aligned_number_of_combinations> num_combos_;
 };
 

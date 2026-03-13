@@ -1,32 +1,27 @@
-#include "covm_algorithm_uniform_strength.hpp"
-
 #include "bitset.hpp"
 #include "citcpp_utils.hpp"
+#include "covm_algorithm_uniform_strength.hpp"
 #include "param_combo_iteration.hpp"
+#include "shared_aux_types.hpp"
 #include "shared_constants.hpp"
 
-namespace {
+namespace citcpp {
+namespace detail {
 
-struct alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    aligned_array_wrapper {
-    citcpp::detail::array_wrapper_uint64 value;
-};
-
-struct alignas(citcpp::detail::false_sharing_avoidance_alignment)
+struct alignas(false_sharing_avoidance_alignment)
     aligned_coverage_level_to_num_param_combos {
     citcpp::coverage_measurement::t_coverage_level_to_num_param_combos value;
 };
 
 class covm_per_param_combo_functor {
   public:
-    covm_per_param_combo_functor(
-        const unsigned int strength,
-        const citcpp::detail::internal_model& model,
-        const citcpp::detail::internal_test_set& test_set,
-        const citcpp::detail::constraint_handler& constr_handler,
-        const unsigned int bitset_backing_array_size,
-        citcpp::detail::covm_exec_handle_impl& exec_handle,
-        citcpp::coverage_measurement& covm)
+    covm_per_param_combo_functor(const unsigned int strength,
+                                 const internal_model& model,
+                                 const internal_test_set& test_set,
+                                 const constraint_handler& constr_handler,
+                                 const unsigned int bitset_backing_array_size,
+                                 covm_exec_handle_impl& exec_handle,
+                                 citcpp::coverage_measurement& covm)
         : model_(model),
           test_set_(test_set),
           constr_handler_(constr_handler),
@@ -37,7 +32,7 @@ class covm_per_param_combo_functor {
           covered_tuples_(test_set.get_list_of_tests().size(), 0),
           covm_(covm) {}
 
-    bool operator()(const citcpp::detail::param_vector& param_indices) {
+    bool operator()(const param_vector& param_indices) {
       using namespace citcpp::detail;
 
       bitset_non_owning_uint64::size_type bitset_size = 1;
@@ -108,11 +103,10 @@ class covm_per_param_combo_functor {
       return true;
     }
 
-    bool operator()(
-        const citcpp::detail::value_vector& value_indices,
-        citcpp::detail::bitset_non_owning_uint64::size_type bitpos,
-        const citcpp::detail::param_vector& param_indices,
-        citcpp::detail::bitset_non_owning_uint64& values_combo_bitset) {
+    bool operator()(const value_vector& value_indices,
+                    bitset_non_owning_uint64::size_type bitpos,
+                    const param_vector& param_indices,
+                    bitset_non_owning_uint64& values_combo_bitset) {
 
       if (!values_combo_bitset.test(bitpos)) {
         const bool valid_tuple = is_valid_tuple(param_indices, value_indices);
@@ -131,8 +125,8 @@ class covm_per_param_combo_functor {
     }
 
   private:
-    bool is_valid_tuple(const citcpp::detail::param_vector& param_indices,
-                        const citcpp::detail::value_vector& value_indices) {
+    bool is_valid_tuple(const param_vector& param_indices,
+                        const value_vector& value_indices) {
 
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
@@ -145,7 +139,7 @@ class covm_per_param_combo_functor {
       return res;
     }
 
-    void reset_scratch_test(const citcpp::detail::param_vector& param_indices) {
+    void reset_scratch_test(const param_vector& param_indices) {
       using namespace citcpp::detail;
 
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
@@ -155,13 +149,13 @@ class covm_per_param_combo_functor {
     }
 
   private:
-    const citcpp::detail::internal_model& model_;
-    const citcpp::detail::internal_test_set& test_set_;
-    const citcpp::detail::constraint_handler& constr_handler_;
-    citcpp::detail::value_vector value_indices_;
-    citcpp::detail::test scratch_test_;
-    citcpp::detail::array_wrapper_uint64 bitset_backing_array_;
-    citcpp::detail::covm_exec_handle_impl& exec_handle_;
+    const internal_model& model_;
+    const internal_test_set& test_set_;
+    const constraint_handler& constr_handler_;
+    value_vector value_indices_;
+    test scratch_test_;
+    array_wrapper_uint64 bitset_backing_array_;
+    covm_exec_handle_impl& exec_handle_;
     std::vector<unsigned long long> covered_tuples_;
     citcpp::coverage_measurement& covm_;
 };
@@ -169,11 +163,10 @@ class covm_per_param_combo_functor {
 class covm_per_param_combo_functor_parallel {
   public:
     covm_per_param_combo_functor_parallel(
-        const citcpp::detail::internal_model& model,
-        const citcpp::detail::internal_test_set& test_set,
+        const internal_model& model, const internal_test_set& test_set,
         const unsigned int bitset_backing_array_size,
-        citcpp::detail::covm_exec_handle_impl& exec_handle,
-        const citcpp::detail::param_combo_parallel_iterator& param_combo_it)
+        covm_exec_handle_impl& exec_handle,
+        const param_combo_parallel_iterator& param_combo_it)
         : model_(model),
           test_set_(test_set),
           exec_handle_(exec_handle),
@@ -181,11 +174,11 @@ class covm_per_param_combo_functor_parallel {
           bitset_backing_array_(param_combo_it.get_num_workers(),
                                 {{bitset_backing_array_size}}),
           covered_tuples_(param_combo_it.get_num_workers(),
-                          citcpp::detail::aligned_vector<unsigned long long>(
+                          aligned_vector<unsigned long long>(
                               test_set.get_list_of_tests().size(), 0)),
           cov_level_to_num_param_combos_(param_combo_it.get_num_workers()) {}
 
-    bool operator()(const citcpp::detail::param_vector& param_indices) {
+    bool operator()(const param_vector& param_indices) {
       using namespace citcpp::detail;
 
       bitset_non_owning_uint64::size_type bitset_size = 1;
@@ -271,46 +264,36 @@ class covm_per_param_combo_functor_parallel {
       return true;
     }
 
-    const citcpp::detail::thread_local_vector<
-        citcpp::detail::aligned_vector<unsigned long long>>&
+    const thread_local_vector<aligned_vector<unsigned long long>>&
     get_coverered_tuples() const {
 
       return covered_tuples_;
     }
 
-    const citcpp::detail::thread_local_vector<
-        aligned_coverage_level_to_num_param_combos>&
+    const thread_local_vector<aligned_coverage_level_to_num_param_combos>&
     get_cov_level_to_num_param_combos() const {
 
       return cov_level_to_num_param_combos_;
     }
 
   private:
-    const citcpp::detail::internal_model& model_;
-    const citcpp::detail::internal_test_set& test_set_;
-    citcpp::detail::covm_exec_handle_impl& exec_handle_;
-    const citcpp::detail::param_combo_parallel_iterator& param_combo_it_;
-    alignas(citcpp::detail::false_sharing_avoidance_alignment) citcpp::detail::
+    const internal_model& model_;
+    const internal_test_set& test_set_;
+    covm_exec_handle_impl& exec_handle_;
+    const param_combo_parallel_iterator& param_combo_it_;
+    alignas(false_sharing_avoidance_alignment)
         thread_local_vector<aligned_array_wrapper> bitset_backing_array_;
-    alignas(citcpp::detail::false_sharing_avoidance_alignment)
-        citcpp::detail::thread_local_vector<
-            citcpp::detail::aligned_vector<unsigned long long>> covered_tuples_;
-    alignas(citcpp::detail::false_sharing_avoidance_alignment)
-        citcpp::detail::thread_local_vector<
-            aligned_coverage_level_to_num_param_combos> cov_level_to_num_param_combos_;
+    alignas(false_sharing_avoidance_alignment)
+        thread_local_vector<aligned_vector<unsigned long long>> covered_tuples_;
+    alignas(false_sharing_avoidance_alignment) thread_local_vector<
+        aligned_coverage_level_to_num_param_combos> cov_level_to_num_param_combos_;
 };
 
-}  // namespace
-
-namespace citcpp {
-namespace detail {
-
-void measure_coverage(const unsigned int strength, const internal_model& model,
-                      const std::vector<unsigned int>& parameter_index_map,
-                      const internal_test_set& test_set,
-                      const constraint_handler& constr_handler,
-                      covm_exec_handle_impl& exec_handle,
-                      citcpp::coverage_measurement& covm) {
+inline void measure_coverage(
+    const unsigned int strength, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    const internal_test_set& test_set, const constraint_handler& constr_handler,
+    covm_exec_handle_impl& exec_handle, citcpp::coverage_measurement& covm) {
 
   const unsigned int product_of_max_parameter_sizes =
       get_product_of_max_n_parameter_sizes(parameter_index_map.size(), strength,
@@ -338,13 +321,12 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
   covm.set_coverered_tuples(std::move(covered_tuples));
 }
 
-void measure_coverage(const unsigned int strength, const internal_model& model,
-                      const std::vector<unsigned int>& parameter_index_map,
-                      const internal_test_set& test_set,
-                      const constraint_handler& constr_handler,
-                      covm_exec_handle_impl& exec_handle,
-                      citcpp::coverage_measurement& covm,
-                      functor_executor& exec) {
+inline void measure_coverage(
+    const unsigned int strength, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    const internal_test_set& test_set, const constraint_handler& constr_handler,
+    covm_exec_handle_impl& exec_handle, citcpp::coverage_measurement& covm,
+    functor_executor& exec) {
 
   if (!constr_handler.is_thread_safe()) {
     measure_coverage(strength, model, parameter_index_map, test_set,
