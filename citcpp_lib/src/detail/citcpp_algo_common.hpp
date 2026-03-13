@@ -76,4 +76,6 @@ number_of_combinations get_number_of_combinations(
 }  // namespace detail
 }  // namespace citcpp
 
+#include "citcpp_algo_common.tpp"
+
 #endif /* DETAIL_CITCPP_ALGO_COMMON_HPP_ */

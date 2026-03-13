@@ -1,15 +1,15 @@
-#include "citcpp_algo_common.hpp"
-
 #include "bitset.hpp"
+#include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
 #include "param_combo_iteration.hpp"
 #include "shared_constants.hpp"
 
-namespace {
+namespace citcpp {
+namespace detail {
 
 // Recursive helper function for combination generation and sum calculation
 // This function will be called by each async task.
-unsigned long long recursive_combine_and_sum(
+inline unsigned long long recursive_combine_and_sum(
     int start_idx, int current_level, unsigned long long current_prod_val,
     const std::vector<unsigned int>& factor_levels,
     const std::vector<unsigned int>& parameter_index_map) {
@@ -261,12 +261,7 @@ class num_combos_per_param_combo_functor_parallel {
         thread_local_vector<aligned_number_of_combinations> num_combos_;
 };
 
-}  // namespace
-
-namespace citcpp {
-namespace detail {
-
-unsigned long long number_of_combinations_to_cover(
+inline unsigned long long number_of_combinations_to_cover(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter) {
@@ -291,7 +286,7 @@ unsigned long long number_of_combinations_to_cover(
   }
 }
 
-unsigned long long number_of_combinations_to_cover(
+inline unsigned long long number_of_combinations_to_cover(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter, functor_executor& exec) {
@@ -348,7 +343,7 @@ unsigned long long number_of_combinations_to_cover(
   return num_combinations;
 }
 
-number_of_combinations get_number_of_combinations(
+inline number_of_combinations get_number_of_combinations(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter, const internal_test_set& test_set) {
@@ -367,7 +362,7 @@ number_of_combinations get_number_of_combinations(
   return per_param_combo_functor.get_number_of_combos();
 }
 
-number_of_combinations get_number_of_combinations(
+inline number_of_combinations get_number_of_combinations(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter, const internal_test_set& test_set,
