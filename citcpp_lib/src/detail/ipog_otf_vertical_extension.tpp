@@ -30,8 +30,6 @@ class ipog_otf_vertical_extension_functor {
           num_new_covered_tuples_(0) {}
 
     bool operator()(const param_vector& param_indices) {
-      using namespace citcpp::detail;
-
       ipog_vertical_extension_func(param_indices);
 
       reset_scratch_test(param_indices);
@@ -43,7 +41,6 @@ class ipog_otf_vertical_extension_functor {
                     bitset_non_owning_uint64::size_type bit_pos,
                     const param_vector& param_indices,
                     bitset_non_owning_uint64& values_combo_bitset) {
-      using namespace citcpp::detail;
 
       ipog_vertical_extension_value_combo_func(
           value_indices, bit_pos, param_indices, values_combo_bitset);
@@ -61,8 +58,6 @@ class ipog_otf_vertical_extension_functor {
 
   private:
     void ipog_vertical_extension_func(const param_vector& param_indices) {
-      using namespace citcpp::detail;
-
       bitset_non_owning_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
         bitset_size *= model_.get_parameter_num_values()[p];
@@ -115,7 +110,6 @@ class ipog_otf_vertical_extension_functor {
         bitset_non_owning_uint64::size_type bit_pos,
         const param_vector& param_indices,
         bitset_non_owning_uint64& values_combo_bitset) {
-      using namespace citcpp::detail;
 
       if (values_combo_bitset.test_and_set(bit_pos)) {
         return;
@@ -251,8 +245,6 @@ class ipog_otf_vertical_extension_functor {
     }
 
     void reset_scratch_test(const param_vector& param_indices) {
-      using namespace citcpp::detail;
-
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
         scratch_test_.get_values()[param_idx] = -1;

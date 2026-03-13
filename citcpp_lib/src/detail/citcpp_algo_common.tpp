@@ -91,8 +91,6 @@ class num_combos_per_param_combo_functor {
           num_combos_{0, 0} {}
 
     bool operator()(const param_vector& param_indices) {
-      using namespace citcpp::detail;
-
       bitset_non_owning_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
         bitset_size *= model_.get_parameter_num_values()[p];
@@ -172,8 +170,6 @@ class num_combos_per_param_combo_functor_parallel {
                       {number_of_combinations{0, 0}}) {}
 
     bool operator()(const param_vector& param_indices) {
-      using namespace citcpp::detail;
-
       bitset_non_owning_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
         bitset_size *= model_.get_parameter_num_values()[p];

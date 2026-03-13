@@ -33,8 +33,6 @@ class covm_per_param_combo_functor {
           covm_(covm) {}
 
     bool operator()(const param_vector& param_indices) {
-      using namespace citcpp::detail;
-
       bitset_non_owning_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
         bitset_size *= model_.get_parameter_num_values()[p];
@@ -140,8 +138,6 @@ class covm_per_param_combo_functor {
     }
 
     void reset_scratch_test(const param_vector& param_indices) {
-      using namespace citcpp::detail;
-
       for (unsigned int i = 0; i < param_indices.size(); ++i) {
         const unsigned int param_idx = param_indices[i];
         scratch_test_.get_values()[param_idx] = -1;
@@ -179,8 +175,6 @@ class covm_per_param_combo_functor_parallel {
           cov_level_to_num_param_combos_(param_combo_it.get_num_workers()) {}
 
     bool operator()(const param_vector& param_indices) {
-      using namespace citcpp::detail;
-
       bitset_non_owning_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
         bitset_size *= model_.get_parameter_num_values()[p];
