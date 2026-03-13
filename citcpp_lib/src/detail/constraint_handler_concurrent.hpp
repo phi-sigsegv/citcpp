@@ -68,4 +68,6 @@ class concurrent_constraint_handler : public constraint_handler {
 }  // namespace detail
 }  // namespace citcpp
 
+#include "constraint_handler_concurrent.tpp"
+
 #endif /* DETAIL_CONSTRAINT_HANDLER_CONCURRENT_HPP_ */

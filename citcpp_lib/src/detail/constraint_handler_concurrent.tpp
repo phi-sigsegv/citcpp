@@ -1,22 +1,19 @@
-#include "constraint_handler_concurrent.hpp"
-
 #include <mutex>
 
+#include "constraint_handler_concurrent.hpp"
 #include "shared_constants.hpp"
 
-namespace {
+namespace citcpp {
+namespace detail {
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    check_test_validity_task {
+class alignas(false_sharing_avoidance_alignment) check_test_validity_task {
 
   public:
     check_test_validity_task() = default;
 
-    check_test_validity_task(const citcpp::detail::test* test,
-                             unsigned int test_index,
-                             const citcpp::detail::constraint_handler* handler,
-                             citcpp::detail::bitset_uint64* result,
-                             std::mutex* mut)
+    check_test_validity_task(const test* test, unsigned int test_index,
+                             const constraint_handler* handler,
+                             bitset_uint64* result, std::mutex* mut)
         : test_(test),
           test_index_(test_index),
           handler_(handler),
@@ -40,24 +37,24 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     }
 
   private:
-    const citcpp::detail::test* test_;
+    const test* test_;
     unsigned int test_index_;
-    const citcpp::detail::constraint_handler* handler_;
-    citcpp::detail::bitset_uint64* result_;
+    const constraint_handler* handler_;
+    bitset_uint64* result_;
     std::mutex* mut_;
 };
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
+class alignas(false_sharing_avoidance_alignment)
     get_valid_parameter_assignments_task {
 
   public:
     get_valid_parameter_assignments_task() = default;
 
-    get_valid_parameter_assignments_task(
-        const citcpp::detail::test* test, unsigned int param_idx,
-        unsigned int test_index,
-        const citcpp::detail::constraint_handler* handler,
-        std::vector<citcpp::detail::bitset_uint64>* results)
+    get_valid_parameter_assignments_task(const test* test,
+                                         unsigned int param_idx,
+                                         unsigned int test_index,
+                                         const constraint_handler* handler,
+                                         std::vector<bitset_uint64>* results)
         : test_(test),
           param_idx_(param_idx),
           test_index_(test_index),
@@ -72,22 +69,19 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     }
 
   private:
-    const citcpp::detail::test* test_;
+    const test* test_;
     unsigned int param_idx_;
     unsigned int test_index_;
-    const citcpp::detail::constraint_handler* handler_;
-    std::vector<citcpp::detail::bitset_uint64>* results_;
+    const constraint_handler* handler_;
+    std::vector<bitset_uint64>* results_;
 };
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    replace_dont_care_values_task {
+class alignas(false_sharing_avoidance_alignment) replace_dont_care_values_task {
 
   public:
     replace_dont_care_values_task() = default;
 
-    replace_dont_care_values_task(
-        citcpp::detail::test* test,
-        const citcpp::detail::constraint_handler* handler)
+    replace_dont_care_values_task(test* test, const constraint_handler* handler)
         : test_(test), handler_(handler) {}
 
     virtual ~replace_dont_care_values_task() {}
@@ -95,27 +89,26 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     void operator()() { handler_->replace_dont_care_values(*test_); }
 
   private:
-    citcpp::detail::test* test_;
-    const citcpp::detail::constraint_handler* handler_;
+    test* test_;
+    const constraint_handler* handler_;
 };
 
-}  // namespace
-
-namespace citcpp {
-namespace detail {
-
-concurrent_constraint_handler::concurrent_constraint_handler(
+inline concurrent_constraint_handler::concurrent_constraint_handler(
     const constraint_handler& handler, functor_executor& exec)
     : base_type(), handler_(handler), exec_(exec) {}
 
-bool concurrent_constraint_handler::is_thread_safe() const { return true; }
+inline bool concurrent_constraint_handler::is_thread_safe() const {
+  return true;
+}
 
-bool concurrent_constraint_handler::is_valid_partial_test(const test& t) const {
+inline bool concurrent_constraint_handler::is_valid_partial_test(
+    const test& t) const {
 
   return handler_.is_valid_partial_test(t);
 }
 
-bitset_uint64 concurrent_constraint_handler::check_validity_of_partial_tests(
+inline bitset_uint64
+concurrent_constraint_handler::check_validity_of_partial_tests(
     const internal_test_set& test_set) const {
 
   bitset_uint64 result(test_set.get_list_of_tests().size());
@@ -138,13 +131,14 @@ bitset_uint64 concurrent_constraint_handler::check_validity_of_partial_tests(
   return result;
 }
 
-bitset_uint64 concurrent_constraint_handler::get_valid_parameter_assignments(
+inline bitset_uint64
+concurrent_constraint_handler::get_valid_parameter_assignments(
     const test& t, unsigned int param_idx) const {
 
   return handler_.get_valid_parameter_assignments(t, param_idx);
 }
 
-std::vector<bitset_uint64>
+inline std::vector<bitset_uint64>
 concurrent_constraint_handler::get_valid_parameter_assignments(
     const internal_test_set& test_set, unsigned int param_idx) const {
 
@@ -167,11 +161,12 @@ concurrent_constraint_handler::get_valid_parameter_assignments(
   return result;
 }
 
-void concurrent_constraint_handler::replace_dont_care_values(test& t) const {
+inline void concurrent_constraint_handler::replace_dont_care_values(
+    test& t) const {
   handler_.replace_dont_care_values(t);
 }
 
-void concurrent_constraint_handler::replace_dont_care_values(
+inline void concurrent_constraint_handler::replace_dont_care_values(
     internal_test_set& test_set) const {
 
   std::vector<replace_dont_care_values_task> tasks(
