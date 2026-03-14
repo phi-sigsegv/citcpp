@@ -30,7 +30,11 @@ inline unsigned long long recursive_combine_and_sum(
   return partial_sum;
 }
 
-class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task {
+class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task
+    : public functor_task_base<compute_partial_sum_task> {
+
+  private:
+    typedef functor_task_base<compute_partial_sum_task> base_type;
 
   public:
     compute_partial_sum_task() = default;
@@ -41,7 +45,8 @@ class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task {
         const std::vector<unsigned int>* factor_levels,
         const std::vector<unsigned int>* parameter_index_map,
         std::atomic_ullong* num_combinations)
-        : start_idx_(start_idx),
+        : base_type(),
+          start_idx_(start_idx),
           end_idx_(end_idx),
           num_params_to_select_(num_params_to_select),
           additional_factor_(additional_factor),
@@ -263,8 +268,9 @@ inline unsigned long long number_of_combinations_to_cover(
                                        model.get_parameter_num_values(),
                                        parameter_index_map);
     } else {
-      // We have exactly one parameter to select, which is just the one we have
-      // fixed. So we do not have to walk over combinations of parameters here.
+      // We have exactly one parameter to select, which is just the one we
+      // have fixed. So we do not have to walk over combinations of parameters
+      // here.
       return num_last_param_values;
     }
   } else {
@@ -281,7 +287,8 @@ inline unsigned long long number_of_combinations_to_cover(
   std::atomic_ullong num_combinations = 0;
 
   if (fixed_last_parameter) {
-    // Parallelization cannot really pay off if we have an interaction strength
+    // Parallelization cannot really pay off if we have an interaction
+    // strength
     // <= 2. So resort to the sequential implementation.
     if (t <= 2) {
       return number_of_combinations_to_cover(n, model, parameter_index_map, t,
@@ -306,7 +313,8 @@ inline unsigned long long number_of_combinations_to_cover(
       }
     }
   } else {
-    // Parallelization cannot really pay off if we have an interaction strength
+    // Parallelization cannot really pay off if we have an interaction
+    // strength
     // <= 1. So resort to the sequential implementation.
     if (t <= 1) {
       return number_of_combinations_to_cover(n, model, parameter_index_map, t,

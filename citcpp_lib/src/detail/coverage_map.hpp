@@ -257,14 +257,20 @@ class coverage_map_parallel_iterator {
     }
 
   private:
-    class alignas(false_sharing_avoidance_alignment) iterate_task {
+    class alignas(false_sharing_avoidance_alignment) iterate_task
+        : public functor_task_base<iterate_task> {
+
+      private:
+        typedef functor_task_base<iterate_task> base_type;
+
       public:
         iterate_task() = default;
 
         iterate_task(coverage_map_parallel_iterator* iterator,
                      unsigned long long start_index,
                      unsigned long long end_index)
-            : iterator_(iterator),
+            : base_type(),
+              iterator_(iterator),
               start_index_(start_index),
               end_index_(end_index) {}
 

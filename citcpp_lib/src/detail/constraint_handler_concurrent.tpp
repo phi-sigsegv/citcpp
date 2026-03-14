@@ -6,7 +6,11 @@
 namespace citcpp {
 namespace detail {
 
-class alignas(false_sharing_avoidance_alignment) check_test_validity_task {
+class alignas(false_sharing_avoidance_alignment) check_test_validity_task
+    : public functor_task_base<check_test_validity_task> {
+
+  private:
+    typedef functor_task_base<check_test_validity_task> base_type;
 
   public:
     check_test_validity_task() = default;
@@ -14,7 +18,8 @@ class alignas(false_sharing_avoidance_alignment) check_test_validity_task {
     check_test_validity_task(const test* test, unsigned int test_index,
                              const constraint_handler* handler,
                              bitset_uint64* result, std::mutex* mut)
-        : test_(test),
+        : base_type(),
+          test_(test),
           test_index_(test_index),
           handler_(handler),
           result_(result),
@@ -45,7 +50,11 @@ class alignas(false_sharing_avoidance_alignment) check_test_validity_task {
 };
 
 class alignas(false_sharing_avoidance_alignment)
-    get_valid_parameter_assignments_task {
+    get_valid_parameter_assignments_task
+    : public functor_task_base<get_valid_parameter_assignments_task> {
+
+  private:
+    typedef functor_task_base<get_valid_parameter_assignments_task> base_type;
 
   public:
     get_valid_parameter_assignments_task() = default;
@@ -55,7 +64,8 @@ class alignas(false_sharing_avoidance_alignment)
                                          unsigned int test_index,
                                          const constraint_handler* handler,
                                          std::vector<bitset_uint64>* results)
-        : test_(test),
+        : base_type(),
+          test_(test),
           param_idx_(param_idx),
           test_index_(test_index),
           handler_(handler),
@@ -76,13 +86,17 @@ class alignas(false_sharing_avoidance_alignment)
     std::vector<bitset_uint64>* results_;
 };
 
-class alignas(false_sharing_avoidance_alignment) replace_dont_care_values_task {
+class alignas(false_sharing_avoidance_alignment) replace_dont_care_values_task
+    : public functor_task_base<replace_dont_care_values_task> {
+
+  private:
+    typedef functor_task_base<replace_dont_care_values_task> base_type;
 
   public:
     replace_dont_care_values_task() = default;
 
     replace_dont_care_values_task(test* test, const constraint_handler* handler)
-        : test_(test), handler_(handler) {}
+        : base_type(), test_(test), handler_(handler) {}
 
     virtual ~replace_dont_care_values_task() {}
 
