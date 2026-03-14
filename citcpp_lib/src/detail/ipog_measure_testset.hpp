@@ -29,4 +29,6 @@ ipog_measure_testset_result ipog_measure_testset(
 }  // namespace detail
 }  // namespace citcpp
 
+#include "ipog_measure_testset.tpp"
+
 #endif /* IPOG_MEASURE_TESTSET_HPP_ */

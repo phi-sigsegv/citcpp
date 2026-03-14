@@ -13,7 +13,7 @@
 namespace citcpp {
 namespace detail {
 
-ipog_vertical_extension_result ipog_vertical_extension(
+ipog_vertical_extension_result ipog_otf_vertical_extension(
     const unsigned long long num_missing_combinations_to_cover,
     const constraint_handler& constr_handler,
     ipog_horizontal_extension_result&

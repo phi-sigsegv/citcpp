@@ -1,15 +1,13 @@
+#include "citcpp_utils.hpp"
 #include "ipog_measure_testset.hpp"
 
-#include "citcpp_utils.hpp"
+namespace citcpp {
+namespace detail {
 
-namespace {
-
-void measure_coverage(
-    citcpp::detail::coverage_map::second_level_type& value_combinations,
-    const citcpp::detail::internal_model& model,
-    const citcpp::detail::internal_test_set& test_set,
+inline void measure_coverage(
+    coverage_map::second_level_type& value_combinations,
+    const internal_model& model, const internal_test_set& test_set,
     unsigned long long& num_covered_tuples) {
-  using namespace citcpp::detail;
 
   const param_vector& param_indices =
       value_combinations.get_parameter_indices();
@@ -54,13 +52,11 @@ void measure_coverage(
 
 class ipog_measure_per_param_combo_functor {
   public:
-    ipog_measure_per_param_combo_functor(
-        const citcpp::detail::internal_model& model,
-        const citcpp::detail::internal_test_set& test_set)
+    ipog_measure_per_param_combo_functor(const internal_model& model,
+                                         const internal_test_set& test_set)
         : model_(model), test_set_(test_set), num_covered_tuples_(0) {}
 
-    bool operator()(
-        citcpp::detail::coverage_map::second_level_type& value_combinations) {
+    bool operator()(coverage_map::second_level_type& value_combinations) {
 
       measure_coverage(value_combinations, model_, test_set_,
                        num_covered_tuples_);
@@ -73,24 +69,22 @@ class ipog_measure_per_param_combo_functor {
     }
 
   private:
-    const citcpp::detail::internal_model& model_;
-    const citcpp::detail::internal_test_set& test_set_;
+    const internal_model& model_;
+    const internal_test_set& test_set_;
     unsigned long long num_covered_tuples_;
 };
 
 class ipog_measure_per_param_combo_functor_parallel {
   public:
     ipog_measure_per_param_combo_functor_parallel(
-        const citcpp::detail::internal_model& model,
-        const citcpp::detail::internal_test_set& test_set,
-        const citcpp::detail::coverage_map_parallel_iterator& cov_map_it)
+        const internal_model& model, const internal_test_set& test_set,
+        const coverage_map_parallel_iterator& cov_map_it)
         : model_(model),
           test_set_(test_set),
           cov_map_it_(cov_map_it),
           num_covered_tuples_() {}
 
-    bool operator()(
-        citcpp::detail::coverage_map::second_level_type& value_combinations) {
+    bool operator()(coverage_map::second_level_type& value_combinations) {
 
       auto& thread_local_num_covered_tuples_ =
           num_covered_tuples_[cov_map_it_.get_worker_id()].value;
@@ -111,19 +105,13 @@ class ipog_measure_per_param_combo_functor_parallel {
     }
 
   private:
-    const citcpp::detail::internal_model& model_;
-    const citcpp::detail::internal_test_set& test_set_;
-    const citcpp::detail::coverage_map_parallel_iterator& cov_map_it_;
-    citcpp::detail::thread_local_vector<citcpp::detail::aligned_ull_value>
-        num_covered_tuples_;
+    const internal_model& model_;
+    const internal_test_set& test_set_;
+    const coverage_map_parallel_iterator& cov_map_it_;
+    thread_local_vector<aligned_ull_value> num_covered_tuples_;
 };
 
-}  // namespace
-
-namespace citcpp {
-namespace detail {
-
-ipog_measure_testset_result ipog_measure_testset(
+inline ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations) {
 
@@ -144,7 +132,7 @@ ipog_measure_testset_result ipog_measure_testset(
   return result;
 }
 
-ipog_measure_testset_result ipog_measure_testset(
+inline ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
     functor_executor& exec) {

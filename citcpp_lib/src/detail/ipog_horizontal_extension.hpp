@@ -28,4 +28,6 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 }  // namespace detail
 }  // namespace citcpp
 
+#include "ipog_horizontal_extension.tpp"
+
 #endif /* IPOG_HORIZONTAL_EXTENSION_HPP_ */

@@ -1,21 +1,19 @@
-#include "ipog_otf_horizontal_extension.hpp"
-
 #include <algorithm>
 
 #include "citcpp_utils.hpp"
+#include "ipog_otf_horizontal_extension.hpp"
 #include "param_combo_iteration.hpp"
 #include "shared_constants.hpp"
 
-namespace {
+namespace citcpp {
+namespace detail {
 
-class ipog_horizontal_select_best_value_per_param_combo_functor {
+class ipog_otf_horizontal_select_best_value_per_param_combo_functor {
   public:
-    ipog_horizontal_select_best_value_per_param_combo_functor(
-        const unsigned int real_current_param_idx,
-        const citcpp::detail::test& test,
-        const citcpp::detail::bitset_uint64& valid_values,
-        unsigned int current_test_index,
-        const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
+    ipog_otf_horizontal_select_best_value_per_param_combo_functor(
+        const unsigned int real_current_param_idx, const test& test,
+        const bitset_uint64& valid_values, unsigned int current_test_index,
+        const internal_test_set& test_set, bool is_extend_mode,
         std::vector<unsigned long long>& gain_per_value)
         : real_current_param_idx_(real_current_param_idx),
           test_(test),
@@ -26,9 +24,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
           param_combo_gain_per_value_(gain_per_value.size()),
           gain_per_value_(gain_per_value) {}
 
-    bool operator()(const citcpp::detail::param_vector& param_indices) {
-      using namespace citcpp::detail;
-
+    bool operator()(const param_vector& param_indices) {
       const int current_param_value =
           test_.get_values()[real_current_param_idx_];
 
@@ -124,27 +120,24 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
 
   private:
     const unsigned int real_current_param_idx_;
-    const citcpp::detail::test& test_;
-    const citcpp::detail::bitset_uint64& valid_values_;
+    const test& test_;
+    const bitset_uint64& valid_values_;
     const unsigned int current_test_index_;
-    const citcpp::detail::internal_test_set& test_set_;
+    const internal_test_set& test_set_;
     const bool is_extend_mode_;
     std::vector<unsigned int> param_combo_gain_per_value_;
     std::vector<unsigned long long>& gain_per_value_;
 };
 
-class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
+class ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel {
   public:
-    ipog_horizontal_select_best_value_per_param_combo_functor_parallel(
+    ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel(
         const unsigned int real_current_param_idx,
-        const unsigned int num_current_param_values,
-        const citcpp::detail::test& test,
-        const citcpp::detail::bitset_uint64& valid_values,
-        unsigned int current_test_index,
-        const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
-        citcpp::detail::thread_local_vector<
-            citcpp::detail::aligned_vector<unsigned long long>>& gain_per_value,
-        const citcpp::detail::functor_executor& exec)
+        const unsigned int num_current_param_values, const test& test,
+        const bitset_uint64& valid_values, unsigned int current_test_index,
+        const internal_test_set& test_set, bool is_extend_mode,
+        thread_local_vector<aligned_vector<unsigned long long>>& gain_per_value,
+        const functor_executor& exec)
         : real_current_param_idx_(real_current_param_idx),
           test_(test),
           valid_values_(valid_values),
@@ -154,13 +147,10 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
           exec_(exec),
           param_combo_gain_per_value_(
               exec.get_num_workers(),
-              citcpp::detail::aligned_vector<unsigned int>(
-                  num_current_param_values, 0)),
+              aligned_vector<unsigned int>(num_current_param_values, 0)),
           gain_per_value_(gain_per_value) {}
 
-    bool operator()(const citcpp::detail::param_vector& param_indices) {
-      using namespace citcpp::detail;
-
+    bool operator()(const param_vector& param_indices) {
       std::vector<unsigned int>& thread_local_param_combo_gain_per_value =
           param_combo_gain_per_value_[exec_.get_worker_id()].value;
       std::vector<unsigned long long>& thread_local_gain_per_value =
@@ -251,38 +241,30 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
 
   private:
     const unsigned int real_current_param_idx_;
-    const citcpp::detail::test& test_;
-    const citcpp::detail::bitset_uint64& valid_values_;
+    const test& test_;
+    const bitset_uint64& valid_values_;
     const unsigned int current_test_index_;
-    const citcpp::detail::internal_test_set& test_set_;
+    const internal_test_set& test_set_;
     const bool is_extend_mode_;
-    const citcpp::detail::functor_executor& exec_;
-    alignas(citcpp::detail::false_sharing_avoidance_alignment)
-        citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
-            unsigned int>> param_combo_gain_per_value_;
-    alignas(citcpp::detail::false_sharing_avoidance_alignment)
-        citcpp::detail::thread_local_vector<citcpp::detail::aligned_vector<
-            unsigned long long>>& gain_per_value_;
+    const functor_executor& exec_;
+    alignas(false_sharing_avoidance_alignment) thread_local_vector<
+        aligned_vector<unsigned int>> param_combo_gain_per_value_;
+    alignas(false_sharing_avoidance_alignment) thread_local_vector<
+        aligned_vector<unsigned long long>>& gain_per_value_;
 };
 
-struct new_covered_tuples_and_selected_value {
-    unsigned long long num_new_covered_tuples_;
-    int selected_value_;
-};
-
-new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
+inline new_covered_tuples_and_selected_value
+ipog_otf_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::bitset_uint64& valid_values,
-    const citcpp::detail::test& test, unsigned int current_test_index,
-    const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
-    std::vector<std::pair<const citcpp::detail::internal_relation*,
-                          citcpp::detail::param_combo_iterator>>&
+    const bitset_uint64& valid_values, const test& test,
+    unsigned int current_test_index, const internal_test_set& test_set,
+    bool is_extend_mode,
+    std::vector<std::pair<const internal_relation*, param_combo_iterator>>&
         param_combo_its,
     unsigned int& last_picked_value, std::vector<int>& value_to_valid_options,
-    std::unordered_map<const citcpp::detail::internal_relation*,
-                       unsigned long long>& num_covered_tuples) {
-  using namespace citcpp::detail;
+    std::unordered_map<const internal_relation*, unsigned long long>&
+        num_covered_tuples) {
 
   new_covered_tuples_and_selected_value res{0, 0};
 
@@ -295,7 +277,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
   for (int relation_idx = 0; relation_idx < param_combo_its.size();
        relation_idx++) {
 
-    ipog_horizontal_select_best_value_per_param_combo_functor
+    ipog_otf_horizontal_select_best_value_per_param_combo_functor
         per_param_combo_functor(real_current_param_idx, test, valid_values,
                                 current_test_index, test_set, is_extend_mode,
                                 relation_gain_per_value[relation_idx]);
@@ -355,20 +337,19 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
   return res;
 }
 
-new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
+inline new_covered_tuples_and_selected_value
+ipog_otf_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
-    const citcpp::detail::bitset_uint64& valid_values,
-    const citcpp::detail::test& test, unsigned int current_test_index,
-    const citcpp::detail::internal_test_set& test_set, bool is_extend_mode,
-    std::vector<std::pair<const citcpp::detail::internal_relation*,
-                          citcpp::detail::param_combo_parallel_iterator>>&
-        param_combo_its,
-    const citcpp::detail::functor_executor& exec,
-    unsigned int& last_picked_value, std::vector<int>& value_to_valid_options,
-    std::unordered_map<const citcpp::detail::internal_relation*,
-                       unsigned long long>& num_covered_tuples) {
-  using namespace citcpp::detail;
+    const bitset_uint64& valid_values, const test& test,
+    unsigned int current_test_index, const internal_test_set& test_set,
+    bool is_extend_mode,
+    std::vector<std::pair<const internal_relation*,
+                          param_combo_parallel_iterator>>& param_combo_its,
+    const functor_executor& exec, unsigned int& last_picked_value,
+    std::vector<int>& value_to_valid_options,
+    std::unordered_map<const internal_relation*, unsigned long long>&
+        num_covered_tuples) {
 
   new_covered_tuples_and_selected_value res{0, 0};
 
@@ -386,7 +367,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
   for (int relation_idx = 0; relation_idx < param_combo_its.size();
        relation_idx++) {
 
-    ipog_horizontal_select_best_value_per_param_combo_functor_parallel
+    ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel
         per_param_combo_functor(real_current_param_idx,
                                 num_current_param_values, test, valid_values,
                                 current_test_index, test_set, is_extend_mode,
@@ -457,29 +438,7 @@ new_covered_tuples_and_selected_value ipog_horizontal_select_best_value(
   return res;
 }
 
-std::vector<int> get_value_to_valid_options(
-    int num_current_param_values,
-    const std::vector<citcpp::detail::bitset_uint64>& valid_values) {
-
-  std::vector<int> valid_value_options(num_current_param_values, 0);
-
-  for (const auto& test_valid_values : valid_values) {
-    for (int v = 0; v < num_current_param_values; ++v) {
-      if (test_valid_values.test(v)) {
-        valid_value_options[v] += 1;
-      }
-    }
-  }
-
-  return valid_value_options;
-}
-
-}  // namespace
-
-namespace citcpp {
-namespace detail {
-
-ipog_horizontal_extension_result ipog_horizontal_extension(
+inline ipog_horizontal_extension_result ipog_otf_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     const constraint_handler& constr_handler, internal_test_set& test_set,
     const internal_model& model,
@@ -528,7 +487,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     }
 
     new_covered_tuples_and_selected_value res =
-        ipog_horizontal_select_best_value(
+        ipog_otf_horizontal_select_best_value(
             real_current_param_idx, num_current_param_values,
             valid_values[test_index], t, test_index, test_set, is_extend_mode,
             param_combo_its, last_picked_value, value_to_valid_options,
@@ -566,7 +525,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
   return result;
 }
 
-ipog_horizontal_extension_result ipog_horizontal_extension(
+inline ipog_horizontal_extension_result ipog_otf_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     const constraint_handler& constr_handler, internal_test_set& test_set,
     const internal_model& model,
@@ -618,7 +577,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     }
 
     new_covered_tuples_and_selected_value res =
-        ipog_horizontal_select_best_value(
+        ipog_otf_horizontal_select_best_value(
             real_current_param_idx, num_current_param_values,
             valid_values[test_index], t, test_index, test_set, is_extend_mode,
             param_combo_its, exec, last_picked_value, value_to_valid_options,

@@ -77,12 +77,12 @@ void main_ipog_loop_body(
         reported_number_combos_to_cover);
   } else {
     auto horizontal_ext_res =
-        with_mt ? ipog_horizontal_extension(number_combos_to_process,
-                                            constr_handler, test_set, model,
-                                            relations, is_extend_mode, exec)
-                : ipog_horizontal_extension(number_combos_to_process,
-                                            constr_handler, test_set, model,
-                                            relations, is_extend_mode);
+        with_mt ? ipog_otf_horizontal_extension(number_combos_to_process,
+                                                constr_handler, test_set, model,
+                                                relations, is_extend_mode, exec)
+                : ipog_otf_horizontal_extension(number_combos_to_process,
+                                                constr_handler, test_set, model,
+                                                relations, is_extend_mode);
 
     exec.suspend_workers();
 
@@ -111,7 +111,7 @@ void main_ipog_loop_body(
     }
 
     if (number_combos_to_process > 0) {
-      auto vertical_ext_res = ipog_vertical_extension(
+      auto vertical_ext_res = ipog_otf_vertical_extension(
           number_combos_to_process, constr_handler, horizontal_ext_res,
           test_set, model, relations);
 
