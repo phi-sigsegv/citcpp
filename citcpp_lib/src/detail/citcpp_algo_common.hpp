@@ -30,10 +30,11 @@ unsigned long long number_of_combinations_to_cover(
  * from the parameters [0, ... ,n-2], and extend those by always
  * appending a value from parameter n-1 to them.
  */
+template <conc_is_void_functor_executor T_EXEC>
 unsigned long long number_of_combinations_to_cover(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
-    bool fixed_last_parameter, functor_executor& exec);
+    bool fixed_last_parameter, T_EXEC& exec);
 
 struct number_of_combinations {
     unsigned long long num_combos_to_cover;
@@ -67,11 +68,11 @@ number_of_combinations get_number_of_combinations(
  * In addition, this method analyzes the given test set and checks how many
  * of the combinations are covered by it.
  */
+template <conc_is_void_functor_executor T_EXEC>
 number_of_combinations get_number_of_combinations(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
-    bool fixed_last_parameter, const internal_test_set& test_set,
-    functor_executor& exec);
+    bool fixed_last_parameter, const internal_test_set& test_set, T_EXEC& exec);
 
 }  // namespace detail
 }  // namespace citcpp

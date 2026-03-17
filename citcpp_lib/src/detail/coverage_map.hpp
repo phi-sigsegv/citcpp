@@ -160,12 +160,12 @@ class coverage_map_iterator {
     coverage_map_base& cov_map_;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class coverage_map_parallel_iterator {
   public:
     coverage_map_parallel_iterator() = default;
 
-    coverage_map_parallel_iterator(coverage_map_base& cov_map,
-                                   functor_executor& exec)
+    coverage_map_parallel_iterator(coverage_map_base& cov_map, T_EXEC& exec)
         : cov_map_(&cov_map), exec_(&exec), iterate_tasks_(), visitor_() {
       const unsigned long long total_param_combos =
           cov_map.get_coverage_map().size();
@@ -250,10 +250,7 @@ class coverage_map_parallel_iterator {
       visitor_ = visitor;
 
       auto exec_scope(exec_->create_execution_scope());
-      for (unsigned int i = 0; i < iterate_tasks_.size(); ++i) {
-        iterate_task& task = iterate_tasks_[i];
-        exec_scope->spawn_execution(task);
-      }
+      exec_scope.spawn_execution(iterate_tasks_);
     }
 
   private:
@@ -301,7 +298,7 @@ class coverage_map_parallel_iterator {
 
   private:
     coverage_map_base* cov_map_;
-    functor_executor* exec_;
+    T_EXEC* exec_;
     std::vector<iterate_task> iterate_tasks_;
     function_ref<bool(coverage_map_base::second_level_type&)> visitor_;
 };
@@ -346,8 +343,9 @@ class coverage_map : public coverage_map_base {
       return coverage_map_iterator(*this);
     }
 
-    coverage_map_parallel_iterator create_parallel_iterator(
-        functor_executor& exec) {
+    template <conc_is_void_functor_executor T_EXEC>
+    coverage_map_parallel_iterator<T_EXEC> create_parallel_iterator(
+        T_EXEC& exec) {
 
       return coverage_map_parallel_iterator(*this, exec);
     }

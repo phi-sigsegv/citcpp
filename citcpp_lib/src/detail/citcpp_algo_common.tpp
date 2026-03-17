@@ -160,12 +160,13 @@ struct alignas(false_sharing_avoidance_alignment)
     number_of_combinations value;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class num_combos_per_param_combo_functor_parallel {
   public:
     num_combos_per_param_combo_functor_parallel(
         const internal_model& model, const internal_test_set& test_set,
         const unsigned int bitset_backing_array_size,
-        const param_combo_parallel_iterator& param_combo_it)
+        const param_combo_parallel_iterator<T_EXEC>& param_combo_it)
         : model_(model),
           test_set_(test_set),
           param_combo_it_(param_combo_it),
@@ -246,7 +247,7 @@ class num_combos_per_param_combo_functor_parallel {
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
-    const param_combo_parallel_iterator& param_combo_it_;
+    const param_combo_parallel_iterator<T_EXEC>& param_combo_it_;
     alignas(false_sharing_avoidance_alignment)
         thread_local_vector<aligned_array_wrapper> bitset_backing_array_;
     alignas(false_sharing_avoidance_alignment)
@@ -279,10 +280,11 @@ inline unsigned long long number_of_combinations_to_cover(
   }
 }
 
-inline unsigned long long number_of_combinations_to_cover(
+template <conc_is_void_functor_executor T_EXEC>
+unsigned long long number_of_combinations_to_cover(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
-    bool fixed_last_parameter, functor_executor& exec) {
+    bool fixed_last_parameter, T_EXEC& exec) {
 
   std::atomic_ullong num_combinations = 0;
 
@@ -309,7 +311,7 @@ inline unsigned long long number_of_combinations_to_cover(
             compute_partial_sum_task(i, i, t - 1, num_last_param_values,
                                      &model.get_parameter_num_values(),
                                      &parameter_index_map, &num_combinations);
-        exec_scope->spawn_execution(tasks[i - array_offset]);
+        exec_scope.spawn_execution(tasks[i - array_offset]);
       }
     }
   } else {
@@ -330,7 +332,7 @@ inline unsigned long long number_of_combinations_to_cover(
         tasks[i - array_offset] = compute_partial_sum_task(
             i, i, t, 1, &model.get_parameter_num_values(), &parameter_index_map,
             &num_combinations);
-        exec_scope->spawn_execution(tasks[i - array_offset]);
+        exec_scope.spawn_execution(tasks[i - array_offset]);
       }
     }
   }
@@ -357,21 +359,23 @@ inline number_of_combinations get_number_of_combinations(
   return per_param_combo_functor.get_number_of_combos();
 }
 
-inline number_of_combinations get_number_of_combinations(
+template <conc_is_void_functor_executor T_EXEC>
+number_of_combinations get_number_of_combinations(
     unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter, const internal_test_set& test_set,
-    functor_executor& exec) {
+    T_EXEC& exec) {
 
   const unsigned int product_of_max_parameter_sizes =
       get_product_of_max_n_parameter_sizes(parameter_index_map.size(), t, model,
                                            parameter_index_map);
 
-  num_combos_per_param_combo_functor per_param_combo_functor(
-      model, test_set, product_of_max_parameter_sizes);
+  param_combo_parallel_iterator<T_EXEC> param_combo_it(
+      n, t, parameter_index_map, fixed_last_parameter, exec);
 
-  param_combo_parallel_iterator param_combo_it(n, t, parameter_index_map,
-                                               fixed_last_parameter, exec);
+  num_combos_per_param_combo_functor_parallel<T_EXEC> per_param_combo_functor(
+      model, test_set, product_of_max_parameter_sizes, param_combo_it);
+
   param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   return per_param_combo_functor.get_number_of_combos();

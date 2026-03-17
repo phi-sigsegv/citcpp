@@ -156,13 +156,14 @@ class covm_per_param_combo_functor {
     citcpp::coverage_measurement& covm_;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class covm_per_param_combo_functor_parallel {
   public:
     covm_per_param_combo_functor_parallel(
         const internal_model& model, const internal_test_set& test_set,
         const unsigned int bitset_backing_array_size,
         covm_exec_handle_impl& exec_handle,
-        const param_combo_parallel_iterator& param_combo_it)
+        const param_combo_parallel_iterator<T_EXEC>& param_combo_it)
         : model_(model),
           test_set_(test_set),
           exec_handle_(exec_handle),
@@ -274,7 +275,7 @@ class covm_per_param_combo_functor_parallel {
     const internal_model& model_;
     const internal_test_set& test_set_;
     covm_exec_handle_impl& exec_handle_;
-    const param_combo_parallel_iterator& param_combo_it_;
+    const param_combo_parallel_iterator<T_EXEC>& param_combo_it_;
     alignas(false_sharing_avoidance_alignment)
         thread_local_vector<aligned_array_wrapper> bitset_backing_array_;
     alignas(false_sharing_avoidance_alignment)
@@ -315,12 +316,13 @@ inline void measure_coverage(
   covm.set_coverered_tuples(std::move(covered_tuples));
 }
 
-inline void measure_coverage(
-    const unsigned int strength, const internal_model& model,
-    const std::vector<unsigned int>& parameter_index_map,
-    const internal_test_set& test_set, const constraint_handler& constr_handler,
-    covm_exec_handle_impl& exec_handle, citcpp::coverage_measurement& covm,
-    functor_executor& exec) {
+template <conc_is_void_functor_executor T_EXEC>
+void measure_coverage(const unsigned int strength, const internal_model& model,
+                      const std::vector<unsigned int>& parameter_index_map,
+                      const internal_test_set& test_set,
+                      const constraint_handler& constr_handler,
+                      covm_exec_handle_impl& exec_handle,
+                      citcpp::coverage_measurement& covm, T_EXEC& exec) {
 
   if (!constr_handler.is_thread_safe()) {
     measure_coverage(strength, model, parameter_index_map, test_set,
@@ -332,10 +334,10 @@ inline void measure_coverage(
       get_product_of_max_n_parameter_sizes(parameter_index_map.size(), strength,
                                            model, parameter_index_map);
 
-  param_combo_parallel_iterator param_combo_it(
+  param_combo_parallel_iterator<T_EXEC> param_combo_it(
       parameter_index_map.size(), strength, parameter_index_map, false, exec);
 
-  covm_per_param_combo_functor_parallel per_param_combo_functor(
+  covm_per_param_combo_functor_parallel<T_EXEC> per_param_combo_functor(
       model, test_set, product_of_max_parameter_sizes, exec_handle,
       param_combo_it);
 

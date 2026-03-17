@@ -107,22 +107,26 @@ class alignas(false_sharing_avoidance_alignment) replace_dont_care_values_task
     const constraint_handler* handler_;
 };
 
-inline concurrent_constraint_handler::concurrent_constraint_handler(
-    const constraint_handler& handler, functor_executor& exec)
+template <conc_is_void_functor_executor T_EXEC>
+concurrent_constraint_handler<T_EXEC>::concurrent_constraint_handler(
+    const constraint_handler& handler, T_EXEC& exec)
     : base_type(), handler_(handler), exec_(exec) {}
 
-inline bool concurrent_constraint_handler::is_thread_safe() const {
+template <conc_is_void_functor_executor T_EXEC>
+bool concurrent_constraint_handler<T_EXEC>::is_thread_safe() const {
   return true;
 }
 
-inline bool concurrent_constraint_handler::is_valid_partial_test(
+template <conc_is_void_functor_executor T_EXEC>
+bool concurrent_constraint_handler<T_EXEC>::is_valid_partial_test(
     const test& t) const {
 
   return handler_.is_valid_partial_test(t);
 }
 
-inline bitset_uint64
-concurrent_constraint_handler::check_validity_of_partial_tests(
+template <conc_is_void_functor_executor T_EXEC>
+bitset_uint64
+concurrent_constraint_handler<T_EXEC>::check_validity_of_partial_tests(
     const internal_test_set& test_set) const {
 
   bitset_uint64 result(test_set.get_list_of_tests().size());
@@ -137,7 +141,7 @@ concurrent_constraint_handler::check_validity_of_partial_tests(
     for (const auto& t : test_set.get_list_of_tests()) {
       tasks[test_index] =
           check_test_validity_task(&t, test_index, &handler_, &result, &mut);
-      exec_scope->spawn_execution(tasks[test_index]);
+      exec_scope.spawn_execution(tasks[test_index]);
       ++test_index;
     }
   }
@@ -145,15 +149,17 @@ concurrent_constraint_handler::check_validity_of_partial_tests(
   return result;
 }
 
-inline bitset_uint64
-concurrent_constraint_handler::get_valid_parameter_assignments(
+template <conc_is_void_functor_executor T_EXEC>
+bitset_uint64
+concurrent_constraint_handler<T_EXEC>::get_valid_parameter_assignments(
     const test& t, unsigned int param_idx) const {
 
   return handler_.get_valid_parameter_assignments(t, param_idx);
 }
 
-inline std::vector<bitset_uint64>
-concurrent_constraint_handler::get_valid_parameter_assignments(
+template <conc_is_void_functor_executor T_EXEC>
+std::vector<bitset_uint64>
+concurrent_constraint_handler<T_EXEC>::get_valid_parameter_assignments(
     const internal_test_set& test_set, unsigned int param_idx) const {
 
   std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
@@ -167,7 +173,7 @@ concurrent_constraint_handler::get_valid_parameter_assignments(
     for (const auto& t : test_set.get_list_of_tests()) {
       tasks[test_index] = get_valid_parameter_assignments_task(
           &t, param_idx, test_index, &handler_, &result);
-      exec_scope->spawn_execution(tasks[test_index]);
+      exec_scope.spawn_execution(tasks[test_index]);
       ++test_index;
     }
   }
@@ -175,12 +181,14 @@ concurrent_constraint_handler::get_valid_parameter_assignments(
   return result;
 }
 
-inline void concurrent_constraint_handler::replace_dont_care_values(
+template <conc_is_void_functor_executor T_EXEC>
+void concurrent_constraint_handler<T_EXEC>::replace_dont_care_values(
     test& t) const {
   handler_.replace_dont_care_values(t);
 }
 
-inline void concurrent_constraint_handler::replace_dont_care_values(
+template <conc_is_void_functor_executor T_EXEC>
+void concurrent_constraint_handler<T_EXEC>::replace_dont_care_values(
     internal_test_set& test_set) const {
 
   std::vector<replace_dont_care_values_task> tasks(
@@ -191,7 +199,7 @@ inline void concurrent_constraint_handler::replace_dont_care_values(
     unsigned int test_index = 0;
     for (auto& t : test_set.get_list_of_tests()) {
       tasks[test_index] = replace_dont_care_values_task(&t, &handler_);
-      exec_scope->spawn_execution(tasks[test_index]);
+      exec_scope.spawn_execution(tasks[test_index]);
       ++test_index;
     }
   }

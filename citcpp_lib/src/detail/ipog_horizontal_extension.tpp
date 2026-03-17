@@ -77,13 +77,14 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
     std::vector<unsigned long long>& gain_per_value_;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor_parallel(
         const internal_model& model, const test& test,
         const bitset_uint64& valid_values,
         thread_local_vector<aligned_vector<unsigned long long>>& gain_per_value,
-        const functor_executor& exec)
+        const T_EXEC& exec)
         : model_(model),
           test_(test),
           valid_values_(valid_values),
@@ -149,7 +150,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     const internal_model& model_;
     const test& test_;
     const bitset_uint64& valid_values_;
-    const functor_executor& exec_;
+    const T_EXEC& exec_;
     alignas(false_sharing_avoidance_alignment) thread_local_vector<
         aligned_vector<unsigned long long>>& gain_per_value_;
 };
@@ -213,14 +214,15 @@ inline int ipog_horizontal_select_best_value(
   return value_with_max_gain;
 }
 
-inline int ipog_horizontal_select_best_value(
+template <conc_is_void_functor_executor T_EXEC>
+int ipog_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values, const internal_model& model,
     const bitset_uint64& valid_values, const test& test,
-    std::vector<
-        std::pair<const internal_relation*, coverage_map_parallel_iterator>>&
+    std::vector<std::pair<const internal_relation*,
+                          coverage_map_parallel_iterator<T_EXEC>>>&
         relation_cov_map_its,
-    const functor_executor& exec, unsigned int& last_picked_value,
+    const T_EXEC& exec, unsigned int& last_picked_value,
     std::vector<int>& value_to_valid_options) {
 
   // We first check whether the test already has a concrete value
@@ -239,7 +241,7 @@ inline int ipog_horizontal_select_best_value(
       exec.get_num_workers(),
       aligned_vector<unsigned long long>(num_current_param_values, 0));
 
-  ipog_horizontal_select_best_value_per_param_combo_functor_parallel
+  ipog_horizontal_select_best_value_per_param_combo_functor_parallel<T_EXEC>
       per_param_combo_functor(model, test, valid_values, gain_per_value, exec);
   for (auto& cov_map_it : relation_cov_map_its) {
     cov_map_it.second.visit_all_parameter_combinations(per_param_combo_functor);
@@ -342,11 +344,11 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
     unsigned long long num_new_covered_tuples_;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel(
-        const internal_model& model, const test& test,
-        const functor_executor& exec)
+        const internal_model& model, const test& test, const T_EXEC& exec)
         : model_(model),
           test_(test),
           exec_(exec),
@@ -411,7 +413,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
   private:
     const internal_model& model_;
     const test& test_;
-    const functor_executor& exec_;
+    const T_EXEC& exec_;
     alignas(false_sharing_avoidance_alignment)
         thread_local_vector<aligned_ull_value> num_new_covered_tuples_;
 };
@@ -433,16 +435,17 @@ inline void ipog_horizontal_update_coverage_map(
   }
 }
 
-inline void ipog_horizontal_update_coverage_map(
+template <conc_is_void_functor_executor T_EXEC>
+void ipog_horizontal_update_coverage_map(
     const internal_model& model, const test& test,
-    std::vector<
-        std::pair<const internal_relation*, coverage_map_parallel_iterator>>&
+    std::vector<std::pair<const internal_relation*,
+                          coverage_map_parallel_iterator<T_EXEC>>>&
         relation_cov_map_its,
-    const functor_executor& exec,
+    const T_EXEC& exec,
     std::unordered_map<const internal_relation*, unsigned long long>&
         num_covered_tuples) {
 
-  ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel
+  ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel<T_EXEC>
       per_param_combo_functor(model, test, exec);
   for (auto& cov_map_it : relation_cov_map_its) {
     per_param_combo_functor.reset_num_new_covered_tuples();
@@ -588,6 +591,7 @@ class
     unsigned long long num_new_covered_tuples_;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel {
   public:
@@ -596,7 +600,7 @@ class
         const bitset_uint64& valid_values,
         thread_local_vector<aligned_vector<unsigned long long>>& gain_per_value,
         const bool enable_coverage_update, const bool enable_gain_computation,
-        const functor_executor& exec)
+        const T_EXEC& exec)
         : model_(model),
           prev_test_(prev_test),
           test_(test),
@@ -734,7 +738,7 @@ class
     const bitset_uint64& valid_values_;
     const bool enable_coverage_update_;
     const bool enable_gain_computation_;
-    const functor_executor& exec_;
+    const T_EXEC& exec_;
     alignas(false_sharing_avoidance_alignment) thread_local_vector<
         aligned_vector<unsigned long long>>& gain_per_value_;
     alignas(false_sharing_avoidance_alignment)
@@ -818,15 +822,16 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
   return res;
 }
 
-inline new_covered_tuples_and_selected_value
+template <conc_is_void_functor_executor T_EXEC>
+new_covered_tuples_and_selected_value
 ipog_horizontal_update_coverage_map_and_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values, const internal_model& model,
     const bitset_uint64& valid_values, const test& prev_test, const test& test,
-    std::vector<
-        std::pair<const internal_relation*, coverage_map_parallel_iterator>>&
+    std::vector<std::pair<const internal_relation*,
+                          coverage_map_parallel_iterator<T_EXEC>>>&
         relation_cov_map_its,
-    const functor_executor& exec, unsigned int& last_picked_value,
+    const T_EXEC& exec, unsigned int& last_picked_value,
     std::vector<int>& value_to_valid_options,
     std::unordered_map<const internal_relation*, unsigned long long>&
         num_covered_tuples) {
@@ -855,7 +860,8 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
 
   new_covered_tuples_and_selected_value res{0, 0};
 
-  ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel
+  ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel<
+      T_EXEC>
       per_param_combo_functor(
           model, prev_test, test, valid_values, gain_per_value,
           prev_test.get_values()[real_current_param_idx] >= 0,
@@ -1046,11 +1052,12 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
   return result;
 }
 
-inline ipog_horizontal_extension_result ipog_horizontal_extension(
+template <conc_is_void_functor_executor T_EXEC>
+ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     const constraint_handler& constr_handler, internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
-    functor_executor& exec) {
+    T_EXEC& exec) {
 
   const unsigned int real_current_param_idx =
       relations[0].second.get_parameter_index_map()
@@ -1068,8 +1075,8 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
       list_intrusive<test_list_intrusive_integ>(),
       std::unordered_map<const internal_relation*, unsigned long long>()};
 
-  std::vector<
-      std::pair<const internal_relation*, coverage_map_parallel_iterator>>
+  std::vector<std::pair<const internal_relation*,
+                        coverage_map_parallel_iterator<T_EXEC>>>
       relation_cov_map_its;
   for (auto& rel : relations) {
     relation_cov_map_its.emplace_back(

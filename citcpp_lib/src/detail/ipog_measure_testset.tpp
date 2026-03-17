@@ -74,11 +74,12 @@ class ipog_measure_per_param_combo_functor {
     unsigned long long num_covered_tuples_;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class ipog_measure_per_param_combo_functor_parallel {
   public:
     ipog_measure_per_param_combo_functor_parallel(
         const internal_model& model, const internal_test_set& test_set,
-        const coverage_map_parallel_iterator& cov_map_it)
+        const coverage_map_parallel_iterator<T_EXEC>& cov_map_it)
         : model_(model),
           test_set_(test_set),
           cov_map_it_(cov_map_it),
@@ -107,7 +108,7 @@ class ipog_measure_per_param_combo_functor_parallel {
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
-    const coverage_map_parallel_iterator& cov_map_it_;
+    const coverage_map_parallel_iterator<T_EXEC>& cov_map_it_;
     thread_local_vector<aligned_ull_value> num_covered_tuples_;
 };
 
@@ -132,20 +133,21 @@ inline ipog_measure_testset_result ipog_measure_testset(
   return result;
 }
 
-inline ipog_measure_testset_result ipog_measure_testset(
+template <conc_is_void_functor_executor T_EXEC>
+ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
-    functor_executor& exec) {
+    T_EXEC& exec) {
 
   // First initialize the result object.
   ipog_measure_testset_result result;
 
   for (auto& rel : relations) {
-    coverage_map_parallel_iterator cov_map_it =
+    coverage_map_parallel_iterator<T_EXEC> cov_map_it =
         rel.second.create_parallel_iterator(exec);
 
-    ipog_measure_per_param_combo_functor_parallel per_param_combo_functor(
-        model, test_set, cov_map_it);
+    ipog_measure_per_param_combo_functor_parallel<T_EXEC>
+        per_param_combo_functor(model, test_set, cov_map_it);
     cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
     result.num_covered_tuples[rel.first] =

@@ -98,6 +98,7 @@ class param_combo_iterator {
     param_vector param_indices_;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class param_combo_parallel_iterator {
   public:
     param_combo_parallel_iterator() = default;
@@ -106,7 +107,7 @@ class param_combo_parallel_iterator {
         unsigned int num_params_to_select_from,
         unsigned int num_params_to_select,
         const std::vector<unsigned int>& parameter_index_map,
-        bool fixed_last_parameter, functor_executor& exec)
+        bool fixed_last_parameter, T_EXEC& exec)
         : num_params_to_select_from_(num_params_to_select_from),
           num_params_to_select_(num_params_to_select),
           parameter_index_map_(&parameter_index_map),
@@ -236,10 +237,7 @@ class param_combo_parallel_iterator {
         visitor(param_indices_);
       } else {
         auto exec_scope(exec_->create_execution_scope());
-        for (int i = 0; i < iterate_tasks_.size(); ++i) {
-          iterate_task& task = iterate_tasks_[i];
-          exec_scope->spawn_execution(task);
-        }
+        exec_scope.spawn_execution(iterate_tasks_);
       }
     }
 
@@ -327,7 +325,7 @@ class param_combo_parallel_iterator {
     const std::vector<unsigned int>* parameter_index_map_;
     bool fixed_last_parameter_;
     param_vector param_indices_;
-    functor_executor* exec_;
+    T_EXEC* exec_;
     std::vector<iterate_task> iterate_tasks_;
     function_ref<bool(const param_vector&)> visitor_;
 };

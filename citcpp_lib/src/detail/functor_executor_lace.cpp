@@ -48,7 +48,7 @@ void functor_execution_scope_lace::spawn_execution(
 }
 
 functor_executor_lace::functor_executor_lace(unsigned int n_workers)
-    : functor_executor(), n_workers_(n_workers), workers_suspended_(false) {
+    : n_workers_(n_workers), workers_suspended_(false) {
 
   lace_init(n_workers, 0);
   suspend_workers();
@@ -71,15 +71,13 @@ void functor_executor_lace::suspend_workers() {
   }
 }
 
-std::unique_ptr<functor_execution_scope>
-functor_executor_lace::create_execution_scope() {
+functor_execution_scope_lace functor_executor_lace::create_execution_scope() {
   if (workers_suspended_) {
     workers_suspended_ = false;
     lace_resume();
   }
 
-  return std::unique_ptr<functor_execution_scope>(
-      new functor_execution_scope_lace());
+  return functor_execution_scope_lace();
 }
 
 }  // namespace detail

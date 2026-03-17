@@ -129,6 +129,7 @@ class ipog_otf_horizontal_select_best_value_per_param_combo_functor {
     std::vector<unsigned long long>& gain_per_value_;
 };
 
+template <conc_is_void_functor_executor T_EXEC>
 class ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel {
   public:
     ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel(
@@ -137,7 +138,7 @@ class ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel {
         const bitset_uint64& valid_values, unsigned int current_test_index,
         const internal_test_set& test_set, bool is_extend_mode,
         thread_local_vector<aligned_vector<unsigned long long>>& gain_per_value,
-        const functor_executor& exec)
+        const T_EXEC& exec)
         : real_current_param_idx_(real_current_param_idx),
           test_(test),
           valid_values_(valid_values),
@@ -246,7 +247,7 @@ class ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel {
     const unsigned int current_test_index_;
     const internal_test_set& test_set_;
     const bool is_extend_mode_;
-    const functor_executor& exec_;
+    const T_EXEC& exec_;
     alignas(false_sharing_avoidance_alignment) thread_local_vector<
         aligned_vector<unsigned int>> param_combo_gain_per_value_;
     alignas(false_sharing_avoidance_alignment) thread_local_vector<
@@ -337,16 +338,17 @@ ipog_otf_horizontal_select_best_value(
   return res;
 }
 
-inline new_covered_tuples_and_selected_value
-ipog_otf_horizontal_select_best_value(
+template <conc_is_void_functor_executor T_EXEC>
+new_covered_tuples_and_selected_value ipog_otf_horizontal_select_best_value(
     const unsigned int real_current_param_idx,
     const unsigned int num_current_param_values,
     const bitset_uint64& valid_values, const test& test,
     unsigned int current_test_index, const internal_test_set& test_set,
     bool is_extend_mode,
     std::vector<std::pair<const internal_relation*,
-                          param_combo_parallel_iterator>>& param_combo_its,
-    const functor_executor& exec, unsigned int& last_picked_value,
+                          param_combo_parallel_iterator<T_EXEC>>>&
+        param_combo_its,
+    const T_EXEC& exec, unsigned int& last_picked_value,
     std::vector<int>& value_to_valid_options,
     std::unordered_map<const internal_relation*, unsigned long long>&
         num_covered_tuples) {
@@ -367,7 +369,8 @@ ipog_otf_horizontal_select_best_value(
   for (int relation_idx = 0; relation_idx < param_combo_its.size();
        relation_idx++) {
 
-    ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel
+    ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel<
+        T_EXEC>
         per_param_combo_functor(real_current_param_idx,
                                 num_current_param_values, test, valid_values,
                                 current_test_index, test_set, is_extend_mode,
@@ -525,12 +528,13 @@ inline ipog_horizontal_extension_result ipog_otf_horizontal_extension(
   return result;
 }
 
-inline ipog_horizontal_extension_result ipog_otf_horizontal_extension(
+template <conc_is_void_functor_executor T_EXEC>
+ipog_horizontal_extension_result ipog_otf_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
     const constraint_handler& constr_handler, internal_test_set& test_set,
     const internal_model& model,
     const std::vector<internal_relation>& relations, bool is_extend_mode,
-    functor_executor& exec) {
+    T_EXEC& exec) {
 
   const unsigned int real_current_param_idx =
       relations[0]
@@ -545,12 +549,12 @@ inline ipog_horizontal_extension_result ipog_otf_horizontal_extension(
       list_intrusive<test_list_intrusive_integ>(),
       std::unordered_map<const internal_relation*, unsigned long long>()};
 
-  std::vector<
-      std::pair<const internal_relation*, param_combo_parallel_iterator>>
+  std::vector<std::pair<const internal_relation*,
+                        param_combo_parallel_iterator<T_EXEC>>>
       param_combo_its;
   for (auto& rel : relations) {
     param_combo_its.emplace_back(
-        &rel, param_combo_parallel_iterator(
+        &rel, param_combo_parallel_iterator<T_EXEC>(
                   rel.get_current_param_idx() + 1,
                   rel.get_current_interaction_strength(),
                   rel.get_parameter_index_map(), true, exec));

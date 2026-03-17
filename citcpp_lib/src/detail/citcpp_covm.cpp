@@ -59,14 +59,14 @@ std::vector<citcpp::detail::internal_relation> create_relations(
   return relations;
 }
 
+template <citcpp::detail::conc_is_void_functor_executor T_EXEC>
 std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     const citcpp::model& input_model,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::internal_test_set& test_set,
     const citcpp::detail::constraint_handler& constr_handler,
-    const citcpp::coverage_measurement_config& config,
-    citcpp::detail::functor_executor& exec, int strength,
-    citcpp::detail::covm_exec_handle_impl& exec_handle) {
+    const citcpp::coverage_measurement_config& config, T_EXEC& exec,
+    int strength, citcpp::detail::covm_exec_handle_impl& exec_handle) {
   using namespace citcpp;
   using namespace citcpp::detail;
 
@@ -222,7 +222,8 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
           exec_handle.get_constraint_handler_init_progress());
   std::shared_ptr<constraint_handler> constr_handler =
       (constr_handler_impl->is_thread_safe() && num_threads > 1)
-          ? std::make_shared<concurrent_constraint_handler>(
+          ? std::make_shared<
+                concurrent_constraint_handler<functor_executor_thread_pool>>(
                 *constr_handler_impl, exec)
           : constr_handler_impl;
 

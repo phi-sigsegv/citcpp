@@ -21,10 +21,11 @@ ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations);
 
+template <conc_is_void_functor_executor T_EXEC>
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
-    functor_executor& exec);
+    T_EXEC& exec);
 
 }  // namespace detail
 }  // namespace citcpp

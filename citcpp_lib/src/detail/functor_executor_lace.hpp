@@ -1,14 +1,14 @@
 #ifndef DETAIL_FUNCTOR_EXECUTOR_LACE_HPP_
 #define DETAIL_FUNCTOR_EXECUTOR_LACE_HPP_
 
+#include <citcpp/function_ref.hpp>
+#include <memory>
 #include <vector>
-
-#include "functor_executor.hpp"
 
 namespace citcpp {
 namespace detail {
 
-class functor_execution_scope_lace : public functor_execution_scope {
+class functor_execution_scope_lace {
   public:
     functor_execution_scope_lace() = default;
     functor_execution_scope_lace(const functor_execution_scope_lace&) = delete;
@@ -17,7 +17,7 @@ class functor_execution_scope_lace : public functor_execution_scope {
 
     ~functor_execution_scope_lace();
 
-    void spawn_execution(function_ref<void()> functor_ref) override;
+    void spawn_execution(function_ref<void()> functor_ref);
 
   private:
     std::vector<function_ref<void()>> functor_refs_;
@@ -27,18 +27,18 @@ class functor_execution_scope_lace : public functor_execution_scope {
  * This defines an interface for a usually parallel execution
  * of a set of function objects.
  */
-class functor_executor_lace : public functor_executor {
+class functor_executor_lace {
   public:
     functor_executor_lace(unsigned int n_workers);
     ~functor_executor_lace();
 
-    unsigned int get_num_workers() const override;
+    unsigned int get_num_workers() const;
 
-    unsigned int get_worker_id() const override;
+    unsigned int get_worker_id() const;
 
-    void suspend_workers() override;
+    void suspend_workers();
 
-    std::unique_ptr<functor_execution_scope> create_execution_scope() override;
+    functor_execution_scope_lace create_execution_scope();
 
   private:
     unsigned int n_workers_;

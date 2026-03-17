@@ -24,6 +24,7 @@
 
 namespace {
 
+template <citcpp::detail::conc_is_void_functor_executor T_EXEC>
 void main_ipog_loop_body(
     const citcpp::detail::internal_model& model,
     const std::vector<citcpp::detail::internal_relation>& relations,
@@ -31,8 +32,7 @@ void main_ipog_loop_body(
     const citcpp::detail::constraint_handler& constr_handler,
     const bool is_extend_mode, const unsigned int real_current_param_idx,
     const bool with_mt,
-    const citcpp::detail::binom_coeff_table& binomial_coeffs,
-    citcpp::detail::functor_executor& exec,
+    const citcpp::detail::binom_coeff_table& binomial_coeffs, T_EXEC& exec,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
@@ -183,12 +183,13 @@ void main_ipog_loop_body(
   }
 }
 
+template <citcpp::detail::conc_is_void_functor_executor T_EXEC>
 void main_ipog_loop(const citcpp::detail::internal_model& model,
                     std::vector<citcpp::detail::internal_relation>& relations,
                     citcpp::detail::internal_test_set& test_set,
                     const citcpp::detail::constraint_handler& constr_handler,
                     const citcpp::covering_array_computation_config config,
-                    citcpp::detail::functor_executor& exec,
+                    T_EXEC& exec,
                     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
@@ -331,13 +332,13 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   }
 }
 
+template <citcpp::detail::conc_is_void_functor_executor T_EXEC>
 void main_ipog_loop_extend_test_set(
     const citcpp::detail::internal_model& model,
     std::vector<citcpp::detail::internal_relation>& relations,
     citcpp::detail::internal_test_set& test_set,
     const citcpp::detail::constraint_handler& constr_handler,
-    const citcpp::covering_array_computation_config config,
-    citcpp::detail::functor_executor& exec,
+    const citcpp::covering_array_computation_config config, T_EXEC& exec,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
 
@@ -464,7 +465,8 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
           exec_handle.get_constraint_handler_init_progress());
   std::shared_ptr<constraint_handler> constr_handler =
       (constr_handler_impl->is_thread_safe() && num_threads > 1)
-          ? std::make_shared<concurrent_constraint_handler>(
+          ? std::make_shared<
+                concurrent_constraint_handler<functor_executor_thread_pool>>(
                 *constr_handler_impl, exec)
           : constr_handler_impl;
 

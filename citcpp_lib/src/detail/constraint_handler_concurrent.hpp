@@ -14,12 +14,13 @@ namespace detail {
  * to provide an API that exploits the thread safety of the underlying
  * wrapper constraint handler.
  */
+template <conc_is_void_functor_executor T_EXEC>
 class concurrent_constraint_handler : public constraint_handler {
     typedef constraint_handler base_type;
 
   public:
     concurrent_constraint_handler(const constraint_handler& handler,
-                                  functor_executor& exec);
+                                  T_EXEC& exec);
 
     /**
      * See constraint_handler interface.
@@ -62,7 +63,7 @@ class concurrent_constraint_handler : public constraint_handler {
 
   private:
     const constraint_handler& handler_;
-    functor_executor& exec_;
+    T_EXEC& exec_;
 };
 
 }  // namespace detail
