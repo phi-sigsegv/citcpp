@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "aligned_allocator.hpp"
 #include "shared_constants.hpp"
 #include "small_vector.hpp"
 #include "threading_lib.hpp"
@@ -18,9 +19,9 @@ typedef std::uint16_t param_index;
 using param_vector = SmallVector<param_index, 6>;
 using value_vector = SmallVector<int, 6>;
 
-template <class T>
-// using thread_local_vector = std::vector<T>;
-using thread_local_vector = SmallVector<T, 32>;
+template <typename T>
+using thread_local_vector =
+    std::vector<T, aligned_allocator<T, false_sharing_avoidance_alignment>>;
 
 struct alignas(false_sharing_avoidance_alignment) aligned_ull_value {
     unsigned long long value;
