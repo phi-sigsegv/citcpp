@@ -152,10 +152,10 @@ class ipog_otf_horizontal_select_best_value_per_param_combo_functor_parallel {
           gain_per_value_(gain_per_value) {}
 
     bool operator()(const param_vector& param_indices) {
-      std::vector<unsigned int>& thread_local_param_combo_gain_per_value =
-          param_combo_gain_per_value_[exec_.get_worker_id()].value;
-      std::vector<unsigned long long>& thread_local_gain_per_value =
-          gain_per_value_[exec_.get_worker_id()].value;
+      aligned_vector<unsigned int>& thread_local_param_combo_gain_per_value =
+          param_combo_gain_per_value_[exec_.get_worker_id()];
+      aligned_vector<unsigned long long>& thread_local_gain_per_value =
+          gain_per_value_[exec_.get_worker_id()];
 
       // We first check whether the test already has a concrete value
       // for the current parameter, because if so, then there is no
@@ -395,7 +395,7 @@ new_covered_tuples_and_selected_value ipog_otf_horizontal_select_best_value(
                thread_local_gain_per_value :
            relation_gain_per_value[relation_idx]) {
 
-        value_gain += thread_local_gain_per_value.value[value];
+        value_gain += thread_local_gain_per_value[value];
       }
     }
 
@@ -430,7 +430,7 @@ new_covered_tuples_and_selected_value ipog_otf_horizontal_select_best_value(
            relation_gain_per_value[relation_idx]) {
 
         num_covered_tuples[param_combo_its[relation_idx].first] +=
-            thread_local_gain_per_value.value[value_with_max_gain];
+            thread_local_gain_per_value[value_with_max_gain];
       }
     }
   }

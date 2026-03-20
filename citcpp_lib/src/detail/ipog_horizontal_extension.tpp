@@ -131,8 +131,8 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
         // If we have found a don't care value in one of the [0, ...
         // ,current_param_idx - 1] parameters, then we skip the combination in
         // the coverage gain computation.
-        std::vector<unsigned long long>& thread_local_gain_per_value =
-            gain_per_value_[exec_.get_worker_id()].value;
+        aligned_vector<unsigned long long>& thread_local_gain_per_value =
+            gain_per_value_[exec_.get_worker_id()];
         for (unsigned int value = 0; value < thread_local_gain_per_value.size();
              ++value) {
           if (!value_combinations.test(base_index + value) &&
@@ -257,7 +257,7 @@ int ipog_horizontal_select_best_value(
     unsigned long long value_gain = 0;
     for (aligned_vector<unsigned long long>& thread_local_gain_per_value :
          gain_per_value) {
-      value_gain += thread_local_gain_per_value.value[value];
+      value_gain += thread_local_gain_per_value[value];
     }
 
     if (value_gain > max_gain) {
@@ -703,8 +703,8 @@ class
         // If we have found a don't care value in one of the [0, ...
         // ,current_param_idx - 1] parameters, then we skip the combination in
         // the coverage gain computation.
-        std::vector<unsigned long long>& thread_local_gain_per_value =
-            gain_per_value_[exec_.get_worker_id()].value;
+        aligned_vector<unsigned long long>& thread_local_gain_per_value =
+            gain_per_value_[exec_.get_worker_id()];
         for (unsigned int value = 0; value < thread_local_gain_per_value.size();
              ++value) {
           if (!value_combinations.test(base_index + value) &&
@@ -854,7 +854,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     // so that it won't modify this gain info.
     for (aligned_vector<unsigned long long>& thread_local_gain_per_value :
          gain_per_value) {
-      thread_local_gain_per_value.value[current_param_value]++;
+      thread_local_gain_per_value[current_param_value]++;
     }
   }
 
@@ -885,7 +885,7 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     unsigned long long value_gain = 0;
     for (aligned_vector<unsigned long long>& thread_local_gain_per_value :
          gain_per_value) {
-      value_gain += thread_local_gain_per_value.value[value];
+      value_gain += thread_local_gain_per_value[value];
     }
 
     if (value_gain > max_gain) {

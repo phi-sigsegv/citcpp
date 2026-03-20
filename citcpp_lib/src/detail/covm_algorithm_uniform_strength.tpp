@@ -8,9 +8,9 @@
 namespace citcpp {
 namespace detail {
 
-struct alignas(false_sharing_avoidance_alignment)
-    aligned_coverage_level_to_num_param_combos {
-    citcpp::coverage_measurement::t_coverage_level_to_num_param_combos value;
+struct aligned_coverage_level_to_num_param_combos
+    : cache_aligned<
+          citcpp::coverage_measurement::t_coverage_level_to_num_param_combos> {
 };
 
 class covm_per_param_combo_functor {
@@ -182,8 +182,7 @@ class covm_per_param_combo_functor_parallel {
       }
       bitset_non_owning_uint64 values_combo_bitset(bitset_size);
       values_combo_bitset.set_backing_array(
-          bitset_backing_array_[param_combo_it_.get_worker_id()]
-              .value.get_array());
+          bitset_backing_array_[param_combo_it_.get_worker_id()].get_array());
       values_combo_bitset.reset();
 
       int test_index = 0;
@@ -221,7 +220,7 @@ class covm_per_param_combo_functor_parallel {
           if (!values_combo_bitset.test_and_set(index)) {
             auto& thread_local_covered_tuples =
                 covered_tuples_[param_combo_it_.get_worker_id()];
-            thread_local_covered_tuples.value[test_index]++;
+            thread_local_covered_tuples[test_index]++;
           }
         }
 
@@ -246,7 +245,7 @@ class covm_per_param_combo_functor_parallel {
           citcpp::coverage_measurement::NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
 
       for (; index >= 0; --index) {
-        thread_local_cov_level_to_num_param_combos.value[index]++;
+        thread_local_cov_level_to_num_param_combos[index]++;
       }
 
       exec_handle_.add_number_of_processed_combinations(
@@ -353,7 +352,7 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
 
     for (const auto& thread_local_covered_tuples : covered_tuples) {
       cumulative_covered_tuples[test_index] +=
-          thread_local_covered_tuples.value[test_index];
+          thread_local_covered_tuples[test_index];
     }
 
     if (test_index > 0) {
@@ -375,10 +374,10 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
        cov_level_to_num_param_combos) {
 
     for (unsigned int i = 0;
-         i < thread_local_cov_level_to_num_param_combos.value.size(); ++i) {
+         i < thread_local_cov_level_to_num_param_combos.size(); ++i) {
 
       cumulative_cov_level_to_num_param_combos[i] +=
-          thread_local_cov_level_to_num_param_combos.value[i];
+          thread_local_cov_level_to_num_param_combos[i];
     }
   }
 

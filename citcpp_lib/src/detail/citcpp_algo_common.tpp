@@ -182,8 +182,7 @@ class num_combos_per_param_combo_functor_parallel {
       }
       bitset_non_owning_uint64 values_combo_bitset(bitset_size);
       values_combo_bitset.set_backing_array(
-          bitset_backing_array_[param_combo_it_.get_worker_id()]
-              .value.get_array());
+          bitset_backing_array_[param_combo_it_.get_worker_id()].get_array());
       values_combo_bitset.reset();
 
       num_combos_[param_combo_it_.get_worker_id()].value.num_combos_to_cover +=

@@ -7,9 +7,7 @@
 namespace citcpp {
 namespace detail {
 
-struct alignas(false_sharing_avoidance_alignment) aligned_array_wrapper {
-    array_wrapper_uint64 value;
-};
+struct aligned_array_wrapper : cache_aligned<array_wrapper_uint64> {};
 
 }  // namespace detail
 }  // namespace citcpp
