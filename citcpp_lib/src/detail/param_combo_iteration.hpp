@@ -326,7 +326,7 @@ class param_combo_parallel_iterator {
     bool fixed_last_parameter_;
     param_vector param_indices_;
     T_EXEC* exec_;
-    std::vector<iterate_task> iterate_tasks_;
+    thread_local_vector<iterate_task> iterate_tasks_;
     function_ref<bool(const param_vector&)> visitor_;
 };
 

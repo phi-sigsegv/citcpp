@@ -32,9 +32,9 @@ class functor_execution_scope_thread_pool {
       tg_.spawnCallable(num_spawned_++, callable);
     }
 
-    template <class T_CALLABLE>
+    template <class T_CALLABLE, typename T_ALLOC>
       requires std::derived_from<T_CALLABLE, functor_task_base<T_CALLABLE>>
-    void spawn_execution(std::vector<T_CALLABLE>& tasks) {
+    void spawn_execution(std::vector<T_CALLABLE, T_ALLOC>& tasks) {
       for (int i = 0; i < tasks.size() - 1; ++i) {
         T_CALLABLE& task = tasks[i];
         tg_.spawn(num_spawned_++, &task);
@@ -44,9 +44,9 @@ class functor_execution_scope_thread_pool {
       tg_.spawn_and_wait(&last_task);
     }
 
-    template <class T_CALLABLE>
+    template <class T_CALLABLE, typename T_ALLOC>
       requires(!std::derived_from<T_CALLABLE, functor_task_base<T_CALLABLE>>)
-    void spawn_execution(std::vector<T_CALLABLE>& callables) {
+    void spawn_execution(std::vector<T_CALLABLE, T_ALLOC>& callables) {
       for (int i = 0; i < callables.size() - 1; ++i) {
         T_CALLABLE& callable = callables[i];
         tg_.spawnCallable(num_spawned_++, callable);

@@ -300,7 +300,7 @@ unsigned long long number_of_combinations_to_cover(
     const int num_last_param_values =
         model.get_parameter_num_values()[real_last_param_idx];
 
-    std::vector<compute_partial_sum_task> tasks(n - t + 1);
+    thread_local_vector<compute_partial_sum_task> tasks(n - t + 1);
 
     {
       auto exec_scope(exec.create_execution_scope());
@@ -322,7 +322,7 @@ unsigned long long number_of_combinations_to_cover(
                                              fixed_last_parameter);
     }
 
-    std::vector<compute_partial_sum_task> tasks(n - t + 1);
+    thread_local_vector<compute_partial_sum_task> tasks(n - t + 1);
 
     {
       auto exec_scope(exec.create_execution_scope());

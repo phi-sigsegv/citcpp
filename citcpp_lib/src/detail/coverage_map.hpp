@@ -299,7 +299,7 @@ class coverage_map_parallel_iterator {
   private:
     coverage_map_base* cov_map_;
     T_EXEC* exec_;
-    std::vector<iterate_task> iterate_tasks_;
+    thread_local_vector<iterate_task> iterate_tasks_;
     function_ref<bool(coverage_map_base::second_level_type&)> visitor_;
 };
 

@@ -132,7 +132,7 @@ concurrent_constraint_handler<T_EXEC>::check_validity_of_partial_tests(
   bitset_uint64 result(test_set.get_list_of_tests().size());
   std::mutex mut;
 
-  std::vector<check_test_validity_task> tasks(
+  thread_local_vector<check_test_validity_task> tasks(
       test_set.get_list_of_tests().size());
 
   {
@@ -164,7 +164,7 @@ concurrent_constraint_handler<T_EXEC>::get_valid_parameter_assignments(
 
   std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
 
-  std::vector<get_valid_parameter_assignments_task> tasks(
+  thread_local_vector<get_valid_parameter_assignments_task> tasks(
       test_set.get_list_of_tests().size());
 
   {
@@ -191,7 +191,7 @@ template <conc_is_void_functor_executor T_EXEC>
 void concurrent_constraint_handler<T_EXEC>::replace_dont_care_values(
     internal_test_set& test_set) const {
 
-  std::vector<replace_dont_care_values_task> tasks(
+  thread_local_vector<replace_dont_care_values_task> tasks(
       test_set.get_list_of_tests().size());
 
   {
