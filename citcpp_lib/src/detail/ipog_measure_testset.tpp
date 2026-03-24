@@ -80,36 +80,31 @@ class ipog_measure_per_param_combo_functor_parallel {
     ipog_measure_per_param_combo_functor_parallel(
         const internal_model& model, const internal_test_set& test_set,
         const coverage_map_parallel_iterator<T_EXEC>& cov_map_it)
-        : model_(model),
-          test_set_(test_set),
-          cov_map_it_(cov_map_it),
-          num_covered_tuples_() {}
+        : thread_local_functors_(cov_map_it.get_num_workers(),
+                                 {model, test_set}),
+          cov_map_it_(cov_map_it) {}
 
     bool operator()(coverage_map::second_level_type& value_combinations) {
+      auto& thread_local_functor =
+          thread_local_functors_[cov_map_it_.get_worker_id()];
 
-      auto& thread_local_num_covered_tuples_ =
-          num_covered_tuples_[cov_map_it_.get_worker_id()].value;
-      measure_coverage(value_combinations, model_, test_set_,
-                       thread_local_num_covered_tuples_);
-
-      return true;
+      return thread_local_functor(value_combinations);
     }
 
     unsigned long long get_num_covered_tuples() const {
       unsigned long long res = 0;
 
-      for (const auto& thread_local_value : num_covered_tuples_) {
-        res += thread_local_value.value;
+      for (const auto& thread_local_functor : thread_local_functors_) {
+        res += thread_local_functor.get_num_covered_tuples();
       }
 
       return res;
     }
 
   private:
-    const internal_model& model_;
-    const internal_test_set& test_set_;
+    alignas(false_sharing_avoidance_alignment) thread_local_vector<
+        ipog_measure_per_param_combo_functor> thread_local_functors_;
     const coverage_map_parallel_iterator<T_EXEC>& cov_map_it_;
-    thread_local_vector<aligned_ull_value> num_covered_tuples_;
 };
 
 inline ipog_measure_testset_result ipog_measure_testset(
