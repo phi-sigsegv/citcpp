@@ -74,6 +74,10 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
       return gain_per_value_;
     }
 
+    std::vector<unsigned long long>& get_gain_per_value() {
+      return gain_per_value_;
+    }
+
   private:
     const internal_model& model_;
     const test& test_;
@@ -368,134 +372,48 @@ class
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor(
         const internal_model& model, const test& prev_test, const test& test,
         const bitset_uint64& valid_values,
-        std::vector<unsigned long long>& gain_per_value,
+        const unsigned int num_current_param_values,
         const bool enable_coverage_update, const bool enable_gain_computation)
-        : model_(model),
-          prev_test_(prev_test),
-          test_(test),
-          valid_values_(valid_values),
+        : covm_update_func_(model, prev_test),
+          best_value_selection_func_(model, test, valid_values,
+                                     num_current_param_values),
           enable_coverage_update_(enable_coverage_update),
-          enable_gain_computation_(enable_gain_computation),
-          gain_per_value_(gain_per_value),
-          num_new_covered_tuples_(0) {}
+          enable_gain_computation_(enable_gain_computation) {}
 
     bool operator()(coverage_map::second_level_type& value_combinations) {
       if (enable_coverage_update_) {
-        update_coverage(value_combinations);
+        covm_update_func_(value_combinations);
       }
       if (enable_gain_computation_) {
-        compute_gain_per_value(value_combinations);
+        best_value_selection_func_(value_combinations);
       }
 
       return true;
     }
 
-    void update_coverage(coverage_map::second_level_type& value_combinations) {
-      const param_vector& param_indices =
-          value_combinations.get_parameter_indices();
-
-      if (!value_combinations.all()) {
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider
-        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
-        // values for p_i. If we now have values x_0, x_1, x_2, then the
-        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index = 0;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size(); ++i) {
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = prev_test_.get_values()[param_idx];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test in one of the [0, ... ,current_param_idx - 1]
-            // parameters. There is nothing to be updated concerning the
-            // coverage. This combination will be taken care of during the
-            // vertical extension step.
-            return;
-          }
-
-          coverage_map::second_level_type::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameter_num_values()[param_indices[j]];
-          }
-          index += addend;
-        }
-
-        if (!value_combinations.test_and_set(index)) {
-          ++num_new_covered_tuples_;
-        }
-      }
+    const std::vector<unsigned long long>& get_gain_per_value() const {
+      return best_value_selection_func_.get_gain_per_value();
     }
 
-    void compute_gain_per_value(
-        const coverage_map::second_level_type& value_combinations) {
-
-      const param_vector& param_indices =
-          value_combinations.get_parameter_indices();
-
-      if (!value_combinations.all()) {
-        // We have a bitset and we have uncovered value combinations left in it.
-        // Thus we have to walk through it concerning all possible value
-        // combinations.
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider three
-        // parameters p_0, p_1, p_2. The last parameter is always the current
-        // one processed by IPOG. Now say that v_i is the number of values for
-        // p_i. If we now have values x_0, x_1, x_2, then the index is x_0 * v_1
-        // * v_2 + x_1 * v_2 + x_2. In the base index we just compute x_0 * v_1
-        // * v_2 + x_1 * v_2, since that expression is constant throughout all
-        // different values of p_2 whose different coverage gains we want to
-        // assess.
-        coverage_map::second_level_type::size_type base_index = 0;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size() - 1; ++i) {
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = test_.get_values()[param_idx];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test.
-            return;
-          }
-
-          coverage_map::second_level_type::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameter_num_values()[param_indices[j]];
-          }
-          base_index += addend;
-        }
-
-        // If we have found a don't care value in one of the [0, ...
-        // ,current_param_idx - 1] parameters, then we skip the combination in
-        // the coverage gain computation.
-        for (unsigned int value = 0; value < gain_per_value_.size(); ++value) {
-          if (!value_combinations.test(base_index + value) &&
-              valid_values_.test(value)) {
-
-            gain_per_value_[value] += 1;
-          }
-        }
-      }
+    std::vector<unsigned long long>& get_gain_per_value() {
+      return best_value_selection_func_.get_gain_per_value();
     }
 
     unsigned long long get_num_new_covered_tuples() const {
-      return num_new_covered_tuples_;
+      return covm_update_func_.get_num_new_covered_tuples();
     }
 
-    void reset_num_new_covered_tuples() { num_new_covered_tuples_ = 0; }
+    void reset_num_new_covered_tuples() {
+      covm_update_func_.reset_num_new_covered_tuples();
+    }
 
   private:
-    const internal_model& model_;
-    const test& prev_test_;
-    const test& test_;
-    const bitset_uint64& valid_values_;
+    ipog_horizontal_update_coverage_map_per_param_combo_functor
+        covm_update_func_;
+    ipog_horizontal_select_best_value_per_param_combo_functor
+        best_value_selection_func_;
     const bool enable_coverage_update_;
     const bool enable_gain_computation_;
-    std::vector<unsigned long long>& gain_per_value_;
-    unsigned long long num_new_covered_tuples_;
 };
 
 template <conc_is_void_functor_executor T_EXEC>
@@ -505,151 +423,56 @@ class
     ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel(
         const internal_model& model, const test& prev_test, const test& test,
         const bitset_uint64& valid_values,
-        thread_local_vector<aligned_vector<unsigned long long>>& gain_per_value,
+        const unsigned int num_current_param_values,
         const bool enable_coverage_update, const bool enable_gain_computation,
         const T_EXEC& exec)
-        : model_(model),
-          prev_test_(prev_test),
-          test_(test),
-          valid_values_(valid_values),
-          enable_coverage_update_(enable_coverage_update),
-          enable_gain_computation_(enable_gain_computation),
+        : thread_local_functors_(
+              exec.get_num_workers(),
+              {model, prev_test, test, valid_values, num_current_param_values,
+               enable_coverage_update, enable_gain_computation}),
           exec_(exec),
-          gain_per_value_(gain_per_value),
-          num_new_covered_tuples_(exec.get_num_workers()) {}
+          num_current_param_values_(num_current_param_values) {}
 
     bool operator()(coverage_map::second_level_type& value_combinations) {
-      if (enable_coverage_update_) {
-        update_coverage(value_combinations);
-      }
-      if (enable_gain_computation_) {
-        compute_gain_per_value(value_combinations);
-      }
+      auto& thread_local_functor =
+          thread_local_functors_[exec_.get_worker_id()];
 
-      return true;
+      return thread_local_functor(value_combinations);
     }
 
-    void update_coverage(coverage_map::second_level_type& value_combinations) {
-      const param_vector& param_indices =
-          value_combinations.get_parameter_indices();
+    std::vector<unsigned long long> get_gain_per_value() const {
+      std::vector<unsigned long long> gain_per_value(num_current_param_values_);
 
-      if (!value_combinations.all()) {
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider
-        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
-        // values for p_i. If we now have values x_0, x_1, x_2, then the
-        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index = 0;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size(); ++i) {
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = prev_test_.get_values()[param_idx];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test in one of the [0, ... ,current_param_idx - 1]
-            // parameters. There is nothing to be updated concerning the
-            // coverage. This combination will be taken care of during the
-            // vertical extension step.
-            return;
-          }
-
-          coverage_map::second_level_type::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameter_num_values()[param_indices[j]];
-          }
-          index += addend;
-        }
-
-        if (!value_combinations.test_and_set(index)) {
-          ++num_new_covered_tuples_[exec_.get_worker_id()].value;
+      for (const auto& thread_local_functor : thread_local_functors_) {
+        for (int i = 0; i < gain_per_value.size(); ++i) {
+          gain_per_value[i] += thread_local_functor.get_gain_per_value()[i];
         }
       }
-    }
 
-    void compute_gain_per_value(
-        const coverage_map::second_level_type& value_combinations) {
-
-      const param_vector& param_indices =
-          value_combinations.get_parameter_indices();
-
-      if (!value_combinations.all()) {
-        // We have a bitset and we have uncovered value combinations left in it.
-        // Thus we have to walk through it concerning all possible value
-        // combinations.
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider three
-        // parameters p_0, p_1, p_2. The last parameter is always the current
-        // one processed by IPOG. Now say that v_i is the number of values for
-        // p_i. If we now have values x_0, x_1, x_2, then the index is x_0 * v_1
-        // * v_2 + x_1 * v_2 + x_2. In the base index we just compute x_0 * v_1
-        // * v_2 + x_1 * v_2, since that expression is constant throughout all
-        // different values of p_2 whose different coverage gains we want to
-        // assess.
-        coverage_map::second_level_type::size_type base_index = 0;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size() - 1; ++i) {
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = test_.get_values()[param_idx];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test.
-            return;
-          }
-
-          coverage_map::second_level_type::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameter_num_values()[param_indices[j]];
-          }
-          base_index += addend;
-        }
-
-        // If we have found a don't care value in one of the [0, ...
-        // ,current_param_idx - 1] parameters, then we skip the combination in
-        // the coverage gain computation.
-        aligned_vector<unsigned long long>& thread_local_gain_per_value =
-            gain_per_value_[exec_.get_worker_id()];
-        for (unsigned int value = 0; value < thread_local_gain_per_value.size();
-             ++value) {
-          if (!value_combinations.test(base_index + value) &&
-              +valid_values_.test(value)) {
-
-            thread_local_gain_per_value[value] += 1;
-          }
-        }
-      }
+      return gain_per_value;
     }
 
     unsigned long long get_num_new_covered_tuples() const {
-      unsigned long long ret = 0;
-      for (const auto& i : num_new_covered_tuples_) {
-        ret += i.value;
+      unsigned long long res = 0;
+
+      for (const auto& thread_local_functor : thread_local_functors_) {
+        res += thread_local_functor.get_num_new_covered_tuples();
       }
 
-      return ret;
+      return res;
     }
 
     void reset_num_new_covered_tuples() {
-      for (auto& i : num_new_covered_tuples_) {
-        i.value = 0;
+      for (auto& thread_local_functor : thread_local_functors_) {
+        thread_local_functor.reset_num_new_covered_tuples();
       }
     }
 
   private:
-    const internal_model& model_;
-    const test& prev_test_;
-    const test& test_;
-    const bitset_uint64& valid_values_;
-    const bool enable_coverage_update_;
-    const bool enable_gain_computation_;
-    const T_EXEC& exec_;
     alignas(false_sharing_avoidance_alignment) thread_local_vector<
-        aligned_vector<unsigned long long>>& gain_per_value_;
-    alignas(false_sharing_avoidance_alignment)
-        thread_local_vector<aligned_ull_value> num_new_covered_tuples_;
+        ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor> thread_local_functors_;
+    const T_EXEC& exec_;
+    const unsigned int num_current_param_values_;
 };
 
 inline new_covered_tuples_and_selected_value
@@ -663,28 +486,13 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     std::unordered_map<const internal_relation*, unsigned long long>&
         num_covered_tuples) {
 
-  // This is an array containing the coverage gain per value of the current
-  // parameter.
-  std::vector<unsigned long long> gain_per_value(num_current_param_values);
-
-  // We first check whether the test already has a concrete value
-  // for the current parameter, because if so, then there is no
-  // point in evaluating a coverage gain.
   const int current_param_value = test.get_values()[real_current_param_idx];
-  if (current_param_value >= 0) {
-    last_picked_value = current_param_value;
-    value_to_valid_options[current_param_value]--;
-
-    // The coverage gain computation is disabled in the functor,
-    // so that it won't modify this gain info.
-    gain_per_value[current_param_value]++;
-  }
 
   new_covered_tuples_and_selected_value res{0, 0};
 
   ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor
       per_param_combo_functor(
-          model, prev_test, test, valid_values, gain_per_value,
+          model, prev_test, test, valid_values, num_current_param_values,
           prev_test.get_values()[real_current_param_idx] >= 0,
           current_param_value < 0);
   for (auto& cov_map_it : relation_cov_map_its) {
@@ -696,35 +504,23 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     res.num_new_covered_tuples_ += num_new_covered_tuples;
   }
 
-  int value_with_max_gain = -1;
-  unsigned long long max_gain = 0;
-  for (unsigned int v_index = 0; v_index < num_current_param_values;
-       ++v_index) {
-    unsigned int value =
-        (v_index + last_picked_value + 1) % num_current_param_values;
-    if (gain_per_value[value] > max_gain) {
-      value_with_max_gain = value;
-      max_gain = gain_per_value[value];
-    } else if (gain_per_value[value] == max_gain) {
-      // We use a simple tie breaking strategy: We do not favor one value over
-      // the other. If two values have the same gain, then we pick the one which
-      // we have picked less so far. Since also this could be a tie (we have
-      // picked the value the same number of times, we remember the value we
-      // have picked before, and choose the next one in this case.
-      if (value_with_max_gain >= 0 &&
-          value_to_valid_options[value] >
-              value_to_valid_options[value_with_max_gain]) {
-        value_with_max_gain = value;
-      }
-    }
+  // This is an array containing the coverage gain per value of the current
+  // parameter.
+  std::vector<unsigned long long>& gain_per_value =
+      per_param_combo_functor.get_gain_per_value();
+
+  // Check whether the test already has a concrete value
+  // for the current parameter, because if so, then there is no
+  // point in evaluating a coverage gain.
+  if (current_param_value >= 0) {
+    // The coverage gain computation is disabled in the functor,
+    // so that it won't modify this gain info.
+    gain_per_value[current_param_value]++;
   }
 
-  if (value_with_max_gain >= 0) {
-    last_picked_value = value_with_max_gain;
-    value_to_valid_options[value_with_max_gain]--;
-  }
-
-  res.selected_value_ = value_with_max_gain;
+  res.selected_value_ = ipog_horizontal_select_best_value(
+      num_current_param_values, gain_per_value, last_picked_value,
+      value_to_valid_options);
 
   return res;
 }
@@ -743,34 +539,14 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     std::unordered_map<const internal_relation*, unsigned long long>&
         num_covered_tuples) {
 
-  // This is an array containing the coverage gain per value of the current
-  // parameter.
-  thread_local_vector<aligned_vector<unsigned long long>> gain_per_value(
-      exec.get_num_workers(),
-      aligned_vector<unsigned long long>(num_current_param_values, 0));
-
-  // We first check whether the test already has a concrete value
-  // for the current parameter, because if so, then there is no
-  // point in evaluating a coverage gain.
   const int current_param_value = test.get_values()[real_current_param_idx];
-  if (current_param_value >= 0) {
-    last_picked_value = current_param_value;
-    value_to_valid_options[current_param_value]--;
-
-    // The coverage gain computation is disabled in the functor,
-    // so that it won't modify this gain info.
-    for (aligned_vector<unsigned long long>& thread_local_gain_per_value :
-         gain_per_value) {
-      thread_local_gain_per_value[current_param_value]++;
-    }
-  }
 
   new_covered_tuples_and_selected_value res{0, 0};
 
   ipog_horizontal_update_coverage_map_and_select_best_value_per_param_combo_functor_parallel<
       T_EXEC>
       per_param_combo_functor(
-          model, prev_test, test, valid_values, gain_per_value,
+          model, prev_test, test, valid_values, num_current_param_values,
           prev_test.get_values()[real_current_param_idx] >= 0,
           current_param_value < 0, exec);
   for (auto& cov_map_it : relation_cov_map_its) {
@@ -782,42 +558,23 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
     res.num_new_covered_tuples_ += num_new_covered_tuples;
   }
 
-  int value_with_max_gain = -1;
-  unsigned long long max_gain = 0;
-  for (unsigned int v_index = 0; v_index < num_current_param_values;
-       ++v_index) {
-    unsigned int value =
-        (v_index + last_picked_value + 1) % num_current_param_values;
+  // This is an array containing the coverage gain per value of the current
+  // parameter.
+  std::vector<unsigned long long> gain_per_value(
+      per_param_combo_functor.get_gain_per_value());
 
-    unsigned long long value_gain = 0;
-    for (aligned_vector<unsigned long long>& thread_local_gain_per_value :
-         gain_per_value) {
-      value_gain += thread_local_gain_per_value[value];
-    }
-
-    if (value_gain > max_gain) {
-      value_with_max_gain = value;
-      max_gain = value_gain;
-    } else if (value_gain == max_gain) {
-      // We use a simple tie breaking strategy: We do not favor one value over
-      // the other. If two values have the same gain, then we pick the one which
-      // we have picked less so far. Since also this could be a tie (we have
-      // picked the value the same number of times, we remember the value we
-      // have picked before, and choose the next one in this case.
-      if (value_with_max_gain >= 0 &&
-          value_to_valid_options[value] >
-              value_to_valid_options[value_with_max_gain]) {
-        value_with_max_gain = value;
-      }
-    }
+  // Check whether the test already has a concrete value
+  // for the current parameter, because if so, then there is no
+  // point in evaluating a coverage gain.
+  if (current_param_value >= 0) {
+    // The coverage gain computation is disabled in the functor,
+    // so that it won't modify this gain info.
+    gain_per_value[current_param_value]++;
   }
 
-  if (value_with_max_gain >= 0) {
-    last_picked_value = value_with_max_gain;
-    value_to_valid_options[value_with_max_gain]--;
-  }
-
-  res.selected_value_ = value_with_max_gain;
+  res.selected_value_ = ipog_horizontal_select_best_value(
+      num_current_param_values, gain_per_value, last_picked_value,
+      value_to_valid_options);
 
   return res;
 }
