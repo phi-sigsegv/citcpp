@@ -146,18 +146,13 @@ class num_combos_per_param_combo_functor {
       return true;
     }
 
-    number_of_combinations get_number_of_combos() { return num_combos_; }
+    number_of_combinations get_number_of_combos() const { return num_combos_; }
 
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
     array_wrapper_uint64 bitset_backing_array_;
     number_of_combinations num_combos_;
-};
-
-struct alignas(false_sharing_avoidance_alignment)
-    aligned_number_of_combinations {
-    number_of_combinations value;
 };
 
 template <conc_is_void_functor_executor T_EXEC>
@@ -167,90 +162,34 @@ class num_combos_per_param_combo_functor_parallel {
         const internal_model& model, const internal_test_set& test_set,
         const unsigned int bitset_backing_array_size,
         const param_combo_parallel_iterator<T_EXEC>& param_combo_it)
-        : model_(model),
-          test_set_(test_set),
-          param_combo_it_(param_combo_it),
-          bitset_backing_array_(param_combo_it.get_num_workers(),
-                                {{bitset_backing_array_size}}),
-          num_combos_(param_combo_it.get_num_workers(),
-                      {number_of_combinations{0, 0}}) {}
+        : thread_local_functors_(param_combo_it.get_num_workers(),
+                                 {model, test_set, bitset_backing_array_size}),
+          param_combo_it_(param_combo_it) {}
 
     bool operator()(const param_vector& param_indices) {
-      bitset_non_owning_uint64::size_type bitset_size = 1;
-      for (auto p : param_indices) {
-        bitset_size *= model_.get_parameter_num_values()[p];
-      }
-      bitset_non_owning_uint64 values_combo_bitset(bitset_size);
-      values_combo_bitset.set_backing_array(
-          bitset_backing_array_[param_combo_it_.get_worker_id()].get_array());
-      values_combo_bitset.reset();
+      auto& thread_local_functor =
+          thread_local_functors_[param_combo_it_.get_worker_id()];
 
-      num_combos_[param_combo_it_.get_worker_id()].value.num_combos_to_cover +=
-          bitset_size;
-
-      for (const test& test : test_set_.get_list_of_tests()) {
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider
-        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
-        // values for p_i. If we now have values x_0, x_1, x_2, then the index
-        // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        bitset_non_owning_uint64::size_type index = 0;
-        bool found_dont_care = false;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size(); ++i) {
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = test.get_values()[param_idx];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test in one of the parameters.
-            // There is nothing to be updated concerning the
-            // coverage.
-            found_dont_care = true;
-            break;
-          }
-
-          bitset_non_owning_uint64::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameter_num_values()[param_indices[j]];
-          }
-          index += addend;
-        }
-
-        if (!found_dont_care) {
-          if (!values_combo_bitset.test_and_set(index)) {
-            auto& thread_local_num_combos =
-                num_combos_[param_combo_it_.get_worker_id()];
-            thread_local_num_combos.value.num_covered_combos++;
-          }
-        }
-      }
-
-      return true;
+      return thread_local_functor(param_indices);
     }
 
-    number_of_combinations get_number_of_combos() {
+    number_of_combinations get_number_of_combos() const {
       number_of_combinations result{0, 0};
 
-      for (const auto& thread_local_num_combos : num_combos_) {
-        result.num_combos_to_cover +=
-            thread_local_num_combos.value.num_combos_to_cover;
-        result.num_covered_combos +=
-            thread_local_num_combos.value.num_covered_combos;
+      for (const auto& thread_local_functor : thread_local_functors_) {
+        number_of_combinations thread_local_result(
+            thread_local_functor.get_number_of_combos());
+        result.num_combos_to_cover += thread_local_result.num_combos_to_cover;
+        result.num_covered_combos += thread_local_result.num_covered_combos;
       }
 
       return result;
     }
 
   private:
-    const internal_model& model_;
-    const internal_test_set& test_set_;
+    alignas(false_sharing_avoidance_alignment) thread_local_vector<
+        num_combos_per_param_combo_functor> thread_local_functors_;
     const param_combo_parallel_iterator<T_EXEC>& param_combo_it_;
-    alignas(false_sharing_avoidance_alignment)
-        thread_local_vector<aligned_array_wrapper> bitset_backing_array_;
-    alignas(false_sharing_avoidance_alignment)
-        thread_local_vector<aligned_number_of_combinations> num_combos_;
 };
 
 inline unsigned long long number_of_combinations_to_cover(
