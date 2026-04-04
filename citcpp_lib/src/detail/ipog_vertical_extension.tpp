@@ -55,6 +55,11 @@ class ipog_vertical_extension_functor {
       return num_new_covered_tuples_;
     }
 
+    void reset() {
+      num_checked_tuples_ = 0;
+      num_new_covered_tuples_ = 0;
+    }
+
   private:
     void ipog_vertical_extension_func(
         coverage_map::second_level_type& value_combinations) {
@@ -301,19 +306,24 @@ inline ipog_vertical_extension_result ipog_vertical_extension(
 
   list_intrusive<test_list_intrusive_integ> modified_tests;
 
-  for (auto& rel : relations) {
-    coverage_map_iterator cov_map_it = rel.second.create_iterator();
-
+  for (auto& rel_and_cov_map : relations) {
     ipog_vertical_extension_functor functor(
-        rel.second.get_number_of_parameters_to_select(), rel.second.get_model(),
-        constr_handler, test_set,
+        rel_and_cov_map.second.get_number_of_parameters_to_select(),
+        rel_and_cov_map.second.get_model(), constr_handler, test_set,
         partitioning_of_tests_according_to_current_values, modified_tests,
         num_missing_combinations_to_cover);
 
-    cov_map_it.visit_all_parameter_combinations(functor);
+    for (auto& value_combinations : rel_and_cov_map.second.get_coverage_map()) {
+      const bool cont = functor(value_combinations);
 
-    result[rel.first].num_checked_tuples = functor.get_num_checked_tuples();
-    result[rel.first].num_new_covered_tuples =
+      if (!cont) {
+        break;
+      }
+    }
+
+    result[rel_and_cov_map.first].num_checked_tuples =
+        functor.get_num_checked_tuples();
+    result[rel_and_cov_map.first].num_new_covered_tuples =
         functor.get_num_new_covered_tuples();
   }
 

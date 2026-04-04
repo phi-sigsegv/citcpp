@@ -133,33 +133,6 @@ class coverage_map_base {
     unsigned long long total_num_tuples_;
 };
 
-class coverage_map_iterator {
-  public:
-    coverage_map_iterator(coverage_map_base& cov_map) : cov_map_(cov_map) {}
-
-    coverage_map_iterator(const coverage_map_iterator& other) = default;
-    coverage_map_iterator(coverage_map_iterator&& other) = default;
-
-    ~coverage_map_iterator() = default;
-
-    coverage_map_iterator& operator=(const coverage_map_iterator& other) =
-        default;
-    coverage_map_iterator& operator=(coverage_map_iterator&& other) = default;
-
-    template <class T_VISITOR>
-    void visit_all_parameter_combinations(T_VISITOR& visitor) {
-      for (coverage_map_base::second_level_type& value_combinations :
-           cov_map_.get_coverage_map()) {
-        if (!visitor(value_combinations)) {
-          return;
-        }
-      }
-    }
-
-  private:
-    coverage_map_base& cov_map_;
-};
-
 template <conc_is_void_functor_executor T_EXEC>
 class coverage_map_parallel_iterator {
   public:
@@ -338,10 +311,6 @@ class coverage_map : public coverage_map_base {
 
     coverage_map& operator=(const coverage_map& other) = default;
     coverage_map& operator=(coverage_map&& other) = default;
-
-    coverage_map_iterator create_iterator() {
-      return coverage_map_iterator(*this);
-    }
 
     template <conc_is_void_functor_executor T_EXEC>
     coverage_map_parallel_iterator<T_EXEC> create_parallel_iterator(

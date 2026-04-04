@@ -56,17 +56,16 @@ class ipog_measure_per_param_combo_functor {
                                          const internal_test_set& test_set)
         : model_(model), test_set_(test_set), num_covered_tuples_(0) {}
 
-    bool operator()(coverage_map::second_level_type& value_combinations) {
-
+    void operator()(coverage_map::second_level_type& value_combinations) {
       measure_coverage(value_combinations, model_, test_set_,
                        num_covered_tuples_);
-
-      return true;
     }
 
     unsigned long long get_num_covered_tuples() const {
       return num_covered_tuples_;
     }
+
+    void reset_num_covered_tuples() { num_covered_tuples_ = 0; }
 
   private:
     const internal_model& model_;
@@ -88,7 +87,9 @@ class ipog_measure_per_param_combo_functor_parallel {
       auto& thread_local_functor =
           thread_local_functors_[cov_map_it_.get_worker_id()];
 
-      return thread_local_functor(value_combinations);
+      thread_local_functor(value_combinations);
+
+      return true;
     }
 
     unsigned long long get_num_covered_tuples() const {
@@ -99,6 +100,12 @@ class ipog_measure_per_param_combo_functor_parallel {
       }
 
       return res;
+    }
+
+    void reset_num_covered_tuples() {
+      for (auto& thread_local_functor : thread_local_functors_) {
+        thread_local_functor.reset_num_covered_tuples();
+      }
     }
 
   private:
@@ -114,14 +121,15 @@ inline ipog_measure_testset_result ipog_measure_testset(
   // First initialize the result object.
   ipog_measure_testset_result result;
 
-  for (auto& rel : relations) {
-    coverage_map_iterator cov_map_it = rel.second.create_iterator();
+  ipog_measure_per_param_combo_functor per_param_combo_functor(model, test_set);
 
-    ipog_measure_per_param_combo_functor per_param_combo_functor(model,
-                                                                 test_set);
-    cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+  for (auto& rel_and_cov_map : relations) {
+    per_param_combo_functor.reset_num_covered_tuples();
+    for (auto& value_combinations : rel_and_cov_map.second.get_coverage_map()) {
+      per_param_combo_functor(value_combinations);
+    }
 
-    result.num_covered_tuples[rel.first] =
+    result.num_covered_tuples[rel_and_cov_map.first] =
         per_param_combo_functor.get_num_covered_tuples();
   }
 
@@ -137,15 +145,16 @@ ipog_measure_testset_result ipog_measure_testset(
   // First initialize the result object.
   ipog_measure_testset_result result;
 
-  for (auto& rel : relations) {
+  for (auto& rel_and_cov_map : relations) {
     coverage_map_parallel_iterator<T_EXEC> cov_map_it =
-        rel.second.create_parallel_iterator(exec);
+        rel_and_cov_map.second.create_parallel_iterator(exec);
 
     ipog_measure_per_param_combo_functor_parallel<T_EXEC>
         per_param_combo_functor(model, test_set, cov_map_it);
+
     cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
 
-    result.num_covered_tuples[rel.first] =
+    result.num_covered_tuples[rel_and_cov_map.first] =
         per_param_combo_functor.get_num_covered_tuples();
   }
 
