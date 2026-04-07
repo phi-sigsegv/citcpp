@@ -10,15 +10,13 @@ namespace detail {
 class ipog_horizontal_select_best_value_per_param_combo_functor {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor(
-        const internal_model& model, const test& test,
-        const bitset_uint64& valid_values,
+        const internal_model& model,
         const unsigned int num_current_param_values)
-        : model_(model),
-          test_(test),
-          valid_values_(valid_values),
-          gain_per_value_(num_current_param_values) {}
+        : model_(model), gain_per_value_(num_current_param_values) {}
 
-    void operator()(const coverage_map::second_level_type& value_combinations) {
+    void operator()(const test& test, const bitset_uint64& valid_values,
+                    const coverage_map::second_level_type& value_combinations) {
+
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
@@ -39,7 +37,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size() - 1; ++i) {
           const unsigned int param_idx = param_indices[i];
-          const int param_value = test_.get_values()[param_idx];
+          const int param_value = test.get_values()[param_idx];
 
           if (param_value < 0) {
             // We have found a don't care value for that combination in
@@ -60,7 +58,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
         // the coverage gain computation.
         for (unsigned int value = 0; value < gain_per_value_.size(); ++value) {
           if (!value_combinations.test(base_index + value) &&
-              valid_values_.test(value)) {
+              valid_values.test(value)) {
 
             gain_per_value_[value] += 1;
           }
@@ -76,10 +74,12 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
       return gain_per_value_;
     }
 
+    void reset() {
+      std::fill(gain_per_value_.begin(), gain_per_value_.end(), 0);
+    }
+
   private:
     const internal_model& model_;
-    const test& test_;
-    const bitset_uint64& valid_values_;
     std::vector<unsigned long long> gain_per_value_;
 };
 
@@ -90,17 +90,18 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
         const internal_model& model, const test& test,
         const bitset_uint64& valid_values,
         const unsigned int num_current_param_values, const T_EXEC& exec)
-        : thread_local_functors_(
-              exec.get_num_workers(),
-              {model, test, valid_values, num_current_param_values}),
+        : thread_local_functors_(exec.get_num_workers(),
+                                 {model, num_current_param_values}),
           exec_(exec),
+          test_(test),
+          valid_values_(valid_values),
           num_current_param_values_(num_current_param_values) {}
 
     bool operator()(coverage_map::second_level_type& value_combinations) {
       auto& thread_local_functor =
           thread_local_functors_[exec_.get_worker_id()];
 
-      thread_local_functor(value_combinations);
+      thread_local_functor(test_, valid_values_, value_combinations);
 
       return true;
     }
@@ -121,6 +122,8 @@ class ipog_horizontal_select_best_value_per_param_combo_functor_parallel {
     alignas(false_sharing_avoidance_alignment) thread_local_vector<
         ipog_horizontal_select_best_value_per_param_combo_functor> thread_local_functors_;
     const T_EXEC& exec_;
+    const test& test_;
+    const bitset_uint64& valid_values_;
     const unsigned int num_current_param_values_;
 };
 
@@ -160,41 +163,66 @@ inline int ipog_horizontal_select_best_value(
   return value_with_max_gain;
 }
 
-inline int ipog_horizontal_select_best_value(
-    const unsigned int real_current_param_idx,
-    const unsigned int num_current_param_values, const internal_model& model,
-    const bitset_uint64& valid_values, const test& test,
-    std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
-    unsigned int& last_picked_value, std::vector<int>& value_to_valid_options) {
+class ipog_horizontal_select_best_value_functor {
+  public:
+    ipog_horizontal_select_best_value_functor(
+        const unsigned int real_current_param_idx,
+        const unsigned int num_current_param_values,
+        const internal_model& model,
+        std::vector<std::pair<const internal_relation*, coverage_map>>&
+            relations,
+        unsigned int& last_picked_value,
+        std::vector<int>& value_to_valid_options)
+        : real_current_param_idx_(real_current_param_idx),
+          num_current_param_values_(num_current_param_values),
+          per_param_combo_functor_(model, num_current_param_values),
+          relations_(relations),
+          last_picked_value_(last_picked_value),
+          value_to_valid_options_(value_to_valid_options) {}
 
-  // We first check whether the test already has a concrete value
-  // for the current parameter, because if so, then there is no
-  // point in evaluating a coverage gain.
-  if (test.get_values()[real_current_param_idx] >= 0) {
-    last_picked_value = test.get_values()[real_current_param_idx];
-    value_to_valid_options[last_picked_value]--;
+    int operator()(const test& test, const bitset_uint64& valid_values) {
+      // We first check whether the test already has a concrete value
+      // for the current parameter, because if so, then there is no
+      // point in evaluating a coverage gain.
+      if (test.get_values()[real_current_param_idx_] >= 0) {
+        last_picked_value_ = test.get_values()[real_current_param_idx_];
+        value_to_valid_options_[last_picked_value_]--;
 
-    return last_picked_value;
-  }
+        per_param_combo_functor_.reset();
 
-  ipog_horizontal_select_best_value_per_param_combo_functor
-      per_param_combo_functor(model, test, valid_values,
-                              num_current_param_values);
-  for (auto& rel_and_cov_map : relations) {
-    for (auto& value_combinations : rel_and_cov_map.second.get_coverage_map()) {
-      per_param_combo_functor(value_combinations);
+        return last_picked_value_;
+      }
+
+      for (auto& rel_and_cov_map : relations_) {
+        for (auto& value_combinations :
+             rel_and_cov_map.second.get_coverage_map()) {
+          per_param_combo_functor_(test, valid_values, value_combinations);
+        }
+      }
+
+      // This is an array containing the coverage gain per value of the current
+      // parameter.
+      const std::vector<unsigned long long>& gain_per_value =
+          per_param_combo_functor_.get_gain_per_value();
+
+      const int selected_value = ipog_horizontal_select_best_value(
+          num_current_param_values_, gain_per_value, last_picked_value_,
+          value_to_valid_options_);
+
+      per_param_combo_functor_.reset();
+
+      return selected_value;
     }
-  }
 
-  // This is an array containing the coverage gain per value of the current
-  // parameter.
-  const std::vector<unsigned long long>& gain_per_value =
-      per_param_combo_functor.get_gain_per_value();
-
-  return ipog_horizontal_select_best_value(num_current_param_values,
-                                           gain_per_value, last_picked_value,
-                                           value_to_valid_options);
-}
+  private:
+    const unsigned int real_current_param_idx_;
+    const unsigned int num_current_param_values_;
+    ipog_horizontal_select_best_value_per_param_combo_functor
+        per_param_combo_functor_;
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations_;
+    unsigned int& last_picked_value_;
+    std::vector<int>& value_to_valid_options_;
+};
 
 template <conc_is_void_functor_executor T_EXEC>
 int ipog_horizontal_select_best_value(
@@ -237,10 +265,12 @@ int ipog_horizontal_select_best_value(
 class ipog_horizontal_update_coverage_map_per_param_combo_functor {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor(
-        const internal_model& model, const test& test)
-        : model_(model), test_(test), num_new_covered_tuples_(0) {}
+        const internal_model& model)
+        : model_(model), num_new_covered_tuples_(0) {}
 
-    void operator()(coverage_map::second_level_type& value_combinations) {
+    void operator()(const test& test,
+                    coverage_map::second_level_type& value_combinations) {
+
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
@@ -254,7 +284,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size(); ++i) {
           const unsigned int param_idx = param_indices[i];
-          const int param_value = test_.get_values()[param_idx];
+          const int param_value = test.get_values()[param_idx];
 
           if (param_value < 0) {
             // We have found a don't care value for that combination in
@@ -283,11 +313,10 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
       return num_new_covered_tuples_;
     }
 
-    void reset_num_new_covered_tuples() { num_new_covered_tuples_ = 0; }
+    void reset() { num_new_covered_tuples_ = 0; }
 
   private:
     const internal_model& model_;
-    const test& test_;
     unsigned long long num_new_covered_tuples_;
 };
 
@@ -296,14 +325,15 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
   public:
     ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel(
         const internal_model& model, const test& test, const T_EXEC& exec)
-        : thread_local_functors_(exec.get_num_workers(), {model, test}),
-          exec_(exec) {}
+        : thread_local_functors_(exec.get_num_workers(), {model}),
+          exec_(exec),
+          test_(test) {}
 
     bool operator()(coverage_map::second_level_type& value_combinations) {
       auto& thread_local_functor =
           thread_local_functors_[exec_.get_worker_id()];
 
-      thread_local_functor(value_combinations);
+      thread_local_functor(test_, value_combinations);
 
       return true;
     }
@@ -318,9 +348,9 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
       return res;
     }
 
-    void reset_num_new_covered_tuples() {
+    void reset() {
       for (auto& thread_local_functor : thread_local_functors_) {
-        thread_local_functor.reset_num_new_covered_tuples();
+        thread_local_functor.reset();
       }
     }
 
@@ -328,26 +358,42 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
     alignas(false_sharing_avoidance_alignment) thread_local_vector<
         ipog_horizontal_update_coverage_map_per_param_combo_functor> thread_local_functors_;
     const T_EXEC& exec_;
+    const test& test_;
 };
 
-inline void ipog_horizontal_update_coverage_map(
-    const internal_model& model, const test& test,
-    std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
-    std::unordered_map<const internal_relation*, unsigned long long>&
-        num_covered_tuples) {
+class ipog_horizontal_update_coverage_map_functor {
+  public:
+    ipog_horizontal_update_coverage_map_functor(
+        const internal_model& model,
+        std::vector<std::pair<const internal_relation*, coverage_map>>&
+            relations,
+        std::unordered_map<const internal_relation*, unsigned long long>&
+            num_covered_tuples)
+        : per_param_combo_functor_(model),
+          relations_(relations),
+          num_covered_tuples_(num_covered_tuples) {}
 
-  ipog_horizontal_update_coverage_map_per_param_combo_functor
-      per_param_combo_functor(model, test);
-  for (auto& rel_and_cov_map : relations) {
-    per_param_combo_functor.reset_num_new_covered_tuples();
-    for (auto& value_combinations : rel_and_cov_map.second.get_coverage_map()) {
-      per_param_combo_functor(value_combinations);
+    void operator()(const test& test) {
+      for (auto& rel_and_cov_map : relations_) {
+        for (auto& value_combinations :
+             rel_and_cov_map.second.get_coverage_map()) {
+          per_param_combo_functor_(test, value_combinations);
+        }
+
+        num_covered_tuples_[rel_and_cov_map.first] +=
+            per_param_combo_functor_.get_num_new_covered_tuples();
+
+        per_param_combo_functor_.reset();
+      }
     }
 
-    num_covered_tuples[rel_and_cov_map.first] +=
-        per_param_combo_functor.get_num_new_covered_tuples();
-  }
-}
+  private:
+    ipog_horizontal_update_coverage_map_per_param_combo_functor
+        per_param_combo_functor_;
+    std::vector<std::pair<const internal_relation*, coverage_map>>& relations_;
+    std::unordered_map<const internal_relation*, unsigned long long>&
+        num_covered_tuples_;
+};
 
 template <conc_is_void_functor_executor T_EXEC>
 void ipog_horizontal_update_coverage_map(
@@ -362,10 +408,10 @@ void ipog_horizontal_update_coverage_map(
   ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel<T_EXEC>
       per_param_combo_functor(model, test, exec);
   for (auto& cov_map_it : relation_cov_map_its) {
-    per_param_combo_functor.reset_num_new_covered_tuples();
     cov_map_it.second.visit_all_parameter_combinations(per_param_combo_functor);
     num_covered_tuples[cov_map_it.first] +=
         per_param_combo_functor.get_num_new_covered_tuples();
+    per_param_combo_functor.reset();
   }
 }
 
@@ -377,18 +423,20 @@ class
         const bitset_uint64& valid_values,
         const unsigned int num_current_param_values,
         const bool enable_coverage_update, const bool enable_gain_computation)
-        : covm_update_func_(model, prev_test),
-          best_value_selection_func_(model, test, valid_values,
-                                     num_current_param_values),
+        : covm_update_func_(model),
+          best_value_selection_func_(model, num_current_param_values),
+          prev_test_(prev_test),
+          test_(test),
+          valid_values_(valid_values),
           enable_coverage_update_(enable_coverage_update),
           enable_gain_computation_(enable_gain_computation) {}
 
     void operator()(coverage_map::second_level_type& value_combinations) {
       if (enable_coverage_update_) {
-        covm_update_func_(value_combinations);
+        covm_update_func_(prev_test_, value_combinations);
       }
       if (enable_gain_computation_) {
-        best_value_selection_func_(value_combinations);
+        best_value_selection_func_(test_, valid_values_, value_combinations);
       }
     }
 
@@ -404,15 +452,16 @@ class
       return covm_update_func_.get_num_new_covered_tuples();
     }
 
-    void reset_num_new_covered_tuples() {
-      covm_update_func_.reset_num_new_covered_tuples();
-    }
+    void reset() { covm_update_func_.reset(); }
 
   private:
     ipog_horizontal_update_coverage_map_per_param_combo_functor
         covm_update_func_;
     ipog_horizontal_select_best_value_per_param_combo_functor
         best_value_selection_func_;
+    const test& prev_test_;
+    const test& test_;
+    const bitset_uint64& valid_values_;
     const bool enable_coverage_update_;
     const bool enable_gain_computation_;
 };
@@ -465,9 +514,9 @@ class
       return res;
     }
 
-    void reset_num_new_covered_tuples() {
+    void reset() {
       for (auto& thread_local_functor : thread_local_functors_) {
-        thread_local_functor.reset_num_new_covered_tuples();
+        thread_local_functor.reset();
       }
     }
 
@@ -498,7 +547,6 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
           prev_test.get_values()[real_current_param_idx] >= 0,
           current_param_value < 0);
   for (auto& rel_and_cov_map : relations) {
-    per_param_combo_functor.reset_num_new_covered_tuples();
     for (auto& value_combinations : rel_and_cov_map.second.get_coverage_map()) {
       per_param_combo_functor(value_combinations);
     }
@@ -507,6 +555,8 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
         per_param_combo_functor.get_num_new_covered_tuples();
     num_covered_tuples[rel_and_cov_map.first] += num_new_covered_tuples;
     res.num_new_covered_tuples_ += num_new_covered_tuples;
+
+    per_param_combo_functor.reset();
   }
 
   // This is an array containing the coverage gain per value of the current
@@ -555,12 +605,13 @@ ipog_horizontal_update_coverage_map_and_select_best_value(
           prev_test.get_values()[real_current_param_idx] >= 0,
           current_param_value < 0, exec);
   for (auto& cov_map_it : relation_cov_map_its) {
-    per_param_combo_functor.reset_num_new_covered_tuples();
     cov_map_it.second.visit_all_parameter_combinations(per_param_combo_functor);
     const unsigned long long num_new_covered_tuples =
         per_param_combo_functor.get_num_new_covered_tuples();
     num_covered_tuples[cov_map_it.first] += num_new_covered_tuples;
     res.num_new_covered_tuples_ += num_new_covered_tuples;
+
+    per_param_combo_functor.reset();
   }
 
   // This is an array containing the coverage gain per value of the current
@@ -615,6 +666,13 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
   std::vector<int> value_to_valid_options(
       get_value_to_valid_options(num_current_param_values, valid_values));
 
+  ipog_horizontal_select_best_value_functor select_best_value_functor(
+      real_current_param_idx, num_current_param_values, model, relations,
+      last_picked_value, value_to_valid_options);
+
+  ipog_horizontal_update_coverage_map_functor update_cov_map_functor(
+      model, relations, result.num_new_covered_tuples);
+
   test* previous_test = nullptr;
   int selected_value = 0;
   unsigned long long num_new_covered_tuples = 0;
@@ -628,10 +686,7 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
     }
 
     if (!previous_test) {
-      selected_value = ipog_horizontal_select_best_value(
-          real_current_param_idx, num_current_param_values, model,
-          valid_values[test_index], t, relations, last_picked_value,
-          value_to_valid_options);
+      selected_value = select_best_value_functor(t, valid_values[test_index]);
     } else {
       if (selected_value >= 0) {
         // We might not have selected any value. This can happen, if no matter
@@ -705,8 +760,7 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
         nullptr;
 
     if (selected_value >= 0) {
-      ipog_horizontal_update_coverage_map(model, *previous_test, relations,
-                                          result.num_new_covered_tuples);
+      update_cov_map_functor(*previous_test);
     }
   }
 
