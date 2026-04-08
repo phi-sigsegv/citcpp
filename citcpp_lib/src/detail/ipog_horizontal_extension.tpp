@@ -364,32 +364,39 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor_parallel {
 class ipog_horizontal_update_coverage_map_functor {
   public:
     ipog_horizontal_update_coverage_map_functor(
-        const internal_model& model,
+        const unsigned int real_current_param_idx, const internal_model& model,
         std::vector<std::pair<const internal_relation*, coverage_map>>&
             relations,
         std::unordered_map<const internal_relation*, unsigned long long>&
             num_covered_tuples)
         : per_param_combo_functor_(model),
+          real_current_param_idx_(real_current_param_idx),
           relations_(relations),
           num_covered_tuples_(num_covered_tuples) {}
 
     void operator()(const test& test) {
-      for (auto& rel_and_cov_map : relations_) {
-        for (auto& value_combinations :
-             rel_and_cov_map.second.get_coverage_map()) {
-          per_param_combo_functor_(test, value_combinations);
+      // Only if the value at the current parameter is different from
+      // don't care, we have a gain in coverage and thus need to
+      // update the coverage map.
+      if (test.get_values()[real_current_param_idx_] >= 0) {
+        for (auto& rel_and_cov_map : relations_) {
+          for (auto& value_combinations :
+               rel_and_cov_map.second.get_coverage_map()) {
+            per_param_combo_functor_(test, value_combinations);
+          }
+
+          num_covered_tuples_[rel_and_cov_map.first] +=
+              per_param_combo_functor_.get_num_new_covered_tuples();
+
+          per_param_combo_functor_.reset();
         }
-
-        num_covered_tuples_[rel_and_cov_map.first] +=
-            per_param_combo_functor_.get_num_new_covered_tuples();
-
-        per_param_combo_functor_.reset();
       }
     }
 
   private:
     ipog_horizontal_update_coverage_map_per_param_combo_functor
         per_param_combo_functor_;
+    const unsigned int real_current_param_idx_;
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations_;
     std::unordered_map<const internal_relation*, unsigned long long>&
         num_covered_tuples_;
@@ -671,7 +678,7 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
       last_picked_value, value_to_valid_options);
 
   ipog_horizontal_update_coverage_map_functor update_cov_map_functor(
-      model, relations, result.num_new_covered_tuples);
+      real_current_param_idx, model, relations, result.num_new_covered_tuples);
 
   test* previous_test = nullptr;
   int selected_value = 0;
@@ -759,9 +766,7 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
     previous_test->get_vertical_extension_intrusive_list_node().next_node_ =
         nullptr;
 
-    if (selected_value >= 0) {
-      update_cov_map_functor(*previous_test);
-    }
+    update_cov_map_functor(*previous_test);
   }
 
   return result;
