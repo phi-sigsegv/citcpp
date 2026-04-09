@@ -169,7 +169,7 @@ class ipog_horizontal_select_best_value_functor {
         const unsigned int real_current_param_idx,
         const unsigned int num_current_param_values,
         const internal_model& model,
-        std::vector<std::pair<const internal_relation*, coverage_map>>&
+        const std::vector<std::pair<const internal_relation*, coverage_map>>&
             relations,
         unsigned int& last_picked_value,
         std::vector<int>& value_to_valid_options)
@@ -188,13 +188,11 @@ class ipog_horizontal_select_best_value_functor {
         last_picked_value_ = test.get_values()[real_current_param_idx_];
         value_to_valid_options_[last_picked_value_]--;
 
-        per_param_combo_functor_.reset();
-
         return last_picked_value_;
       }
 
-      for (auto& rel_and_cov_map : relations_) {
-        for (auto& value_combinations :
+      for (const auto& rel_and_cov_map : relations_) {
+        for (const auto& value_combinations :
              rel_and_cov_map.second.get_coverage_map()) {
           per_param_combo_functor_(test, valid_values, value_combinations);
         }
@@ -219,7 +217,8 @@ class ipog_horizontal_select_best_value_functor {
     const unsigned int num_current_param_values_;
     ipog_horizontal_select_best_value_per_param_combo_functor
         per_param_combo_functor_;
-    std::vector<std::pair<const internal_relation*, coverage_map>>& relations_;
+    const std::vector<std::pair<const internal_relation*, coverage_map>>&
+        relations_;
     unsigned int& last_picked_value_;
     std::vector<int>& value_to_valid_options_;
 };
