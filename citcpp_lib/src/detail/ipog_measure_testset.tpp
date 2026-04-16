@@ -65,7 +65,7 @@ class ipog_measure_per_param_combo_functor {
       return num_covered_tuples_;
     }
 
-    void reset_num_covered_tuples() { num_covered_tuples_ = 0; }
+    void reset() { num_covered_tuples_ = 0; }
 
   private:
     const internal_model& model_;
@@ -74,44 +74,52 @@ class ipog_measure_per_param_combo_functor {
 };
 
 template <conc_is_void_functor_executor T_EXEC>
-class ipog_measure_per_param_combo_functor_parallel {
+class alignas(false_sharing_avoidance_alignment)
+    ipog_measure_per_param_combo_functor_parallel
+    : public functor_task_base<
+          ipog_measure_per_param_combo_functor_parallel<T_EXEC>> {
+
+  private:
+    typedef functor_task_base<
+        ipog_measure_per_param_combo_functor_parallel<T_EXEC>>
+        base_type;
+
   public:
     ipog_measure_per_param_combo_functor_parallel(
-        const internal_model& model, const internal_test_set& test_set,
-        const coverage_map_parallel_iterator<T_EXEC>& cov_map_it)
-        : thread_local_functors_(cov_map_it.get_num_workers(),
-                                 {model, test_set}),
-          cov_map_it_(cov_map_it) {}
+        const internal_model& model, const internal_test_set& test_set)
+        : per_param_combo_functor_(model, test_set),
+          cov_map_(nullptr),
+          start_index_(0),
+          end_index_(0) {}
 
-    bool operator()(coverage_map::second_level_type& value_combinations) {
-      auto& thread_local_functor =
-          thread_local_functors_[cov_map_it_.get_worker_id()];
+    void operator()() {
+      auto& cov_map = cov_map_->get_coverage_map();
 
-      thread_local_functor(value_combinations);
+      for (unsigned long long i = start_index_; i < end_index_; ++i) {
+        per_param_combo_functor_(cov_map[i]);
+      }
+    }
 
-      return true;
+    void set_task_parameters(coverage_map_base* cov_map,
+                             unsigned long long start_index,
+                             unsigned long long end_index) {
+      base_type::reset();
+      cov_map_ = cov_map;
+      start_index_ = start_index;
+      end_index_ = end_index;
     }
 
     unsigned long long get_num_covered_tuples() const {
-      unsigned long long res = 0;
-
-      for (const auto& thread_local_functor : thread_local_functors_) {
-        res += thread_local_functor.get_num_covered_tuples();
-      }
-
-      return res;
+      return per_param_combo_functor_.get_num_covered_tuples();
     }
 
-    void reset_num_covered_tuples() {
-      for (auto& thread_local_functor : thread_local_functors_) {
-        thread_local_functor.reset_num_covered_tuples();
-      }
-    }
+    void reset() { per_param_combo_functor_.reset(); }
 
   private:
-    alignas(false_sharing_avoidance_alignment) thread_local_vector<
-        ipog_measure_per_param_combo_functor> thread_local_functors_;
-    const coverage_map_parallel_iterator<T_EXEC>& cov_map_it_;
+    ipog_measure_per_param_combo_functor per_param_combo_functor_;
+    coverage_map_base* cov_map_;
+    unsigned long long start_index_;
+    unsigned long long end_index_;
 };
 
 inline ipog_measure_testset_result ipog_measure_testset(
@@ -124,7 +132,7 @@ inline ipog_measure_testset_result ipog_measure_testset(
   ipog_measure_per_param_combo_functor per_param_combo_functor(model, test_set);
 
   for (auto& rel_and_cov_map : relations) {
-    per_param_combo_functor.reset_num_covered_tuples();
+    per_param_combo_functor.reset();
     for (auto& value_combinations : rel_and_cov_map.second.get_coverage_map()) {
       per_param_combo_functor(value_combinations);
     }
@@ -145,17 +153,40 @@ ipog_measure_testset_result ipog_measure_testset(
   // First initialize the result object.
   ipog_measure_testset_result result;
 
+  thread_local_vector<ipog_measure_per_param_combo_functor_parallel<T_EXEC>>
+      thread_local_functors(exec.get_num_workers() * 8, {model, test_set});
+
   for (auto& rel_and_cov_map : relations) {
-    coverage_map_parallel_iterator<T_EXEC> cov_map_it =
-        rel_and_cov_map.second.create_parallel_iterator(exec);
+    coverage_map_base* cov_map = &rel_and_cov_map.second;
+    const unsigned long long total_param_combos =
+        cov_map->get_coverage_map().size();
+    const unsigned long long num_tasks = std::min(
+        (unsigned long long)thread_local_functors.size(), total_param_combos);
+    const unsigned long long per_task_combos = total_param_combos / num_tasks;
 
-    ipog_measure_per_param_combo_functor_parallel<T_EXEC>
-        per_param_combo_functor(model, test_set, cov_map_it);
+    {
+      auto exec_scope(exec.create_execution_scope());
+      for (unsigned long long i = 0; i < num_tasks - 1; ++i) {
+        auto& thread_local_func = thread_local_functors[i];
+        thread_local_func.set_task_parameters(cov_map, per_task_combos * i,
+                                              per_task_combos * (i + 1));
+        exec_scope.spawn_execution(thread_local_func);
+      }
+      {
+        auto& thread_local_func = thread_local_functors[num_tasks - 1];
+        thread_local_func.set_task_parameters(
+            cov_map, per_task_combos * (num_tasks - 1), total_param_combos);
+        exec_scope.spawn_execution(thread_local_func);
+      }
+    }
 
-    cov_map_it.visit_all_parameter_combinations(per_param_combo_functor);
+    for (unsigned long long i = 0; i < num_tasks; ++i) {
+      auto& thread_local_functor = thread_local_functors[i];
+      result.num_covered_tuples[rel_and_cov_map.first] +=
+          thread_local_functor.get_num_covered_tuples();
 
-    result.num_covered_tuples[rel_and_cov_map.first] =
-        per_param_combo_functor.get_num_covered_tuples();
+      thread_local_functor.reset();
+    }
   }
 
   return result;
