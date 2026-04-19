@@ -21,7 +21,7 @@ class coverage_measurement {
         : num_param_combos_to_cover_(0),
           num_tuples_to_cover_(0),
           covered_tuples_(),
-          cov_level_to_num_param_combos_() {}
+          cov_level_to_num_param_combos_{0} {}
 
     /**
      * Returns the number of parameter combinations that have to be covered.
@@ -120,26 +120,6 @@ class coverage_measurement {
                    NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
 
       return cov_level_to_num_param_combos_[index];
-    }
-
-    /**
-     * Returns for a coverage level (specified as a fraction in the range [0,
-     * 1]), the number of parameter combinations, whose coverage is equal or
-     * greater than that fraction.
-     * A coverage level of 1.0 means that all the value combinations of the
-     * parameter combinations have been covered.
-     */
-    unsigned long long& operator[](double coverage_fraction) {
-      coverage_fraction = std::max(std::min(coverage_fraction, 1.0), 0.0);
-
-      // Map the coverage fraction to the appropriate array index.
-      int index =
-          std::min((int)((double)(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
-                         coverage_fraction),
-                   NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
-
-      return cov_level_to_num_param_combos_[std::min(
-          index, NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1)];
     }
 
     /**
