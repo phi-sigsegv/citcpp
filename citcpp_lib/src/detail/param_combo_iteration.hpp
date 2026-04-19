@@ -330,6 +330,154 @@ class param_combo_parallel_iterator {
     function_ref<bool(const param_vector&)> visitor_;
 };
 
+template <typename F, conc_is_void_functor_executor T_EXEC>
+class param_combo_functor_parallel_iterator {
+  public:
+    param_combo_functor_parallel_iterator() = default;
+
+    template <typename... Args>
+    param_combo_functor_parallel_iterator(
+        unsigned int num_params_to_select_from,
+        unsigned int num_params_to_select,
+        const std::vector<unsigned int>& parameter_index_map,
+        bool fixed_last_parameter, T_EXEC& exec, Args... args)
+        : iterate_tasks_(), exec_(exec) {
+
+      param_vector param_indices(num_params_to_select);
+      param_indices[num_params_to_select - 1] =
+          parameter_index_map[num_params_to_select_from - 1];
+
+      if (fixed_last_parameter) {
+        if (num_params_to_select >= 2) {
+          const int loop_lb = num_params_to_select - 2;
+          iterate_tasks_.reserve(num_params_to_select_from - 2 - loop_lb + 1);
+          for (int j = num_params_to_select_from - 2; j >= loop_lb; --j) {
+
+            iterate_tasks_.emplace_back(
+                parameter_index_map, j, j, num_params_to_select - 1,
+                param_vector(param_indices), std::forward<Args>(args)...);
+          }
+        } else {
+          // If we have fixed the last parameter and shall only select one,
+          // then we have to treat that case differently.
+          iterate_tasks_.emplace_back(
+              parameter_index_map, num_params_to_select_from - 1,
+              num_params_to_select_from - 1, num_params_to_select,
+              param_vector(param_indices), std::forward<Args>(args)...);
+        }
+      } else {
+        const int loop_lb = num_params_to_select - 1;
+        iterate_tasks_.reserve(num_params_to_select_from - 1 - loop_lb + 1);
+        for (int j = num_params_to_select_from - 1; j >= loop_lb; --j) {
+
+          iterate_tasks_.emplace_back(
+              parameter_index_map, j, j, num_params_to_select,
+              param_vector(param_indices), std::forward<Args>(args)...);
+        }
+      }
+    }
+
+    ~param_combo_functor_parallel_iterator() = default;
+
+    unsigned int get_num_workers() const { return exec_->get_num_workers(); }
+
+    unsigned int get_worker_id() const { return exec_->get_worker_id(); }
+
+    void visit_all_parameter_combinations() {
+      auto exec_scope(exec_.create_execution_scope());
+      exec_scope.spawn_execution(iterate_tasks_);
+    }
+
+    template <typename T_VISITOR>
+    void visit_all_functors(T_VISITOR&& visitor) {
+      for (auto& t : iterate_tasks_) {
+        visitor(t.get_functor());
+      }
+    }
+
+  private:
+    class alignas(false_sharing_avoidance_alignment) iterate_task
+        : public functor_task_base<iterate_task> {
+
+      private:
+        typedef functor_task_base<iterate_task> base_type;
+
+      public:
+        iterate_task() = default;
+
+        template <typename... Args>
+        iterate_task(const std::vector<unsigned int>& parameter_index_map,
+                     int start_idx, int end_idx, int num_params_to_select,
+                     param_vector&& param_indices, Args... args)
+            : base_type(),
+              func_(std::forward<Args>(args)...),
+              param_indices_(std::move(param_indices)),
+              parameter_index_map_(parameter_index_map),
+              start_idx_(start_idx),
+              end_idx_(end_idx),
+              num_params_to_select_(num_params_to_select) {}
+
+        virtual ~iterate_task() {}
+
+        void operator()() {
+          const int current_level = num_params_to_select_ - 1;
+          bool cont = true;
+          for (int j = start_idx_; j >= end_idx_; --j) {
+            param_indices_[current_level] = parameter_index_map_[j];
+
+            if (current_level == 0) {
+              cont = func_(param_indices_);
+            } else {
+              cont =
+                  recursively_visit_all_param_combos(j - 1, current_level - 1);
+            }
+
+            if (!cont) {
+              break;
+            }
+          }
+        }
+
+        F& get_functor() { return func_; }
+        const F& get_functor() const { return func_; }
+
+      private:
+        bool recursively_visit_all_param_combos(int start_idx,
+                                                int current_level) {
+
+          bool cont = true;
+          for (int j = start_idx; j >= current_level; --j) {
+            param_indices_[current_level] = parameter_index_map_[j];
+
+            if (current_level == 0) {
+              cont = func_(param_indices_);
+            } else {
+              cont =
+                  recursively_visit_all_param_combos(j - 1, current_level - 1);
+            }
+
+            if (!cont) {
+              break;
+            }
+          }
+
+          return cont;
+        }
+
+      private:
+        F func_;
+        param_vector param_indices_;
+        const std::vector<unsigned int>& parameter_index_map_;
+        int start_idx_;
+        int end_idx_;
+        int num_params_to_select_;
+    };
+
+  private:
+    thread_local_vector<iterate_task> iterate_tasks_;
+    T_EXEC& exec_;
+};
+
 }  // namespace detail
 }  // namespace citcpp
 
