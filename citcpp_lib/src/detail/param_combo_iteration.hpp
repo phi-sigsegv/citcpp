@@ -20,18 +20,9 @@ class param_combo_iterator {
                          bool fixed_last_parameter)
         : num_params_to_select_from_(num_params_to_select_from),
           num_params_to_select_(num_params_to_select),
-          parameter_index_map_(&parameter_index_map),
+          parameter_index_map_(parameter_index_map),
           fixed_last_parameter_(fixed_last_parameter),
           param_indices_(num_params_to_select) {}
-
-    param_combo_iterator(const param_combo_iterator& other) = default;
-    param_combo_iterator(param_combo_iterator&& other) = default;
-
-    ~param_combo_iterator() = default;
-
-    param_combo_iterator& operator=(const param_combo_iterator& other) =
-        default;
-    param_combo_iterator& operator=(param_combo_iterator&& other) = default;
 
     unsigned int get_number_of_parameters_to_select_from() const {
       return num_params_to_select_from_;
@@ -43,10 +34,9 @@ class param_combo_iterator {
 
     template <class T_VISITOR>
     void visit_all_parameter_combinations(T_VISITOR& visitor) {
-
       if (fixed_last_parameter_) {
         const unsigned int real_last_param_idx =
-            (*parameter_index_map_)[num_params_to_select_from_ - 1];
+            parameter_index_map_[num_params_to_select_from_ - 1];
 
         param_indices_[num_params_to_select_ - 1] = real_last_param_idx;
 
@@ -73,7 +63,7 @@ class param_combo_iterator {
 
       bool cont = true;
       for (int j = start_idx_for_next; j >= current_level; --j) {
-        param_indices_[current_level] = (*parameter_index_map_)[j];
+        param_indices_[current_level] = parameter_index_map_[j];
 
         if (current_level == 0) {
           cont = visitor(param_indices_);
@@ -93,7 +83,7 @@ class param_combo_iterator {
   private:
     unsigned int num_params_to_select_from_;
     unsigned int num_params_to_select_;
-    const std::vector<unsigned int>* parameter_index_map_;
+    const std::vector<unsigned int>& parameter_index_map_;
     bool fixed_last_parameter_;
     param_vector param_indices_;
 };
