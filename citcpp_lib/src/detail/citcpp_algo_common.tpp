@@ -1,3 +1,5 @@
+#include <functional>
+
 #include "bitset.hpp"
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
@@ -146,50 +148,15 @@ class num_combos_per_param_combo_functor {
       return true;
     }
 
-    number_of_combinations get_number_of_combos() const { return num_combos_; }
+    const number_of_combinations& get_number_of_combos() const {
+      return num_combos_;
+    }
 
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
     array_wrapper_uint64 bitset_backing_array_;
     number_of_combinations num_combos_;
-};
-
-template <conc_is_void_functor_executor T_EXEC>
-class num_combos_per_param_combo_functor_parallel {
-  public:
-    num_combos_per_param_combo_functor_parallel(
-        const internal_model& model, const internal_test_set& test_set,
-        const unsigned int bitset_backing_array_size,
-        const param_combo_parallel_iterator<T_EXEC>& param_combo_it)
-        : thread_local_functors_(param_combo_it.get_num_workers(),
-                                 {model, test_set, bitset_backing_array_size}),
-          param_combo_it_(param_combo_it) {}
-
-    bool operator()(const param_vector& param_indices) {
-      auto& thread_local_functor =
-          thread_local_functors_[param_combo_it_.get_worker_id()];
-
-      return thread_local_functor(param_indices);
-    }
-
-    number_of_combinations get_number_of_combos() const {
-      number_of_combinations result{0, 0};
-
-      for (const auto& thread_local_functor : thread_local_functors_) {
-        number_of_combinations thread_local_result(
-            thread_local_functor.get_number_of_combos());
-        result.num_combos_to_cover += thread_local_result.num_combos_to_cover;
-        result.num_covered_combos += thread_local_result.num_covered_combos;
-      }
-
-      return result;
-    }
-
-  private:
-    alignas(false_sharing_avoidance_alignment) thread_local_vector<
-        num_combos_per_param_combo_functor> thread_local_functors_;
-    const param_combo_parallel_iterator<T_EXEC>& param_combo_it_;
 };
 
 inline unsigned long long number_of_combinations_to_cover(
@@ -308,15 +275,25 @@ number_of_combinations get_number_of_combinations(
       get_product_of_max_n_parameter_sizes(parameter_index_map.size(), t, model,
                                            parameter_index_map);
 
-  param_combo_parallel_iterator<T_EXEC> param_combo_it(
-      n, t, parameter_index_map, fixed_last_parameter, exec);
+  param_combo_functor_parallel_iterator<num_combos_per_param_combo_functor,
+                                        T_EXEC>
+      per_param_combo_functor_parallel(n, t, parameter_index_map,
+                                       fixed_last_parameter, exec,
+                                       std::cref(model), std::cref(test_set),
+                                       product_of_max_parameter_sizes);
 
-  num_combos_per_param_combo_functor_parallel<T_EXEC> per_param_combo_functor(
-      model, test_set, product_of_max_parameter_sizes, param_combo_it);
+  per_param_combo_functor_parallel.visit_all_parameter_combinations();
 
-  param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
+  number_of_combinations num_combos{0, 0};
+  per_param_combo_functor_parallel.visit_all_functors(
+      [&num_combos](const num_combos_per_param_combo_functor& f) {
+        const number_of_combinations& local_num_combos =
+            f.get_number_of_combos();
+        num_combos.num_combos_to_cover += local_num_combos.num_combos_to_cover;
+        num_combos.num_covered_combos += local_num_combos.num_covered_combos;
+      });
 
-  return per_param_combo_functor.get_number_of_combos();
+  return num_combos;
 }
 
 }  // namespace detail
