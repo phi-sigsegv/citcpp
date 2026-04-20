@@ -21,9 +21,6 @@ std::ostream& operator<<(std::ostream& os,
     case covering_array_computation_algorithm::IPOG:
       os << "IPOG";
       break;
-    case covering_array_computation_algorithm::IPOG_OTF:
-      os << "IPOG_OTF";
-      break;
   }
 
   return os;

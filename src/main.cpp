@@ -41,24 +41,6 @@ class InteractionStrengthValidator : public CLI::Validator {
     }
 };
 
-class CagenAlgorithmValidator : public CLI::Validator {
-  public:
-    CagenAlgorithmValidator() : Validator() {
-      func_ = [](const std::string& input) {
-        if (input.compare("IPOG") == 0 || input.compare("ipog") == 0 ||
-            input.compare("IPOG_OTF") == 0 || input.compare("ipog_otf") == 0) {
-
-          return std::string{};
-        }
-
-        std::stringstream out;
-        out << "invalid cagen algorithm \"" << input
-            << "\", should be \"IPOG\" or \"IPOG_OTF\"";
-        return out.str();
-      };
-    }
-};
-
 std::unique_ptr<citcpp::model> read_model_file(
     const std::string& model_file_path, bool& ok) {
 
@@ -467,15 +449,6 @@ int main(int argc, char* argv[]) {
       "--progress", show_progress,
       "Set this flag to enable displaying progress information.");
 
-  std::string cagen_algo_str{""};
-  command_cagen
-      ->add_option(
-          "--algo", cagen_algo_str,
-          "Set this flag to choose between available algorithms. "
-          "Supported ones "
-          "are \"IPOG\" and \"IPOG_OTF\". The default value is \"IPOG\".")
-      ->check(CagenAlgorithmValidator());
-
   std::string seed_test_set_file_path{""};
   command_cagen->add_option(
       "--seed-testset_file", seed_test_set_file_path,
@@ -572,18 +545,10 @@ int main(int argc, char* argv[]) {
   std::signal(SIGINT, signal_handler);
 
   if (command_cagen->parsed()) {
-    covering_array_computation_algorithm cagen_algo =
-        covering_array_computation_algorithm::IPOG;
-    if (cagen_algo_str.compare("IPOG_OTF") == 0 ||
-        cagen_algo_str.compare("ipog_otf") == 0) {
-
-      cagen_algo = covering_array_computation_algorithm::IPOG_OTF;
-    }
-
-    return execute_cagen(model_file_path, test_set_file_path,
-                         seed_test_set_file_path, cagen_algo,
-                         interaction_strength, show_progress, sep, num_threads,
-                         rand_star);
+    return execute_cagen(
+        model_file_path, test_set_file_path, seed_test_set_file_path,
+        covering_array_computation_algorithm::IPOG, interaction_strength,
+        show_progress, sep, num_threads, rand_star);
   }
   if (command_cov_measure->parsed()) {
     return execute_covm(model_file_path, test_set_file_path,

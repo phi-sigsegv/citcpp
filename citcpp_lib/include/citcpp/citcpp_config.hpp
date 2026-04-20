@@ -16,14 +16,7 @@ enum class covering_array_computation_algorithm {
    * An in-parameter-order-general algorithm similar to the one implemented
    * by the popular tool ACTS.
    */
-  IPOG,
-  /**
-   * An in-parameter-order-general algorithm whose results are identical to
-   * the ones achieved by IPOG, but which trades a much better memory
-   * consumption against a slower run-time performance. This algorithm should be
-   * used, if the given problem simply results in too much memory being used.
-   */
-  IPOG_OTF
+  IPOG
 };
 
 std::ostream& operator<<(std::ostream& os,
