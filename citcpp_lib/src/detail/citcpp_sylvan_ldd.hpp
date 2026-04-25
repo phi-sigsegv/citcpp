@@ -141,45 +141,6 @@ class sylvan_ldd {
     void get_sat_one_under_partial_assignment(
         std::vector<int>& assignment) const;
 
-    /**
-     * Returns whether the given partial assignment is contained in this LDD.
-     * Note that although the assignment maybe partial, the size of the given
-     * vector specifying the assignment must be fully defined with respect to
-     * the variables of this LDD. An unassigned/free variable shall be denoted
-     * by a negative values at the corresponding index of the given
-     * assignment specification.
-     */
-    bool thread_safe_is_sat_with_partial_assignment(
-        const std::vector<int>& partial_assignment) const;
-
-    /**
-     * Returns a bitset that represents which values of the specified variable
-     * are valid, in the sense of the existence of a full assignment to all
-     * variables. This collection of valid values of a variable can be
-     * optionally limited to paths that are consistent with the specified
-     * partial assignment with respect to other variables. It is also possible
-     * to pass in an empty partial assignment, in which case the search for
-     * valid values of the specified variable in done in a global manner.
-     *
-     * The returned bitset has bits enabled at indices corresponding to the
-     * indices of values in the domain definition of the variable.
-     */
-    bitset_uint64 thread_safe_get_valid_variable_assignments(
-        uint32_t variable, uint32_t domain_size,
-        const std::vector<int>& partial_assignment) const;
-
-    /**
-     * Gets a full satisfying assignment, writing it to the given
-     * vector. The vector is expected to be large enough such that
-     * for each variable of this LDD a value can be written to it.
-     *
-     * Compared to {@link #get_sat_one}, this method analyzes the
-     * given vector for a partial assignment, such that the extracted
-     * full assignment is guaranteed to be consistent with it.
-     */
-    void thread_safe_get_sat_one_under_partial_assignment(
-        std::vector<int>& assignment) const;
-
   private:
     sylvan_ldd(uint64_t ldd, const std::vector<uint32_t>& variables);
     sylvan_ldd(uint64_t ldd, std::vector<uint32_t>&& variables);
