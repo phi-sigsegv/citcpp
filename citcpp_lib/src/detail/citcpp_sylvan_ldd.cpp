@@ -2046,11 +2046,41 @@ bool sylvan_ldd::operator!=(const sylvan_ldd& other) const {
   return ldd_ != other.ldd_ || variables_ != other.variables_;
 }
 
+sylvan_ldd sylvan_ldd::get_down_node() const {
+  const mddnode_t node = LDD_GETNODE(ldd_);
+  MDD down = mddnode_getdown(node);
+  if (down == lddmc_true) {
+    return lddTrue();
+  } else if (down == lddmc_false) {
+    return lddFalse();
+  } else {
+    std::vector<uint32_t> down_vars(variables_);
+    down_vars.erase(down_vars.begin());
+    return sylvan_ldd(down, std::move(down_vars));
+  }
+}
+
+sylvan_ldd sylvan_ldd::get_right_node() const {
+  const mddnode_t node = LDD_GETNODE(ldd_);
+  MDD right = mddnode_getright(node);
+  if (right == lddmc_true) {
+    return lddTrue();
+  } else if (right == lddmc_false) {
+    return lddFalse();
+  } else {
+    return sylvan_ldd(right, std::vector<uint32_t>(variables_));
+  }
+}
+
 uint32_t sylvan_ldd::get_value() const {
   const mddnode_t node = LDD_GETNODE(ldd_);
   const uint32_t value = mddnode_getvalue(node);
 
   return value;
+}
+
+const std::vector<uint32_t>& sylvan_ldd::get_variables() const {
+  return variables_;
 }
 
 sylvan_ldd sylvan_ldd::project_intersect(const sylvan_ldd& lhs,
@@ -2281,20 +2311,20 @@ void sylvan_ldd::get_sat_one_under_partial_assignment(
   }
 }
 
-sylvan_idd::sylvan_idd() : ldd_(lddmc_false), variables_() {
-  lddmc_protect(&ldd_);
+sylvan_idd::sylvan_idd() : idd_(lddmc_false), variables_() {
+  lddmc_protect(&idd_);
 }
 
 sylvan_idd::sylvan_idd(uint32_t variable, uint32_t value)
-    : ldd_(sylvan_make_node(encode_interval(value, value), lddmc_true,
+    : idd_(sylvan_make_node(encode_interval(value, value), lddmc_true,
                             lddmc_false)),
       variables_(1, variable) {
 
-  lddmc_protect(&ldd_);
+  lddmc_protect(&idd_);
 }
 
 sylvan_idd::sylvan_idd(const std::vector<int>& assignments)
-    : ldd_(sylvan_idd_create_cube_from_assignments(assignments.data(),
+    : idd_(sylvan_idd_create_cube_from_assignments(assignments.data(),
                                                    assignments.size())),
       variables_() {
 
@@ -2305,47 +2335,47 @@ sylvan_idd::sylvan_idd(const std::vector<int>& assignments)
     }
   }
 
-  lddmc_protect(&ldd_);
+  lddmc_protect(&idd_);
 }
 
 sylvan_idd::sylvan_idd(uint32_t variable, relational_operator op,
                        uint32_t value, uint32_t variable_domain_size)
-    : ldd_(sylvan_idd_create_relational_proposition(op, value,
+    : idd_(sylvan_idd_create_relational_proposition(op, value,
                                                     variable_domain_size)),
       variables_(1, variable) {
 
-  lddmc_protect(&ldd_);
+  lddmc_protect(&idd_);
 }
 
 sylvan_idd::sylvan_idd(const sylvan_idd& other)
-    : ldd_(other.ldd_), variables_(other.variables_) {
+    : idd_(other.idd_), variables_(other.variables_) {
 
-  lddmc_protect(&ldd_);
+  lddmc_protect(&idd_);
 }
 
 sylvan_idd::sylvan_idd(sylvan_idd&& other)
-    : ldd_(other.ldd_), variables_(std::move(other.variables_)) {
+    : idd_(other.idd_), variables_(std::move(other.variables_)) {
 
-  lddmc_protect(&ldd_);
+  lddmc_protect(&idd_);
 }
 
 sylvan_idd::sylvan_idd(uint64_t ldd, const std::vector<uint32_t>& variables)
-    : ldd_(ldd), variables_(variables) {
+    : idd_(ldd), variables_(variables) {
 
-  lddmc_protect(&ldd_);
+  lddmc_protect(&idd_);
 }
 
 sylvan_idd::sylvan_idd(uint64_t ldd, std::vector<uint32_t>&& variables)
-    : ldd_(ldd), variables_(std::move(variables)) {
+    : idd_(ldd), variables_(std::move(variables)) {
 
-  lddmc_protect(&ldd_);
+  lddmc_protect(&idd_);
 }
 
-sylvan_idd::~sylvan_idd() { lddmc_unprotect(&ldd_); }
+sylvan_idd::~sylvan_idd() { lddmc_unprotect(&idd_); }
 
 sylvan_idd& sylvan_idd::operator=(const sylvan_idd& other) {
   if (this != &other) {
-    ldd_ = other.ldd_;
+    idd_ = other.idd_;
     variables_ = other.variables_;
   }
   return *this;
@@ -2353,7 +2383,7 @@ sylvan_idd& sylvan_idd::operator=(const sylvan_idd& other) {
 
 sylvan_idd& sylvan_idd::operator=(sylvan_idd&& other) {
   if (this != &other) {
-    ldd_ = other.ldd_;
+    idd_ = other.idd_;
     variables_ = std::move(other.variables_);
   }
   return *this;
@@ -2366,15 +2396,48 @@ sylvan_idd sylvan_idd::iddTrue() {
 sylvan_idd sylvan_idd::iddFalse() { return sylvan_idd(); }
 
 bool sylvan_idd::operator==(const sylvan_idd& other) const {
-  return ldd_ == other.ldd_ && variables_ == other.variables_;
+  return idd_ == other.idd_ && variables_ == other.variables_;
 }
 
 bool sylvan_idd::operator!=(const sylvan_idd& other) const {
-  return ldd_ != other.ldd_ || variables_ != other.variables_;
+  return idd_ != other.idd_ || variables_ != other.variables_;
+}
+
+sylvan_idd sylvan_idd::get_down_node() const {
+  const mddnode_t node = LDD_GETNODE(idd_);
+  MDD down = mddnode_getdown(node);
+  if (down == lddmc_true) {
+    return iddTrue();
+  } else if (down == lddmc_false) {
+    return iddFalse();
+  } else {
+    std::vector<uint32_t> down_vars(variables_);
+    down_vars.erase(down_vars.begin());
+    return sylvan_idd(down, std::move(down_vars));
+  }
+}
+
+sylvan_idd sylvan_idd::get_right_node() const {
+  const mddnode_t node = LDD_GETNODE(idd_);
+  MDD right = mddnode_getright(node);
+  if (right == lddmc_true) {
+    return iddTrue();
+  } else if (right == lddmc_false) {
+    return iddFalse();
+  } else {
+    return sylvan_idd(right, std::vector<uint32_t>(variables_));
+  }
+}
+
+uint32_t sylvan_idd::get_encoded_interval() const {
+  const mddnode_t node = LDD_GETNODE(idd_);
+  const uint32_t value = mddnode_getvalue(node);
+
+  return value;
 }
 
 void sylvan_idd::get_interval(uint32_t& lb, uint32_t& ub) const {
-  const mddnode_t node = LDD_GETNODE(ldd_);
+  const mddnode_t node = LDD_GETNODE(idd_);
   const uint32_t value = mddnode_getvalue(node);
 
   interval ival(decode_interval(value));
@@ -2382,13 +2445,17 @@ void sylvan_idd::get_interval(uint32_t& lb, uint32_t& ub) const {
   ub = ival.ub;
 }
 
+const std::vector<uint32_t>& sylvan_idd::get_variables() const {
+  return variables_;
+}
+
 sylvan_idd sylvan_idd::project_intersect(const sylvan_idd& lhs,
                                          const sylvan_idd& rhs) {
 
-  if (lhs.ldd_ == lddmc_false || rhs.ldd_ == lddmc_false)
+  if (lhs.idd_ == lddmc_false || rhs.idd_ == lddmc_false)
     return sylvan_idd::iddFalse();
-  if (lhs.ldd_ == lddmc_true) return rhs;
-  if (rhs.ldd_ == lddmc_true) return lhs;
+  if (lhs.idd_ == lddmc_true) return rhs;
+  if (rhs.idd_ == lddmc_true) return lhs;
 
   const std::vector<uint32_t>& lhs_vars = lhs.variables_;
   const std::vector<uint32_t>& rhs_vars = rhs.variables_;
@@ -2404,7 +2471,7 @@ sylvan_idd sylvan_idd::project_intersect(const sylvan_idd& lhs,
       rhs_vars.size());
   lddmc_protect(&rhs_cube);
 
-  MDD and_ldd = sylvan_idd_join(lhs.ldd_, rhs.ldd_, lhs_cube, rhs_cube);
+  MDD and_ldd = sylvan_idd_join(lhs.idd_, rhs.idd_, lhs_cube, rhs_cube);
 
   lddmc_unprotect(&lhs_cube);
   lddmc_unprotect(&rhs_cube);
@@ -2413,13 +2480,13 @@ sylvan_idd sylvan_idd::project_intersect(const sylvan_idd& lhs,
 }
 
 sylvan_idd& sylvan_idd::project_intersect(const sylvan_idd& other) {
-  if (ldd_ == lddmc_false || other.ldd_ == lddmc_false) {
-    ldd_ = lddmc_false;
+  if (idd_ == lddmc_false || other.idd_ == lddmc_false) {
+    idd_ = lddmc_false;
     variables_.clear();
     return *this;
   }
-  if (other.ldd_ == lddmc_true) return *this;
-  if (ldd_ == lddmc_true) {
+  if (other.idd_ == lddmc_true) return *this;
+  if (idd_ == lddmc_true) {
     *this = other;
     return *this;
   }
@@ -2438,7 +2505,7 @@ sylvan_idd& sylvan_idd::project_intersect(const sylvan_idd& other) {
       other_vars.size());
   lddmc_protect(&other_cube);
 
-  ldd_ = sylvan_idd_join(ldd_, other.ldd_, this_cube, other_cube);
+  idd_ = sylvan_idd_join(idd_, other.idd_, this_cube, other_cube);
 
   lddmc_unprotect(&this_cube);
   lddmc_unprotect(&other_cube);
@@ -2452,8 +2519,8 @@ sylvan_idd sylvan_idd::project_union(
     const sylvan_idd& lhs, const sylvan_idd& rhs,
     const std::vector<unsigned int>& domain_sizes) {
 
-  if (lhs.ldd_ == lddmc_false) return rhs;
-  if (rhs.ldd_ == lddmc_false) return lhs;
+  if (lhs.idd_ == lddmc_false) return rhs;
+  if (rhs.idd_ == lddmc_false) return lhs;
 
   const std::vector<uint32_t>& lhs_vars = lhs.variables_;
   const std::vector<uint32_t>& rhs_vars = rhs.variables_;
@@ -2472,10 +2539,10 @@ sylvan_idd sylvan_idd::project_union(
       common_variables.data(), common_variables.size(), domain_sizes.data());
   lddmc_protect(&universe);
 
-  MDD lhs_projected = sylvan_idd_inv_project(universe, lhs.ldd_, lhs_cube);
+  MDD lhs_projected = sylvan_idd_inv_project(universe, lhs.idd_, lhs_cube);
   lddmc_protect(&lhs_projected);
   lddmc_unprotect(&lhs_cube);
-  MDD rhs_projected = sylvan_idd_inv_project(universe, rhs.ldd_, rhs_cube);
+  MDD rhs_projected = sylvan_idd_inv_project(universe, rhs.idd_, rhs_cube);
   lddmc_protect(&rhs_projected);
   lddmc_unprotect(&rhs_cube);
   lddmc_unprotect(&universe);
@@ -2491,8 +2558,8 @@ sylvan_idd sylvan_idd::project_union(
 sylvan_idd& sylvan_idd::project_union(
     const sylvan_idd& other, const std::vector<unsigned int>& domain_sizes) {
 
-  if (other.ldd_ == lddmc_false) return *this;
-  if (ldd_ == lddmc_false) {
+  if (other.idd_ == lddmc_false) return *this;
+  if (idd_ == lddmc_false) {
     *this = other;
     return *this;
   }
@@ -2514,16 +2581,16 @@ sylvan_idd& sylvan_idd::project_union(
       common_variables.data(), common_variables.size(), domain_sizes.data());
   lddmc_protect(&universe);
 
-  MDD this_projected = sylvan_idd_inv_project(universe, ldd_, this_cube);
+  MDD this_projected = sylvan_idd_inv_project(universe, idd_, this_cube);
   lddmc_protect(&this_projected);
   lddmc_unprotect(&this_cube);
   MDD other_projected =
-      sylvan_idd_inv_project(universe, other.ldd_, other_cube);
+      sylvan_idd_inv_project(universe, other.idd_, other_cube);
   lddmc_protect(&other_projected);
   lddmc_unprotect(&other_cube);
   lddmc_unprotect(&universe);
 
-  ldd_ = sylvan_idd_union(this_projected, other_projected);
+  idd_ = sylvan_idd_union(this_projected, other_projected);
 
   lddmc_unprotect(&this_projected);
   lddmc_unprotect(&other_projected);
@@ -2533,12 +2600,12 @@ sylvan_idd& sylvan_idd::project_union(
   return *this;
 }
 
-size_t sylvan_idd::node_count() const { return lddmc_nodecount(ldd_); }
+size_t sylvan_idd::node_count() const { return lddmc_nodecount(idd_); }
 
-long double sylvan_idd::sat_count() const { return sylvan_idd_satcount(ldd_); }
+long double sylvan_idd::sat_count() const { return sylvan_idd_satcount(idd_); }
 
 void sylvan_idd::get_sat_one(std::vector<int>& assignment) const {
-  MDD cube = ldd_;
+  MDD cube = idd_;
 
   int var_idx = 0;
   while (cube != lddmc_true && cube != lddmc_false) {
@@ -2553,7 +2620,7 @@ void sylvan_idd::get_sat_one(std::vector<int>& assignment) const {
 
 void sylvan_idd::print_dot(const std::string& file_path) const {
   FILE* f = fopen(file_path.data(), "w");
-  lddmc_fprintdot(f, ldd_);
+  lddmc_fprintdot(f, idd_);
   fclose(f);
 }
 
@@ -2561,7 +2628,7 @@ bool sylvan_idd::is_sat_with_partial_assignment(
     const std::vector<int>& partial_assignment) const {
 
   const int res = sylvan_idd_sat_with_partial_assignment(
-      ldd_, variables_.data(), variables_.size(), partial_assignment.data(),
+      idd_, variables_.data(), variables_.size(), partial_assignment.data(),
       partial_assignment.size());
 
   return res != 0;
@@ -2574,7 +2641,7 @@ bitset_uint64 sylvan_idd::get_valid_variable_assignments(
   bitset_uint64 valid_values_as_bitset(domain_size);
 
   MDD valid_values_as_ldd = sylvan_idd_get_valid_variable_assignments(
-      ldd_, variables_.data(), variables_.size(), partial_assignment.data(),
+      idd_, variables_.data(), variables_.size(), partial_assignment.data(),
       partial_assignment.size(), variable);
 
   if (valid_values_as_ldd == lddmc_true) {
@@ -2600,7 +2667,7 @@ void sylvan_idd::get_sat_one_under_partial_assignment(
     std::vector<int>& assignment) const {
 
   MDD cube = sylvan_idd_full_sat_one_under_partial_assignment(
-      ldd_, variables_.data(), variables_.size(), assignment.data(),
+      idd_, variables_.data(), variables_.size(), assignment.data(),
       assignment.size());
 
   int var_idx = 0;

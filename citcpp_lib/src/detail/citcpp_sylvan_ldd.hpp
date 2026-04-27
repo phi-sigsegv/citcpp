@@ -13,7 +13,7 @@ namespace detail {
 class sylvan_ldd {
   public:
     /**
-     * The default constructor create an LDD representing false.
+     * The default constructor creates an LDD representing false.
      */
     sylvan_ldd();
 
@@ -65,9 +65,24 @@ class sylvan_ldd {
     bool operator!=(const sylvan_ldd& other) const;
 
     /**
+     * Returns the LDD obtained by following the down node.
+     */
+    sylvan_ldd get_down_node() const;
+
+    /**
+     * Returns the LDD obtained by following the right node.
+     */
+    sylvan_ldd get_right_node() const;
+
+    /**
      * Returns the value of the top-level node of this LDD.
      */
     uint32_t get_value() const;
+
+    /**
+     * Returns a vector defining the ordered variables of this LDD.
+     */
+    const std::vector<uint32_t>& get_variables() const;
 
     static sylvan_ldd project_intersect(const sylvan_ldd& lhs,
                                         const sylvan_ldd& rhs);
@@ -153,7 +168,7 @@ class sylvan_ldd {
 class sylvan_idd {
   public:
     /**
-     * The default constructor create an IDD representing false.
+     * The default constructor creates an IDD representing false.
      */
     sylvan_idd();
 
@@ -205,9 +220,29 @@ class sylvan_idd {
     bool operator!=(const sylvan_idd& other) const;
 
     /**
+     * Returns the IDD obtained by following the down node.
+     */
+    sylvan_idd get_down_node() const;
+
+    /**
+     * Returns the IDD obtained by following the right node.
+     */
+    sylvan_idd get_right_node() const;
+
+    /**
+     * Reads the encoded interval of the top-level node of this IDD.
+     */
+    uint32_t get_encoded_interval() const;
+
+    /**
      * Reads the interval of the top-level node of this IDD.
      */
     void get_interval(uint32_t& lb, uint32_t& ub) const;
+
+    /**
+     * Returns a vector defining the ordered variables of this IDD.
+     */
+    const std::vector<uint32_t>& get_variables() const;
 
     static sylvan_idd project_intersect(const sylvan_idd& lhs,
                                         const sylvan_idd& rhs);
@@ -286,7 +321,7 @@ class sylvan_idd {
     sylvan_idd(uint64_t ldd, std::vector<uint32_t>&& variables);
 
   private:
-    uint64_t ldd_;
+    uint64_t idd_;
     std::vector<uint32_t> variables_;
 };
 
