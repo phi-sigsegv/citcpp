@@ -125,6 +125,11 @@ size_t get_cache_line_size(void)
 static size_t cache_line_size;
 
 /**
+ * Thread handles
+ */
+pthread_t *handles = NULL;
+
+/**
  * (public) Worker data
  */
 static Worker **workers = NULL;
@@ -332,7 +337,7 @@ lace_barrier()
  * Initialize the Lace barrier
  */
 static void
-lace_barrier_init()
+lace_barrier_init(void)
 {
     memset(&lace_bar, 0, sizeof(barrier_t));
 }
@@ -341,7 +346,7 @@ lace_barrier_init()
  * Destroy the Lace barrier (just wait until all are exited)
  */
 static void
-lace_barrier_destroy()
+lace_barrier_destroy(void)
 {
     // wait for all to exit
     while (lace_bar.leaving != 0) continue;
@@ -422,6 +427,7 @@ lace_pin_worker(void)
 #endif
 }
 
+LACE_NO_SANITIZE_THREAD
 void
 lace_init_worker(unsigned int worker)
 {
@@ -881,33 +887,39 @@ lace_start(unsigned int _n_workers, size_t dqsize)
     // hwloc_obj_t root = hwloc_get_root_obj(topo);
     // hwloc_distrib(topo, &root, 1, cpusets, n_workers, INT_MAX, 0);
 
-    int i=0;
-    hwloc_obj_t core = NULL;
-    hwloc_obj_t cores[n_cores];
-    while ((core = hwloc_get_next_obj_by_type(topo, HWLOC_OBJ_CORE, core)) != NULL) cores[i++] = core;
-
-    i = 0;
-    int j=0, k=0;
-    // i is index of worker, j is index of cpu, k is how many PUs per core we have used
-    while (i < n_workers) {
-        if (j < n_cores && k < hwloc_bitmap_weight(cores[j]->cpuset)) {
-            cpusets[i] = cores[j]->cpuset;
-            // grab the kth in cpuset
-            // turns out this is slightly slower than just pinning to all threads
-            // int idx = hwloc_bitmap_first(cores[j]->cpuset);
-            // for (int kk=1; kk<k; kk++) idx = hwloc_bitmap_next(cores[j]->cpuset, idx);
-            // hwloc_obj_t pu = hwloc_get_pu_obj_by_os_index(topo, idx);
-            // cpusets[i] = pu->cpuset;
-            i++;
-            j++;
-        } else {
-            k++;
-            for (j=0; j<n_cores; j++) {
-                if (k < hwloc_bitmap_weight(cores[j]->cpuset)) break;
+    {
+        unsigned int i=0;
+        hwloc_obj_t cores[n_cores];
+        {
+            hwloc_obj_t core = NULL;
+            while ((core = hwloc_get_next_obj_by_type(topo, HWLOC_OBJ_CORE, core)) != NULL) {
+                cores[i++] = core;
             }
-            if (j == n_cores) {
-                j = 0;
-                k = 0;
+        }
+
+        i = 0;
+        unsigned int j=0, k=0;
+        // i is index of worker, j is index of cpu, k is how many PUs per core we have used
+        while (i < n_workers) {
+            if (j < n_cores && k < (unsigned)hwloc_bitmap_weight(cores[j]->cpuset)) {
+                cpusets[i] = cores[j]->cpuset;
+                // grab the kth in cpuset
+                // turns out this is slightly slower than just pinning to all threads
+                // int idx = hwloc_bitmap_first(cores[j]->cpuset);
+                // for (int kk=1; kk<k; kk++) idx = hwloc_bitmap_next(cores[j]->cpuset, idx);
+                // hwloc_obj_t pu = hwloc_get_pu_obj_by_os_index(topo, idx);
+                // cpusets[i] = pu->cpuset;
+                i++;
+                j++;
+            } else {
+                k++;
+                for (j=0; j<n_cores; j++) {
+                    if (k < (unsigned)hwloc_bitmap_weight(cores[j]->cpuset)) break;
+                }
+                if (j == n_cores) {
+                    j = 0;
+                    k = 0;
+                }
             }
         }
     }
@@ -983,7 +995,7 @@ lace_start(unsigned int _n_workers, size_t dqsize)
         fprintf(stdout, "Lace startup: %u nodes, %u cores, %u logical processors, %d workers.\n", n_nodes, n_cores, n_pus, n_workers);
         // Print resulting CPU sets
         if (verbosity != 0) {
-            for (int i = 0; i < n_workers; ++i) {
+            for (unsigned int i = 0; i < n_workers; ++i) {
                 unsigned int id;
                 hwloc_bitmap_foreach_begin(id, cpusets[i]);
                 hwloc_obj_t pu = hwloc_get_pu_obj_by_os_index(topo, id);
@@ -1013,9 +1025,9 @@ lace_start(unsigned int _n_workers, size_t dqsize)
     }
 
     /* Spawn all workers */
+    handles = (pthread_t*)malloc(n_workers * sizeof(*handles));
     for (unsigned int i=0; i<n_workers; i++) {
-        pthread_t res;
-        pthread_create(&res, &worker_attr, lace_worker_thread, (void*)(size_t)i);
+        pthread_create(&handles[i], &worker_attr, lace_worker_thread, (void*)(size_t)i);
     }
 
     /* Make sure we start resumed */
@@ -1033,7 +1045,7 @@ static uint64_t ctr_all[CTR_MAX];
  * Reset the counters of Lace.
  */
 void
-lace_count_reset()
+lace_count_reset(void)
 {
 #if LACE_COUNT_EVENTS
     unsigned int i;
@@ -1175,7 +1187,11 @@ void lace_stop()
 
     lace_quits = 1;
 
-    while (workers_running != 0) {}
+    for (unsigned int i=0; i<n_workers; i++) {
+        pthread_join(handles[i], NULL);
+    }
+
+    free(handles);
 
 #if LACE_COUNT_EVENTS
     lace_count_report_file(stdout);
