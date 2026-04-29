@@ -520,11 +520,11 @@ TASK_4(MDD, sylvan_full_sat_one_under_partial_assignment_recursive, MDD, ldd,
           SYNC(sylvan_full_sat_one_under_partial_assignment_recursive);
       lddmc_refs_pop(1);
 
-      if (right_full_sat_one_cube != lddmc_false) {
-        full_sat_one_cube = right_full_sat_one_cube;
-      } else if (down_full_sat_one_cube != lddmc_false) {
+      if (down_full_sat_one_cube != lddmc_false) {
         full_sat_one_cube = lddmc_makenode(mddnode_getvalue(nldd),
                                            down_full_sat_one_cube, lddmc_false);
+      } else if (right_full_sat_one_cube != lddmc_false) {
+        full_sat_one_cube = right_full_sat_one_cube;
       } else {
         full_sat_one_cube = lddmc_false;
       }
@@ -1506,11 +1506,11 @@ TASK_4(MDD, sylvan_idd_full_sat_one_under_partial_assignment_recursive, MDD,
           SYNC(sylvan_idd_full_sat_one_under_partial_assignment_recursive);
       lddmc_refs_pop(1);
 
-      if (right_full_sat_one_cube != lddmc_false) {
-        full_sat_one_cube = right_full_sat_one_cube;
-      } else if (down_full_sat_one_cube != lddmc_false) {
+      if (down_full_sat_one_cube != lddmc_false) {
         full_sat_one_cube = lddmc_makenode(mddnode_getvalue(nldd),
                                            down_full_sat_one_cube, lddmc_false);
+      } else if (right_full_sat_one_cube != lddmc_false) {
+        full_sat_one_cube = right_full_sat_one_cube;
       } else {
         full_sat_one_cube = lddmc_false;
       }
