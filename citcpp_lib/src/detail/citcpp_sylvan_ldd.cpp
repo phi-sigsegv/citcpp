@@ -4,6 +4,7 @@
 #include <sylvan_int.h>
 
 #include <algorithm>
+#include <fstream>
 #include <utility>
 
 #include "lace_lifecycle.hpp"
@@ -1950,6 +1951,98 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
 
 #define sylvan_idd_union(a, b) RUN(sylvan_idd_union, a, b)
 
+static void sylvan_idd_fprintdot_rec(std::ofstream& out, MDD idd) {
+  // assert(mdd > lddmc_true);
+
+  // check mark
+  mddnode_t n = LDD_GETNODE(idd);
+  if (mddnode_getmark(n)) return;
+  mddnode_setmark(n, 1);
+
+  // print the node
+  uint32_t val = mddnode_getvalue(n);
+  out << idd << " [shape=record, label=\"";
+  if (mddnode_getcopy(n))
+    out << "<c> *";
+  else {
+    interval ival = decode_interval(val);
+    out << "<" << val << "> [" << ival.lb << "," << ival.ub << "]";
+  }
+  MDD right = mddnode_getright(n);
+  while (right != lddmc_false) {
+    mddnode_t n2 = LDD_GETNODE(right);
+    uint32_t val2 = mddnode_getvalue(n2);
+    interval ival = decode_interval(val2);
+    out << "|<" << val2 << "> [" << ival.lb << "," << ival.ub << "]";
+    right = mddnode_getright(n2);
+    // assert(right != lddmc_true);
+  }
+  out << "\"];\n";
+
+  // recurse and print the edges
+  for (;;) {
+    MDD down = mddnode_getdown(n);
+    // assert(down != lddmc_false);
+    if (down > lddmc_true) {
+      sylvan_idd_fprintdot_rec(out, down);
+      if (mddnode_getcopy(n)) {
+        out << idd << ":c -> ";
+      } else {
+        out << idd << ":" << mddnode_getvalue(n) << " -> ";
+      }
+      if (mddnode_getcopy(LDD_GETNODE(down))) {
+        out << down << ":c [style=solid];\n";
+      } else {
+        out << down << ":" << mddnode_getvalue(LDD_GETNODE(down))
+            << " [style=solid];\n";
+      }
+    }
+    MDD right = mddnode_getright(n);
+    if (right == lddmc_false) break;
+    n = LDD_GETNODE(right);
+  }
+}
+
+static void sylvan_idd_fprintdot_unmark(MDD idd) {
+  if (idd <= lddmc_true) return;
+  mddnode_t n = LDD_GETNODE(idd);
+  if (mddnode_getmark(n)) {
+    mddnode_setmark(n, 0);
+    for (;;) {
+      sylvan_idd_fprintdot_unmark(mddnode_getdown(n));
+      idd = mddnode_getright(n);
+      if (idd == lddmc_false) return;
+      n = LDD_GETNODE(idd);
+    }
+  }
+}
+
+static void sylvan_idd_fprintdot(std::ofstream& out, MDD idd) {
+  out << "digraph \"DD\" {\n";
+  out << "graph [dpi = 300];\n";
+  out << "center = true;\n";
+  out << "edge [dir = forward];\n";
+
+  // Special case: false
+  if (idd == lddmc_false) {
+    out << "0 [shape=record, label=\"False\"];\n";
+    out << "}\n";
+    return;
+  }
+
+  // Special case: true
+  if (idd == lddmc_true) {
+    out << "1 [shape=record, label=\"True\"];\n";
+    out << "}\n";
+    return;
+  }
+
+  sylvan_idd_fprintdot_rec(out, idd);
+  sylvan_idd_fprintdot_unmark(idd);
+
+  out << "}\n";
+}
+
 }  // namespace
 
 namespace citcpp {
@@ -2619,9 +2712,8 @@ void sylvan_idd::get_sat_one(std::vector<int>& assignment) const {
 }
 
 void sylvan_idd::print_dot(const std::string& file_path) const {
-  FILE* f = fopen(file_path.data(), "w");
-  lddmc_fprintdot(f, idd_);
-  fclose(f);
+  std::ofstream f{file_path};
+  sylvan_idd_fprintdot(f, idd_);
 }
 
 bool sylvan_idd::is_sat_with_partial_assignment(
