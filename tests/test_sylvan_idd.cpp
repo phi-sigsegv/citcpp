@@ -2,6 +2,7 @@
 
 #include <doctest.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <mutex>
 
@@ -261,6 +262,15 @@ TEST_CASE("sylvan IDD, testing atomic prop & AND") {
     CHECK(intersection.node_count() == 2);
     CHECK((int)intersection.sat_count() == 9);
 
+    CHECK(encode_interval(2, 4) ==
+          intersection.get_down_node().get_encoded_interval());
+    CHECK(intersection.get_down_node().node_count() == 1);
+    CHECK((int)intersection.get_down_node().sat_count() == 3);
+    CHECK(intersection.get_down_node().get_down_node() ==
+          sylvan_idd::iddTrue());
+    CHECK(intersection.get_down_node().get_right_node() ==
+          sylvan_idd::iddFalse());
+
     CHECK(!intersection.is_sat_with_partial_assignment(std::vector<int>{2, 0}));
     CHECK(intersection.is_sat_with_partial_assignment(std::vector<int>{2, 2}));
     CHECK(intersection.is_sat_with_partial_assignment(std::vector<int>{4, -1}));
@@ -269,9 +279,20 @@ TEST_CASE("sylvan IDD, testing atomic prop & AND") {
     CHECK(!intersection.is_sat_with_partial_assignment(std::vector<int>{3, 1}));
 
     std::vector<int> assignment{-1, -1};
+    intersection.get_sat_one(assignment);
+    CHECK(assignment[0] == 2);
+    CHECK(assignment[1] == 2);
+
+    std::fill(assignment.begin(), assignment.end(), -1);
     intersection.get_sat_one_under_partial_assignment(assignment);
     CHECK(assignment[0] == 2);
     CHECK(assignment[1] == 2);
+
+    assignment[0] = -1;
+    assignment[1] = 3;
+    intersection.get_sat_one_under_partial_assignment(assignment);
+    CHECK(assignment[0] == 2);
+    CHECK(assignment[1] == 3);
   }
 
   {
@@ -291,6 +312,20 @@ TEST_CASE("sylvan IDD, testing atomic prop & AND") {
     CHECK(intersection.node_count() == 3);
     CHECK((int)intersection.sat_count() == 9);
 
+    CHECK(encode_interval(0, 0) ==
+          intersection.get_down_node().get_encoded_interval());
+    CHECK(intersection.get_down_node().node_count() == 2);
+    CHECK((int)intersection.get_down_node().sat_count() == 3);
+    CHECK(intersection.get_down_node().get_down_node() ==
+          sylvan_idd::iddTrue());
+
+    CHECK(encode_interval(2, 3) ==
+          intersection.get_down_node().get_right_node().get_encoded_interval());
+    CHECK(intersection.get_down_node().get_right_node().node_count() == 1);
+    CHECK((int)intersection.get_down_node().get_right_node().sat_count() == 2);
+    CHECK(intersection.get_down_node().get_right_node().get_down_node() ==
+          sylvan_idd::iddTrue());
+
     CHECK(intersection.is_sat_with_partial_assignment(std::vector<int>{2, 0}));
     CHECK(intersection.is_sat_with_partial_assignment(std::vector<int>{2, 3}));
     CHECK(!intersection.is_sat_with_partial_assignment(std::vector<int>{2, 4}));
@@ -300,9 +335,99 @@ TEST_CASE("sylvan IDD, testing atomic prop & AND") {
     CHECK(!intersection.is_sat_with_partial_assignment(std::vector<int>{3, 1}));
 
     std::vector<int> assignment{-1, -1};
+    intersection.get_sat_one(assignment);
+    CHECK(assignment[0] == 2);
+    CHECK(assignment[1] == 0);
+
+    std::fill(assignment.begin(), assignment.end(), -1);
     intersection.get_sat_one_under_partial_assignment(assignment);
     CHECK(assignment[0] == 2);
     CHECK(assignment[1] == 0);
+
+    assignment[0] = -1;
+    assignment[1] = 3;
+    intersection.get_sat_one_under_partial_assignment(assignment);
+    CHECK(assignment[0] == 2);
+    CHECK(assignment[1] == 3);
+  }
+}
+
+TEST_CASE("sylvan IDD, testing atomic prop & OR") {
+  using namespace citcpp;
+  using namespace citcpp::detail;
+
+  sylvan_lifecycle sylvan_lifecycle;
+
+  uint32_t lb = 0;
+  uint32_t ub = 0;
+
+  {
+    sylvan_idd union_set = sylvan_idd::project_intersect(
+        sylvan_idd(0, relational_operator::GT, 1, 5),
+        sylvan_idd(1, relational_operator::NEQ, 1, 5));
+    union_set = sylvan_idd::project_union(
+        union_set,
+        sylvan_idd::project_intersect(
+            sylvan_idd(0, relational_operator::EQ, 2, 5),
+            sylvan_idd(1, relational_operator::LE, 3, 5)),
+        std::vector<unsigned int>{5, 5});
+
+    CHECK(union_set != sylvan_idd::iddFalse());
+    CHECK(union_set != sylvan_idd::iddTrue());
+    union_set.get_interval(lb, ub);
+    CHECK(encode_interval(2, 2) == union_set.get_encoded_interval());
+    CHECK(lb == 2);
+    CHECK(ub == 2);
+    CHECK(union_set.node_count() == 6);
+    CHECK((int)union_set.sat_count() == 13);
+
+    CHECK(encode_interval(0, 3) ==
+          union_set.get_down_node().get_encoded_interval());
+    CHECK(union_set.get_down_node().node_count() == 2);
+    CHECK((int)union_set.get_down_node().sat_count() == 5);
+    CHECK(union_set.get_down_node().get_down_node() == sylvan_idd::iddTrue());
+
+    CHECK(encode_interval(4, 4) ==
+          union_set.get_down_node().get_right_node().get_encoded_interval());
+    CHECK(union_set.get_down_node().get_right_node().node_count() == 1);
+    CHECK((int)union_set.get_down_node().get_right_node().sat_count() == 1);
+    CHECK(union_set.get_down_node().get_right_node().get_down_node() ==
+          sylvan_idd::iddTrue());
+
+    CHECK(encode_interval(3, 4) ==
+          union_set.get_right_node().get_encoded_interval());
+    CHECK(union_set.get_right_node().node_count() == 3);
+    CHECK((int)union_set.get_right_node().sat_count() == 8);
+    CHECK(union_set.get_right_node().get_right_node() ==
+          sylvan_idd::iddFalse());
+
+    CHECK(encode_interval(0, 0) ==
+          union_set.get_right_node().get_down_node().get_encoded_interval());
+    CHECK(union_set.get_right_node().get_down_node().node_count() == 2);
+    CHECK((int)union_set.get_right_node().get_down_node().sat_count() == 4);
+    CHECK(union_set.get_right_node().get_down_node().get_down_node() ==
+          sylvan_idd::iddTrue());
+
+    CHECK(encode_interval(2, 4) == union_set.get_right_node()
+                                       .get_down_node()
+                                       .get_right_node()
+                                       .get_encoded_interval());
+    CHECK(union_set.get_right_node()
+              .get_down_node()
+              .get_right_node()
+              .node_count() == 1);
+    CHECK((int)union_set.get_right_node()
+              .get_down_node()
+              .get_right_node()
+              .sat_count() == 3);
+    CHECK(union_set.get_right_node()
+              .get_down_node()
+              .get_right_node()
+              .get_down_node() == sylvan_idd::iddTrue());
+    CHECK(union_set.get_right_node()
+              .get_down_node()
+              .get_right_node()
+              .get_right_node() == sylvan_idd::iddFalse());
   }
 }
 
