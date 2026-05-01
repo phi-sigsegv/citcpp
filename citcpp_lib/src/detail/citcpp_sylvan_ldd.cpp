@@ -1674,6 +1674,39 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
   return result;
 }
 
+static MDD merge_adjacent_idds(MDD idd) {
+  bool merged_adjacent_nodes = true;
+
+  while (merged_adjacent_nodes) {
+    merged_adjacent_nodes = false;
+    mddnode_t nidd = LDD_GETNODE(idd);
+    uint32_t encoded_ival = mddnode_getvalue(nidd);
+    interval ival = decode_interval(encoded_ival);
+
+    MDD idd_right = mddnode_getright(nidd);
+    if (idd_right != lddmc_false) {
+      mddnode_t nidd_right = LDD_GETNODE(idd_right);
+      uint32_t right_encoded_ival = mddnode_getvalue(nidd_right);
+      interval right_ival = decode_interval(right_encoded_ival);
+      if (is_intervals_connected(ival, right_ival)) {
+        // This nodes and the node next right to it have connected intervals.
+        // Now check whether they point to the very same down node.
+        MDD result_down = mddnode_getdown(nidd);
+        MDD result_right_down = mddnode_getdown(nidd_right);
+        if (result_down == result_right_down) {
+          // Ok both down nodes are the same, so let's merge the nodes.
+          interval span = interval_union(ival, right_ival);
+          idd = lddmc_makenode(encode_interval(span), result_down,
+                               mddnode_getright(nidd_right));
+          merged_adjacent_nodes = true;
+        }
+      }
+    }
+  }
+
+  return idd;
+}
+
 static const uint64_t CACHE_IDD_UNION = (68LL << 40);
 
 TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
@@ -1829,31 +1862,7 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
   // If that is the case, we can merge both nodes.
   // Due to the recursive nature of this method, this causes all
   // intervals to be merged to the greatest possible extent.
-  {
-    mddnode_t nresult = LDD_GETNODE(result);
-    uint32_t nresult_value = mddnode_getvalue(nresult);
-    interval nresult_interval = decode_interval(nresult_value);
-
-    MDD result_right = mddnode_getright(nresult);
-    if (result_right != lddmc_false) {
-      mddnode_t nresult_right = LDD_GETNODE(result_right);
-      uint32_t nresult_right_value = mddnode_getvalue(nresult_right);
-      interval nresult_right_interval = decode_interval(nresult_right_value);
-      if (is_intervals_connected(nresult_interval, nresult_right_interval)) {
-        // This nodes and the node next right to it have connected intervals.
-        // Now check whether they point to the very same down node.
-        MDD result_down = mddnode_getdown(nresult);
-        MDD result_right_down = mddnode_getdown(nresult_right);
-        if (result_down == result_right_down) {
-          // Ok both down nodes are the same, so let's merge the nodes.
-          interval span =
-              interval_union(nresult_interval, nresult_right_interval);
-          result = lddmc_makenode(encode_interval(span), result_down,
-                                  mddnode_getright(nresult_right));
-        }
-      }
-    }
-  }
+  result = merge_adjacent_idds(result);
 
   /* Write to cache */
   cache_put3(CACHE_IDD_UNION, a, b, 0, result);
