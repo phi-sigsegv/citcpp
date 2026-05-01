@@ -617,17 +617,21 @@ TASK_3(MDD, sylvan_inv_project, MDD, a, MDD, b, MDD, proj) {
   mddnode_t na = LDD_GETNODE(a);
   MDD down;
 
+  const MDD na_right = mddnode_getright(na);
+  const MDD na_down = mddnode_getdown(na);
+  const MDD p_down = mddnode_getdown(p_node);
+
   if (p_val == 1) {
     mddnode_t nb = LDD_GETNODE(b);
-    /* right = */ lddmc_refs_spawn(SPAWN(
-        sylvan_inv_project, mddnode_getright(na), mddnode_getright(nb), proj));
-    down = CALL(sylvan_inv_project, mddnode_getdown(na), mddnode_getdown(nb),
-                mddnode_getdown(p_node));
+    const MDD nb_right = mddnode_getright(nb);
+    const MDD nb_down = mddnode_getdown(nb);
+    /* right = */ lddmc_refs_spawn(
+        SPAWN(sylvan_inv_project, na_right, nb_right, proj));
+    down = CALL(sylvan_inv_project, na_down, nb_down, p_down);
   } else {
     /* right = */ lddmc_refs_spawn(
-        SPAWN(sylvan_inv_project, mddnode_getright(na), b, proj));
-    down = CALL(sylvan_inv_project, mddnode_getdown(na), b,
-                mddnode_getdown(p_node));
+        SPAWN(sylvan_inv_project, na_right, b, proj));
+    down = CALL(sylvan_inv_project, na_down, b, p_down);
   }
   lddmc_refs_push(down);
   MDD right = lddmc_refs_sync(SYNC(sylvan_inv_project));
@@ -742,7 +746,8 @@ interval interval_intersection(interval a, interval b) {
  * is well defined.
  */
 int is_intervals_connected(interval a, interval b) {
-  return a.lb <= b.ub + 1 && b.lb <= a.ub + 1;
+  return (uint32_t)a.lb <= (uint32_t)b.ub + 1 &&
+         (uint32_t)b.lb <= (uint32_t)a.ub + 1;
 }
 
 interval interval_union(interval a, interval b) {
@@ -971,12 +976,16 @@ TASK_2(MDD, sylvan_idd_intersect, MDD, a, MDD, b) {
   }
 
   /* Perform recursive calculation */
+  const MDD na_right = mddnode_getright(na);
+  const MDD nb_right = mddnode_getright(nb);
+  const MDD na_down = mddnode_getdown(na);
+  const MDD nb_down = mddnode_getdown(nb);
+
   if (a_ival.ub == b_ival.ub) {
     // The upper bounds of both intervals coincide. So when moving to greater
     // intervals (the right), there won't be any interval that can have an
     // intersection with a_ival or b_ival.
-    lddmc_refs_spawn(SPAWN(sylvan_idd_intersect, mddnode_getright(na),
-                           mddnode_getright(nb)));
+    lddmc_refs_spawn(SPAWN(sylvan_idd_intersect, na_right, nb_right));
   } else if (na_value < nb_value) {
     // The upper bound of a is lower than the upper bound of b.
     // Thus, we fetch the next greater interval with respect to values
@@ -984,7 +993,7 @@ TASK_2(MDD, sylvan_idd_intersect, MDD, a, MDD, b) {
     // We need to keep the interval b however, since it can happen that
     // the next greater interval from a also has an intersection with
     // the current interval from b.
-    lddmc_refs_spawn(SPAWN(sylvan_idd_intersect, mddnode_getright(na), b));
+    lddmc_refs_spawn(SPAWN(sylvan_idd_intersect, na_right, b));
   } else {
     // The upper bound of b is lower than the upper bound of a.
     // Thus, we fetch the next greater interval with respect to values
@@ -992,10 +1001,9 @@ TASK_2(MDD, sylvan_idd_intersect, MDD, a, MDD, b) {
     // We need to keep the interval a however, since it can happen that
     // the next greater interval from b also has an intersection with
     // the current interval from a.
-    lddmc_refs_spawn(SPAWN(sylvan_idd_intersect, a, mddnode_getright(nb)));
+    lddmc_refs_spawn(SPAWN(sylvan_idd_intersect, a, nb_right));
   }
-  MDD down =
-      CALL(sylvan_idd_intersect, mddnode_getdown(na), mddnode_getdown(nb));
+  MDD down = CALL(sylvan_idd_intersect, na_down, nb_down);
   lddmc_refs_push(down);
   MDD right = lddmc_refs_sync(SYNC(sylvan_idd_intersect));
   lddmc_refs_pop(1);
@@ -1088,6 +1096,13 @@ TASK_4(MDD, sylvan_idd_join, MDD, a, MDD, b, MDD, a_proj, MDD, b_proj) {
   uint32_t val;
   MDD down;
 
+  const MDD na_right = mddnode_getright(na);
+  const MDD na_down = mddnode_getdown(na);
+  const MDD nb_right = mddnode_getright(nb);
+  const MDD nb_down = mddnode_getdown(nb);
+  const MDD a_proj_down = mddnode_getdown(n_a_proj);
+  const MDD b_proj_down = mddnode_getdown(n_b_proj);
+
   // Make copies (for cache)
   MDD _a_proj = a_proj, _b_proj = b_proj;
   if (keep_a) {
@@ -1097,8 +1112,8 @@ TASK_4(MDD, sylvan_idd_join, MDD, a, MDD, b, MDD, a_proj, MDD, b_proj) {
         // The upper bounds of both intervals coincide. So when moving to
         // greater intervals (the right), there won't be any interval that can
         // have an intersection with a_ival or b_ival.
-        lddmc_refs_spawn(SPAWN(sylvan_idd_join, mddnode_getright(na),
-                               mddnode_getright(nb), a_proj, b_proj));
+        lddmc_refs_spawn(
+            SPAWN(sylvan_idd_join, na_right, nb_right, a_proj, b_proj));
       } else if (na_value < nb_value) {
         // The upper bound of a is lower than the upper bound of b.
         // Thus, we fetch the next greater interval with respect to values
@@ -1106,8 +1121,7 @@ TASK_4(MDD, sylvan_idd_join, MDD, a, MDD, b, MDD, a_proj, MDD, b_proj) {
         // We need to keep the interval b however, since it can happen that
         // the next greater interval from a also has an intersection with
         // the current interval from b.
-        lddmc_refs_spawn(
-            SPAWN(sylvan_idd_join, mddnode_getright(na), b, a_proj, b_proj));
+        lddmc_refs_spawn(SPAWN(sylvan_idd_join, na_right, b, a_proj, b_proj));
       } else {
         // The upper bound of b is lower than the upper bound of a.
         // Thus, we fetch the next greater interval with respect to values
@@ -1115,28 +1129,24 @@ TASK_4(MDD, sylvan_idd_join, MDD, a, MDD, b, MDD, a_proj, MDD, b_proj) {
         // We need to keep the interval a however, since it can happen that
         // the next greater interval from b also has an intersection with
         // the current interval from a.
-        lddmc_refs_spawn(
-            SPAWN(sylvan_idd_join, a, mddnode_getright(nb), a_proj, b_proj));
+        lddmc_refs_spawn(SPAWN(sylvan_idd_join, a, nb_right, a_proj, b_proj));
       }
-      if (a_proj_val != (uint32_t)-1) a_proj = mddnode_getdown(n_a_proj);
-      if (b_proj_val != (uint32_t)-1) b_proj = mddnode_getdown(n_b_proj);
-      down = CALL(sylvan_idd_join, mddnode_getdown(na), mddnode_getdown(nb),
-                  a_proj, b_proj);
+      if (a_proj_val != (uint32_t)-1) a_proj = a_proj_down;
+      if (b_proj_val != (uint32_t)-1) b_proj = b_proj_down;
+      down = CALL(sylvan_idd_join, na_down, nb_down, a_proj, b_proj);
     } else {
       val = na_value;
-      lddmc_refs_spawn(
-          SPAWN(sylvan_idd_join, mddnode_getright(na), b, a_proj, b_proj));
-      if (a_proj_val != (uint32_t)-1) a_proj = mddnode_getdown(n_a_proj);
-      if (b_proj_val != (uint32_t)-1) b_proj = mddnode_getdown(n_b_proj);
-      down = CALL(sylvan_idd_join, mddnode_getdown(na), b, a_proj, b_proj);
+      lddmc_refs_spawn(SPAWN(sylvan_idd_join, na_right, b, a_proj, b_proj));
+      if (a_proj_val != (uint32_t)-1) a_proj = a_proj_down;
+      if (b_proj_val != (uint32_t)-1) b_proj = b_proj_down;
+      down = CALL(sylvan_idd_join, na_down, b, a_proj, b_proj);
     }
   } else {
     val = nb_value;
-    lddmc_refs_spawn(
-        SPAWN(sylvan_idd_join, a, mddnode_getright(nb), a_proj, b_proj));
-    if (a_proj_val != (uint32_t)-1) a_proj = mddnode_getdown(n_a_proj);
-    if (b_proj_val != (uint32_t)-1) b_proj = mddnode_getdown(n_b_proj);
-    down = CALL(sylvan_idd_join, a, mddnode_getdown(nb), a_proj, b_proj);
+    lddmc_refs_spawn(SPAWN(sylvan_idd_join, a, nb_right, a_proj, b_proj));
+    if (a_proj_val != (uint32_t)-1) a_proj = a_proj_down;
+    if (b_proj_val != (uint32_t)-1) b_proj = b_proj_down;
+    down = CALL(sylvan_idd_join, a, nb_down, a_proj, b_proj);
   }
 
   lddmc_refs_push(down);
@@ -1285,6 +1295,8 @@ TASK_5(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd,
     while (ldd != lddmc_false) {
       const mddnode_t nldd = LDD_GETNODE(ldd);
       const uint32_t v = mddnode_getvalue(nldd);
+      const MDD nldd_down = mddnode_getdown(nldd);
+      const MDD nldd_right = mddnode_getright(nldd);
       const interval ival = decode_interval(v);
       if (ival.lb <= value && value <= ival.ub) {
         // We have found the value we are looking for. So recurse from here.
@@ -1292,10 +1304,10 @@ TASK_5(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd,
         MDD collected_values;
         if (!cache_get4(CACHE_IDD_GET_VALID_ASSIGNS, ldd, variables_cube,
                         values_cube, variable_index, &collected_values)) {
-          collected_values = CALL(
-              sylvan_idd_get_valid_variable_assignments_recursive,
-              mddnode_getdown(nldd), var_idx + 1, mddnode_getdown(var_node),
-              mddnode_getdown(value_node), variable_index);
+          collected_values =
+              CALL(sylvan_idd_get_valid_variable_assignments_recursive,
+                   nldd_down, var_idx + 1, mddnode_getdown(var_node),
+                   mddnode_getdown(value_node), variable_index);
           cache_put4(CACHE_IDD_GET_VALID_ASSIGNS, ldd, variables_cube,
                      values_cube, variable_index, collected_values);
         }
@@ -1310,7 +1322,7 @@ TASK_5(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd,
 
       // The value we are looking for might still be on this level, move
       // to the right (where higher values are stored).
-      ldd = mddnode_getright(nldd);
+      ldd = nldd_right;
     }
 
     // No valid value for the parameter on this path.
@@ -1318,17 +1330,19 @@ TASK_5(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd,
   } else {
     // We have to follow all paths.
     const mddnode_t nldd = LDD_GETNODE(ldd);
+    const MDD nldd_right = mddnode_getright(nldd);
+    const MDD nldd_down = mddnode_getdown(nldd);
+
     MDD collected_values;
     // Use cached result if possible.
     if (!cache_get4(CACHE_IDD_GET_VALID_ASSIGNS, ldd, variables_cube,
                     values_cube, variable_index, &collected_values)) {
       /* right = */ lddmc_refs_spawn(
-          SPAWN(sylvan_idd_get_valid_variable_assignments_recursive,
-                mddnode_getright(nldd), var_idx, variables_cube, values_cube,
-                variable_index));
-      MDD down_set = CALL(sylvan_idd_get_valid_variable_assignments_recursive,
-                          mddnode_getdown(nldd), var_idx + 1, variables_cube,
-                          values_cube, variable_index);
+          SPAWN(sylvan_idd_get_valid_variable_assignments_recursive, nldd_right,
+                var_idx, variables_cube, values_cube, variable_index));
+      MDD down_set =
+          CALL(sylvan_idd_get_valid_variable_assignments_recursive, nldd_down,
+               var_idx + 1, variables_cube, values_cube, variable_index);
       lddmc_refs_push(down_set);
       MDD right_set = lddmc_refs_sync(
           SYNC(sylvan_idd_get_valid_variable_assignments_recursive));
@@ -1627,14 +1641,19 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
   uint32_t val;
   MDD down;
 
+  const MDD na_right = mddnode_getright(na);
+  const MDD nb_right = mddnode_getright(nb);
+  const MDD na_down = mddnode_getdown(na);
+  const MDD nb_down = mddnode_getdown(nb);
+  const MDD p_down = mddnode_getdown(p_node);
+
   if (p_val == 1) {
     val = encode_interval(intersection);
     if (a_ival.ub == b_ival.ub) {
       // The upper bounds of both intervals coincide. So when moving to
       // greater intervals (the right), there won't be any interval that can
       // have an intersection with a_ival or b_ival.
-      lddmc_refs_spawn(SPAWN(sylvan_idd_inv_project, mddnode_getright(na),
-                             mddnode_getright(nb), proj));
+      lddmc_refs_spawn(SPAWN(sylvan_idd_inv_project, na_right, nb_right, proj));
     } else if (na_value < nb_value) {
       // The upper bound of a is lower than the upper bound of b.
       // Thus, we fetch the next greater interval with respect to values
@@ -1642,8 +1661,7 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
       // We need to keep the interval b however, since it can happen that
       // the next greater interval from a also has an intersection with
       // the current interval from b.
-      lddmc_refs_spawn(
-          SPAWN(sylvan_idd_inv_project, mddnode_getright(na), b, proj));
+      lddmc_refs_spawn(SPAWN(sylvan_idd_inv_project, na_right, b, proj));
     } else {
       // The upper bound of b is lower than the upper bound of a.
       // Thus, we fetch the next greater interval with respect to values
@@ -1651,17 +1669,14 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
       // We need to keep the interval a however, since it can happen that
       // the next greater interval from b also has an intersection with
       // the current interval from a.
-      lddmc_refs_spawn(
-          SPAWN(sylvan_idd_inv_project, a, mddnode_getright(nb), proj));
+      lddmc_refs_spawn(SPAWN(sylvan_idd_inv_project, a, nb_right, proj));
     }
-    down = CALL(sylvan_idd_inv_project, mddnode_getdown(na),
-                mddnode_getdown(nb), mddnode_getdown(p_node));
+    down = CALL(sylvan_idd_inv_project, na_down, nb_down, p_down);
   } else {
     val = na_value;
     /* right = */ lddmc_refs_spawn(
-        SPAWN(sylvan_idd_inv_project, mddnode_getright(na), b, proj));
-    down = CALL(sylvan_idd_inv_project, mddnode_getdown(na), b,
-                mddnode_getdown(p_node));
+        SPAWN(sylvan_idd_inv_project, na_right, b, proj));
+    down = CALL(sylvan_idd_inv_project, na_down, b, p_down);
   }
   lddmc_refs_push(down);
   MDD right = lddmc_refs_sync(SYNC(sylvan_idd_inv_project));
@@ -1682,22 +1697,24 @@ static MDD merge_adjacent_idds(MDD idd) {
     mddnode_t nidd = LDD_GETNODE(idd);
     uint32_t encoded_ival = mddnode_getvalue(nidd);
     interval ival = decode_interval(encoded_ival);
-
+    MDD result_down = mddnode_getdown(nidd);
     MDD idd_right = mddnode_getright(nidd);
+
     if (idd_right != lddmc_false) {
       mddnode_t nidd_right = LDD_GETNODE(idd_right);
       uint32_t right_encoded_ival = mddnode_getvalue(nidd_right);
       interval right_ival = decode_interval(right_encoded_ival);
+      MDD result_right_down = mddnode_getdown(nidd_right);
+      MDD result_right_right = mddnode_getright(nidd_right);
+
       if (is_intervals_connected(ival, right_ival)) {
         // This nodes and the node next right to it have connected intervals.
         // Now check whether they point to the very same down node.
-        MDD result_down = mddnode_getdown(nidd);
-        MDD result_right_down = mddnode_getdown(nidd_right);
         if (result_down == result_right_down) {
           // Ok both down nodes are the same, so let's merge the nodes.
           interval span = interval_union(ival, right_ival);
           idd = lddmc_makenode(encode_interval(span), result_down,
-                               mddnode_getright(nidd_right));
+                               result_right_right);
           merged_adjacent_nodes = true;
         }
       }
@@ -1739,20 +1756,22 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
   mddnode_t nb = LDD_GETNODE(b);
   const uint32_t na_value = mddnode_getvalue(na);
   const uint32_t nb_value = mddnode_getvalue(nb);
+  const MDD na_down = mddnode_getdown(na);
+  const MDD na_right = mddnode_getright(na);
+  const MDD nb_down = mddnode_getdown(nb);
+  const MDD nb_right = mddnode_getright(nb);
+
   interval a_ival = decode_interval(na_value);
   interval b_ival = decode_interval(nb_value);
   interval intersection = interval_intersection(a_ival, b_ival);
 
   /* Perform recursive calculation */
   if (is_valid(intersection)) {
-    uint32_t val;
     if (na_value == nb_value) {
       // The intervals do not just have an intersection, they are precisely
       // the same.
-      lddmc_refs_spawn(
-          SPAWN(sylvan_idd_union, mddnode_getdown(na), mddnode_getdown(nb)));
-      MDD right =
-          CALL(sylvan_idd_union, mddnode_getright(na), mddnode_getright(nb));
+      lddmc_refs_spawn(SPAWN(sylvan_idd_union, na_down, nb_down));
+      MDD right = CALL(sylvan_idd_union, na_right, nb_right);
       lddmc_refs_push(right);
       MDD down = lddmc_refs_sync(SYNC(sylvan_idd_union));
       lddmc_refs_pop(1);
@@ -1773,55 +1792,38 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
       interval before_intersection =
           interval{before_intersection_lb, before_intersection_ub};
 
-      lddmc_refs_spawn(
-          SPAWN(sylvan_idd_union, mddnode_getdown(na), mddnode_getdown(nb)));
+      lddmc_refs_spawn(SPAWN(sylvan_idd_union, na_down, nb_down));
 
       MDD right_right;
       if (na_value < nb_value) {
         // The upper bound of a is lower than the upper bound of b,
         // or if equal, the lower bound is less.
-        // Thus, we fetch the next greater interval with respect to values
-        // from the variable associated to a.
-        // Regarding interval b, we need to modify its interval to exclude
-        // what is part of the current intersection.
-        // The remaining part might have an intersection with some other
-        // interval related to a.
-        const uint16_t reduced_b_ival_lb = intersection.ub + 1;
-        const uint16_t reduced_b_ival_ub = b_ival.ub;
-        interval reduced_b_ival =
-            interval{reduced_b_ival_lb, reduced_b_ival_ub};
-        if (is_valid(reduced_b_ival)) {
-          MDD mod_b = lddmc_makenode(encode_interval(reduced_b_ival),
-                                     mddnode_getdown(nb), mddnode_getright(nb));
+        if (intersection.ub < b_ival.ub) {
+          const uint16_t reduced_b_lb = (uint16_t)(intersection.ub + 1);
+          const uint16_t reduced_b_ub = b_ival.ub;
+          interval reduced_b_ival = interval{reduced_b_lb, reduced_b_ub};
+          MDD mod_b = lddmc_makenode(encode_interval(reduced_b_ival), nb_down,
+                                     nb_right);
           lddmc_refs_push(mod_b);
-          right_right = CALL(sylvan_idd_union, mddnode_getright(na), mod_b);
+          right_right = CALL(sylvan_idd_union, na_right, mod_b);
           lddmc_refs_pop(1);
         } else {
-          right_right = CALL(sylvan_idd_union, mddnode_getright(na),
-                             mddnode_getright(nb));
+          right_right = CALL(sylvan_idd_union, na_right, nb_right);
         }
       } else {
         // The upper bound of b is lower than the upper bound of a,
         // or if equal, the lower bound is less.
-        // Thus, we fetch the next greater interval with respect to values
-        // from the variable associated to b.
-        // Regarding interval a, we need to modify its interval to exclude
-        // what is part of the current intersection.
-        // The remaining part might have an intersection with some other
-        // interval related to b.
-        const uint16_t reduced_a_ival_lb = intersection.ub + 1;
-        const uint16_t reduced_a_ival_ub = a_ival.ub;
-        interval reduced_a_ival =
-            interval{reduced_a_ival_lb, reduced_a_ival_ub};
-        if (is_valid(reduced_a_ival)) {
-          MDD mod_a = lddmc_makenode(encode_interval(reduced_a_ival),
-                                     mddnode_getdown(na), mddnode_getright(na));
+        if (intersection.ub < a_ival.ub) {
+          const uint16_t reduced_a_lb = (uint16_t)(intersection.ub + 1);
+          const uint16_t reduced_a_ub = a_ival.ub;
+          interval reduced_a_ival = interval{reduced_a_lb, reduced_a_ub};
+          MDD mod_a = lddmc_makenode(encode_interval(reduced_a_ival), na_down,
+                                     na_right);
           lddmc_refs_push(mod_a);
-          right_right = CALL(sylvan_idd_union, mod_a, mddnode_getright(nb));
+          right_right = CALL(sylvan_idd_union, mod_a, nb_right);
           lddmc_refs_pop(1);
         } else {
-          right_right = CALL(sylvan_idd_union, mddnode_getright(na),
-                             mddnode_getright(nb));
+          right_right = CALL(sylvan_idd_union, na_right, nb_right);
         }
       }
 
@@ -1836,21 +1838,21 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
         // There is a valid interval before the intersection. This interval
         // of values either belong to a or b.
         if (a_ival.lb < b_ival.lb) {
-          result = lddmc_makenode(encode_interval(before_intersection),
-                                  mddnode_getdown(na), right);
+          result = lddmc_makenode(encode_interval(before_intersection), na_down,
+                                  right);
         } else {
-          result = lddmc_makenode(encode_interval(before_intersection),
-                                  mddnode_getdown(nb), right);
+          result = lddmc_makenode(encode_interval(before_intersection), nb_down,
+                                  right);
         }
       }
     }
   } else {
     if (na_value < nb_value) {
-      MDD right = CALL(sylvan_idd_union, mddnode_getright(na), b);
-      result = lddmc_makenode(na_value, mddnode_getdown(na), right);
+      MDD right = CALL(sylvan_idd_union, na_right, b);
+      result = lddmc_makenode(na_value, na_down, right);
     } else /* na_value > nb_value */ {
-      MDD right = CALL(sylvan_idd_union, a, mddnode_getright(nb));
-      result = lddmc_makenode(nb_value, mddnode_getdown(nb), right);
+      MDD right = CALL(sylvan_idd_union, a, nb_right);
+      result = lddmc_makenode(nb_value, nb_down, right);
     }
   }
 
@@ -1899,12 +1901,15 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
 
   mddnode_t n = LDD_GETNODE(mdd);
   uint32_t v = mddnode_getvalue(n);
+  MDD n_down = mddnode_getdown(n);
+  MDD n_right = mddnode_getright(n);
+
   interval ival = decode_interval(v);
   // Trivial interval has a span of 1.
   long double span = ival.ub - ival.lb + 1;
 
-  SPAWN(sylvan_idd_satcount, mddnode_getdown(n));
-  long double right = CALL(sylvan_idd_satcount, mddnode_getright(n));
+  SPAWN(sylvan_idd_satcount, n_down);
+  long double right = CALL(sylvan_idd_satcount, n_right);
   // The down path is identical for all values from the interval
   // stored in the current node. Therefore we needs to multiply
   // this by the number of values in that interval in order to

@@ -98,6 +98,41 @@ TEST_CASE("sylvan IDD, testing single value") {
   CHECK((int)idd.sat_count() == 1);
 }
 
+TEST_CASE("sylvan IDD, testing boundary conditions") {
+  using namespace citcpp;
+  using namespace citcpp::detail;
+
+  sylvan_lifecycle sylvan_lifecycle;
+  std::vector<unsigned int> domain_sizes{65536};
+
+  // Test union with 65535
+  sylvan_idd v_0_to_65534(0, relational_operator::LE, 65534, 65536);
+  sylvan_idd v_65535(0, 65535);
+
+  sylvan_idd union_res =
+      sylvan_idd::project_union(v_0_to_65534, v_65535, domain_sizes);
+  CHECK(union_res.get_encoded_interval() == encode_interval(0, 65535));
+  CHECK(union_res.get_right_node() == sylvan_idd::iddFalse());
+
+  // Test union with overlapping 65535
+  sylvan_idd v_65530_to_65535(0, relational_operator::GE, 65530, 65536);
+  sylvan_idd v_65532_to_65535(0, relational_operator::GE, 65532, 65536);
+  sylvan_idd union_overlap = sylvan_idd::project_union(
+      v_65530_to_65535, v_65532_to_65535, domain_sizes);
+  CHECK(union_overlap.get_encoded_interval() == encode_interval(65530, 65535));
+
+  // Test intersection with 65535
+  sylvan_idd intersect_res =
+      sylvan_idd::project_intersect(v_65530_to_65535, v_65532_to_65535);
+  CHECK(intersect_res.get_encoded_interval() == encode_interval(65532, 65535));
+
+  // Test connectivity at the boundary
+  sylvan_idd v_0(0, 0);
+  sylvan_idd v_1(0, 1);
+  sylvan_idd union_0_1 = sylvan_idd::project_union(v_0, v_1, domain_sizes);
+  CHECK(union_0_1.get_encoded_interval() == encode_interval(0, 1));
+}
+
 TEST_CASE("sylvan IDD, testing atomic prop") {
   using namespace citcpp;
   using namespace citcpp::detail;
