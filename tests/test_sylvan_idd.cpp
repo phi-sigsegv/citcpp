@@ -378,21 +378,14 @@ TEST_CASE("sylvan IDD, testing atomic prop & OR") {
     CHECK(encode_interval(2, 2) == union_set.get_encoded_interval());
     CHECK(lb == 2);
     CHECK(ub == 2);
-    CHECK(union_set.node_count() == 6);
+    CHECK(union_set.node_count() == 5);
     CHECK((int)union_set.sat_count() == 13);
 
-    CHECK(encode_interval(0, 3) ==
+    CHECK(encode_interval(0, 4) ==
           union_set.get_down_node().get_encoded_interval());
-    CHECK(union_set.get_down_node().node_count() == 2);
+    CHECK(union_set.get_down_node().node_count() == 1);
     CHECK((int)union_set.get_down_node().sat_count() == 5);
     CHECK(union_set.get_down_node().get_down_node() == sylvan_idd::iddTrue());
-
-    CHECK(encode_interval(4, 4) ==
-          union_set.get_down_node().get_right_node().get_encoded_interval());
-    CHECK(union_set.get_down_node().get_right_node().node_count() == 1);
-    CHECK((int)union_set.get_down_node().get_right_node().sat_count() == 1);
-    CHECK(union_set.get_down_node().get_right_node().get_down_node() ==
-          sylvan_idd::iddTrue());
 
     CHECK(encode_interval(3, 4) ==
           union_set.get_right_node().get_encoded_interval());
