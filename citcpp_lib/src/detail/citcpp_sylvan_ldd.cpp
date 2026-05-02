@@ -1225,32 +1225,33 @@ inline MDD sylvan_idd_one_level_set_union(MDD a, MDD b) {
   mddnode_t nb = LDD_GETNODE(b);
   const uint32_t na_value = mddnode_getvalue(na);
   const uint32_t nb_value = mddnode_getvalue(nb);
+  const MDD na_right = mddnode_getright(na);
+  const MDD nb_right = mddnode_getright(nb);
   interval a_ival = decode_interval(na_value);
   interval b_ival = decode_interval(nb_value);
 
   if (is_intervals_connected(a_ival, b_ival)) {
     interval span = interval_union(a_ival, b_ival);
-    MDD right = sylvan_idd_one_level_set_union(mddnode_getright(na),
-                                               mddnode_getright(nb));
-    mddnode_t n_right;
-    interval right_ival;
-    if (right != lddmc_false) {
-      n_right = LDD_GETNODE(right);
-      right_ival = decode_interval(mddnode_getvalue(n_right));
-    }
-    while (right != lddmc_false && is_intervals_connected(span, right_ival)) {
-      span = interval_union(span, right_ival);
-      right = mddnode_getright(n_right);
-      if (right != lddmc_false) {
-        n_right = LDD_GETNODE(right);
-        right_ival = decode_interval(mddnode_getvalue(n_right));
+    MDD right = sylvan_idd_one_level_set_union(na_right, nb_right);
+    lddmc_refs_push(right);
+
+    while (right != lddmc_false) {
+      mddnode_t n_right = LDD_GETNODE(right);
+      interval right_ival = decode_interval(mddnode_getvalue(n_right));
+      if (is_intervals_connected(span, right_ival)) {
+        span = interval_union(span, right_ival);
+        MDD next_right = mddnode_getright(n_right);
+        lddmc_refs_pop(1);
+        right = next_right;
+        lddmc_refs_push(right);
+      } else {
+        break;
       }
     }
 
-    // right now points to the next greater interval that is not connected,
-    // or false (no greater interval exists).
-    // So we can now return a node with the created interval.
-    return lddmc_makenode(encode_interval(span), lddmc_true, right);
+    MDD result = lddmc_makenode(encode_interval(span), lddmc_true, right);
+    lddmc_refs_pop(1);
+    return result;
   }
 
   // When reaching this point, the intervals stored
@@ -1258,16 +1259,61 @@ inline MDD sylvan_idd_one_level_set_union(MDD a, MDD b) {
 
   if (a_ival.ub < b_ival.lb) {
     // The interval stored in node a is ordered before the one stored in node b.
-    return lddmc_makenode(
-        na_value, lddmc_true,
-        sylvan_idd_one_level_set_union(mddnode_getright(na), b));
+    MDD right = sylvan_idd_one_level_set_union(na_right, b);
+    return lddmc_makenode(na_value, lddmc_true, right);
   } else {
     // The interval stored in node b is ordered before the one stored in node a.
-    return lddmc_makenode(
-        nb_value, lddmc_true,
-        sylvan_idd_one_level_set_union(a, mddnode_getright(nb)));
+    MDD right = sylvan_idd_one_level_set_union(a, nb_right);
+    return lddmc_makenode(nb_value, lddmc_true, right);
   }
 }
+
+static const uint64_t CACHE_IDD_MERGE_ADJACENT = (69LL << 40);
+
+TASK_1(MDD, sylvan_idd_merge_adjacent, MDD, idd) {
+  if (idd <= lddmc_true) return idd;
+
+  /* Access cache */
+  MDD result;
+  if (cache_get3(CACHE_IDD_MERGE_ADJACENT, idd, 0, 0, &result)) {
+    return result;
+  }
+
+  mddnode_t nidd = LDD_GETNODE(idd);
+  uint32_t val = mddnode_getvalue(nidd);
+  MDD down = mddnode_getdown(nidd);
+  MDD right = mddnode_getright(nidd);
+
+  /* Recursively merge the right part first */
+  MDD merged_right = CALL(sylvan_idd_merge_adjacent, right);
+  lddmc_refs_push(merged_right);
+
+  if (merged_right != lddmc_false) {
+    mddnode_t n_merged_right = LDD_GETNODE(merged_right);
+    interval ival = decode_interval(val);
+    interval right_ival = decode_interval(mddnode_getvalue(n_merged_right));
+    MDD right_down = mddnode_getdown(n_merged_right);
+
+    if (is_intervals_connected(ival, right_ival) && down == right_down) {
+      interval span = interval_union(ival, right_ival);
+      result = lddmc_makenode(encode_interval(span), down,
+                              mddnode_getright(n_merged_right));
+    } else {
+      result = lddmc_makenode(val, down, merged_right);
+    }
+  } else {
+    result = lddmc_makenode(val, down, lddmc_false);
+  }
+
+  lddmc_refs_pop(1);
+
+  /* Write to cache */
+  cache_put3(CACHE_IDD_MERGE_ADJACENT, idd, 0, 0, result);
+
+  return result;
+}
+
+#define sylvan_idd_merge_adjacent(idd) RUN(sylvan_idd_merge_adjacent, idd)
 
 static const uint64_t CACHE_IDD_GET_VALID_ASSIGNS = (65LL << 40);
 
@@ -1683,45 +1729,12 @@ TASK_3(MDD, sylvan_idd_inv_project, MDD, a, MDD, b, MDD, proj) {
   lddmc_refs_pop(1);
   result = lddmc_makenode(val, down, right);
 
+  result = sylvan_idd_merge_adjacent(result);
+
   /* Write to cache */
   cache_put3(CACHE_IDD_INV_PROJ, a, b, proj, result);
 
   return result;
-}
-
-static MDD merge_adjacent_idds(MDD idd) {
-  bool merged_adjacent_nodes = true;
-
-  while (merged_adjacent_nodes) {
-    merged_adjacent_nodes = false;
-    mddnode_t nidd = LDD_GETNODE(idd);
-    uint32_t encoded_ival = mddnode_getvalue(nidd);
-    interval ival = decode_interval(encoded_ival);
-    MDD result_down = mddnode_getdown(nidd);
-    MDD idd_right = mddnode_getright(nidd);
-
-    if (idd_right != lddmc_false) {
-      mddnode_t nidd_right = LDD_GETNODE(idd_right);
-      uint32_t right_encoded_ival = mddnode_getvalue(nidd_right);
-      interval right_ival = decode_interval(right_encoded_ival);
-      MDD result_right_down = mddnode_getdown(nidd_right);
-      MDD result_right_right = mddnode_getright(nidd_right);
-
-      if (is_intervals_connected(ival, right_ival)) {
-        // This nodes and the node next right to it have connected intervals.
-        // Now check whether they point to the very same down node.
-        if (result_down == result_right_down) {
-          // Ok both down nodes are the same, so let's merge the nodes.
-          interval span = interval_union(ival, right_ival);
-          idd = lddmc_makenode(encode_interval(span), result_down,
-                               result_right_right);
-          merged_adjacent_nodes = true;
-        }
-      }
-    }
-  }
-
-  return idd;
 }
 
 static const uint64_t CACHE_IDD_UNION = (68LL << 40);
@@ -1864,7 +1877,7 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
   // If that is the case, we can merge both nodes.
   // Due to the recursive nature of this method, this causes all
   // intervals to be merged to the greatest possible extent.
-  result = merge_adjacent_idds(result);
+  result = sylvan_idd_merge_adjacent(result);
 
   /* Write to cache */
   cache_put3(CACHE_IDD_UNION, a, b, 0, result);

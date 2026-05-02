@@ -98,6 +98,54 @@ TEST_CASE("sylvan IDD, testing single value") {
   CHECK((int)idd.sat_count() == 1);
 }
 
+TEST_CASE("sylvan IDD, testing merge logic bug") {
+  using namespace citcpp;
+  using namespace citcpp::detail;
+
+  sylvan_lifecycle sylvan_lifecycle;
+
+  // We want to create a situation where:
+  // result = [10, 11] with D1 -> [12, 20] with D2 -> [21, 25] with D2
+  // D1 = {var1=1}, D2 = {var1=1, var1=2}
+
+  sylvan_idd d1(1, 1);    // var1 = 1
+  sylvan_idd d2_2(1, 2);  // var1 = 2
+
+  std::vector<unsigned int> domain_sizes{0, 3};  // var0: any, var1: 3
+  sylvan_idd d2 =
+      sylvan_idd::project_union(d1, d2_2, domain_sizes);  // var1 = 1 or 2
+
+  sylvan_idd a_part(0, relational_operator::LE, 20, 31);   // var0 <= 20
+  sylvan_idd a_part2(0, relational_operator::GE, 10, 31);  // var0 >= 10
+  sylvan_idd a_range =
+      sylvan_idd::project_intersect(a_part, a_part2);  // var0 in [10, 20]
+
+  sylvan_idd a = sylvan_idd::project_intersect(a_range, d1);
+
+  sylvan_idd b_part(0, relational_operator::LE, 25, 31);
+  sylvan_idd b_part2(0, relational_operator::GE, 12, 31);
+  sylvan_idd b_range =
+      sylvan_idd::project_intersect(b_part, b_part2);  // var0 in [12, 25]
+
+  sylvan_idd b = sylvan_idd::project_intersect(b_range, d2);
+
+  sylvan_idd union_res = sylvan_idd::project_union(a, b, domain_sizes);
+
+  // Let's check the top level intervals.
+  uint32_t lb, ub;
+  union_res.get_interval(lb, ub);
+  CHECK(lb == 10);
+  CHECK(ub == 11);
+
+  sylvan_idd right = union_res.get_right_node();
+  CHECK(right != sylvan_idd::iddFalse());
+  right.get_interval(lb, ub);
+
+  // If merged, the next interval should be [12, 25].
+  // If NOT merged (the bug), it will be [12, 20].
+  CHECK(ub == 25);
+}
+
 TEST_CASE("sylvan IDD, testing boundary conditions") {
   using namespace citcpp;
   using namespace citcpp::detail;
