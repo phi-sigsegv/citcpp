@@ -2,6 +2,8 @@
 
 #include <lace.h>
 
+#include <mutex>
+
 namespace {
 
 std::mutex& get_global_lace_init_mutex() {
