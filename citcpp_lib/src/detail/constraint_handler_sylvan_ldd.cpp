@@ -12,16 +12,6 @@ template <typename T_DD>
 struct true_false_dd_trait {};
 
 template <>
-struct true_false_dd_trait<citcpp::detail::sylvan_ldd> {
-    static citcpp::detail::sylvan_ldd true_dd() {
-      return citcpp::detail::sylvan_ldd::lddTrue();
-    }
-    static citcpp::detail::sylvan_ldd false_dd() {
-      return citcpp::detail::sylvan_ldd::lddFalse();
-    }
-};
-
-template <>
 struct true_false_dd_trait<citcpp::detail::sylvan_idd> {
     static citcpp::detail::sylvan_idd true_dd() {
       return citcpp::detail::sylvan_idd::iddTrue();
@@ -553,101 +543,6 @@ constraint_handler_sylvan_base::constraint_handler_sylvan_base(int num_workers)
 constraint_handler_sylvan_base::~constraint_handler_sylvan_base() {
   maybe_shutdown_sylvan();
 }
-
-constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
-    const internal_model& model, int num_workers)
-    : base_type(num_workers), model_(model), ldd_() {
-
-  constraint_to_xdd_visitor<sylvan_ldd> visitor(model);
-  sylvan_ldd ldd_true = sylvan_ldd::lddTrue();
-  sylvan_ldd ldd = ldd_true;
-  for (const auto& constr : model.get_input_model().get_constraints()) {
-    if (ldd == ldd_true) {
-      ldd = constr->accept<sylvan_ldd>(visitor);
-    } else {
-      ldd.project_intersect(constr->accept<sylvan_ldd>(visitor));
-    }
-  }
-
-  ldd_ = ldd;
-}
-
-constraint_handler_sylvan_ldd::constraint_handler_sylvan_ldd(
-    const internal_model& model, int num_workers,
-    constraint_handler_init_progress& exec_handle)
-    : constraint_handler_sylvan_base(num_workers), model_(model), ldd_() {
-
-  constraint_to_xdd_visitor<sylvan_ldd> visitor(model);
-  sylvan_ldd ldd_true = sylvan_ldd::lddTrue();
-  sylvan_ldd ldd = ldd_true;
-  for (const auto& constr : model.get_input_model().get_constraints()) {
-    if (ldd == ldd_true) {
-      ldd = constr->accept<sylvan_ldd>(visitor);
-    } else {
-      ldd.project_intersect(constr->accept<sylvan_ldd>(visitor));
-    }
-    exec_handle.add_constraint_handler_init_progress_current(1);
-  }
-
-  ldd_ = ldd;
-}
-
-bool constraint_handler_sylvan_ldd::is_thread_safe() const { return false; }
-
-bool constraint_handler_sylvan_ldd::is_valid_partial_test(const test& t) const {
-  return ldd_.is_sat_with_partial_assignment(t.get_values());
-}
-
-bitset_uint64 constraint_handler_sylvan_ldd::check_validity_of_partial_tests(
-    const internal_test_set& test_set) const {
-
-  bitset_uint64 result(test_set.get_list_of_tests().size());
-
-  RUN(lace_check_validity_of_partial_test, &result, &test_set, this);
-
-  return result;
-}
-
-bitset_uint64 constraint_handler_sylvan_ldd::get_valid_parameter_assignments(
-    const test& t, unsigned int param_idx) const {
-
-  return ldd_.get_valid_variable_assignments(
-      param_idx, model_.get_parameter_num_values()[param_idx], t.get_values());
-}
-
-std::vector<bitset_uint64>
-constraint_handler_sylvan_ldd::get_valid_parameter_assignments(
-    const internal_test_set& test_set, unsigned int param_idx) const {
-
-  std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
-
-  RUN(lace_get_valid_parameter_assignments_for_testset_task, &result, &test_set,
-      param_idx, this);
-
-  return result;
-}
-
-void constraint_handler_sylvan_ldd::replace_dont_care_values(test& t) const {
-  ldd_.get_sat_one_under_partial_assignment(t.get_values());
-  // The call above only replaces don't care values for constrained variables.
-  // So the test may still contain  don't care values for unconstrained
-  // variables, which we also need to replace. This is easy however, since we
-  // can simply replace all of them by the first value of the respective domain.
-  for (unsigned int i = 0; i < t.get_values().size(); ++i) {
-    int& value = t.get_values()[i];
-    if (value < 0) {
-      value = 0;
-    }
-  }
-}
-
-void constraint_handler_sylvan_ldd::replace_dont_care_values(
-    internal_test_set& test_set) const {
-
-  RUN(lace_replace_dont_care_values_in_testset_task, &test_set, this);
-}
-
-const sylvan_ldd& constraint_handler_sylvan_ldd::getLdd() const { return ldd_; }
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     const internal_model& model, int num_workers)

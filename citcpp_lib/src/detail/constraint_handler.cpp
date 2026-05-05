@@ -59,7 +59,7 @@ constraint_handler::create_constraint_handler(
     exec_handle.set_constraint_handler_init_progress_target(
         model.get_input_model().get_constraints().size());
     exec_handle.set_constraint_handler_init_progress_current(0);
-    return std::make_unique<constraint_handler_sylvan_ldd>(
+    return std::make_unique<constraint_handler_sylvan_idd>(
         model, num_worker_threads, exec_handle);
   }
 }
