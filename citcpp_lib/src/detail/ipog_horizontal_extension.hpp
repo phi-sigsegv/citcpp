@@ -16,13 +16,13 @@ namespace detail {
 
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
-    const constraint_handler& constr_handler, internal_test_set& test_set,
+    constraint_handler& constr_handler, internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations);
 
 template <conc_is_void_functor_executor T_EXEC>
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
-    const constraint_handler& constr_handler, internal_test_set& test_set,
+    constraint_handler& constr_handler, internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
     T_EXEC& exec);
 

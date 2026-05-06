@@ -16,7 +16,7 @@ namespace detail {
 
 ipog_vertical_extension_result ipog_vertical_extension(
     const unsigned long long num_missing_combinations_to_cover,
-    const constraint_handler& constr_handler,
+    constraint_handler& constr_handler,
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values,
     internal_test_set& test_set,

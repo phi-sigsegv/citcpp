@@ -29,7 +29,7 @@ void main_ipog_loop_body(
     const citcpp::detail::internal_model& model,
     const std::vector<citcpp::detail::internal_relation>& relations,
     citcpp::detail::internal_test_set& test_set,
-    const citcpp::detail::constraint_handler& constr_handler,
+    citcpp::detail::constraint_handler& constr_handler,
     const bool is_extend_mode, const unsigned int real_current_param_idx,
     const bool with_mt,
     const citcpp::detail::binom_coeff_table& binomial_coeffs, T_EXEC& exec,
@@ -189,7 +189,7 @@ template <citcpp::detail::conc_is_void_functor_executor T_EXEC>
 void main_ipog_loop(const citcpp::detail::internal_model& model,
                     std::vector<citcpp::detail::internal_relation>& relations,
                     citcpp::detail::internal_test_set& test_set,
-                    const citcpp::detail::constraint_handler& constr_handler,
+                    citcpp::detail::constraint_handler& constr_handler,
                     const citcpp::covering_array_computation_config config,
                     T_EXEC& exec,
                     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
@@ -242,6 +242,12 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
     // Step 1: Initialize for the first t parameters.
     create_all_value_combinations(first_param_idx, model, parameter_index_map,
                                   constr_handler, test_set);
+
+    // Cache the test in the constraint handler.
+    for (const auto& t : test_set.get_list_of_tests()) {
+      constr_handler.cache_partial_test(&t);
+    }
+
     exec_handle.set_testset_size(test_set.get_list_of_tests().size());
     exec_handle.set_number_of_processed_parameters(first_param_idx);
   }
@@ -339,7 +345,7 @@ void main_ipog_loop_extend_test_set(
     const citcpp::detail::internal_model& model,
     std::vector<citcpp::detail::internal_relation>& relations,
     citcpp::detail::internal_test_set& test_set,
-    const citcpp::detail::constraint_handler& constr_handler,
+    citcpp::detail::constraint_handler& constr_handler,
     const citcpp::covering_array_computation_config config, T_EXEC& exec,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;

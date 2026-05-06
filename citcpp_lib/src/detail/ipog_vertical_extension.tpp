@@ -10,7 +10,7 @@ class ipog_vertical_extension_functor {
   public:
     ipog_vertical_extension_functor(
         const unsigned int strength, const internal_model& model,
-        const constraint_handler& constr_handler, internal_test_set& test_set,
+        constraint_handler& constr_handler, internal_test_set& test_set,
         ipog_horizontal_extension_result&
             partitioning_of_tests_according_to_current_values,
         list_intrusive<test_list_intrusive_integ>& modified_tests,
@@ -215,6 +215,9 @@ class ipog_vertical_extension_functor {
           .push_back(test_set_.get_list_of_tests()
                          .back()
                          .get_value_partition_intrusive_list_node());
+
+      // Cache the test in the constraint handler.
+      constr_handler_.cache_partial_test(&t);
     }
 
     bool ipog_vertical_extension_try_inject_value_combo(
@@ -250,6 +253,9 @@ class ipog_vertical_extension_functor {
         return false;
       }
 
+      // Update the state of the test as seen by constraint hander.
+      constr_handler_.update_cached_partial_test(&t);
+
       return true;
     }
 
@@ -281,7 +287,7 @@ class ipog_vertical_extension_functor {
 
   private:
     const internal_model& model_;
-    const constraint_handler& constr_handler_;
+    constraint_handler& constr_handler_;
     internal_test_set& test_set_;
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values_;
@@ -295,7 +301,7 @@ class ipog_vertical_extension_functor {
 
 inline ipog_vertical_extension_result ipog_vertical_extension(
     const unsigned long long num_missing_combinations_to_cover,
-    const constraint_handler& constr_handler,
+    constraint_handler& constr_handler,
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values,
     internal_test_set& test_set,

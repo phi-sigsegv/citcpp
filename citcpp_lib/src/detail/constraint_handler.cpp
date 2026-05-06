@@ -61,7 +61,7 @@ constraint_handler::create_constraint_handler(
     exec_handle.set_constraint_handler_init_progress_current(0);
     constraint_handler_sylvan_idd* handler = new constraint_handler_sylvan_idd(
         model, num_worker_threads, exec_handle);
-    handler->use_per_test_idd(false);
+    handler->use_per_test_idd(true);
     return std::unique_ptr<constraint_handler_sylvan_idd>(handler);
   }
 }

@@ -895,7 +895,7 @@ class
 
 inline ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
-    const constraint_handler& constr_handler, internal_test_set& test_set,
+    constraint_handler& constr_handler, internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations) {
 
   const unsigned int real_current_param_idx =
@@ -964,6 +964,9 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
         // tests.
         result.value_to_row_mapping[selected_value].push_back(
             previous_test->get_value_partition_intrusive_list_node());
+        // Update the state of the test as seen by constraint hander.
+        constr_handler.update_cached_partial_test(
+            previous_test, real_current_param_idx, selected_value);
       } else {
         // Maintain a mapping from values of the current parameter to the
         // tests.
@@ -1010,6 +1013,9 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
       // tests.
       result.value_to_row_mapping[selected_value].push_back(
           previous_test->get_value_partition_intrusive_list_node());
+      // Update the state of the test as seen by constraint hander.
+      constr_handler.update_cached_partial_test(
+          previous_test, real_current_param_idx, selected_value);
     } else {
       // Maintain a mapping from values of the current parameter to the
       // tests.
@@ -1033,7 +1039,7 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
 template <conc_is_void_functor_executor T_EXEC>
 ipog_horizontal_extension_result ipog_horizontal_extension(
     const unsigned long long num_missing_combinations_to_cover,
-    const constraint_handler& constr_handler, internal_test_set& test_set,
+    constraint_handler& constr_handler, internal_test_set& test_set,
     std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
     T_EXEC& exec) {
 
@@ -1106,6 +1112,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
         // tests.
         result.value_to_row_mapping[selected_value].push_back(
             previous_test->get_value_partition_intrusive_list_node());
+        // Update the state of the test as seen by constraint hander.
+        constr_handler.update_cached_partial_test(
+            previous_test, real_current_param_idx, selected_value);
       } else {
         // Maintain a mapping from values of the current parameter to the
         // tests.
@@ -1152,6 +1161,9 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
       // tests.
       result.value_to_row_mapping[selected_value].push_back(
           previous_test->get_value_partition_intrusive_list_node());
+      // Update the state of the test as seen by constraint hander.
+      constr_handler.update_cached_partial_test(
+          previous_test, real_current_param_idx, selected_value);
     } else {
       // Maintain a mapping from values of the current parameter to the
       // tests.
