@@ -109,7 +109,7 @@ class alignas(false_sharing_avoidance_alignment) replace_dont_care_values_task
 
 template <conc_is_void_functor_executor T_EXEC>
 concurrent_constraint_handler<T_EXEC>::concurrent_constraint_handler(
-    const constraint_handler& handler, T_EXEC& exec)
+    constraint_handler& handler, T_EXEC& exec)
     : base_type(), handler_(handler), exec_(exec) {}
 
 template <conc_is_void_functor_executor T_EXEC>
@@ -203,6 +203,25 @@ void concurrent_constraint_handler<T_EXEC>::replace_dont_care_values(
       ++test_index;
     }
   }
+}
+
+template <conc_is_void_functor_executor T_EXEC>
+void concurrent_constraint_handler<T_EXEC>::cache_partial_test(const test* t) {
+  handler_.cache_partial_test(t);
+}
+
+template <conc_is_void_functor_executor T_EXEC>
+void concurrent_constraint_handler<T_EXEC>::update_cached_partial_test(
+    const test* t) {
+
+  handler_.update_cached_partial_test(t);
+}
+
+template <conc_is_void_functor_executor T_EXEC>
+void concurrent_constraint_handler<T_EXEC>::update_cached_partial_test(
+    const test* t, unsigned int param_idx, int value) {
+
+  handler_.update_cached_partial_test(t, param_idx, value);
 }
 
 }  // namespace detail

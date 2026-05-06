@@ -9,7 +9,6 @@ constraint_handler_void::constraint_handler_void(const internal_model& model)
 bool constraint_handler_void::is_thread_safe() const { return true; }
 
 bool constraint_handler_void::is_valid_partial_test(const test& t) const {
-
   return true;
 }
 
@@ -33,6 +32,14 @@ void constraint_handler_void::replace_dont_care_values(test& t) const {
     }
   }
 }
+
+void constraint_handler_void::cache_partial_test(const test* t) {}
+
+void constraint_handler_void::update_cached_partial_test(const test* t) {}
+
+void constraint_handler_void::update_cached_partial_test(const test* t,
+                                                         unsigned int param_idx,
+                                                         int value) {}
 
 }  // namespace detail
 }  // namespace citcpp

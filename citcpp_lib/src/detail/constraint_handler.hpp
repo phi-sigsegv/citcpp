@@ -82,6 +82,59 @@ class constraint_handler {
     virtual void replace_dont_care_values(internal_test_set& test_set) const;
 
     /**
+     * Calling this method causes the constraint handler to remember
+     * the given test and its current assignments, such that if
+     * the test is being referenced by other calls, then those calls can make
+     * use of the cached information.
+     *
+     * Note that clients of this method are free to add more assignments
+     * to a test after it has been cached. It is not necessary to call this
+     * method again. But an assignment of a test given to this method
+     * must not be changed afterwards.
+     */
+    virtual void cache_partial_test(const test* t) = 0;
+
+    /**
+     * Calling this method causes the constraint handler to update
+     * its cache regarding the given test by adding its assignments,
+     * such that if the test is being referenced by other calls,
+     * then those calls can make use of the cached information.
+     *
+     * Note that clients of this method are free to add more assignments
+     * to a test after it has been cached. It is not necessary to call this
+     * method again. But an assignment of a test given to this method
+     * must not be changed afterwards.
+     *
+     * Note that this is only well-defined if current assignments found
+     * in the given test are consistent with the assignments at the point
+     * when the cache was last updated (in the sense that some don't care values
+     * are not replaced by concrete assigned values). Otherwise the behavior of
+     * the constraint handler is undefined and may cause crashes or simply
+     * deliver wrong results.
+     */
+    virtual void update_cached_partial_test(const test* t) = 0;
+
+    /**
+     * Calling this method causes the constraint handler to update
+     * its cache regarding the given test by adding the given assignment
+     * to it, such that if the test is being referenced by other calls,
+     * then those calls can make use of the cached information.
+     *
+     * Note that clients of this method are free to add more assignments
+     * to a test after it has been cached. It is not necessary to call this
+     * method again. But an assignment of a test given to this method
+     * must not be changed afterwards.
+     *
+     * Note that this is only well-defined if the parameter was previously
+     * unassigned (a don't care value) and now has a concrete assigned
+     * value. Otherwise the behavior of the constraint handler is undefined
+     * and may cause crashes or simply deliver wrong results.
+     */
+    virtual void update_cached_partial_test(const test* t,
+                                            unsigned int param_idx,
+                                            int value) = 0;
+
+    /**
      * Creates a constraint handler for the given model.
      */
     static std::unique_ptr<constraint_handler> create_constraint_handler(

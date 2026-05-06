@@ -1,6 +1,8 @@
 #ifndef DETAIL_CONSTRAINT_HANDLER_SYLVAN_LDD_HPP_
 #define DETAIL_CONSTRAINT_HANDLER_SYLVAN_LDD_HPP_
 
+#include <unordered_map>
+
 #include "citcpp_sylvan_ldd.hpp"
 #include "constraint_handler.hpp"
 #include "internal_model.hpp"
@@ -70,6 +72,32 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     void replace_dont_care_values(internal_test_set& test_set) const override;
 
     /**
+     * See constraint_handler interface.
+     */
+    void cache_partial_test(const test* t) override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void update_cached_partial_test(const test* t) override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void update_cached_partial_test(const test* t, unsigned int param_idx,
+                                    int value) override;
+
+    /**
+     * Returns whether using an IDD per test is enabled.
+     */
+    bool is_per_test_idd_enabled() const;
+
+    /**
+     * Sets whether using an IDD per test is enabled.
+     */
+    void use_per_test_idd(bool enabled);
+
+    /**
      * Returns the IDD used by the constraint handler.
      */
     const sylvan_idd& getIdd() const;
@@ -77,6 +105,8 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
   private:
     const internal_model& model_;
     sylvan_idd idd_;
+    std::unordered_map<const test*, sylvan_idd> test_to_idd_;
+    bool is_per_test_idd_enabled_;
 };
 
 }  // namespace detail

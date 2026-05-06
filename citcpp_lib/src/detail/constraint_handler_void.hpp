@@ -38,6 +38,22 @@ class constraint_handler_void : public constraint_handler {
      */
     void replace_dont_care_values(test& t) const override;
 
+    /**
+     * See constraint_handler interface.
+     */
+    void cache_partial_test(const test* t) override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void update_cached_partial_test(const test* t) override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void update_cached_partial_test(const test* t, unsigned int param_idx,
+                                    int value) override;
+
   private:
     const internal_model& model_;
 };

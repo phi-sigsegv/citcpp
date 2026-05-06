@@ -19,8 +19,7 @@ class concurrent_constraint_handler : public constraint_handler {
     typedef constraint_handler base_type;
 
   public:
-    concurrent_constraint_handler(const constraint_handler& handler,
-                                  T_EXEC& exec);
+    concurrent_constraint_handler(constraint_handler& handler, T_EXEC& exec);
 
     /**
      * See constraint_handler interface.
@@ -61,8 +60,24 @@ class concurrent_constraint_handler : public constraint_handler {
      */
     void replace_dont_care_values(internal_test_set& test_set) const override;
 
+    /**
+     * See constraint_handler interface.
+     */
+    void cache_partial_test(const test* t) override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void update_cached_partial_test(const test* t) override;
+
+    /**
+     * See constraint_handler interface.
+     */
+    void update_cached_partial_test(const test* t, unsigned int param_idx,
+                                    int value) override;
+
   private:
-    const constraint_handler& handler_;
+    constraint_handler& handler_;
     T_EXEC& exec_;
 };
 

@@ -546,7 +546,11 @@ constraint_handler_sylvan_base::~constraint_handler_sylvan_base() {
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     const internal_model& model, int num_workers)
-    : base_type(num_workers), model_(model), idd_() {
+    : base_type(num_workers),
+      model_(model),
+      idd_(),
+      test_to_idd_(),
+      is_per_test_idd_enabled_(false) {
 
   constraint_to_xdd_visitor<sylvan_idd> visitor(model);
   sylvan_idd idd_true = sylvan_idd::iddTrue();
@@ -585,6 +589,11 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
 bool constraint_handler_sylvan_idd::is_thread_safe() const { return false; }
 
 bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
+  auto it = test_to_idd_.find(&t);
+  if (it != test_to_idd_.end()) {
+    return it->second.is_sat_with_partial_assignment(t.get_values());
+  }
+
   return idd_.is_sat_with_partial_assignment(t.get_values());
 }
 
@@ -600,6 +609,13 @@ bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
 
 bitset_uint64 constraint_handler_sylvan_idd::get_valid_parameter_assignments(
     const test& t, unsigned int param_idx) const {
+
+  auto it = test_to_idd_.find(&t);
+  if (it != test_to_idd_.end()) {
+    return it->second.get_valid_variable_assignments(
+        param_idx, model_.get_parameter_num_values()[param_idx],
+        t.get_values());
+  }
 
   return idd_.get_valid_variable_assignments(
       param_idx, model_.get_parameter_num_values()[param_idx], t.get_values());
@@ -618,7 +634,13 @@ constraint_handler_sylvan_idd::get_valid_parameter_assignments(
 }
 
 void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
-  idd_.get_sat_one_under_partial_assignment(t.get_values());
+  auto it = test_to_idd_.find(&t);
+  if (it != test_to_idd_.end()) {
+    it->second.get_sat_one_under_partial_assignment(t.get_values());
+  } else {
+    idd_.get_sat_one_under_partial_assignment(t.get_values());
+  }
+
   // The call above only replaces don't care values for constrained variables.
   // So the test may still contain  don't care values for unconstrained
   // variables, which we also need to replace. This is easy however, since we
@@ -635,6 +657,48 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(
     internal_test_set& test_set) const {
 
   RUN(lace_replace_dont_care_values_in_testset_task, &test_set, this);
+}
+
+void constraint_handler_sylvan_idd::cache_partial_test(const test* t) {
+  if (is_per_test_idd_enabled_) {
+    test_to_idd_.emplace(t,
+                         sylvan_idd::project_intersect(idd_, t->get_values()));
+  }
+}
+
+void constraint_handler_sylvan_idd::update_cached_partial_test(const test* t) {
+  if (is_per_test_idd_enabled_) {
+    auto it = test_to_idd_.find(t);
+    if (it != test_to_idd_.end()) {
+      it->second.project_intersect(sylvan_idd(t->get_values()));
+    } else {
+      cache_partial_test(t);
+    }
+  }
+}
+
+void constraint_handler_sylvan_idd::update_cached_partial_test(
+    const test* t, unsigned int param_idx, int value) {
+
+  if (is_per_test_idd_enabled_) {
+    auto it = test_to_idd_.find(t);
+    if (it != test_to_idd_.end()) {
+      it->second.project_intersect(sylvan_idd(param_idx, value));
+    } else {
+      auto emplace_result = test_to_idd_.emplace(
+          t, sylvan_idd::project_intersect(idd_, t->get_values()));
+      emplace_result.first->second.project_intersect(
+          sylvan_idd(param_idx, value));
+    }
+  }
+}
+
+bool constraint_handler_sylvan_idd::is_per_test_idd_enabled() const {
+  return is_per_test_idd_enabled_;
+}
+
+void constraint_handler_sylvan_idd::use_per_test_idd(bool enabled) {
+  is_per_test_idd_enabled_ = enabled;
 }
 
 const sylvan_idd& constraint_handler_sylvan_idd::getIdd() const { return idd_; }
