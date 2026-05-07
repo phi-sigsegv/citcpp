@@ -78,7 +78,7 @@ void main_ipog_loop_body(
     exec_handle.add_number_of_covered_combinations(
         reported_number_combos_to_cover);
   } else {
-    std::vector<std::pair<const internal_relation*, coverage_map>>
+    std::vector<std::pair<const internal_relation*, ipog_coverage_map>>
         relation_cov_maps;
     unsigned long long number_combos_to_process = 0;
     for (const auto& relation : relations) {
@@ -87,10 +87,11 @@ void main_ipog_loop_body(
           real_current_param_idx) {
 
         relation_cov_maps.push_back(std::make_pair(
-            &relation, coverage_map(relation.get_current_param_idx() + 1,
-                                    relation.get_current_interaction_strength(),
-                                    model, relation.get_parameter_index_map(),
-                                    binomial_coeffs, true)));
+            &relation,
+            ipog_coverage_map(relation.get_current_param_idx() + 1,
+                              relation.get_current_interaction_strength(),
+                              model, relation.get_parameter_index_map(),
+                              binomial_coeffs, true)));
         number_combos_to_process +=
             relation_cov_maps.back().second.get_total_number_of_tuples();
       }

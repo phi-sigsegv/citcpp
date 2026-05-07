@@ -27,7 +27,7 @@ class ipog_vertical_extension_functor {
           num_checked_tuples_(0),
           num_new_covered_tuples_(0) {}
 
-    bool operator()(coverage_map::second_level_type& value_combinations) {
+    bool operator()(ipog_coverage_map::second_level_type& value_combinations) {
       if (!value_combinations.all()) {
         ipog_vertical_extension_func(value_combinations);
 
@@ -38,8 +38,8 @@ class ipog_vertical_extension_functor {
     }
 
     bool operator()(const value_vector& value_indices,
-                    coverage_map_base::size_type bitpos,
-                    coverage_map::second_level_type& value_combinations) {
+                    ipog_coverage_map::size_type bitpos,
+                    ipog_coverage_map::second_level_type& value_combinations) {
 
       ipog_vertical_extension_value_combo_func(value_indices, bitpos,
                                                value_combinations);
@@ -62,7 +62,7 @@ class ipog_vertical_extension_functor {
 
   private:
     void ipog_vertical_extension_func(
-        coverage_map::second_level_type& value_combinations) {
+        ipog_coverage_map::second_level_type& value_combinations) {
 
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
@@ -73,7 +73,7 @@ class ipog_vertical_extension_functor {
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
         // values for p_i. If we now have values x_0, x_1, x_2, then the
         // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        coverage_map::second_level_type::size_type index = 0;
+        ipog_coverage_map::second_level_type::size_type index = 0;
         bool index_valid = true;
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size(); ++i) {
@@ -88,7 +88,7 @@ class ipog_vertical_extension_functor {
             break;
           }
 
-          coverage_map::second_level_type::size_type addend = param_value;
+          ipog_coverage_map::second_level_type::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
             addend *= model_.get_parameter_num_values()[param_indices[j]];
@@ -109,8 +109,8 @@ class ipog_vertical_extension_functor {
     }
 
     void ipog_vertical_extension_value_combo_func(
-        const value_vector& value_indices, coverage_map_base::size_type bitpos,
-        coverage_map::second_level_type& value_combinations) {
+        const value_vector& value_indices, ipog_coverage_map::size_type bitpos,
+        ipog_coverage_map::second_level_type& value_combinations) {
 
       // First we check whether the value combination is covered, because if it
       // is, then there is no point trying to fit it into some test.
@@ -274,7 +274,7 @@ class ipog_vertical_extension_functor {
     }
 
     void reset_scratch_test(
-        coverage_map::second_level_type& value_combinations) {
+        ipog_coverage_map::second_level_type& value_combinations) {
 
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
@@ -305,7 +305,8 @@ inline ipog_vertical_extension_result ipog_vertical_extension(
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values,
     internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation*, coverage_map>>& relations) {
+    std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+        relations) {
 
   // First initialize the result object.
   ipog_vertical_extension_result result;

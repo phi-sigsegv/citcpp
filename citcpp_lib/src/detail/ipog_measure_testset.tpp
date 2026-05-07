@@ -5,7 +5,7 @@ namespace citcpp {
 namespace detail {
 
 inline void measure_coverage(
-    coverage_map::second_level_type& value_combinations,
+    ipog_coverage_map::second_level_type& value_combinations,
     const internal_model& model, const internal_test_set& test_set,
     unsigned long long& num_covered_tuples) {
 
@@ -18,7 +18,7 @@ inline void measure_coverage(
     // three parameters p_0, p_1, p_2. Now say that v_i is the number of
     // values for p_i. If we now have values x_0, x_1, x_2, then the index
     // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-    coverage_map::second_level_type::size_type index = 0;
+    ipog_coverage_map::second_level_type::size_type index = 0;
     bool found_dont_care = false;
     for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size();
          ++i) {
@@ -34,7 +34,7 @@ inline void measure_coverage(
         break;
       }
 
-      coverage_map::second_level_type::size_type addend = param_value;
+      ipog_coverage_map::second_level_type::size_type addend = param_value;
       for (std::vector<unsigned int>::size_type j = i + 1;
            j < param_indices.size(); ++j) {
         addend *= model.get_parameter_num_values()[param_indices[j]];
@@ -56,7 +56,7 @@ class ipog_measure_per_param_combo_functor {
                                          const internal_test_set& test_set)
         : model_(model), test_set_(test_set), num_covered_tuples_(0) {}
 
-    void operator()(coverage_map::second_level_type& value_combinations) {
+    void operator()(ipog_coverage_map::second_level_type& value_combinations) {
       measure_coverage(value_combinations, model_, test_set_,
                        num_covered_tuples_);
     }
@@ -100,7 +100,7 @@ class alignas(false_sharing_avoidance_alignment)
       }
     }
 
-    void set_task_parameters(coverage_map_base* cov_map,
+    void set_task_parameters(ipog_coverage_map* cov_map,
                              unsigned long long start_index,
                              unsigned long long end_index) {
       base_type::reset();
@@ -117,14 +117,15 @@ class alignas(false_sharing_avoidance_alignment)
 
   private:
     ipog_measure_per_param_combo_functor per_param_combo_functor_;
-    coverage_map_base* cov_map_;
+    ipog_coverage_map* cov_map_;
     unsigned long long start_index_;
     unsigned long long end_index_;
 };
 
 inline ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation*, coverage_map>>& relations) {
+    std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+        relations) {
 
   // First initialize the result object.
   ipog_measure_testset_result result;
@@ -147,7 +148,8 @@ inline ipog_measure_testset_result ipog_measure_testset(
 template <conc_is_void_functor_executor T_EXEC>
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    std::vector<std::pair<const internal_relation*, coverage_map>>& relations,
+    std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+        relations,
     T_EXEC& exec) {
 
   // First initialize the result object.
@@ -157,7 +159,7 @@ ipog_measure_testset_result ipog_measure_testset(
       thread_local_functors(exec.get_num_workers() * 8, {model, test_set});
 
   for (auto& rel_and_cov_map : relations) {
-    coverage_map_base* cov_map = &rel_and_cov_map.second;
+    ipog_coverage_map* cov_map = &rel_and_cov_map.second;
     const unsigned long long total_param_combos =
         cov_map->get_coverage_map().size();
     const unsigned long long num_tasks = std::min(

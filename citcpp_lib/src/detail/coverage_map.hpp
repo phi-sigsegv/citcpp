@@ -84,9 +84,6 @@ class coverage_map_second_level : public bitset_uint64 {
  */
 class coverage_map_base {
   public:
-    typedef std::vector<coverage_map_second_level>::size_type size_type;
-    typedef coverage_map_second_level second_level_type;
-
     coverage_map_base(unsigned int n, unsigned int t,
                       const internal_model& model,
                       const std::vector<unsigned int>& parameter_index_map,
@@ -111,14 +108,6 @@ class coverage_map_base {
 
     unsigned int get_number_of_parameters_to_select() const { return t_; }
 
-    std::vector<coverage_map_second_level>& get_coverage_map() {
-      return cov_map_;
-    }
-
-    const std::vector<coverage_map_second_level>& get_coverage_map() const {
-      return cov_map_;
-    }
-
     unsigned long long get_total_number_of_tuples() const {
       return total_num_tuples_;
     }
@@ -129,7 +118,6 @@ class coverage_map_base {
     const std::vector<unsigned int>& parameter_index_map_;
     const unsigned int n_;
     const unsigned int t_;
-    std::vector<coverage_map_second_level> cov_map_;
     unsigned long long total_num_tuples_;
 };
 
@@ -150,25 +138,39 @@ class coverage_map_base {
  * from the parameters [0, ... ,n-2], and extend those combinations by always
  * appending parameter n-1 to them.
  */
-class coverage_map : public coverage_map_base {
+template <typename T_SECOND_LEVEL_TYPE>
+class coverage_map_tmpl : public coverage_map_base {
     typedef coverage_map_base base_type;
 
   public:
-    coverage_map(unsigned int n, unsigned int t, const internal_model& model,
-                 const std::vector<unsigned int>& parameter_index_map,
-                 const binom_coeff_table& binomial_coeffs,
-                 bool fixed_last_parameter)
-        : base_type(n, t, model, parameter_index_map, binomial_coeffs,
-                    fixed_last_parameter) {}
+    typedef std::vector<T_SECOND_LEVEL_TYPE>::size_type size_type;
+    typedef T_SECOND_LEVEL_TYPE second_level_type;
 
-    coverage_map(const coverage_map& other) = default;
-    coverage_map(coverage_map&& other) = default;
+    coverage_map_tmpl(unsigned int n, unsigned int t,
+                      const internal_model& model,
+                      const std::vector<unsigned int>& parameter_index_map,
+                      const binom_coeff_table& binomial_coeffs,
+                      bool fixed_last_parameter);
 
-    ~coverage_map() = default;
+    coverage_map_tmpl(const coverage_map_tmpl& other) = default;
+    coverage_map_tmpl(coverage_map_tmpl&& other) = default;
 
-    coverage_map& operator=(const coverage_map& other) = default;
-    coverage_map& operator=(coverage_map&& other) = default;
+    ~coverage_map_tmpl() = default;
+
+    coverage_map_tmpl& operator=(const coverage_map_tmpl& other) = default;
+    coverage_map_tmpl& operator=(coverage_map_tmpl&& other) = default;
+
+    std::vector<second_level_type>& get_coverage_map() { return cov_map_; }
+
+    const std::vector<second_level_type>& get_coverage_map() const {
+      return cov_map_;
+    }
+
+  protected:
+    std::vector<second_level_type> cov_map_;
 };
+
+typedef coverage_map_tmpl<coverage_map_second_level> ipog_coverage_map;
 
 }  // namespace detail
 }  // namespace citcpp

@@ -4,13 +4,15 @@
 
 namespace {
 
+template <typename T_SECOND_LEVEL_TYPE>
 inline unsigned long long recursively_initialize_coverage_map(
     int start_idx_for_next, int current_level,
     unsigned long long num_value_combinations,
-    citcpp::detail::coverage_map_base& cov_map,
+    citcpp::detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>& cov_map,
     const citcpp::detail::internal_model& model,
     const std::vector<unsigned int>& parameter_index_map,
-    citcpp::detail::coverage_map_base::size_type& cov_map_first_level_index,
+    typename citcpp::detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::size_type&
+        cov_map_first_level_index,
     citcpp::detail::param_vector& param_indices) {
   using namespace citcpp::detail;
 
@@ -25,8 +27,8 @@ inline unsigned long long recursively_initialize_coverage_map(
       partial_sum += final_num_value_combinations;
 
       cov_map.get_coverage_map()[cov_map_first_level_index] =
-          coverage_map_base::second_level_type(final_num_value_combinations,
-                                               param_indices);
+          typename citcpp::detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::
+              second_level_type(final_num_value_combinations, param_indices);
 
       ++cov_map_first_level_index;
     } else {
@@ -57,9 +59,17 @@ inline coverage_map_base::coverage_map_base(
       parameter_index_map_(parameter_index_map),
       n_(n),
       t_(t),
-      cov_map_(size_),
-      total_num_tuples_(0) {
-  coverage_map_base::size_type cov_map_first_level_index = 0;
+      total_num_tuples_(0) {}
+
+template <typename T_SECOND_LEVEL_TYPE>
+coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::coverage_map_tmpl(
+    unsigned int n, unsigned int t, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    const binom_coeff_table& binomial_coeffs, bool fixed_last_parameter)
+    : base_type(n, t, model, parameter_index_map, binomial_coeffs,
+                fixed_last_parameter),
+      cov_map_(size_) {
+  size_type cov_map_first_level_index = 0;
   param_vector param_indices(t);
 
   if (fixed_last_parameter) {
@@ -76,8 +86,8 @@ inline coverage_map_base::coverage_map_base(
     } else {
       // We have exactly one parameter to select, which is just the one we have
       // fixed. So we do not have to walk over combinations of parameters here.
-      get_coverage_map()[0] = coverage_map_base::second_level_type(
-          num_last_param_values, param_indices);
+      get_coverage_map()[0] =
+          second_level_type(num_last_param_values, param_indices);
       total_num_tuples_ = num_last_param_values;
     }
   } else {
