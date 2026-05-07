@@ -173,4 +173,6 @@ class coverage_map : public coverage_map_base {
 }  // namespace detail
 }  // namespace citcpp
 
+#include "coverage_map.tpp"
+
 #endif /* DETAIL_COVERAGE_MAP_HPP_ */

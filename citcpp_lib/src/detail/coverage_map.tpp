@@ -1,10 +1,10 @@
-#include "coverage_map.hpp"
-
 #include <algorithm>
+
+#include "coverage_map.hpp"
 
 namespace {
 
-unsigned long long recursively_initialize_coverage_map(
+inline unsigned long long recursively_initialize_coverage_map(
     int start_idx_for_next, int current_level,
     unsigned long long num_value_combinations,
     citcpp::detail::coverage_map_base& cov_map,
@@ -47,7 +47,7 @@ unsigned long long recursively_initialize_coverage_map(
 namespace citcpp {
 namespace detail {
 
-coverage_map_base::coverage_map_base(
+inline coverage_map_base::coverage_map_base(
     unsigned int n, unsigned int t, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map,
     const binom_coeff_table& binomial_coeffs, bool fixed_last_parameter)
