@@ -79,6 +79,24 @@ class coverage_map_second_level {
       return previous_value;
     }
 
+    /**
+     * Accesses the bit at the given position that represents
+     * validity of a value combination.
+     * This method does no range checking. Passing an invalid position
+     * results in undefined behavior.
+     */
+    bool is_valid(size_type bit_pos) const {
+      return bitset_.test((bit_pos << 1) + 1);
+    }
+
+    /**
+     * Sets the bit at the given position that represents
+     * validity of a value combination.
+     * This method does no range checking. Passing an invalid position
+     * results in undefined behavior.
+     */
+    void set_valid(size_type bit_pos) { bitset_.set((bit_pos << 1) + 1); }
+
     const param_vector& get_parameter_indices() const { return param_indices_; }
 
   private:

@@ -123,10 +123,13 @@ class ipog_vertical_extension_functor {
 
       ++num_checked_tuples_;
 
-      const bool valid_tuple = is_valid_tuple(param_indices, value_indices);
-      if (!valid_tuple) {
-        // Value tuple is invalid according to constraints.
-        return;
+      if (!value_combinations.is_valid(bitpos)) {
+        // Only call the actual constraint handler, if our validity cache
+        // cannot tell that the tuple is valid.
+        if (!is_valid_tuple(param_indices, value_indices)) {
+          // Value tuple is invalid according to constraints.
+          return;
+        }
       }
 
       ++num_new_covered_tuples_;

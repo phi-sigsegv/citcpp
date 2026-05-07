@@ -14,9 +14,8 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
         const unsigned int num_current_param_values)
         : model_(model), gain_per_value_(num_current_param_values) {}
 
-    void operator()(
-        const test& test, const bitset_uint64& valid_values,
-        const ipog_coverage_map::second_level_type& value_combinations) {
+    void operator()(const test& test, const bitset_uint64& valid_values,
+                    ipog_coverage_map::second_level_type& value_combinations) {
 
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
@@ -58,10 +57,11 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
         // ,current_param_idx - 1] parameters, then we skip the combination in
         // the coverage gain computation.
         for (unsigned int value = 0; value < gain_per_value_.size(); ++value) {
-          if (!value_combinations.is_marked_covered(base_index + value) &&
-              valid_values.test(value)) {
-
-            gain_per_value_[value] += 1;
+          if (!value_combinations.is_marked_covered(base_index + value)) {
+            if (valid_values.test(value)) {
+              gain_per_value_[value] += 1;
+              value_combinations.set_valid(base_index + value);
+            }
           }
         }
       }
@@ -126,8 +126,8 @@ class ipog_horizontal_select_best_value_functor {
         const unsigned int real_current_param_idx,
         const unsigned int num_current_param_values,
         const internal_model& model,
-        const std::vector<
-            std::pair<const internal_relation*, ipog_coverage_map>>& relations,
+        std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+            relations,
         unsigned int& last_picked_value,
         std::vector<int>& value_to_valid_options)
         : real_current_param_idx_(real_current_param_idx),
@@ -148,8 +148,8 @@ class ipog_horizontal_select_best_value_functor {
         return last_picked_value_;
       }
 
-      for (const auto& rel_and_cov_map : relations_) {
-        for (const auto& value_combinations :
+      for (auto& rel_and_cov_map : relations_) {
+        for (auto& value_combinations :
              rel_and_cov_map.second.get_coverage_map()) {
           per_param_combo_functor_(test, valid_values, value_combinations);
         }
@@ -174,7 +174,7 @@ class ipog_horizontal_select_best_value_functor {
     const unsigned int num_current_param_values_;
     ipog_horizontal_select_best_value_per_param_combo_functor
         per_param_combo_functor_;
-    const std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+    std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations_;
     unsigned int& last_picked_value_;
     std::vector<int>& value_to_valid_options_;
@@ -187,8 +187,8 @@ class ipog_horizontal_select_best_value_functor_parallel {
         const unsigned int real_current_param_idx,
         const unsigned int num_current_param_values,
         const internal_model& model,
-        const std::vector<
-            std::pair<const internal_relation*, ipog_coverage_map>>& relations,
+        std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+            relations,
         unsigned int& last_picked_value,
         std::vector<int>& value_to_valid_options, T_EXEC& exec)
         : thread_local_functors_(exec.get_num_workers() * 8,
@@ -213,8 +213,8 @@ class ipog_horizontal_select_best_value_functor_parallel {
 
       unsigned long long max_num_tasks = 0;
 
-      for (const auto& rel_and_cov_map : relations_) {
-        const ipog_coverage_map* cov_map = &rel_and_cov_map.second;
+      for (auto& rel_and_cov_map : relations_) {
+        ipog_coverage_map* cov_map = &rel_and_cov_map.second;
         const unsigned long long total_param_combos =
             cov_map->get_coverage_map().size();
         const unsigned long long num_tasks =
@@ -282,7 +282,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
         void operator()() {
           const auto& test = *test_;
           const auto& valid_values = *valid_values_;
-          const auto& cov_map = cov_map_->get_coverage_map();
+          auto& cov_map = cov_map_->get_coverage_map();
 
           for (unsigned long long i = start_index_; i < end_index_; ++i) {
             per_param_combo_functor_(test, valid_values, cov_map[i]);
@@ -291,7 +291,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
 
         void set_task_parameters(const test* test,
                                  const bitset_uint64* valid_values,
-                                 const ipog_coverage_map* cov_map,
+                                 ipog_coverage_map* cov_map,
                                  unsigned long long start_index,
                                  unsigned long long end_index) {
           base_type::reset();
@@ -313,7 +313,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
             per_param_combo_functor_;
         const test* test_;
         const bitset_uint64* valid_values_;
-        const ipog_coverage_map* cov_map_;
+        ipog_coverage_map* cov_map_;
         unsigned long long start_index_;
         unsigned long long end_index_;
     };
@@ -323,7 +323,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
         thread_local_vector<value_selection_task> thread_local_functors_;
     const unsigned int real_current_param_idx_;
     const unsigned int num_current_param_values_;
-    const std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+    std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations_;
     unsigned int& last_picked_value_;
     std::vector<int>& value_to_valid_options_;
