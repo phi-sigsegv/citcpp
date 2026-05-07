@@ -21,7 +21,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
-      if (!value_combinations.all()) {
+      if (!value_combinations.all_covered()) {
         // We have a bitset and we have uncovered value combinations left in it.
         // Thus we have to walk through it concerning all possible value
         // combinations.
@@ -58,7 +58,7 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
         // ,current_param_idx - 1] parameters, then we skip the combination in
         // the coverage gain computation.
         for (unsigned int value = 0; value < gain_per_value_.size(); ++value) {
-          if (!value_combinations.test(base_index + value) &&
+          if (!value_combinations.is_marked_covered(base_index + value) &&
               valid_values.test(value)) {
 
             gain_per_value_[value] += 1;
@@ -342,7 +342,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
-      if (!value_combinations.all()) {
+      if (!value_combinations.all_covered()) {
         // Here we compute an index into the bitset. To do so, we treat the
         // number of values of each parameter as a kind of radix. Consider
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
@@ -371,7 +371,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
           index += addend;
         }
 
-        if (!value_combinations.test_and_set(index)) {
+        if (!value_combinations.test_and_set_covered(index)) {
           ++num_new_covered_tuples_;
         }
       }

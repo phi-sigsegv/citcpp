@@ -28,7 +28,7 @@ class ipog_vertical_extension_functor {
           num_new_covered_tuples_(0) {}
 
     bool operator()(ipog_coverage_map::second_level_type& value_combinations) {
-      if (!value_combinations.all()) {
+      if (!value_combinations.all_covered()) {
         ipog_vertical_extension_func(value_combinations);
 
         reset_scratch_test(value_combinations);
@@ -97,7 +97,7 @@ class ipog_vertical_extension_functor {
         }
 
         if (index_valid) {
-          if (!value_combinations.test_and_set(index)) {
+          if (!value_combinations.test_and_set_covered(index)) {
             num_checked_tuples_++;
             num_new_covered_tuples_++;
           }
@@ -117,7 +117,7 @@ class ipog_vertical_extension_functor {
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
-      if (value_combinations.test_and_set(bitpos)) {
+      if (value_combinations.test_and_set_covered(bitpos)) {
         return;
       }
 

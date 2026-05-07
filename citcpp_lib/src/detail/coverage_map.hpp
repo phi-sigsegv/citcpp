@@ -15,54 +15,76 @@
 namespace citcpp {
 namespace detail {
 
-class coverage_map_second_level : public bitset_uint64 {
+class coverage_map_second_level {
   public:
-    coverage_map_second_level() : bitset_uint64() {}
+    typedef std::uint32_t size_type;
+
+    coverage_map_second_level()
+        : bitset_(0), param_indices_(), cov_num_ones_(0) {}
 
     coverage_map_second_level(size_type num_bits,
                               const param_vector& param_indices)
-        : bitset_uint64(num_bits), param_indices_(param_indices) {}
+        : bitset_(num_bits << 1),
+          param_indices_(param_indices),
+          cov_num_ones_(0) {}
 
-    coverage_map_second_level(const coverage_map_second_level& other)
-        : bitset_uint64(other), param_indices_(other.param_indices_) {}
-
-    coverage_map_second_level(coverage_map_second_level&& other)
-        : bitset_uint64(std::move(other)),
-          param_indices_(std::move(other.param_indices_)) {}
+    coverage_map_second_level(const coverage_map_second_level& other) = default;
+    coverage_map_second_level(coverage_map_second_level&& other) = default;
 
     ~coverage_map_second_level() {}
 
     coverage_map_second_level& operator=(
-        const coverage_map_second_level& other) {
-      if (this != &other) {
-        bitset_uint64::operator=(other);
-        param_indices_ = other.param_indices_;
-      }
-
-      return *this;
-    }
-
-    coverage_map_second_level& operator=(coverage_map_second_level&& other) {
-      if (this != &other) {
-        bitset_uint64::operator=(std::move(other));
-        param_indices_ = std::move(other.param_indices_);
-      }
-
-      return *this;
-    }
+        const coverage_map_second_level& other) = default;
+    coverage_map_second_level& operator=(coverage_map_second_level&& other) =
+        default;
 
     /**
      * Swaps this and the given other bitset.
      */
     void swap(coverage_map_second_level& other) {
-      bitset_uint64::swap(other);
+      std::swap(bitset_, other.bitset_);
       std::swap(param_indices_, other.param_indices_);
+      std::swap(cov_num_ones_, other.cov_num_ones_);
+    }
+
+    /**
+     * Checks if all values are marked as covered.
+     */
+    bool all_covered() const { return (cov_num_ones_ << 1) == bitset_.size(); }
+
+    /**
+     * Accesses the bit at the given position that represents
+     * coverage of a value combination.
+     * This method does no range checking. Passing an invalid position
+     * results in undefined behavior.
+     */
+    bool is_marked_covered(size_type bit_pos) const {
+      return bitset_.test(bit_pos << 1);
+    }
+
+    /**
+     * Accesses the bit at the given position that represents
+     * coverage of a value combination and sets it to true.
+     * This method returns the previous value stored at the
+     * position.
+     * This method does no range checking. Passing an invalid position
+     * results in undefined behavior.
+     */
+    bool test_and_set_covered(size_type bit_pos) {
+      const size_type prev_num_ones = bitset_.count();
+      const bool previous_value = bitset_.test_and_set(bit_pos << 1);
+      if (bitset_.count() > prev_num_ones) {
+        ++cov_num_ones_;
+      }
+      return previous_value;
     }
 
     const param_vector& get_parameter_indices() const { return param_indices_; }
 
   private:
+    bitset_uint64 bitset_;
     param_vector param_indices_;
+    size_type cov_num_ones_;
 };
 
 /**

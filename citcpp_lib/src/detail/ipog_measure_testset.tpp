@@ -43,7 +43,7 @@ inline void measure_coverage(
     }
 
     if (!found_dont_care) {
-      if (!value_combinations.test_and_set(index)) {
+      if (!value_combinations.test_and_set_covered(index)) {
         ++num_covered_tuples;
       }
     }
