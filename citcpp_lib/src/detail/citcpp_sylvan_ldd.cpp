@@ -6,7 +6,9 @@
 #include <algorithm>
 #include <atomic>
 #include <fstream>
+#include <iterator>
 #include <utility>
+#include <vector>
 
 #include "lace_lifecycle.hpp"
 
@@ -1340,6 +1342,60 @@ TASK_2(MDD, sylvan_idd_union, MDD, a, MDD, b) {
   return result;
 }
 
+static const uint64_t CACHE_IDD_PROJECT = (69LL << 40);
+
+TASK_2(MDD, sylvan_idd_project, MDD, mdd, MDD, proj) {
+  if (mdd == lddmc_false) return lddmc_false;
+  if (mdd == lddmc_true) return lddmc_true;
+
+  mddnode_t p_node = LDD_GETNODE(proj);
+  uint32_t p_val = mddnode_getvalue(p_node);
+  if (p_val == (uint32_t)-1) return mdd;
+  if (p_val == (uint32_t)-2) return lddmc_true;
+
+  sylvan_gc_test();
+
+  MDD result;
+  if (cache_get3(CACHE_IDD_PROJECT, mdd, proj, 0, &result)) {
+    return result;
+  }
+
+  mddnode_t n = LDD_GETNODE(mdd);
+
+  if (p_val == 1) {  // Keep level
+    lddmc_refs_spawn(SPAWN(sylvan_idd_project, mddnode_getright(n), proj));
+    MDD down =
+        CALL(sylvan_idd_project, mddnode_getdown(n), mddnode_getdown(p_node));
+    lddmc_refs_push(down);
+    MDD right = lddmc_refs_sync(SYNC(sylvan_idd_project));
+    lddmc_refs_pop(1);
+    result = sylvan_idd_makenode(mddnode_getvalue(n), down, right);
+  } else {  // Quantify level (p_val == 0)
+    int count = 0;
+    MDD p_down = mddnode_getdown(p_node);
+    MDD _mdd = mdd;
+    while (1) {
+      lddmc_refs_spawn(SPAWN(sylvan_idd_project, mddnode_getdown(n), p_down));
+      count++;
+      _mdd = mddnode_getright(n);
+      if (_mdd == lddmc_false) break;
+      n = LDD_GETNODE(_mdd);
+    }
+    result = lddmc_false;
+    while (count--) {
+      lddmc_refs_push(result);
+      MDD down = lddmc_refs_sync(SYNC(sylvan_idd_project));
+      lddmc_refs_push(down);
+      result = CALL(sylvan_idd_union, result, down);
+      lddmc_refs_pop(2);
+    }
+  }
+
+  cache_put3(CACHE_IDD_PROJECT, mdd, proj, 0, result);
+
+  return result;
+}
+
 /**
  * This is just the method lddmc_satcount from the sylvan library modified
  * accordingly to work on encoded intervals.
@@ -1433,6 +1489,8 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
 
 #define sylvan_idd_inv_project(a, b, proj) \
   RUN(sylvan_idd_inv_project, a, b, proj)
+
+#define sylvan_idd_project(mdd, proj) RUN(sylvan_idd_project, mdd, proj)
 
 #define sylvan_idd_union(a, b) RUN(sylvan_idd_union, a, b)
 
@@ -1820,6 +1878,35 @@ sylvan_idd& sylvan_idd::project_union(
   variables_ = std::move(common_variables);
 
   return *this;
+}
+
+sylvan_idd sylvan_idd::project(
+    const std::vector<uint32_t>& target_variables) const {
+  if (idd_ == lddmc_false || idd_ == lddmc_true) return *this;
+
+  // The resulting variables are the intersection of target_variables and this
+  // IDD's variables.
+  std::vector<uint32_t> actual_target_vars;
+  std::set_intersection(variables_.begin(), variables_.end(),
+                        target_variables.begin(), target_variables.end(),
+                        std::back_inserter(actual_target_vars));
+
+  // Efficient check: if sizes match, target covers all source variables
+  // (identity)
+  if (actual_target_vars.size() == variables_.size()) return *this;
+  if (actual_target_vars.empty()) return sylvan_idd::iddTrue();
+
+  // Create projection cube: iterate over SOURCE variables (variables_)
+  // and mark which ones are in the TARGET subset (actual_target_vars).
+  MDD proj_cube = sylvan_idd_create_projection_cube(
+      variables_.data(), variables_.size(), actual_target_vars.data(),
+      actual_target_vars.size());
+  lddmc_protect(&proj_cube);
+
+  MDD projected_idd = sylvan_idd_project(idd_, proj_cube);
+  lddmc_unprotect(&proj_cube);
+
+  return sylvan_idd(projected_idd, std::move(actual_target_vars));
 }
 
 size_t sylvan_idd::node_count() const { return lddmc_nodecount(idd_); }

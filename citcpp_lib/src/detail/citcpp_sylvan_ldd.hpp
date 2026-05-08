@@ -100,6 +100,16 @@ class sylvan_idd {
                               const std::vector<unsigned int>& domain_sizes);
 
     /**
+     * Projects this IDD onto the specified target variables (existential
+     * quantification). The resulting IDD will only contain variables that are
+     * both in this IDD and in target_variables.
+     *
+     * @param target_variables The variables to keep. Should be sorted.
+     * @return A new IDD representing the projection.
+     */
+    sylvan_idd project(const std::vector<uint32_t>& target_variables) const;
+
+    /**
      * Return the number of nodes in this IDD.
      * WARNING: This is not thread-safe.
      */
