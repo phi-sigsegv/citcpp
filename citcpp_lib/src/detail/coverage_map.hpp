@@ -2,15 +2,12 @@
 #define DETAIL_COVERAGE_MAP_HPP_
 
 #include <algorithm>
-#include <citcpp/function_ref.hpp>
 #include <vector>
 
 #include "binom_coeff_table.hpp"
 #include "bitset.hpp"
 #include "datatypes_config.hpp"
-#include "functor_executor.hpp"
 #include "internal_model.hpp"
-#include "shared_constants.hpp"
 
 namespace citcpp {
 namespace detail {
@@ -20,13 +17,14 @@ class coverage_map_second_level {
     typedef std::uint32_t size_type;
 
     coverage_map_second_level()
-        : bitset_(0), param_indices_(), cov_num_ones_(0) {}
+        : bitset_(0), param_indices_(), cov_num_ones_(0), valid_num_ones_(0) {}
 
     coverage_map_second_level(size_type num_bits,
                               const param_vector& param_indices)
         : bitset_(num_bits << 1),
           param_indices_(param_indices),
-          cov_num_ones_(0) {}
+          cov_num_ones_(0),
+          valid_num_ones_(0) {}
 
     coverage_map_second_level(const coverage_map_second_level& other) = default;
     coverage_map_second_level(coverage_map_second_level&& other) = default;
@@ -45,6 +43,7 @@ class coverage_map_second_level {
       std::swap(bitset_, other.bitset_);
       std::swap(param_indices_, other.param_indices_);
       std::swap(cov_num_ones_, other.cov_num_ones_);
+      std::swap(valid_num_ones_, other.valid_num_ones_);
     }
 
     /**
@@ -80,6 +79,11 @@ class coverage_map_second_level {
     }
 
     /**
+     * Checks if all values are marked as valid.
+     */
+    bool all_valid() const { return (valid_num_ones_ << 1) == bitset_.size(); }
+
+    /**
      * Accesses the bit at the given position that represents
      * validity of a value combination.
      * This method does no range checking. Passing an invalid position
@@ -95,7 +99,23 @@ class coverage_map_second_level {
      * This method does no range checking. Passing an invalid position
      * results in undefined behavior.
      */
-    void set_valid(size_type bit_pos) { bitset_.set((bit_pos << 1) + 1); }
+    void set_valid(size_type bit_pos) {
+      const size_type prev_num_ones = bitset_.count();
+      bitset_.set((bit_pos << 1) + 1);
+      if (bitset_.count() > prev_num_ones) {
+        ++valid_num_ones_;
+      }
+    }
+
+    /**
+     * Sets the bits for all value combinations to valid.
+     */
+    void set_all_valid() {
+      const size_type size = bitset_.size() >> 1;
+      for (size_type i = 0; i < size; ++i) {
+        set_valid(i);
+      }
+    }
 
     const param_vector& get_parameter_indices() const { return param_indices_; }
 
@@ -103,6 +123,7 @@ class coverage_map_second_level {
     bitset_uint64 bitset_;
     param_vector param_indices_;
     size_type cov_num_ones_;
+    size_type valid_num_ones_;
 };
 
 /**
