@@ -4,6 +4,7 @@
 
 #include <mutex>
 
+#include "coverage_map.hpp"
 #include "datatypes_config.hpp"
 
 namespace {
@@ -595,6 +596,13 @@ bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
   }
 
   return idd_.is_sat_with_partial_assignment(t.get_values());
+}
+
+void constraint_handler_sylvan_idd::premark_valid_tuples(
+    coverage_map_second_level& value_combinations) const {
+
+  idd_.mark_valid_value_combinations(value_combinations,
+                                     model_.get_parameter_num_values());
 }
 
 bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(

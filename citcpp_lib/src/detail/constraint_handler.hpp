@@ -8,6 +8,8 @@
 namespace citcpp {
 namespace detail {
 
+class coverage_map_second_level;
+
 /**
  * This defines an interface for a constraint handler, as needed
  * by e.g. an IPOG algorithm.
@@ -32,6 +34,14 @@ class constraint_handler {
      * combination of those assignments is valid.
      */
     virtual bool is_valid_partial_test(const test& t) const = 0;
+
+    /**
+     * This method reads the given coverage map, and marks the bits representing
+     * the validity of value combinations that are feasible according to
+     * constraints.
+     */
+    virtual void premark_valid_tuples(
+        coverage_map_second_level& value_combinations) const = 0;
 
     /**
      * This method reads the given partial tests, in particular the

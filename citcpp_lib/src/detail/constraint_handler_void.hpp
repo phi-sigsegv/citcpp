@@ -30,6 +30,12 @@ class constraint_handler_void : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
+    void premark_valid_tuples(
+        coverage_map_second_level& value_combinations) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
     bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) const override;
 

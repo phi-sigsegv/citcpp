@@ -34,6 +34,12 @@ class concurrent_constraint_handler : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
+    void premark_valid_tuples(
+        coverage_map_second_level& value_combinations) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
     bitset_uint64 check_validity_of_partial_tests(
         const internal_test_set& test_set) const override;
 

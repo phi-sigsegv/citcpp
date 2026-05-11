@@ -1396,6 +1396,104 @@ TASK_2(MDD, sylvan_idd_project, MDD, mdd, MDD, proj) {
   return result;
 }
 
+struct marking_context {
+    const size_t* weights;
+    const uint32_t* domain_sizes;
+    int t;
+    const uint32_t* idd_vars;
+    int num_idd_vars;
+    citcpp::detail::coverage_map_second_level* value_combinations;
+};
+
+VOID_TASK_3(sylvan_idd_fill_all_parallel, int, combo_idx, size_t, current_index,
+            const marking_context*, ctx) {
+
+  if (combo_idx == ctx->t) {
+    ctx->value_combinations->set_valid(current_index);
+    return;
+  }
+
+  uint32_t domain_size =
+      ctx->domain_sizes[ctx->value_combinations
+                            ->get_parameter_indices()[combo_idx]];
+  size_t weight = ctx->weights[combo_idx];
+
+  if (domain_size > 1) {
+    for (uint32_t v = 0; v < domain_size; ++v) {
+      SPAWN(sylvan_idd_fill_all_parallel, combo_idx + 1,
+            current_index + v * weight, ctx);
+    }
+    for (uint32_t v = 0; v < domain_size; ++v) {
+      SYNC(sylvan_idd_fill_all_parallel);
+    }
+  } else {
+    CALL(sylvan_idd_fill_all_parallel, combo_idx + 1, current_index, ctx);
+  }
+}
+
+VOID_TASK_5(sylvan_idd_mark_valid_recursive, MDD, ldd, int, combo_idx, int,
+            idd_var_idx, size_t, current_index, const marking_context*, ctx) {
+
+  if (ldd == lddmc_false) return;
+
+  if (combo_idx == ctx->t) {
+    if (ldd == lddmc_true) {
+      ctx->value_combinations->set_valid(current_index);
+    }
+    return;
+  }
+
+  if (ldd == lddmc_true) {
+    // All remaining variables are free.
+    CALL(sylvan_idd_fill_all_parallel, combo_idx, current_index, ctx);
+    return;
+  }
+
+  uint32_t current_param =
+      ctx->value_combinations->get_parameter_indices()[combo_idx];
+  size_t weight = ctx->weights[combo_idx];
+
+  if (idd_var_idx < ctx->num_idd_vars &&
+      ctx->idd_vars[idd_var_idx] == current_param) {
+    // Current param is constrained in the IDD.
+    mddnode_t n = LDD_GETNODE(ldd);
+
+    // Spawn right siblings.
+    SPAWN(sylvan_idd_mark_valid_recursive, mddnode_getright(n), combo_idx,
+          idd_var_idx, current_index, ctx);
+
+    // Process intervals on this node.
+    uint32_t val = mddnode_getvalue(n);
+    interval ival = decode_interval(val);
+    MDD down = mddnode_getdown(n);
+
+    for (uint32_t v = ival.lb; v <= ival.ub; ++v) {
+      SPAWN(sylvan_idd_mark_valid_recursive, down, combo_idx + 1,
+            idd_var_idx + 1, current_index + v * weight, ctx);
+    }
+    for (uint32_t v = ival.lb; v <= ival.ub; ++v) {
+      SYNC(sylvan_idd_mark_valid_recursive);
+    }
+
+    SYNC(sylvan_idd_mark_valid_recursive);
+  } else {
+    // Current param is unconstrained.
+    uint32_t domain_size = ctx->domain_sizes[current_param];
+    if (domain_size > 1) {
+      for (uint32_t v = 0; v < domain_size; ++v) {
+        SPAWN(sylvan_idd_mark_valid_recursive, ldd, combo_idx + 1, idd_var_idx,
+              current_index + v * weight, ctx);
+      }
+      for (uint32_t v = 0; v < domain_size; ++v) {
+        SYNC(sylvan_idd_mark_valid_recursive);
+      }
+    } else {
+      CALL(sylvan_idd_mark_valid_recursive, ldd, combo_idx + 1, idd_var_idx,
+           current_index, ctx);
+    }
+  }
+}
+
 /**
  * This is just the method lddmc_satcount from the sylvan library modified
  * accordingly to work on encoded intervals.
@@ -1481,6 +1579,14 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
 
 #define sylvan_idd_join(a, b, a_proj, b_proj) \
   RUN(sylvan_idd_join, a, b, a_proj, b_proj)
+
+#define sylvan_idd_fill_all_parallel(combo_idx, current_index, ctx) \
+  RUN(sylvan_idd_fill_all_parallel, combo_idx, current_index, ctx)
+
+#define sylvan_idd_mark_valid_recursive(ldd, combo_idx, idd_var_idx, \
+                                        current_index, ctx)          \
+  RUN(sylvan_idd_mark_valid_recursive, ldd, combo_idx, idd_var_idx,  \
+      current_index, ctx)
 
 #define sylvan_idd_satcount(mdd) RUN(sylvan_idd_satcount, mdd)
 
@@ -1907,6 +2013,32 @@ sylvan_idd sylvan_idd::project(
   lddmc_unprotect(&proj_cube);
 
   return sylvan_idd(projected_idd, std::move(actual_target_vars));
+}
+
+void sylvan_idd::mark_valid_value_combinations(
+    coverage_map_second_level& value_combinations,
+    const std::vector<unsigned int>& domain_sizes) const {
+
+  if (idd_ == lddmc_false) return;
+
+  const int t = value_combinations.get_parameter_indices().size();
+  std::vector<size_t> weights(t);
+  size_t current_weight = 1;
+  for (int i = t - 1; i >= 0; --i) {
+    weights[i] = current_weight;
+    current_weight *=
+        domain_sizes[value_combinations.get_parameter_indices()[i]];
+  }
+
+  marking_context ctx;
+  ctx.weights = weights.data();
+  ctx.domain_sizes = domain_sizes.data();
+  ctx.t = t;
+  ctx.idd_vars = variables_.data();
+  ctx.num_idd_vars = variables_.size();
+  ctx.value_combinations = &value_combinations;
+
+  sylvan_idd_mark_valid_recursive(idd_, 0, 0, 0, &ctx);
 }
 
 size_t sylvan_idd::node_count() const { return lddmc_nodecount(idd_); }
