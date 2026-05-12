@@ -325,6 +325,7 @@ TASK_4(MDD, sylvan_idd_create_projection_cube, const uint32_t*,
 }
 
 static const uint64_t CACHE_IDD_CONTAINS_PART_ASSIGN = (64LL << 40);
+static const uint64_t CACHE_IDD_MARK_VALID = (65LL << 40);
 
 TASK_5(int, sylvan_idd_sat_with_partial_assignment_recursive, MDD, ldd,
        uint32_t, var_idx, MDD, variables_cube, MDD, values_cube,
@@ -1401,97 +1402,136 @@ struct marking_context {
     const uint32_t* domain_sizes;
     int t;
     const uint32_t* idd_vars;
-    int num_idd_vars;
+    citcpp::detail::spin_lock* lock;
     citcpp::detail::coverage_map_second_level* value_combinations;
 };
 
-VOID_TASK_3(sylvan_idd_fill_all_parallel, int, combo_idx, size_t, current_index,
-            const marking_context*, ctx) {
+TASK_3(int, sylvan_idd_fill_all_recursive, MDD, cube, size_t, current_index,
+       const marking_context*, ctx) {
 
-  if (combo_idx == ctx->t) {
-    ctx->value_combinations->set_valid(current_index);
-    return;
-  }
+  if (ctx->value_combinations->all_valid()) return 1;
 
-  uint32_t domain_size =
-      ctx->domain_sizes[ctx->value_combinations
-                            ->get_parameter_indices()[combo_idx]];
-  size_t weight = ctx->weights[combo_idx];
-
-  if (domain_size > 1) {
-    for (uint32_t v = 0; v < domain_size; ++v) {
-      SPAWN(sylvan_idd_fill_all_parallel, combo_idx + 1,
-            current_index + v * weight, ctx);
-    }
-    for (uint32_t v = 0; v < domain_size; ++v) {
-      SYNC(sylvan_idd_fill_all_parallel);
-    }
-  } else {
-    CALL(sylvan_idd_fill_all_parallel, combo_idx + 1, current_index, ctx);
-  }
-}
-
-VOID_TASK_5(sylvan_idd_mark_valid_recursive, MDD, ldd, int, combo_idx, int,
-            idd_var_idx, size_t, current_index, const marking_context*, ctx) {
-
-  if (ldd == lddmc_false) return;
-
-  if (combo_idx == ctx->t) {
-    if (ldd == lddmc_true) {
+  if (cube == lddmc_true) {
+    ctx->lock->lock();
+    if (!ctx->value_combinations->all_valid()) {
       ctx->value_combinations->set_valid(current_index);
     }
-    return;
+    ctx->lock->unlock();
+    return 0;
+  }
+
+  uint64_t res;
+  if (cache_get3(CACHE_IDD_MARK_VALID, lddmc_true, cube, current_index, &res)) {
+    return (int)res;
+  }
+
+  mddnode_t n_cube = LDD_GETNODE(cube);
+  uint32_t cube_val = mddnode_getvalue(n_cube);
+  uint32_t p_idx = cube_val & 0xFFFF;
+  uint32_t domain_size =
+      ctx->domain_sizes[ctx->value_combinations->get_parameter_indices()[p_idx]];
+  size_t weight = ctx->weights[p_idx];
+  MDD down_cube = mddnode_getdown(n_cube);
+
+  int aborted = 0;
+  for (uint32_t v = 0; v < domain_size; ++v) {
+    SPAWN(sylvan_idd_fill_all_recursive, down_cube, current_index + v * weight,
+          ctx);
+  }
+  for (uint32_t v = 0; v < domain_size; ++v) {
+    if (SYNC(sylvan_idd_fill_all_recursive)) aborted = 1;
+  }
+
+  if (!aborted) {
+    cache_put3(CACHE_IDD_MARK_VALID, lddmc_true, cube, current_index, 0);
+  }
+  return aborted;
+}
+
+TASK_5(int, sylvan_idd_mark_valid_recursive, MDD, ldd, MDD, cube, int,
+       idd_var_idx, size_t, current_index, const marking_context*, ctx) {
+
+  if (ctx->value_combinations->all_valid()) return 1;
+
+  if (ldd == lddmc_false) return 0;
+
+  if (cube == lddmc_true) {
+    ctx->lock->lock();
+    if (!ctx->value_combinations->all_valid()) {
+      ctx->value_combinations->set_valid(current_index);
+    }
+    ctx->lock->unlock();
+    return 0;
   }
 
   if (ldd == lddmc_true) {
-    // All remaining variables are free.
-    CALL(sylvan_idd_fill_all_parallel, combo_idx, current_index, ctx);
-    return;
+    return CALL(sylvan_idd_fill_all_recursive, cube, current_index, ctx);
   }
 
-  uint32_t current_param =
-      ctx->value_combinations->get_parameter_indices()[combo_idx];
-  size_t weight = ctx->weights[combo_idx];
+  uint64_t res;
+  if (cache_get3(CACHE_IDD_MARK_VALID, ldd, cube, current_index, &res)) {
+    return (int)res;
+  }
 
-  if (idd_var_idx < ctx->num_idd_vars &&
-      ctx->idd_vars[idd_var_idx] == current_param) {
-    // Current param is constrained in the IDD.
-    mddnode_t n = LDD_GETNODE(ldd);
+  mddnode_t n_ldd = LDD_GETNODE(ldd);
+  mddnode_t n_cube = LDD_GETNODE(cube);
+  uint32_t cube_val = mddnode_getvalue(n_cube);
+  uint32_t var_cube = cube_val >> 16;
+  uint32_t p_idx = cube_val & 0xFFFF;
 
-    // Spawn right siblings.
-    SPAWN(sylvan_idd_mark_valid_recursive, mddnode_getright(n), combo_idx,
+  uint32_t var_ldd = ctx->idd_vars[idd_var_idx];
+
+  int aborted = 0;
+
+  if (var_ldd < var_cube) {
+    // Current IDD variable is not of interest.
+    SPAWN(sylvan_idd_mark_valid_recursive, mddnode_getright(n_ldd), cube,
+          idd_var_idx, current_index, ctx);
+    if (CALL(sylvan_idd_mark_valid_recursive, mddnode_getdown(n_ldd), cube,
+             idd_var_idx + 1, current_index, ctx))
+      aborted = 1;
+    if (SYNC(sylvan_idd_mark_valid_recursive)) aborted = 1;
+  } else if (var_ldd == var_cube) {
+    // Current variable is of interest and constrained.
+    SPAWN(sylvan_idd_mark_valid_recursive, mddnode_getright(n_ldd), cube,
           idd_var_idx, current_index, ctx);
 
-    // Process intervals on this node.
-    uint32_t val = mddnode_getvalue(n);
+    uint32_t val = mddnode_getvalue(n_ldd);
     interval ival = decode_interval(val);
-    MDD down = mddnode_getdown(n);
+    MDD down_ldd = mddnode_getdown(n_ldd);
+    MDD down_cube = mddnode_getdown(n_cube);
+    size_t weight = ctx->weights[p_idx];
 
     for (uint32_t v = ival.lb; v <= ival.ub; ++v) {
-      SPAWN(sylvan_idd_mark_valid_recursive, down, combo_idx + 1,
+      SPAWN(sylvan_idd_mark_valid_recursive, down_ldd, down_cube,
             idd_var_idx + 1, current_index + v * weight, ctx);
     }
     for (uint32_t v = ival.lb; v <= ival.ub; ++v) {
-      SYNC(sylvan_idd_mark_valid_recursive);
+      if (SYNC(sylvan_idd_mark_valid_recursive)) aborted = 1;
     }
-
-    SYNC(sylvan_idd_mark_valid_recursive);
+    if (SYNC(sylvan_idd_mark_valid_recursive)) aborted = 1;
   } else {
-    // Current param is unconstrained.
-    uint32_t domain_size = ctx->domain_sizes[current_param];
-    if (domain_size > 1) {
-      for (uint32_t v = 0; v < domain_size; ++v) {
-        SPAWN(sylvan_idd_mark_valid_recursive, ldd, combo_idx + 1, idd_var_idx,
-              current_index + v * weight, ctx);
-      }
-      for (uint32_t v = 0; v < domain_size; ++v) {
-        SYNC(sylvan_idd_mark_valid_recursive);
-      }
-    } else {
-      CALL(sylvan_idd_mark_valid_recursive, ldd, combo_idx + 1, idd_var_idx,
-           current_index, ctx);
+    // var_ldd > var_cube: Variable of interest is not constrained in IDD (it's
+    // free).
+    uint32_t domain_size =
+        ctx->domain_sizes[ctx->value_combinations->get_parameter_indices()[p_idx]];
+    size_t weight = ctx->weights[p_idx];
+    MDD down_cube = mddnode_getdown(n_cube);
+
+    for (uint32_t v = 0; v < domain_size; ++v) {
+      SPAWN(sylvan_idd_mark_valid_recursive, ldd, down_cube, idd_var_idx,
+            current_index + v * weight, ctx);
+    }
+    for (uint32_t v = 0; v < domain_size; ++v) {
+      if (SYNC(sylvan_idd_mark_valid_recursive)) aborted = 1;
     }
   }
+
+  if (!aborted) {
+    cache_put3(CACHE_IDD_MARK_VALID, ldd, cube, current_index, 0);
+  }
+
+  return aborted;
 }
 
 /**
@@ -1580,13 +1620,13 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
 #define sylvan_idd_join(a, b, a_proj, b_proj) \
   RUN(sylvan_idd_join, a, b, a_proj, b_proj)
 
-#define sylvan_idd_fill_all_parallel(combo_idx, current_index, ctx) \
-  RUN(sylvan_idd_fill_all_parallel, combo_idx, current_index, ctx)
+#define sylvan_idd_fill_all_recursive(cube, current_index, ctx) \
+  RUN(sylvan_idd_fill_all_recursive, cube, current_index, ctx)
 
-#define sylvan_idd_mark_valid_recursive(ldd, combo_idx, idd_var_idx, \
-                                        current_index, ctx)          \
-  RUN(sylvan_idd_mark_valid_recursive, ldd, combo_idx, idd_var_idx,  \
-      current_index, ctx)
+#define sylvan_idd_mark_valid_recursive(ldd, cube, idd_var_idx, current_index, \
+                                        ctx)                                   \
+  RUN(sylvan_idd_mark_valid_recursive, ldd, cube, idd_var_idx, current_index,  \
+      ctx)
 
 #define sylvan_idd_satcount(mdd) RUN(sylvan_idd_satcount, mdd)
 
@@ -2020,25 +2060,48 @@ void sylvan_idd::mark_valid_value_combinations(
     const std::vector<unsigned int>& domain_sizes) const {
 
   if (idd_ == lddmc_false) return;
+  if (value_combinations.all_valid()) return;
 
-  const int t = value_combinations.get_parameter_indices().size();
+  const auto& p_indices = value_combinations.get_parameter_indices();
+  const int t = p_indices.size();
+
   std::vector<size_t> weights(t);
   size_t current_weight = 1;
   for (int i = t - 1; i >= 0; --i) {
     weights[i] = current_weight;
-    current_weight *=
-        domain_sizes[value_combinations.get_parameter_indices()[i]];
+    current_weight *= domain_sizes[p_indices[i]];
   }
 
+  // Prepare parameters of interest sorted by their ID (which is their level in
+  // the IDD)
+  struct p_info {
+    uint32_t id;
+    int pos;
+  };
+  std::vector<p_info> sorted_p;
+  for (int i = 0; i < t; ++i) sorted_p.push_back({p_indices[i], i});
+  std::sort(sorted_p.begin(), sorted_p.end(),
+            [](const p_info& a, const p_info& b) { return a.id < b.id; });
+
+  MDD cube = lddmc_true;
+  for (int i = t - 1; i >= 0; --i) {
+    uint32_t val = (sorted_p[i].id << 16) | (uint32_t)sorted_p[i].pos;
+    cube = lddmc_makenode(val, cube, lddmc_false);
+  }
+  lddmc_protect(&cube);
+
+  citcpp::detail::spin_lock lock;
   marking_context ctx;
   ctx.weights = weights.data();
   ctx.domain_sizes = domain_sizes.data();
   ctx.t = t;
   ctx.idd_vars = variables_.data();
-  ctx.num_idd_vars = variables_.size();
+  ctx.lock = &lock;
   ctx.value_combinations = &value_combinations;
 
-  sylvan_idd_mark_valid_recursive(idd_, 0, 0, 0, &ctx);
+  sylvan_idd_mark_valid_recursive(idd_, cube, 0, 0, &ctx);
+
+  lddmc_unprotect(&cube);
 }
 
 size_t sylvan_idd::node_count() const { return lddmc_nodecount(idd_); }

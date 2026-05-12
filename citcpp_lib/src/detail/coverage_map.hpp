@@ -2,6 +2,7 @@
 #define DETAIL_COVERAGE_MAP_HPP_
 
 #include <algorithm>
+#include <atomic>
 #include <vector>
 
 #include "binom_coeff_table.hpp"
@@ -26,15 +27,40 @@ class coverage_map_second_level {
           cov_num_ones_(0),
           valid_num_ones_(0) {}
 
-    coverage_map_second_level(const coverage_map_second_level& other) = default;
-    coverage_map_second_level(coverage_map_second_level&& other) = default;
+    coverage_map_second_level(const coverage_map_second_level& other)
+        : bitset_(other.bitset_),
+          param_indices_(other.param_indices_),
+          cov_num_ones_(other.cov_num_ones_.load()),
+          valid_num_ones_(other.valid_num_ones_.load()) {}
+
+    coverage_map_second_level(coverage_map_second_level&& other)
+        : bitset_(std::move(other.bitset_)),
+          param_indices_(std::move(other.param_indices_)),
+          cov_num_ones_(other.cov_num_ones_.load()),
+          valid_num_ones_(other.valid_num_ones_.load()) {}
 
     ~coverage_map_second_level() {}
 
     coverage_map_second_level& operator=(
-        const coverage_map_second_level& other) = default;
-    coverage_map_second_level& operator=(coverage_map_second_level&& other) =
-        default;
+        const coverage_map_second_level& other) {
+      if (this != &other) {
+        bitset_ = other.bitset_;
+        param_indices_ = other.param_indices_;
+        cov_num_ones_ = other.cov_num_ones_.load();
+        valid_num_ones_ = other.valid_num_ones_.load();
+      }
+      return *this;
+    }
+
+    coverage_map_second_level& operator=(coverage_map_second_level&& other) {
+      if (this != &other) {
+        bitset_ = std::move(other.bitset_);
+        param_indices_ = std::move(other.param_indices_);
+        cov_num_ones_ = other.cov_num_ones_.load();
+        valid_num_ones_ = other.valid_num_ones_.load();
+      }
+      return *this;
+    }
 
     /**
      * Swaps this and the given other bitset.
@@ -42,14 +68,21 @@ class coverage_map_second_level {
     void swap(coverage_map_second_level& other) {
       std::swap(bitset_, other.bitset_);
       std::swap(param_indices_, other.param_indices_);
-      std::swap(cov_num_ones_, other.cov_num_ones_);
-      std::swap(valid_num_ones_, other.valid_num_ones_);
+      size_type this_cov = cov_num_ones_.load();
+      cov_num_ones_.store(other.cov_num_ones_.load());
+      other.cov_num_ones_.store(this_cov);
+      size_type this_valid = valid_num_ones_.load();
+      valid_num_ones_.store(other.valid_num_ones_.load());
+      other.valid_num_ones_.store(this_valid);
     }
 
     /**
      * Checks if all values are marked as covered.
      */
-    bool all_covered() const { return (cov_num_ones_ << 1) == bitset_.size(); }
+    bool all_covered() const {
+      return (cov_num_ones_.load(std::memory_order_relaxed) << 1) ==
+             bitset_.size();
+    }
 
     /**
      * Accesses the bit at the given position that represents
@@ -73,7 +106,7 @@ class coverage_map_second_level {
       const size_type prev_num_ones = bitset_.count();
       const bool previous_value = bitset_.test_and_set(bit_pos << 1);
       if (bitset_.count() > prev_num_ones) {
-        ++cov_num_ones_;
+        cov_num_ones_.fetch_add(1, std::memory_order_relaxed);
       }
       return previous_value;
     }
@@ -81,7 +114,10 @@ class coverage_map_second_level {
     /**
      * Checks if all values are marked as valid.
      */
-    bool all_valid() const { return (valid_num_ones_ << 1) == bitset_.size(); }
+    bool all_valid() const {
+      return (valid_num_ones_.load(std::memory_order_relaxed) << 1) ==
+             bitset_.size();
+    }
 
     /**
      * Accesses the bit at the given position that represents
@@ -103,7 +139,7 @@ class coverage_map_second_level {
       const size_type prev_num_ones = bitset_.count();
       bitset_.set((bit_pos << 1) + 1);
       if (bitset_.count() > prev_num_ones) {
-        ++valid_num_ones_;
+        valid_num_ones_.fetch_add(1, std::memory_order_relaxed);
       }
     }
 
@@ -122,8 +158,8 @@ class coverage_map_second_level {
   private:
     bitset_uint64 bitset_;
     param_vector param_indices_;
-    size_type cov_num_ones_;
-    size_type valid_num_ones_;
+    std::atomic<size_type> cov_num_ones_;
+    std::atomic<size_type> valid_num_ones_;
 };
 
 /**

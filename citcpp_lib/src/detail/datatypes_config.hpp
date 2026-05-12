@@ -39,6 +39,8 @@ using aligned_vector = cache_aligned<std::vector<T>>;
 using thread_pool = threads::WorkStealingThreadPool<32>;
 using task_group = thread_pool::TaskGroup;
 
+using spin_lock = threads::SpinLock;
+
 template <class T_DERIVED>
 using functor_task_base = thread_pool::FunctorTaskBase<T_DERIVED>;
 
