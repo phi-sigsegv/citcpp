@@ -507,4 +507,192 @@ TEST_CASE("sylvan IDD, testing atomic prop & OR") {
   }
 }
 
+TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
+  using namespace citcpp;
+  using namespace citcpp::detail;
+
+  sylvan_lifecycle sylvan_lifecycle;
+
+  SUBCASE("Basic matching (all variables in cube are in IDD)") {
+    // P0 != P1, domains 2, 2
+    std::vector<unsigned int> domain_sizes{2, 2};
+
+    // (P0=0 AND P1=1) OR (P0=1 AND P1=0)
+    sylvan_idd c1 =
+        sylvan_idd::project_intersect(sylvan_idd(0, 0), sylvan_idd(1, 1));
+    sylvan_idd c2 =
+        sylvan_idd::project_intersect(sylvan_idd(0, 1), sylvan_idd(1, 0));
+    sylvan_idd constraint = sylvan_idd::project_union(c1, c2, domain_sizes);
+
+    param_vector p_indices = {0, 1};
+    coverage_map_second_level cov(4, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    CHECK(cov.is_valid(1));   // (0, 1)
+    CHECK(cov.is_valid(2));   // (1, 0)
+    CHECK(!cov.is_valid(0));  // (0, 0)
+    CHECK(!cov.is_valid(3));  // (1, 1)
+  }
+
+  SUBCASE("Don't care in IDD (cube variable missing from IDD path)") {
+    // IDD only constrains P0=0. P1 is free.
+    // Tuple of interest (P0, P1).
+    std::vector<unsigned int> domain_sizes{2, 2};
+    sylvan_idd constraint(0, 0);  // P0 = 0
+
+    param_vector p_indices = {0, 1};
+    coverage_map_second_level cov(4, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    CHECK(cov.is_valid(0));   // (0, 0)
+    CHECK(cov.is_valid(1));   // (0, 1)
+    CHECK(!cov.is_valid(2));  // (1, 0)
+    CHECK(!cov.is_valid(3));  // (1, 1)
+  }
+
+  SUBCASE("Don't care in cube (IDD variable missing from cube)") {
+    // IDD constrains P0=0 and P1=0.
+    // Tuple of interest (P0).
+    std::vector<unsigned int> domain_sizes{2, 2};
+    sylvan_idd constraint =
+        sylvan_idd::project_intersect(sylvan_idd(0, 0), sylvan_idd(1, 0));
+
+    param_vector p_indices = {0};
+    coverage_map_second_level cov(2, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    CHECK(cov.is_valid(0));   // P0=0 is valid
+    CHECK(!cov.is_valid(1));  // P0=1 is invalid
+  }
+
+  SUBCASE("Unordered parameter indices in cube") {
+    // P0 != P1, domains 2, 2
+    std::vector<unsigned int> domain_sizes{2, 2};
+
+    // (P0=0 AND P1=1) OR (P0=1 AND P1=0)
+    sylvan_idd c1 =
+        sylvan_idd::project_intersect(sylvan_idd(0, 0), sylvan_idd(1, 1));
+    sylvan_idd c2 =
+        sylvan_idd::project_intersect(sylvan_idd(0, 1), sylvan_idd(1, 0));
+    sylvan_idd constraint = sylvan_idd::project_union(c1, c2, domain_sizes);
+
+    // Tuple (P1, P0)
+    param_vector p_indices = {1, 0};
+    coverage_map_second_level cov(4, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    // Valid combinations: P1=1, P0=0 -> index 1*2 + 0 = 2
+    //                    P1=0, P0=1 -> index 0*2 + 1 = 1
+    CHECK(cov.is_valid(2));
+    CHECK(cov.is_valid(1));
+    CHECK(!cov.is_valid(0));
+    CHECK(!cov.is_valid(3));
+  }
+
+  SUBCASE("Empty IDD (False)") {
+    std::vector<unsigned int> domain_sizes{2, 2};
+    sylvan_idd constraint = sylvan_idd::iddFalse();
+
+    param_vector p_indices = {0, 1};
+    coverage_map_second_level cov(4, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    CHECK(!cov.is_valid(0));
+    CHECK(!cov.is_valid(1));
+    CHECK(!cov.is_valid(2));
+    CHECK(!cov.is_valid(3));
+  }
+
+  SUBCASE("IDD True") {
+    std::vector<unsigned int> domain_sizes{2, 2};
+    sylvan_idd constraint = sylvan_idd::iddTrue();
+
+    param_vector p_indices = {0, 1};
+    coverage_map_second_level cov(4, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    CHECK(cov.is_valid(0));
+    CHECK(cov.is_valid(1));
+    CHECK(cov.is_valid(2));
+    CHECK(cov.is_valid(3));
+  }
+
+  SUBCASE("Larger domains and mixed constraints") {
+    // P0 in [0, 2], P1 in [1, 3], P2 free. Domains 5, 5, 5
+    std::vector<unsigned int> domain_sizes{5, 5, 5};
+    sylvan_idd c0(0, relational_operator::LE, 2, 5);
+    sylvan_idd c1 = sylvan_idd::project_intersect(
+        sylvan_idd(1, relational_operator::GE, 1, 5),
+        sylvan_idd(1, relational_operator::LE, 3, 5));
+    sylvan_idd constraint = sylvan_idd::project_intersect(c0, c1);
+
+    param_vector p_indices = {0, 1, 2};
+    coverage_map_second_level cov(125, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    // Check some points
+    // (0, 1, 0) -> 0*25 + 1*5 + 0 = 5. Should be valid.
+    CHECK(cov.is_valid(5));
+    // (2, 3, 4) -> 2*25 + 3*5 + 4 = 50 + 15 + 4 = 69. Should be valid.
+    CHECK(cov.is_valid(69));
+    // (3, 1, 0) -> 3*25 + 1*5 + 0 = 80. Should be invalid (P0=3).
+    CHECK(!cov.is_valid(80));
+    // (0, 0, 0) -> 0. Should be invalid (P1=0).
+    CHECK(!cov.is_valid(0));
+    // (0, 4, 0) -> 20. Should be invalid (P1=4).
+    CHECK(!cov.is_valid(20));
+  }
+
+  SUBCASE("Skipped variables in IDD path") {
+    // IDD: P0=0, P2=0. P1 is free.
+    // Cube: (P0, P1, P2)
+    std::vector<unsigned int> domain_sizes{2, 2, 2};
+    sylvan_idd constraint =
+        sylvan_idd::project_intersect(sylvan_idd(0, 0), sylvan_idd(2, 0));
+
+    param_vector p_indices = {0, 1, 2};
+    coverage_map_second_level cov(8, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    // (0, 0, 0) -> 0. Valid.
+    CHECK(cov.is_valid(0));
+    // (0, 1, 0) -> 0*4 + 1*2 + 0 = 2. Valid.
+    CHECK(cov.is_valid(2));
+    // (0, 0, 1) -> 1. Invalid.
+    CHECK(!cov.is_valid(1));
+    // (1, 0, 0) -> 4. Invalid.
+    CHECK(!cov.is_valid(4));
+  }
+
+  SUBCASE("IDD variables interleaved with cube variables") {
+    // IDD: P0=0, P2=0, P4=0. P1, P3 are free.
+    // Cube: (P1, P3, P4)
+    std::vector<unsigned int> domain_sizes{2, 2, 2, 2, 2};
+    sylvan_idd constraint = sylvan_idd::project_intersect(
+        sylvan_idd::project_intersect(sylvan_idd(0, 0), sylvan_idd(2, 0)),
+        sylvan_idd(4, 0));
+
+    param_vector p_indices = {1, 3, 4};
+    coverage_map_second_level cov(8, p_indices);
+
+    constraint.mark_valid_value_combinations(cov, domain_sizes);
+
+    // Any value of P1, P3 is valid as long as P4=0.
+    // (P1=0, P3=0, P4=0) -> 0. Valid.
+    CHECK(cov.is_valid(0));
+    // (P1=1, P3=1, P4=0) -> 1*4 + 1*2 + 0 = 6. Valid.
+    CHECK(cov.is_valid(6));
+    // (P1=0, P3=0, P4=1) -> 1. Invalid.
+    CHECK(!cov.is_valid(1));
+  }
+}
+
 }  // namespace
