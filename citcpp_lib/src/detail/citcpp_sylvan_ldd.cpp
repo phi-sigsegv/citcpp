@@ -1398,12 +1398,13 @@ TASK_2(MDD, sylvan_idd_project, MDD, mdd, MDD, proj) {
 }
 
 struct marking_context {
-    const size_t* weights;
-    const uint32_t* domain_sizes;
-    int t;
-    const uint32_t* idd_vars;
-    citcpp::detail::spin_lock* lock;
-    citcpp::detail::coverage_map_second_level* value_combinations;
+  const size_t* weights;
+  const uint32_t* domain_sizes;
+  int t;
+  const uint32_t* idd_vars;
+  citcpp::detail::spin_lock* lock;
+  citcpp::detail::coverage_map_second_level* value_combinations;
+  uint64_t invocation_id;
 };
 
 TASK_3(int, sylvan_idd_fill_all_recursive, MDD, cube, size_t, current_index,
@@ -1421,7 +1422,8 @@ TASK_3(int, sylvan_idd_fill_all_recursive, MDD, cube, size_t, current_index,
   }
 
   uint64_t res;
-  if (cache_get3(CACHE_IDD_MARK_VALID, lddmc_true, cube, current_index, &res)) {
+  if (cache_get6(lddmc_true | CACHE_IDD_MARK_VALID, cube, current_index,
+                 ctx->invocation_id, 0, 0, &res, nullptr)) {
     return (int)res;
   }
 
@@ -1443,7 +1445,8 @@ TASK_3(int, sylvan_idd_fill_all_recursive, MDD, cube, size_t, current_index,
   }
 
   if (!aborted) {
-    cache_put3(CACHE_IDD_MARK_VALID, lddmc_true, cube, current_index, 0);
+    cache_put6(lddmc_true | CACHE_IDD_MARK_VALID, cube, current_index,
+               ctx->invocation_id, 0, 0, 0, 0);
   }
   return aborted;
 }
@@ -1469,7 +1472,8 @@ TASK_5(int, sylvan_idd_mark_valid_recursive, MDD, ldd, MDD, cube, int,
   }
 
   uint64_t res;
-  if (cache_get3(CACHE_IDD_MARK_VALID, ldd, cube, current_index, &res)) {
+  if (cache_get6(ldd | CACHE_IDD_MARK_VALID, cube, current_index,
+                 ctx->invocation_id, 0, 0, &res, nullptr)) {
     return (int)res;
   }
 
@@ -1528,7 +1532,8 @@ TASK_5(int, sylvan_idd_mark_valid_recursive, MDD, ldd, MDD, cube, int,
   }
 
   if (!aborted) {
-    cache_put3(CACHE_IDD_MARK_VALID, ldd, cube, current_index, 0);
+    cache_put6(ldd | CACHE_IDD_MARK_VALID, cube, current_index,
+               ctx->invocation_id, 0, 0, 0, 0);
   }
 
   return aborted;
@@ -2062,6 +2067,10 @@ void sylvan_idd::mark_valid_value_combinations(
   if (idd_ == lddmc_false) return;
   if (value_combinations.all_valid()) return;
 
+  static std::atomic<uint64_t> next_invocation_id{1};
+  uint64_t invocation_id =
+      next_invocation_id.fetch_add(1, std::memory_order_relaxed);
+
   const auto& p_indices = value_combinations.get_parameter_indices();
   const int t = p_indices.size();
 
@@ -2098,6 +2107,7 @@ void sylvan_idd::mark_valid_value_combinations(
   ctx.idd_vars = variables_.data();
   ctx.lock = &lock;
   ctx.value_combinations = &value_combinations;
+  ctx.invocation_id = invocation_id;
 
   sylvan_idd_mark_valid_recursive(idd_, cube, 0, 0, &ctx);
 
