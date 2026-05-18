@@ -125,9 +125,9 @@ bool concurrent_constraint_handler<T_EXEC>::is_valid_partial_test(
 }
 
 template <conc_is_void_functor_executor T_EXEC>
-void concurrent_constraint_handler<T_EXEC>::premark_valid_tuples(
+void concurrent_constraint_handler<T_EXEC>::mark_valid_tuples(
     coverage_map_second_level& value_combinations) const {
-  handler_.premark_valid_tuples(value_combinations);
+  handler_.mark_valid_tuples(value_combinations);
 }
 
 template <conc_is_void_functor_executor T_EXEC>

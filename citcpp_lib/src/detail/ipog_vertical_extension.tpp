@@ -106,7 +106,7 @@ class ipog_vertical_extension_functor {
         }
       }
 
-      constr_handler_.premark_valid_tuples(value_combinations);
+      constr_handler_.mark_valid_tuples(value_combinations);
 
       visit_all_value_combos_of_param_combo(
           model_, param_indices, value_indices_, *this, value_combinations);

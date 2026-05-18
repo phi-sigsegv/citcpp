@@ -45,7 +45,7 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     /**
      * See constraint_handler interface.
      */
-    void premark_valid_tuples(
+    void mark_valid_tuples(
         coverage_map_second_level& value_combinations) const override;
 
     /**

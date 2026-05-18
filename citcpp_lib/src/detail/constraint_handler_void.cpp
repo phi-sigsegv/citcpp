@@ -14,7 +14,7 @@ bool constraint_handler_void::is_valid_partial_test(const test& t) const {
   return true;
 }
 
-void constraint_handler_void::premark_valid_tuples(
+void constraint_handler_void::mark_valid_tuples(
     coverage_map_second_level& value_combinations) const {
   value_combinations.set_all_valid();
 }

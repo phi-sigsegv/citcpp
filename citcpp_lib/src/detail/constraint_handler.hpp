@@ -40,7 +40,7 @@ class constraint_handler {
      * the validity of value combinations that are feasible according to
      * constraints.
      */
-    virtual void premark_valid_tuples(
+    virtual void mark_valid_tuples(
         coverage_map_second_level& value_combinations) const = 0;
 
     /**

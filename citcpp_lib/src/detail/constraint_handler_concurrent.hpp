@@ -34,7 +34,7 @@ class concurrent_constraint_handler : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
-    void premark_valid_tuples(
+    void mark_valid_tuples(
         coverage_map_second_level& value_combinations) const override;
 
     /**

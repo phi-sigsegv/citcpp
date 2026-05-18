@@ -598,7 +598,7 @@ bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
   return idd_.is_sat_with_partial_assignment(t.get_values());
 }
 
-void constraint_handler_sylvan_idd::premark_valid_tuples(
+void constraint_handler_sylvan_idd::mark_valid_tuples(
     coverage_map_second_level& value_combinations) const {
 
   idd_.mark_valid_value_combinations(value_combinations,
