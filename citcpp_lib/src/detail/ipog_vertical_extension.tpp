@@ -100,9 +100,8 @@ class ipog_vertical_extension_functor {
           if (!value_combinations.test_and_set_covered(index)) {
             num_checked_tuples_++;
             num_new_covered_tuples_++;
+            value_combinations.set_valid(index);
           }
-
-          value_combinations.set_valid(index);
         }
       }
 
