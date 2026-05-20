@@ -14,8 +14,9 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
         const unsigned int num_current_param_values)
         : model_(model), gain_per_value_(num_current_param_values) {}
 
-    void operator()(const test& test, const bitset_uint64& valid_values,
-                    ipog_coverage_map::second_level_type& value_combinations) {
+    void operator()(
+        const test& test, const bitset_uint64& valid_values,
+        const ipog_coverage_map::second_level_type& value_combinations) {
 
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
@@ -60,7 +61,6 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
           if (!value_combinations.is_marked_covered(base_index + value)) {
             if (valid_values.test(value)) {
               gain_per_value_[value] += 1;
-              value_combinations.set_valid(base_index + value);
             }
           }
         }
@@ -126,8 +126,8 @@ class ipog_horizontal_select_best_value_functor {
         const unsigned int real_current_param_idx,
         const unsigned int num_current_param_values,
         const internal_model& model,
-        std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
-            relations,
+        const std::vector<
+            std::pair<const internal_relation*, ipog_coverage_map>>& relations,
         unsigned int& last_picked_value,
         std::vector<int>& value_to_valid_options)
         : real_current_param_idx_(real_current_param_idx),
@@ -148,8 +148,8 @@ class ipog_horizontal_select_best_value_functor {
         return last_picked_value_;
       }
 
-      for (auto& rel_and_cov_map : relations_) {
-        for (auto& value_combinations :
+      for (const auto& rel_and_cov_map : relations_) {
+        for (const auto& value_combinations :
              rel_and_cov_map.second.get_coverage_map()) {
           per_param_combo_functor_(test, valid_values, value_combinations);
         }
@@ -174,7 +174,7 @@ class ipog_horizontal_select_best_value_functor {
     const unsigned int num_current_param_values_;
     ipog_horizontal_select_best_value_per_param_combo_functor
         per_param_combo_functor_;
-    std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+    const std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations_;
     unsigned int& last_picked_value_;
     std::vector<int>& value_to_valid_options_;
@@ -187,8 +187,8 @@ class ipog_horizontal_select_best_value_functor_parallel {
         const unsigned int real_current_param_idx,
         const unsigned int num_current_param_values,
         const internal_model& model,
-        std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
-            relations,
+        const std::vector<
+            std::pair<const internal_relation*, ipog_coverage_map>>& relations,
         unsigned int& last_picked_value,
         std::vector<int>& value_to_valid_options, T_EXEC& exec)
         : thread_local_functors_(exec.get_num_workers() * 8,
@@ -213,8 +213,8 @@ class ipog_horizontal_select_best_value_functor_parallel {
 
       unsigned long long max_num_tasks = 0;
 
-      for (auto& rel_and_cov_map : relations_) {
-        ipog_coverage_map* cov_map = &rel_and_cov_map.second;
+      for (const auto& rel_and_cov_map : relations_) {
+        const ipog_coverage_map* cov_map = &rel_and_cov_map.second;
         const unsigned long long total_param_combos =
             cov_map->get_coverage_map().size();
         const unsigned long long num_tasks =
@@ -282,7 +282,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
         void operator()() {
           const auto& test = *test_;
           const auto& valid_values = *valid_values_;
-          auto& cov_map = cov_map_->get_coverage_map();
+          const auto& cov_map = cov_map_->get_coverage_map();
 
           for (unsigned long long i = start_index_; i < end_index_; ++i) {
             per_param_combo_functor_(test, valid_values, cov_map[i]);
@@ -291,7 +291,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
 
         void set_task_parameters(const test* test,
                                  const bitset_uint64* valid_values,
-                                 ipog_coverage_map* cov_map,
+                                 const ipog_coverage_map* cov_map,
                                  unsigned long long start_index,
                                  unsigned long long end_index) {
           base_type::reset();
@@ -313,7 +313,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
             per_param_combo_functor_;
         const test* test_;
         const bitset_uint64* valid_values_;
-        ipog_coverage_map* cov_map_;
+        const ipog_coverage_map* cov_map_;
         unsigned long long start_index_;
         unsigned long long end_index_;
     };
@@ -323,7 +323,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
         thread_local_vector<value_selection_task> thread_local_functors_;
     const unsigned int real_current_param_idx_;
     const unsigned int num_current_param_values_;
-    std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
+    const std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations_;
     unsigned int& last_picked_value_;
     std::vector<int>& value_to_valid_options_;
@@ -336,7 +336,7 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
         const internal_model& model)
         : model_(model), num_new_covered_tuples_(0) {}
 
-    void operator()(const test& test,
+    void operator()(const test& test, const bitset_uint64& valid_values,
                     ipog_coverage_map::second_level_type& value_combinations) {
 
       const param_vector& param_indices =
@@ -347,10 +347,12 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
         // number of values of each parameter as a kind of radix. Consider
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
         // values for p_i. If we now have values x_0, x_1, x_2, then the
-        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        ipog_coverage_map::second_level_type::size_type index = 0;
+        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2. In the base index we just
+        // compute x_0 * v_1 * v_2 + x_1 * v_2, since that expression is
+        // constant throughout all different values of p_2.
+        ipog_coverage_map::second_level_type::size_type base_index = 0;
         for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size(); ++i) {
+             i < param_indices.size() - 1; ++i) {
           const unsigned int param_idx = param_indices[i];
           const int param_value = test.get_values()[param_idx];
 
@@ -368,11 +370,31 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
                j < param_indices.size(); ++j) {
             addend *= model_.get_parameter_num_values()[param_indices[j]];
           }
-          index += addend;
+          base_index += addend;
         }
 
-        if (!value_combinations.test_and_set_covered(index)) {
+        const unsigned int real_current_param_idx =
+            param_indices[param_indices.size() - 1];
+        const int current_param_value =
+            test.get_values()[real_current_param_idx];
+        if (current_param_value < 0) {
+          // We have found a don't care value for that combination in
+          // the considered test in one of the [0, ... ,current_param_idx - 1]
+          // parameters. There is nothing to be updated concerning the
+          // coverage. This combination will be taken care of during the
+          // vertical extension step.
+          return;
+        }
+
+        if (!value_combinations.test_and_set_covered(base_index +
+                                                     current_param_value)) {
           ++num_new_covered_tuples_;
+        }
+
+        for (unsigned int value = 0; value < valid_values.size(); ++value) {
+          if (valid_values.test(value)) {
+            value_combinations.set_valid(base_index + value);
+          }
         }
       }
     }
@@ -401,7 +423,7 @@ class ipog_horizontal_update_coverage_map_functor {
           relations_(relations),
           num_covered_tuples_(num_covered_tuples) {}
 
-    void operator()(const test& test) {
+    void operator()(const test& test, const bitset_uint64& valid_values) {
       // Only if the value at the current parameter is different from
       // don't care, we have a gain in coverage and thus need to
       // update the coverage map.
@@ -409,7 +431,7 @@ class ipog_horizontal_update_coverage_map_functor {
         for (auto& rel_and_cov_map : relations_) {
           for (auto& value_combinations :
                rel_and_cov_map.second.get_coverage_map()) {
-            per_param_combo_functor_(test, value_combinations);
+            per_param_combo_functor_(test, valid_values, value_combinations);
           }
 
           num_covered_tuples_[rel_and_cov_map.first] +=
@@ -446,7 +468,7 @@ class ipog_horizontal_update_coverage_map_functor_parallel {
           num_covered_tuples_(num_covered_tuples),
           exec_(exec) {}
 
-    void operator()(const test& test) {
+    void operator()(const test& test, const bitset_uint64& valid_values) {
       // Only if the value at the current parameter is different from
       // don't care, we have a gain in coverage and thus need to
       // update the coverage map.
@@ -465,16 +487,16 @@ class ipog_horizontal_update_coverage_map_functor_parallel {
             auto exec_scope(exec_.create_execution_scope());
             for (unsigned long long i = 0; i < num_tasks - 1; ++i) {
               auto& thread_local_func = thread_local_functors_[i];
-              thread_local_func.set_task_parameters(&test, cov_map,
-                                                    per_task_combos * i,
-                                                    per_task_combos * (i + 1));
+              thread_local_func.set_task_parameters(
+                  &test, &valid_values, cov_map, per_task_combos * i,
+                  per_task_combos * (i + 1));
               exec_scope.spawn_execution(thread_local_func);
             }
             {
               auto& thread_local_func = thread_local_functors_[num_tasks - 1];
               thread_local_func.set_task_parameters(
-                  &test, cov_map, per_task_combos * (num_tasks - 1),
-                  total_param_combos);
+                  &test, &valid_values, cov_map,
+                  per_task_combos * (num_tasks - 1), total_param_combos);
               exec_scope.spawn_execution(thread_local_func);
             }
           }
@@ -501,24 +523,29 @@ class ipog_horizontal_update_coverage_map_functor_parallel {
         value_selection_task(const internal_model& model)
             : per_param_combo_functor_(model),
               test_(nullptr),
+              valid_values_(nullptr),
               cov_map_(nullptr),
               start_index_(0),
               end_index_(0) {}
 
         void operator()() {
           const auto& test = *test_;
+          const auto& valid_values = *valid_values_;
           auto& cov_map = cov_map_->get_coverage_map();
 
           for (unsigned long long i = start_index_; i < end_index_; ++i) {
-            per_param_combo_functor_(test, cov_map[i]);
+            per_param_combo_functor_(test, valid_values, cov_map[i]);
           }
         }
 
-        void set_task_parameters(const test* test, ipog_coverage_map* cov_map,
+        void set_task_parameters(const test* test,
+                                 const bitset_uint64* valid_values,
+                                 ipog_coverage_map* cov_map,
                                  unsigned long long start_index,
                                  unsigned long long end_index) {
           base_type::reset();
           test_ = test;
+          valid_values_ = valid_values;
           cov_map_ = cov_map;
           start_index_ = start_index;
           end_index_ = end_index;
@@ -534,6 +561,7 @@ class ipog_horizontal_update_coverage_map_functor_parallel {
         ipog_horizontal_update_coverage_map_per_param_combo_functor
             per_param_combo_functor_;
         const test* test_;
+        const bitset_uint64* valid_values_;
         ipog_coverage_map* cov_map_;
         unsigned long long start_index_;
         unsigned long long end_index_;
@@ -608,6 +636,7 @@ class ipog_horizontal_update_coverage_map_and_select_best_value_functor {
 
     new_covered_tuples_and_selected_value operator()(
         const test& prev_test, const test& test,
+        const bitset_uint64& prev_test_valid_values,
         const bitset_uint64& valid_values) {
 
       const int current_param_value =
@@ -627,7 +656,7 @@ class ipog_horizontal_update_coverage_map_and_select_best_value_functor {
 
           if (enable_coverage_update) {
             per_param_combo_functor_.get_coverage_update_functor()(
-                prev_test, value_combinations);
+                prev_test, prev_test_valid_values, value_combinations);
           }
           if (current_param_value < 0) {
             per_param_combo_functor_.get_select_best_value_functor()(
@@ -709,6 +738,7 @@ class
 
     new_covered_tuples_and_selected_value operator()(
         const test& prev_test, const test& test,
+        const bitset_uint64& prev_test_valid_values,
         const bitset_uint64& valid_values) {
 
       const int current_param_value =
@@ -742,16 +772,18 @@ class
             auto& thread_local_func = thread_local_functors_[i];
             thread_local_func.set_task_parameters(
                 enable_coverage_update ? &prev_test : nullptr,
-                current_param_value < 0 ? &test : nullptr, &valid_values,
-                cov_map, per_task_combos * i, per_task_combos * (i + 1));
+                current_param_value < 0 ? &test : nullptr,
+                &prev_test_valid_values, &valid_values, cov_map,
+                per_task_combos * i, per_task_combos * (i + 1));
             exec_scope.spawn_execution(thread_local_func);
           }
           {
             auto& thread_local_func = thread_local_functors_[num_tasks - 1];
             thread_local_func.set_task_parameters(
                 enable_coverage_update ? &prev_test : nullptr,
-                current_param_value < 0 ? &test : nullptr, &valid_values,
-                cov_map, per_task_combos * (num_tasks - 1), total_param_combos);
+                current_param_value < 0 ? &test : nullptr,
+                &prev_test_valid_values, &valid_values, cov_map,
+                per_task_combos * (num_tasks - 1), total_param_combos);
             exec_scope.spawn_execution(thread_local_func);
           }
         }
@@ -819,6 +851,7 @@ class
             : per_param_combo_functor_(model, num_current_param_values),
               prev_test_(nullptr),
               test_(nullptr),
+              prev_test_valid_values_(nullptr),
               valid_values_(nullptr),
               cov_map_(nullptr),
               start_index_(0),
@@ -830,7 +863,7 @@ class
           for (unsigned long long i = start_index_; i < end_index_; ++i) {
             if (prev_test_) {
               per_param_combo_functor_.get_coverage_update_functor()(
-                  *prev_test_, cov_map[i]);
+                  *prev_test_, *prev_test_valid_values_, cov_map[i]);
             }
             if (test_) {
               per_param_combo_functor_.get_select_best_value_functor()(
@@ -840,6 +873,7 @@ class
         }
 
         void set_task_parameters(const test* prev_test, const test* test,
+                                 const bitset_uint64* prev_test_valid_values,
                                  const bitset_uint64* valid_values,
                                  ipog_coverage_map* cov_map,
                                  unsigned long long start_index,
@@ -847,6 +881,7 @@ class
           base_type::reset();
           prev_test_ = prev_test;
           test_ = test;
+          prev_test_valid_values_ = prev_test_valid_values;
           valid_values_ = valid_values;
           cov_map_ = cov_map;
           start_index_ = start_index;
@@ -878,6 +913,7 @@ class
             per_param_combo_functor_;
         const test* prev_test_;
         const test* test_;
+        const bitset_uint64* prev_test_valid_values_;
         const bitset_uint64* valid_values_;
         ipog_coverage_map* cov_map_;
         unsigned long long start_index_;
@@ -989,6 +1025,7 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
 
       new_covered_tuples_and_selected_value res =
           update_cov_and_select_best_value_functor(*previous_test, t,
+                                                   valid_values[test_index - 1],
                                                    valid_values[test_index]);
 
       selected_value = res.selected_value_;
@@ -1036,7 +1073,7 @@ inline ipog_horizontal_extension_result ipog_horizontal_extension(
     previous_test->get_vertical_extension_intrusive_list_node().next_node_ =
         nullptr;
 
-    update_cov_map_functor(*previous_test);
+    update_cov_map_functor(*previous_test, valid_values[test_index - 1]);
   }
 
   return result;
@@ -1138,6 +1175,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
 
       new_covered_tuples_and_selected_value res =
           update_cov_and_select_best_value_functor(*previous_test, t,
+                                                   valid_values[test_index - 1],
                                                    valid_values[test_index]);
 
       selected_value = res.selected_value_;
@@ -1185,7 +1223,7 @@ ipog_horizontal_extension_result ipog_horizontal_extension(
     previous_test->get_vertical_extension_intrusive_list_node().next_node_ =
         nullptr;
 
-    update_cov_map_functor(*previous_test);
+    update_cov_map_functor(*previous_test, valid_values[test_index - 1]);
   }
 
   return result;
