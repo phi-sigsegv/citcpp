@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <citcpp/function_ref.hpp>
 #include <cstddef>
 #include <memory>
 #include <new>
@@ -48,66 +49,8 @@ struct build_index_tuple<0> {
     typedef indexes_tuple<> type;
 };
 
-/**
- * This is a type copied from LLVM. It is an efficient, type-erasing, non-owning
- * reference to a callable. So similarily to std::function it wraps a callable
- * object, but does not store it in any way. It just refers to it, which means
- * that the lifetime of the callable must be long enough if it shall be
- * invoked via a function_ref object.
- *
- * WARNING: This function reference is easy to use incorrectly.
- * For example consider:
- * function_ref< int() > invoke_later( []{ return 42; } );
- * auto val = invoke_later();
- * Here the lambda is a temporary(!) whose address is taken in the constructor
- * of function_ref, therefore at the time invoke_later() is called, it is gone!
- * On the other hand this works because the lambda lives long enough:
- * void func( function_ref< int() > f );
- * func( []{ return 42; } );
- * And this also works:
- * auto lambda = []{ return 42; };
- * function_ref< int() > invoke_later( lambda );
- * auto val = invoke_later();
- * And this also works:
- * struct Functor { int operator()() { return 42; } };
- * Functor func;
- * function_ref< int() > invoke_later( func );
- * auto val = invoke_later();
- */
 template <typename Fn>
-class function_ref;
-
-template <typename Ret, typename... Params>
-class function_ref<Ret(Params...)> {
-  private:
-    Ret (*callback)(intptr_t callable, Params... params) = nullptr;
-    intptr_t callable;
-
-    template <typename Callable>
-    static Ret callback_fn(intptr_t callable, Params... params) {
-      return (*reinterpret_cast<Callable*>(callable))(
-          std::forward<Params>(params)...);
-    }
-
-  public:
-    function_ref() = default;
-    function_ref(std::nullptr_t) {}
-
-    template <typename Callable>
-    function_ref(
-        Callable&& callable,
-        typename std::enable_if<
-            !std::is_same<typename std::remove_reference<Callable>::type,
-                          function_ref>::value>::type* = nullptr)
-        : callback(callback_fn<typename std::remove_reference<Callable>::type>),
-          callable(reinterpret_cast<intptr_t>(&callable)) {}
-
-    Ret operator()(Params... params) const {
-      return callback(callable, std::forward<Params>(params)...);
-    }
-
-    operator bool() const { return callback; }
-};
+using function_ref = citcpp::function_ref<Fn>;
 
 /**
  * This back-off strategy is a mixture of different back-off
@@ -1336,9 +1279,6 @@ class StructuredTask : public concurrent_queue_intrusive_node {
     friend class StructuredTaskGroup;
 
     typedef StructuredTask this_type;
-    typedef unsigned int T_STATUS_MASK_TYPE;
-
-    static const T_STATUS_MASK_TYPE TERMINATION_MASK = 1;
 
   public:
     StructuredTask()
@@ -1430,8 +1370,9 @@ class StructuredTask : public concurrent_queue_intrusive_node {
     }
 
     template <class T_CALLABLE>
-    void setCallable(T_CALLABLE& callable) {
-      setCallableImpl(callable);
+    void setCallable(T_CALLABLE&& callable) {
+      m_func_ref =
+          detail::function_ref<void()>(std::forward<T_CALLABLE>(callable));
     }
 
   protected:
@@ -1446,19 +1387,40 @@ class StructuredTask : public concurrent_queue_intrusive_node {
   private:
     void execute() { m_func_ref(); }
 
-    template <class T_CALLABLE>
-    void setCallableImpl(T_CALLABLE& callable) {
-      m_func_ref =
-          detail::function_ref<void()>(std::forward<T_CALLABLE>(callable));
-    }
-
   protected:
+    typedef unsigned int T_STATUS_MASK_TYPE;
+
+    static const T_STATUS_MASK_TYPE TERMINATION_MASK = 1;
+    static const T_STATUS_MASK_TYPE DELETE_AFTER_TERMINATION = 2;
+
     mutable StructuredWorkStealingThreadPoolBase* m_pool_ptr;
     T_STATUS_MASK_TYPE m_task_status;
     std::atomic_int m_refcount;
     StructuredTask* m_successor_task;
     std::atomic_int* m_waiting_refcount;
     detail::function_ref<void()> m_func_ref;
+};
+
+class AutoDeletedTask : public StructuredTask {
+    typedef StructuredTask base_type;
+    typedef AutoDeletedTask this_type;
+
+  public:
+    AutoDeletedTask() : base_type() {
+      m_task_status |= detail::StructuredTask::DELETE_AFTER_TERMINATION;
+    }
+
+    AutoDeletedTask(const this_type&) = delete;
+
+    AutoDeletedTask(this_type&& other) : base_type() {
+      m_task_status |= detail::StructuredTask::DELETE_AFTER_TERMINATION;
+    }
+
+    virtual ~AutoDeletedTask() = default;
+
+    this_type& operator=(const this_type&) = delete;
+
+    this_type& operator=(this_type&&) = delete;
 };
 
 class WorkerBlockingTask : public StructuredTask {
@@ -1541,6 +1503,9 @@ class StructuredWorkStealingThreadPoolWorker {
         }
         if (task->m_task_status & StructuredTask::TERMINATION_MASK) {
           // We received a signal to terminate.
+          if (task->m_task_status & StructuredTask::DELETE_AFTER_TERMINATION) {
+            delete task;
+          }
           return;
         } else {
           do {
@@ -1558,6 +1523,11 @@ class StructuredWorkStealingThreadPoolWorker {
 
             if (task->m_waiting_refcount) {
               task->m_waiting_refcount->fetch_sub(1, std::memory_order_acq_rel);
+            }
+
+            if (task->m_task_status &
+                StructuredTask::DELETE_AFTER_TERMINATION) {
+              delete task;
             }
 
             task = next_task;
@@ -1673,6 +1643,9 @@ class StructuredWorkStealingThreadPool
       if (m_task_queue.pop(task)) {
         if (task->m_task_status & StructuredTask::TERMINATION_MASK) {
           // We received a signal to terminate.
+          if (task->m_task_status & StructuredTask::DELETE_AFTER_TERMINATION) {
+            delete task;
+          }
           return false;
         } else {
           do {
@@ -1690,6 +1663,11 @@ class StructuredWorkStealingThreadPool
 
             if (task->m_waiting_refcount) {
               task->m_waiting_refcount->fetch_sub(1, std::memory_order_acq_rel);
+            }
+
+            if (task->m_task_status &
+                StructuredTask::DELETE_AFTER_TERMINATION) {
+              delete task;
             }
 
             task = next_task;
@@ -1830,6 +1808,10 @@ class StructuredTaskGroup {
 
         if (task->m_waiting_refcount) {
           task->m_waiting_refcount->fetch_sub(1, std::memory_order_acq_rel);
+        }
+
+        if (task->m_task_status & StructuredTask::DELETE_AFTER_TERMINATION) {
+          delete task;
         }
 
         task = next_task;
@@ -2231,6 +2213,58 @@ class WorkStealingThreadPool {
         }
 
         /**
+         * This method spawn a \a callable. That means \a task is inserted into
+         * the task queue of the associated thread pool, which executes the
+         * specified callable.
+         * Calling this function is equivalent to calling enqueueTask( callable
+         * ) on the associated thread pool.
+         *
+         * WARNING: Only call this method AFTER this task has been spawned.
+         * Otherwise calling this method results in undefined behavior,
+         * because this task does not know its associated thread pool, yet.
+         *
+         * @param callable the callable to spawn
+         */
+        template <class T_CALLABLE>
+        void spawnCallable(T_CALLABLE&& callable) {
+          detail::AutoDeletedTask* task_descr = new detail::AutoDeletedTask();
+          task_descr->setCallable(std::forward<T_CALLABLE>(callable));
+          base_type::spawn(task_descr);
+        }
+
+        /**
+         * This method spawn a \a callable. That means \a task is inserted into
+         * the task queue of the associated thread pool, which executes the
+         * specified callable.
+         * Calling this function is equivalent to calling
+         * enqueueTask( queue_hint, callable ) on the associated thread pool.
+         * The parameter \a queue_hint is a hint for insertion into the
+         * task queue. Actually, the task queue consists of multiple queues.
+         * Each thread is associated with its own queue. Only if it does not
+         * find any task inside its own queue, it tries to steal a task from
+         * another queue. So if the caller wants to distribute tasks among
+         * the worker threads, it can use \a queue_hint to do so.
+         * The queue where the task gets inserted into is determined by
+         * "queue_hint % num_queues". So a strategy to distribute tasks among
+         * these queues might look like:
+         * queue_hint = 0;
+         * while( true ) { spawn( queue_hint++, task ); }
+         *
+         * WARNING: Only call this method AFTER this task has been spawned.
+         * Otherwise calling this method results in undefined behavior,
+         * because this task does not know its associated thread pool, yet.
+         *
+         * @param queue_hint the hint for insertion into the task queue
+         * @param callable the callable to spawn
+         */
+        template <class T_CALLABLE>
+        void spawnCallable(std::size_t queue_hint, T_CALLABLE&& callable) {
+          detail::AutoDeletedTask* task_descr = new detail::AutoDeletedTask();
+          task_descr->setCallable(std::forward<T_CALLABLE>(callable));
+          base_type::spawn(queue_hint, task_descr);
+        }
+
+        /**
          * This method synchronizes the caller with
          * the point in time, at which all tasks spawned through
          * the task group have finished their execution. This means
@@ -2278,6 +2312,25 @@ class WorkStealingThreadPool {
          * @param task the task to execute before waiting
          */
         void spawn_and_wait(Task* task) { base_type::spawn_and_wait(task); }
+
+        /**
+         * This method executes \a callable in the context of the caller
+         * and afterwards waits until all other tasks spawned through
+         * the task group have finished their execution. Thus, the
+         * effect of this method is similar to calling #spawn(task)
+         * followed by calling #wait(). However, there is a slight
+         * performance improvement because \a callable is not put into
+         * the task queue of the thread pool associated with the
+         * task group.
+         *
+         * @param callable the task to execute before waiting
+         */
+        template <class T_CALLABLE>
+        void spawn_callable_and_wait(T_CALLABLE&& callable) {
+          detail::AutoDeletedTask* task_descr = new detail::AutoDeletedTask();
+          task_descr->setCallable(std::forward<T_CALLABLE>(callable));
+          base_type::spawn_and_wait(task_descr);
+        }
 
         /**
          * This method creates and returns a task group that uses
@@ -2592,6 +2645,59 @@ class WorkStealingThreadPool {
         }
 
         /**
+         * This method spawn a \a callable. That means \a task is inserted into
+         * the task queue of the associated thread pool, which executes the
+         * specified callable.
+         * Calling this function is equivalent to calling enqueueTask( callable
+         * ) on the associated thread pool.
+         *
+         * WARNING: Only call this method AFTER this task has been spawned.
+         * Otherwise calling this method results in undefined behavior,
+         * because this task does not know its associated thread pool, yet.
+         *
+         * @param callable the callable to spawn
+         */
+        template <class T_CALLABLE>
+        void spawnCallable(T_CALLABLE&& callable) const {
+          detail::AutoDeletedTask* task_descr = new detail::AutoDeletedTask();
+          task_descr->setCallable(std::forward<T_CALLABLE>(callable));
+          get_thread_pool()->enqueueTask(task_descr);
+        }
+
+        /**
+         * This method spawn a \a callable. That means \a task is inserted into
+         * the task queue of the associated thread pool, which executes the
+         * specified callable.
+         * Calling this function is equivalent to calling
+         * enqueueTask( queue_hint, callable ) on the associated thread pool.
+         * The parameter \a queue_hint is a hint for insertion into the
+         * task queue. Actually, the task queue consists of multiple queues.
+         * Each thread is associated with its own queue. Only if it does not
+         * find any task inside its own queue, it tries to steal a task from
+         * another queue. So if the caller wants to distribute tasks among
+         * the worker threads, it can use \a queue_hint to do so.
+         * The queue where the task gets inserted into is determined by
+         * "queue_hint % num_queues". So a strategy to distribute tasks among
+         * these queues might look like:
+         * queue_hint = 0;
+         * while( true ) { spawn( queue_hint++, task ); }
+         *
+         * WARNING: Only call this method AFTER this task has been spawned.
+         * Otherwise calling this method results in undefined behavior,
+         * because this task does not know its associated thread pool, yet.
+         *
+         * @param queue_hint the hint for insertion into the task queue
+         * @param callable the callable to spawn
+         */
+        template <class T_CALLABLE>
+        void spawnCallable(std::size_t queue_hint,
+                           T_CALLABLE&& callable) const {
+          detail::AutoDeletedTask* task_descr = new detail::AutoDeletedTask();
+          task_descr->setCallable(std::forward<T_CALLABLE>(callable));
+          get_thread_pool()->enqueueTask(queue_hint, task_descr);
+        }
+
+        /**
          * Returns the successor task of this task. If upon completion this task
          * is the last predecessor of its successor task, then that successor
          * task gets executed.
@@ -2688,8 +2794,8 @@ class WorkStealingThreadPool {
          * @param callable the callable to execute by this task
          */
         template <class T_CALLABLE>
-        void setCallable(T_CALLABLE& callable) {
-          base_type::setCallable(callable);
+        void setCallable(T_CALLABLE&& callable) {
+          base_type::setCallable(std::forward<T_CALLABLE>(callable));
         }
 
       private:
@@ -2860,6 +2966,46 @@ class WorkStealingThreadPool {
     }
 
     /**
+     * This method enqueues \a callable. That means \a callable is set as job
+     * to execute by a task that is inserted into
+     * the task queue of this thread pool. If this is the first
+     * task to be enqueued, then this pool starts its worker threads.
+     *
+     * @param callable the callable to insert
+     */
+    template <class T_CALLABLE>
+    void enqueueCallable(T_CALLABLE&& callable) {
+      detail::AutoDeletedTask* task_descr = new detail::AutoDeletedTask();
+      task_descr->setCallable(std::forward<T_CALLABLE>(callable));
+      m_pool_impl.enqueueTask(task_descr);
+    }
+
+    /**
+     * This method enqueues \a callable. That means \a callable is set as job
+     * to execute by a task that is inserted into the task queue of this thread
+     * pool. If this is the first task to be enqueued, then this pool starts its
+     * worker threads. The parameter \a queue_hint is a hint for insertion into
+     * the task queue. Actually, the task queue consists of multiple queues.
+     * Each thread is associated with its own queue. Only if it does not find
+     * any task inside its own queue, it tries to steal a task from another
+     * queue. So if the caller wants to distribute tasks among the worker
+     * threads, it can use \a queue_hint to do so. The queue where the task gets
+     * inserted into is determined by "queue_hint % num_queues". So a
+     * strategy to distribute tasks among these queues might look like:
+     * queue_hint = 0;
+     * while( true ) { thread_pool.enqueueTask( queue_hint++, task ); }
+     *
+     * @param queue_hint the hint for insertion into the task queue
+     * @param callable the callable to insert
+     */
+    template <class T_CALLABLE>
+    void enqueueCallable(std::size_t queue_hint, T_CALLABLE&& callable) {
+      detail::AutoDeletedTask* task_descr = new detail::AutoDeletedTask();
+      task_descr->setCallable(std::forward<T_CALLABLE>(callable));
+      m_pool_impl.enqueueTask(queue_hint, task_descr);
+    }
+
+    /**
      * This method tries to dequeue a task from the task queue of this
      * thread pool and executing it. If a task has been dequeued and executed,
      * true is returned. Otherwise false is returned.
@@ -2902,17 +3048,6 @@ class WorkStealingThreadPool {
      * @return an empty task list
      */
     TaskList createTaskList() const { return TaskList(); }
-
-    /**
-     * Creates a task that executes the given callable.
-     *
-     * @param callable the callable to execute by the task
-     * @return the created task
-     */
-    template <class T_CALLABLE>
-    Task makeTask(T_CALLABLE& callable) const {
-      return {callable};
-    }
 
     /**
      * Returns the number of workers of this thread pool.

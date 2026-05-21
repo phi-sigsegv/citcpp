@@ -49,6 +49,15 @@ class covm_exec_result {
     }
 
     /**
+     * Returns a list of indices of tests which are invalid, i.e. violate
+     * at least one constraint. Invalid tests are ignored during
+     * the coverage measurement.
+     */
+    const std::vector<unsigned int>& get_invalid_test_indices() const {
+      return invalid_test_indices_;
+    }
+
+    /**
      * Returns the status code defining the result of the coverage measurement
      * execution.
      */
@@ -62,6 +71,7 @@ class covm_exec_result {
 
   protected:
     std::unordered_map<std::string, coverage_measurement> result_;
+    std::vector<unsigned int> invalid_test_indices_;
     covm_result_code result_code_;
     std::string error_message_;
 };
@@ -75,6 +85,21 @@ class covm_exec_result {
 class covm_exec_handle {
   public:
     /**
+     * This enumeration defines the different execution phases of the algorithm
+     * for measuring coverage.
+     */
+    enum class phase {
+      /**
+       * This is a phase where the constraint handler is being initalized.
+       */
+      CONSTRAINT_HANDLER_INIT = 0,
+      /**
+       * This is a phase where the coverage is being measured.
+       */
+      COVERAGE_MEASUREMENT = 1
+    };
+
+    /**
      * The real destructor of this handle calls abort() and joins with
      * the executing thread, in order to ensure a clean termination
      * if this handle is destroyed without the client explicitly waiting
@@ -83,18 +108,42 @@ class covm_exec_handle {
     virtual ~covm_exec_handle() {}
 
     /**
-     * Returns the number of combinations to cover based on the given
-     * input model and desired interaction strength.
+     * Returns which phase is active.
      */
-    virtual unsigned long long get_number_of_combinations_to_cover() const = 0;
+    virtual phase get_execution_phase() const = 0;
+
+    /**
+     * Returns a progress value, which represents the state where the
+     * constraint handler is fully initialized.
+     */
+    virtual unsigned int get_constraint_handler_init_progress_target()
+        const = 0;
+
+    /**
+     * Returns the current progress value with regard to the initialization
+     * of the constraint handler.
+     */
+    virtual unsigned int get_constraint_handler_init_progress_current()
+        const = 0;
+
+    /**
+     * Returns the number of combinations to process based on the given
+     * input model and desired interaction strength.
+     * Constraints of the model are ignored for the computation of this
+     * number, meaning it will NOT reflect the number of all valid
+     * combinations of the desired interaction strength, but may be a number
+     * greater than that.
+     */
+    virtual unsigned long long get_number_of_combinations_to_process()
+        const = 0;
 
     /**
      * Returns the current number of combinations whose coverage has been
      * checked. This number is frequently updated during the execution. So for
      * instance this method can be used for showing the progress of the
-     * execution.
+     * execution when compared again the number of combinations to process.
      */
-    virtual unsigned long long get_number_of_checked_combinations() const = 0;
+    virtual unsigned long long get_number_of_processed_combinations() const = 0;
 
     /**
      * Calling this method aborts the current execution.

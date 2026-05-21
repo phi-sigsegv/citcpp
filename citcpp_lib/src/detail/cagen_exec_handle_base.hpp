@@ -5,6 +5,8 @@
 #include <citcpp/cagen_exec_handle.hpp>
 #include <thread>
 
+#include "constraint_handler_init_progress.hpp"
+
 namespace citcpp {
 namespace detail {
 
@@ -12,7 +14,10 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
   public:
     cagen_exec_handle_base()
         : cagen_exec_handle(),
-          num_combinations_to_cover_(0),
+          exec_phase_(0),
+          c_handler_init_progress_(),
+          num_combinations_to_process_(0),
+          processed_combinations_(0),
           covered_combinations_(0),
           testset_size_(0),
           is_aborted_(),
@@ -31,29 +36,70 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     }
 
   public:
-    unsigned long long get_number_of_combinations_to_cover() const {
-      return num_combinations_to_cover_;
+    phase get_execution_phase() const override {
+      unsigned int v = exec_phase_;
+      return static_cast<phase>(v);
     }
 
-    unsigned long long get_number_of_covered_combinations() const {
+    unsigned int get_constraint_handler_init_progress_target() const override {
+      return c_handler_init_progress_
+          .get_constraint_handler_init_progress_target();
+    }
+
+    unsigned int get_constraint_handler_init_progress_current() const override {
+      return c_handler_init_progress_
+          .get_constraint_handler_init_progress_current();
+    }
+
+    unsigned long long get_number_of_combinations_to_process() const override {
+      return num_combinations_to_process_;
+    }
+
+    unsigned long long get_number_of_processed_combinations() const override {
+      return processed_combinations_;
+    }
+
+    unsigned long long get_number_of_covered_combinations() const override {
       return covered_combinations_;
     }
 
-    unsigned int get_testset_size() const { return testset_size_; }
+    unsigned int get_testset_size() const override { return testset_size_; }
 
-    void abort() { is_aborted_.store(true, std::memory_order_relaxed); }
+    void abort() override {
+      is_aborted_.store(true, std::memory_order_relaxed);
+    }
 
-    std::future<citcpp::cagen_exec_result> get_test_set() {
+    std::future<citcpp::cagen_exec_result> get_test_set() override {
       return test_set_.get_future();
     }
 
-    unsigned int get_duration_in_milli_seconds() const {
+    unsigned int get_duration_in_milli_seconds() const override {
       return duration_msec_;
     }
 
-    void set_number_of_combinations_to_cover(
-        unsigned long long num_combinations_to_cover) {
-      num_combinations_to_cover_ = num_combinations_to_cover;
+    void set_execution_phase(phase p) {
+      unsigned int v = static_cast<unsigned int>(p);
+      exec_phase_ = v;
+    }
+
+    constraint_handler_init_progress& get_constraint_handler_init_progress() {
+      return c_handler_init_progress_;
+    }
+
+    void set_number_of_combinations_to_process(
+        unsigned long long num_combinations_to_process) {
+      num_combinations_to_process_ = num_combinations_to_process;
+    }
+
+    void set_number_of_processed_combinations(
+        unsigned long long processed_combinations) {
+      processed_combinations_ = processed_combinations;
+    }
+
+    void add_number_of_processed_combinations(
+        unsigned long long processed_combinations) {
+      processed_combinations_.fetch_add(processed_combinations,
+                                        std::memory_order_acq_rel);
     }
 
     void set_number_of_covered_combinations(
@@ -88,7 +134,10 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     }
 
   public:
-    std::atomic_ullong num_combinations_to_cover_;
+    std::atomic_uint exec_phase_;
+    constraint_handler_init_progress c_handler_init_progress_;
+    std::atomic_ullong num_combinations_to_process_;
+    std::atomic_ullong processed_combinations_;
     std::atomic_ullong covered_combinations_;
     std::atomic_uint testset_size_;
     std::atomic_bool is_aborted_;

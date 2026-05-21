@@ -1,0 +1,83 @@
+#ifndef DETAIL_CONSTRAINT_EVALUATOR_HPP_
+#define DETAIL_CONSTRAINT_EVALUATOR_HPP_
+
+#include <citcpp/constraints.hpp>
+#include <citcpp/model.hpp>
+#include <citcpp/test_set.hpp>
+#include <unordered_map>
+
+#include "internal_test_set.hpp"
+
+namespace citcpp {
+namespace detail {
+
+/**
+ * This class provides means to evaluate satisfaction of constraints
+ * by a given test.
+ */
+class constraint_evaluator {
+  public:
+    constraint_evaluator(const std::vector<parameter_def>& parameters) {
+      int idx = 0;
+      for (const auto& param : parameters) {
+        param_to_index_.emplace(param.get_name(), idx);
+        ++idx;
+      }
+    }
+
+    constraint_evaluator(const std::vector<parameter>& parameters) {
+      int idx = 0;
+      for (const auto& param : parameters) {
+        param_to_index_.emplace(param, idx);
+        ++idx;
+      }
+    }
+
+    /**
+     * Evaluates whether the given test fulfills the given constraint.
+     */
+    bool operator()(const std::vector<parameter_value>& test,
+                    const constraint& constr) const;
+
+    /**
+     * Evaluates whether the given test fulfills all the given constraints.
+     */
+    bool operator()(
+        const std::vector<parameter_value>& test,
+        const std::vector<std::shared_ptr<constraint>>& constraints) const;
+
+    /**
+     * Evaluates whether all tests in a given testset fulfill all the given
+     * constraints.
+     */
+    bool operator()(
+        const test_set& tests,
+        const std::vector<std::shared_ptr<constraint>>& constraints) const;
+
+    /**
+     * Evaluates whether the given test fulfills the given constraint.
+     */
+    bool operator()(const test& test, const constraint& constr,
+                    const model& model) const;
+
+    /**
+     * Evaluates whether the given test fulfills all the given constraints.
+     */
+    bool operator()(const test& test, const model& model) const;
+
+    /**
+     * Evaluates whether all tests in a given testset fulfill all the given
+     * constraints.
+     */
+    bool operator()(const internal_test_set& tests,
+                    const citcpp::model& model) const;
+
+  private:
+    std::unordered_map<parameter_reference, int, parameter_reference_hash>
+        param_to_index_;
+};
+
+}  // namespace detail
+}  // namespace citcpp
+
+#endif /* DETAIL_CONSTRAINT_EVALUATOR_HPP_ */

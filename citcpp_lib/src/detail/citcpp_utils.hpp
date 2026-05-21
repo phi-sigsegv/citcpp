@@ -73,9 +73,6 @@ extern const citcpp::parameter_value DONT_CARE_PARAMETER_VALUE;
 internal_test_set create_internal_test_set(const model& input_model,
                                            const citcpp::test_set& tests);
 
-void replace_dont_care_values(internal_test_set& test_set,
-                              const internal_model& model);
-
 unsigned int get_product_of_max_n_parameter_sizes(
     const unsigned int num_parameters, const unsigned int n,
     const citcpp::detail::internal_model& model,

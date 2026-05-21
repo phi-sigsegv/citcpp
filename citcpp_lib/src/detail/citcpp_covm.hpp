@@ -20,9 +20,7 @@ class covm_exec_handle_impl;
  */
 class citcpp_covm {
   public:
-    citcpp_covm(const model& input_model, const test_set& tests,
-                const coverage_measurement_config& config);
-    citcpp_covm(model&& input_model, test_set&& tests,
+    citcpp_covm(model input_model, test_set tests,
                 const coverage_measurement_config& config);
 
     /**
@@ -48,8 +46,7 @@ class citcpp_covm {
     const coverage_measurement_config config_;
     const model input_model_;
     const internal_model model_;
-    const test_set input_tests_;
-    const internal_test_set tests_;
+    internal_test_set tests_;
     int strength_;
 };
 

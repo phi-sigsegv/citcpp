@@ -6,25 +6,25 @@ find_package(Threads REQUIRED)
 
 set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/binom_coeff_table.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_algo_common.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_ipog_base.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_ipog.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_ipog_otf.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/coverage_map.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/functor_executor_lace.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/internal_model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_all_value_combinations.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_horizontal_extension.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_measure_testset.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_vertical_extension.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_otf_horizontal_extension.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_otf_vertical_extension.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/covm_algorithm_uniform_strength.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_covm.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_evaluator.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_void.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_sylvan_ldd.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_sylvan_ldd.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/lace_lifecycle.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/coverage_measurement.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/constraints.cpp
 )
 
 add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
@@ -33,7 +33,7 @@ target_include_directories(citcpp_lib PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
-target_link_libraries(citcpp_lib PUBLIC Threads::Threads)
+target_link_libraries(citcpp_lib PUBLIC Threads::Threads PRIVATE sylvan::sylvan)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(citcpp_lib PRIVATE -Wno-interference-size)

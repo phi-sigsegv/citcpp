@@ -72,6 +72,84 @@ citcpp::model create_pict_example_model() {
   return model;
 }
 
+citcpp::model create_acts_example_model() {
+  using namespace citcpp;
+
+  model model;
+
+  model.set_name("TCAS");
+
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("Cur_Vertical_Sep")
+                          .values({{299}, {300}, {601}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::BOOLEAN)
+                          .name("High_Confidence")
+                          .values({{true}, {false}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::BOOLEAN)
+                          .name("Two_of_Three_Reports_Valid")
+                          .values({{true}, {false}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("Own_Tracked_Alt")
+                          .values({{1}, {2}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("Other_Tracked_Alt")
+                          .values({{1}, {2}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("Own_Tracked_Alt_Rate")
+                          .values({{600}, {601}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("Alt_Layer_Value")
+                          .values({{0}, {1}, {2}, {3}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("Up_Separation")
+                          .values({{0},
+                                   {399},
+                                   {400},
+                                   {499},
+                                   {500},
+                                   {639},
+                                   {640},
+                                   {739},
+                                   {740},
+                                   {840}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::INTEGER)
+                          .name("Down_Separation")
+                          .values({{0},
+                                   {399},
+                                   {400},
+                                   {499},
+                                   {500},
+                                   {639},
+                                   {640},
+                                   {739},
+                                   {740},
+                                   {840}}));
+  model.add_parameter(
+      parameter()
+          .type(parameter_type::ENUM)
+          .name("Alt_Layer_Value")
+          .values({{"NO_INTENT"}, {"DO_NOT_CLIMB"}, {"DO_NOT_DESCEND"}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::ENUM)
+                          .name("Other_Capability")
+                          .values({{"TCAS_TA"}, {"OTHER"}}));
+  model.add_parameter(parameter()
+                          .type(parameter_type::BOOLEAN)
+                          .name("Climb_Inhibit")
+                          .values({{true}, {false}}));
+
+  return model;
+}
+
 }  // namespace
 
 TEST_CASE("cagen, testing simple model, strength 1") {
@@ -102,34 +180,6 @@ TEST_CASE("cagen, testing simple model, strength 1") {
   // Thus, for 1-way coverage we shall get a testset with exactly
   // three rows.
   CHECK(ipog_test_set.get_list_of_tests().size() == 3);
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 1,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-  }
-
-  // The parameter with the largest number of values has 3 values.
-  // Thus, for 1-way coverage we shall get a testset with exactly
-  // three rows.
-  CHECK(ipog_otf_test_set.get_list_of_tests().size() == 3);
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing simple model, strength 2") {
@@ -155,29 +205,6 @@ TEST_CASE("cagen, testing simple model, strength 2") {
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 2,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-  }
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing simple model, strength 3") {
@@ -203,29 +230,6 @@ TEST_CASE("cagen, testing simple model, strength 3") {
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 3,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-  }
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing PICT example model, strength 1") {
@@ -256,34 +260,6 @@ TEST_CASE("cagen, testing PICT example model, strength 1") {
     // four rows.
     CHECK(ipog_test_set.get_list_of_tests().size() == 4);
   }
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 1,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-
-    // The parameter with the largest number of values has 4 values.
-    // Thus, for 1-way coverage we shall get a testset with exactly
-    // four rows.
-    CHECK(ipog_otf_test_set.get_list_of_tests().size() == 4);
-  }
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing PICT example model, strength 2") {
@@ -309,29 +285,6 @@ TEST_CASE("cagen, testing PICT example model, strength 2") {
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 2,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-  }
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing PICT example model, strength 3") {
@@ -357,29 +310,6 @@ TEST_CASE("cagen, testing PICT example model, strength 3") {
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 3,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-  }
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing PICT example model, strength 4") {
@@ -405,29 +335,6 @@ TEST_CASE("cagen, testing PICT example model, strength 4") {
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 4,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-  }
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing PICT example model, strength 5") {
@@ -453,29 +360,6 @@ TEST_CASE("cagen, testing PICT example model, strength 5") {
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 5,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-  }
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing PICT example model, strength 6") {
@@ -501,29 +385,6 @@ TEST_CASE("cagen, testing PICT example model, strength 6") {
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
-
-  test_set ipog_otf_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 6,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG_OTF in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-  }
-
-  CHECK(ipog_test_set == ipog_otf_test_set);
 }
 
 TEST_CASE("cagen, testing PICT example model, strength 7") {
@@ -549,27 +410,135 @@ TEST_CASE("cagen, testing PICT example model, strength 7") {
               << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
   }
+}
 
-  test_set ipog_otf_test_set;
+TEST_CASE("cagen, testing unconstrained ACTS example model, strength 1") {
+  using namespace citcpp;
+
+  model model{create_acts_example_model()};
+
+  test_set ipog_test_set;
   {
     std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, 7,
-            covering_array_computation_config().with_algorithm(
-                covering_array_computation_algorithm::IPOG_OTF));
+        compute_covering_array_ipog(model, 1,
+                                    covering_array_computation_config());
     auto f = handle->get_test_set();
     cagen_exec_result result(f.get());
-    ipog_otf_test_set = result.get_result();
+    ipog_test_set = result.get_result();
 
     CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
                                           COVERING_ARRAY_GENERATION_COMPLETED);
 
-    std::cout << "Test set generated using IPOG_OTF in "
+    std::cout << "Test set generated using IPOG in "
               << duration_wrapper(std::chrono::milliseconds(
                      handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_otf_test_set.get_list_of_tests().size()
+              << " and has " << ipog_test_set.get_list_of_tests().size()
               << " rows." << std::endl;
-  }
 
-  CHECK(ipog_test_set == ipog_otf_test_set);
+    // The parameter with the largest number of values has 10 values.
+    // Thus, for 1-way coverage we shall get a testset with exactly
+    // 10 rows.
+    CHECK(ipog_test_set.get_list_of_tests().size() == 10);
+
+    std::unique_ptr<covm_exec_handle> covm_handle = measure_coverage(
+        model, ipog_test_set, 1, coverage_measurement_config());
+    auto covm_f = covm_handle->get_coverage_measurement();
+    covm_exec_result covm_result(covm_f.get());
+    const coverage_measurement& covm = covm_result.get_result().at("");
+
+    CHECK(covm_result.get_result_code() ==
+          covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+    std::cout << "Coverage measured in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     covm_handle->get_duration_in_milli_seconds()))
+              << std::endl;
+
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          44);
+  }
+}
+
+TEST_CASE("cagen, testing unconstrained ACTS example model, strength 2") {
+  using namespace citcpp;
+
+  model model{create_acts_example_model()};
+
+  test_set ipog_test_set;
+  {
+    std::unique_ptr<cagen_exec_handle_ipog> handle =
+        compute_covering_array_ipog(model, 2,
+                                    covering_array_computation_config());
+    auto f = handle->get_test_set();
+    cagen_exec_result result(f.get());
+    ipog_test_set = result.get_result();
+
+    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                          COVERING_ARRAY_GENERATION_COMPLETED);
+
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
+              << " and has " << ipog_test_set.get_list_of_tests().size()
+              << " rows." << std::endl;
+
+    std::unique_ptr<covm_exec_handle> covm_handle = measure_coverage(
+        model, ipog_test_set, 2, coverage_measurement_config());
+    auto covm_f = covm_handle->get_coverage_measurement();
+    covm_exec_result covm_result(covm_f.get());
+    const coverage_measurement& covm = covm_result.get_result().at("");
+
+    CHECK(covm_result.get_result_code() ==
+          covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+    std::cout << "Coverage measured in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     covm_handle->get_duration_in_milli_seconds()))
+              << std::endl;
+
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          837);
+  }
+}
+
+TEST_CASE("cagen, testing unconstrained ACTS example model, strength 3") {
+  using namespace citcpp;
+
+  model model{create_acts_example_model()};
+
+  test_set ipog_test_set;
+  {
+    std::unique_ptr<cagen_exec_handle_ipog> handle =
+        compute_covering_array_ipog(model, 3,
+                                    covering_array_computation_config());
+    auto f = handle->get_test_set();
+    cagen_exec_result result(f.get());
+    ipog_test_set = result.get_result();
+
+    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                          COVERING_ARRAY_GENERATION_COMPLETED);
+
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
+              << " and has " << ipog_test_set.get_list_of_tests().size()
+              << " rows." << std::endl;
+
+    std::unique_ptr<covm_exec_handle> covm_handle = measure_coverage(
+        model, ipog_test_set, 3, coverage_measurement_config());
+    auto covm_f = covm_handle->get_coverage_measurement();
+    covm_exec_result covm_result(covm_f.get());
+    const coverage_measurement& covm = covm_result.get_result().at("");
+
+    CHECK(covm_result.get_result_code() ==
+          covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+    std::cout << "Coverage measured in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     covm_handle->get_duration_in_milli_seconds()))
+              << std::endl;
+
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          9158);
+  }
 }

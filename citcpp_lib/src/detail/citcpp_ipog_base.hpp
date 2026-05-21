@@ -1,8 +1,10 @@
 #ifndef DETAIL_CITCPP_IPOG_BASE_HPP_
 #define DETAIL_CITCPP_IPOG_BASE_HPP_
 
+#include <memory>
 #include <vector>
 
+#include "constraint_handler.hpp"
 #include "internal_model.hpp"
 
 namespace citcpp {

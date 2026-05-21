@@ -5,6 +5,10 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "cagen_exec_handle_ipog_impl.hpp"
+#include "constraint_handler_sylvan_ldd.hpp"
+#include "constraint_handler_void.hpp"
+
 namespace {
 
 bool is_covered_by(const citcpp::detail::internal_relation& rel,
@@ -185,15 +189,18 @@ unsigned int citcpp_ipog_base::length_of_common_param_prefix(
     const citcpp::detail::internal_relation& rel,
     const std::vector<unsigned int>& parameter_index_map) {
 
-  for (unsigned int param_idx = 0; param_idx < parameter_index_map.size();
+  unsigned int param_idx = 0;
+  for (; param_idx < parameter_index_map.size() &&
+         param_idx < rel.get_parameter_index_map().size();
        ++param_idx) {
+
     if (parameter_index_map[param_idx] !=
         rel.get_parameter_index_map()[param_idx]) {
       return param_idx;
     }
   }
 
-  return parameter_index_map.size();
+  return param_idx;
 }
 
 }  // namespace detail

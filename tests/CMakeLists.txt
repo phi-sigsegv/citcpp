@@ -5,9 +5,13 @@ include(${CITCPP_3RD_PARTY_DIR}/doctest/cmake/doctest.cmake)
 list(APPEND CITCPP_UNITTESTS 
   test_binom_coeff_table
   test_bitset
+  test_sylvan_idd
+  test_idd_projection
+  test_sylvan_idd_constraint_handler
   test_cagen
   test_cagen_extend
   test_cagen_relations
+  test_constrained_cagen
   test_cov_measure_result
   test_cov_measure
   test_cov_measure_relations

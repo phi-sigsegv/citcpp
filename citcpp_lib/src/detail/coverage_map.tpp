@@ -1,0 +1,101 @@
+#include <algorithm>
+
+#include "coverage_map.hpp"
+
+namespace {
+
+template <typename T_SECOND_LEVEL_TYPE>
+inline unsigned long long recursively_initialize_coverage_map(
+    int start_idx_for_next, int current_level,
+    unsigned long long num_value_combinations,
+    citcpp::detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>& cov_map,
+    const citcpp::detail::internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    typename citcpp::detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::size_type&
+        cov_map_first_level_index,
+    citcpp::detail::param_vector& param_indices) {
+  using namespace citcpp::detail;
+
+  unsigned long long partial_sum = 0;
+  for (int j = start_idx_for_next; j >= current_level; --j) {
+    param_indices[current_level] = parameter_index_map[j];
+
+    if (current_level == 0) {
+      unsigned long long final_num_value_combinations =
+          num_value_combinations *
+          model.get_parameter_num_values()[parameter_index_map[j]];
+      partial_sum += final_num_value_combinations;
+
+      cov_map.get_coverage_map()[cov_map_first_level_index] =
+          typename citcpp::detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::
+              second_level_type(final_num_value_combinations, param_indices);
+
+      ++cov_map_first_level_index;
+    } else {
+      partial_sum += recursively_initialize_coverage_map(
+          j - 1, current_level - 1,
+          num_value_combinations *
+              model.get_parameter_num_values()[parameter_index_map[j]],
+          cov_map, model, parameter_index_map, cov_map_first_level_index,
+          param_indices);
+    }
+  }
+
+  return partial_sum;
+}
+
+}  // namespace
+
+namespace citcpp {
+namespace detail {
+
+inline coverage_map_base::coverage_map_base(
+    unsigned int n, unsigned int t, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    const binom_coeff_table& binomial_coeffs, bool fixed_last_parameter)
+    : size_(fixed_last_parameter ? binomial_coeffs.get_coefficient(n - 1, t - 1)
+                                 : binomial_coeffs.get_coefficient(n, t)),
+      model_(model),
+      parameter_index_map_(parameter_index_map),
+      n_(n),
+      t_(t),
+      total_num_tuples_(0) {}
+
+template <typename T_SECOND_LEVEL_TYPE>
+coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::coverage_map_tmpl(
+    unsigned int n, unsigned int t, const internal_model& model,
+    const std::vector<unsigned int>& parameter_index_map,
+    const binom_coeff_table& binomial_coeffs, bool fixed_last_parameter)
+    : base_type(n, t, model, parameter_index_map, binomial_coeffs,
+                fixed_last_parameter),
+      cov_map_(size_) {
+  size_type cov_map_first_level_index = 0;
+  param_vector param_indices(t);
+
+  if (fixed_last_parameter) {
+    const unsigned int real_last_param_idx = parameter_index_map[n_ - 1];
+    const int num_last_param_values =
+        model.get_parameter_num_values()[real_last_param_idx];
+
+    param_indices[t - 1] = real_last_param_idx;
+
+    if (t_ >= 2) {
+      total_num_tuples_ = recursively_initialize_coverage_map(
+          n_ - 2, t_ - 2, num_last_param_values, *this, model,
+          parameter_index_map, cov_map_first_level_index, param_indices);
+    } else {
+      // We have exactly one parameter to select, which is just the one we have
+      // fixed. So we do not have to walk over combinations of parameters here.
+      get_coverage_map()[0] =
+          second_level_type(num_last_param_values, param_indices);
+      total_num_tuples_ = num_last_param_values;
+    }
+  } else {
+    total_num_tuples_ = recursively_initialize_coverage_map(
+        n_ - 1, t_ - 1, 1, *this, model, parameter_index_map,
+        cov_map_first_level_index, param_indices);
+  }
+}
+
+}  // namespace detail
+}  // namespace citcpp
