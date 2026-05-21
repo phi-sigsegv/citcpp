@@ -123,14 +123,12 @@ void main_ipog_loop_body(
     }
 
     auto horizontal_ext_res =
-        // with_mt ? ipog_horizontal_extension(number_combos_to_process,
-        //                                     constr_handler, test_set,
-        //                                     relation_cov_maps, exec)
-        //         : ipog_horizontal_extension(number_combos_to_process,
-        //                                     constr_handler, test_set,
-        //                                     relation_cov_maps);
-        ipog_horizontal_extension(number_combos_to_process, constr_handler,
-                                  test_set, relation_cov_maps);
+        with_mt ? ipog_horizontal_extension(number_combos_to_process,
+                                            constr_handler, test_set,
+                                            relation_cov_maps, exec)
+                : ipog_horizontal_extension(number_combos_to_process,
+                                            constr_handler, test_set,
+                                            relation_cov_maps);
 
     exec.suspend_workers();
 
