@@ -1616,9 +1616,6 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
 #define sylvan_idd_join(a, b, a_proj, b_proj) \
   RUN(sylvan_idd_join, a, b, a_proj, b_proj)
 
-#define sylvan_idd_fill_all_recursive(cube, current_index, ctx) \
-  RUN(sylvan_idd_fill_all_recursive, cube, current_index, ctx)
-
 #define sylvan_idd_mark_valid_recursive(ldd, cube, idd_var_idx, current_index, \
                                         ctx)                                   \
   RUN(sylvan_idd_mark_valid_recursive, ldd, cube, idd_var_idx, current_index,  \

@@ -42,7 +42,6 @@ class functor_executor_lace {
 
   private:
     unsigned int n_workers_;
-    bool workers_suspended_;
 };
 
 }  // namespace detail

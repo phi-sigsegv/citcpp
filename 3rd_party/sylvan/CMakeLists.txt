@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 
 project(sylvan
-    VERSION 1.9.4
+    VERSION 1.10.0
     DESCRIPTION "Sylvan, a parallel decision diagram library"
     HOMEPAGE_URL "https://github.com/trolando/sylvan"
     LANGUAGES C CXX
@@ -32,13 +32,13 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/")
 # Then try to find lace in the OS using find_package.
 # If that fails, then download lace.
 if(NOT TARGET lace)
-  find_package(lace 1.5.3 QUIET)
+  find_package(lace 1.6.0 QUIET)
   if(NOT lace_FOUND)
     include(FetchContent)
     FetchContent_Declare(
         lace
         GIT_REPOSITORY https://github.com/trolando/lace.git
-        GIT_TAG        v1.5.3
+        GIT_TAG        v1.6.0
         GIT_SHALLOW    TRUE
     )
     FetchContent_MakeAvailable(lace)
