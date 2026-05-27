@@ -220,7 +220,7 @@ class ipog_vertical_extension_functor {
                          .get_value_partition_intrusive_list_node());
 
       // Cache the test in the constraint handler.
-      constr_handler_.cache_partial_test(&t);
+      constr_handler_.cache_partial_test(&test_set_.get_list_of_tests().back());
     }
 
     bool ipog_vertical_extension_try_inject_value_combo(
