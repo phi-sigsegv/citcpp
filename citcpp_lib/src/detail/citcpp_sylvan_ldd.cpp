@@ -412,16 +412,25 @@ TASK_5(int, sylvan_idd_sat_with_partial_assignment_recursive, MDD, ldd,
   }
 }
 
-TASK_5(int, sylvan_idd_sat_with_partial_assignment, MDD, ldd, const uint32_t*,
-       variables, int, num_variables, const int*, values, int, num_values) {
+struct partial_assignment_ctx {
+    const uint32_t* variables;
+    int num_variables;
+    const int* values;
+    int num_values;
+    const uint32_t* variable_order;
+};
+
+TASK_2(int, sylvan_idd_sat_with_partial_assignment, MDD, ldd,
+       const partial_assignment_ctx*, ctx) {
 
   // First we create cubes that specifies which variable we have assignments
   // for, and what are the assigned values.
   MDD variables_cube = lddmc_true;
   MDD values_cube = lddmc_true;
-  for (int v = num_variables - 1; v >= 0; --v) {
-    const uint32_t var = variables[v];
-    const int value = values[var];
+  for (int v = ctx->num_variables - 1; v >= 0; --v) {
+    const uint32_t var = ctx->variables[v];
+    const int value = ctx->variable_order ? ctx->values[ctx->variable_order[var]]
+                                          : ctx->values[var];
 
     if (value >= 0) {
       variables_cube = lddmc_makenode(v, variables_cube, lddmc_false);
@@ -927,22 +936,22 @@ TASK_7(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd, MDD,
   }
 }
 
-TASK_7(MDD, sylvan_idd_get_valid_variable_assignments, MDD, ldd,
-       const uint32_t*, variables, int, num_variables, const int*, values, int,
-       num_values, uint32_t, variable, uint32_t, domain_size) {
+TASK_4(MDD, sylvan_idd_get_valid_variable_assignments, MDD, ldd, uint32_t,
+       variable, uint32_t, domain_size, const partial_assignment_ctx*, ctx) {
 
   // First we create cubes that specify which variable we have assignments
   // for, and what are the assigned values.
   MDD variables_cube = lddmc_true;
   MDD values_cube = lddmc_true;
   int variable_index = -1;
-  for (int v = num_variables - 1; v >= 0; --v) {
-    const uint32_t var = variables[v];
+  for (int v = ctx->num_variables - 1; v >= 0; --v) {
+    const uint32_t var = ctx->variables[v];
     if (var == variable) {
       variable_index = v;
     }
 
-    const int value = values[var];
+    const int value = ctx->variable_order ? ctx->values[ctx->variable_order[var]]
+                                          : ctx->values[var];
     if (value >= 0) {
       variables_cube = lddmc_makenode(v, variables_cube, lddmc_false);
       values_cube = lddmc_makenode(value, values_cube, lddmc_false);
@@ -978,6 +987,20 @@ TASK_2(MDD, sylvan_idd_create_cube_from_assignments, const int*, assignments,
   MDD cube = lddmc_true;
   for (int var = num_assignments - 1; var >= 0; --var) {
     const int value = assignments[var];
+    if (value >= 0) {
+      cube = lddmc_makenode(encode_interval(value, value), cube, lddmc_false);
+    }
+  }
+
+  return cube;
+}
+
+TASK_3(MDD, sylvan_idd_create_cube_from_assignments_with_order, const int*,
+       assignments, const uint32_t*, variable_order, int, num_levels) {
+
+  MDD cube = lddmc_true;
+  for (int level = num_levels - 1; level >= 0; --level) {
+    const int value = assignments[variable_order[level]];
     if (value >= 0) {
       cube = lddmc_makenode(encode_interval(value, value), cube, lddmc_false);
     }
@@ -1081,17 +1104,17 @@ TASK_4(MDD, sylvan_idd_full_sat_one_under_partial_assignment_recursive, MDD,
   }
 }
 
-TASK_5(MDD, sylvan_idd_full_sat_one_under_partial_assignment, MDD, ldd,
-       const uint32_t*, variables, int, num_variables, const int*, values, int,
-       num_values) {
+TASK_2(MDD, sylvan_idd_full_sat_one_under_partial_assignment, MDD, ldd,
+       const partial_assignment_ctx*, ctx) {
 
   // First we create cubes that specify which variables we have assignments
   // for, and what are the assigned values.
   MDD variables_cube = lddmc_true;
   MDD values_cube = lddmc_true;
-  for (int v = num_variables - 1; v >= 0; --v) {
-    const uint32_t var = variables[v];
-    const int value = values[var];
+  for (int v = ctx->num_variables - 1; v >= 0; --v) {
+    const uint32_t var = ctx->variables[v];
+    const int value = ctx->variable_order ? ctx->values[ctx->variable_order[var]]
+                                          : ctx->values[var];
 
     if (value >= 0) {
       variables_cube = lddmc_makenode(v, variables_cube, lddmc_false);
@@ -1595,23 +1618,39 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
   RUN(sylvan_idd_create_projection_cube, target_variables,   \
       num_target_variables, local_variables, num_local_variables)
 
-#define sylvan_idd_sat_with_partial_assignment(ldd, variables, num_variables, \
-                                               values, num_values)            \
-  RUN(sylvan_idd_sat_with_partial_assignment, ldd, variables, num_variables,  \
-      values, num_values)
+#define sylvan_idd_create_cube_from_assignments_with_order(             \
+    assignments, variable_order, num_levels)                            \
+  RUN(sylvan_idd_create_cube_from_assignments_with_order, assignments, \
+      variable_order, num_levels)
+
+#define sylvan_idd_sat_with_partial_assignment(                              \
+    ldd, variables, num_variables, values, num_values, variable_order)       \
+  ({                                                                         \
+    partial_assignment_ctx _ctx = {variables, num_variables, values,         \
+                                   num_values, variable_order};              \
+    RUN(sylvan_idd_sat_with_partial_assignment, ldd, &_ctx);                 \
+  })
 
 #define sylvan_idd_get_valid_variable_assignments(                            \
-    ldd, variables, num_variables, values, num_values, variable, domain_size) \
-  RUN(sylvan_idd_get_valid_variable_assignments, ldd, variables,              \
-      num_variables, values, num_values, variable, domain_size)
+    ldd, variables, num_variables, values, num_values, variable, domain_size, \
+    variable_order)                                                           \
+  ({                                                                          \
+    partial_assignment_ctx _ctx = {variables, num_variables, values,          \
+                                   num_values, variable_order};               \
+    RUN(sylvan_idd_get_valid_variable_assignments, ldd, variable,             \
+        domain_size, &_ctx);                                                  \
+  })
 
 #define sylvan_idd_create_cube_from_assignments(assignments, num_assignments) \
   RUN(sylvan_idd_create_cube_from_assignments, assignments, num_assignments)
 
 #define sylvan_idd_full_sat_one_under_partial_assignment(               \
-    ldd, variables, num_variables, values, num_values)                  \
-  RUN(sylvan_idd_full_sat_one_under_partial_assignment, ldd, variables, \
-      num_variables, values, num_values)
+    ldd, variables, num_variables, values, num_values, variable_order)  \
+  ({                                                                    \
+    partial_assignment_ctx _ctx = {variables, num_variables, values,    \
+                                   num_values, variable_order};         \
+    RUN(sylvan_idd_full_sat_one_under_partial_assignment, ldd, &_ctx);  \
+  })
 
 #define sylvan_idd_join(a, b, a_proj, b_proj) \
   RUN(sylvan_idd_join, a, b, a_proj, b_proj)
@@ -1742,15 +1781,29 @@ sylvan_idd::sylvan_idd(uint32_t variable, uint32_t value)
   lddmc_protect(&idd_);
 }
 
-sylvan_idd::sylvan_idd(const std::vector<int>& assignments)
-    : idd_(sylvan_idd_create_cube_from_assignments(assignments.data(),
-                                                   assignments.size())),
+sylvan_idd::sylvan_idd(const std::vector<int>& assignments,
+                       const std::vector<unsigned int>* variable_order)
+    : idd_(variable_order
+               ? sylvan_idd_create_cube_from_assignments_with_order(
+                     assignments.data(), variable_order->data(),
+                     variable_order->size())
+               : sylvan_idd_create_cube_from_assignments(assignments.data(),
+                                                         assignments.size())),
       variables_() {
 
-  for (int var = 0; var < assignments.size(); ++var) {
-    const int value = assignments[var];
-    if (value >= 0) {
-      variables_.push_back(var);
+  if (variable_order) {
+    for (int level = 0; level < variable_order->size(); ++level) {
+      const int value = assignments[(*variable_order)[level]];
+      if (value >= 0) {
+        variables_.push_back(level);
+      }
+    }
+  } else {
+    for (int var = 0; var < assignments.size(); ++var) {
+      const int value = assignments[var];
+      if (value >= 0) {
+        variables_.push_back(var);
+      }
     }
   }
 
@@ -2131,24 +2184,28 @@ void sylvan_idd::print_dot(const std::string& file_path) const {
 }
 
 bool sylvan_idd::is_sat_with_partial_assignment(
-    const std::vector<int>& partial_assignment) const {
+    const std::vector<int>& partial_assignment,
+    const std::vector<unsigned int>* variable_order) const {
 
   const int res = sylvan_idd_sat_with_partial_assignment(
-      idd_, variables_.data(), variables_.size(), partial_assignment.data(),
-      partial_assignment.size());
+      idd_, variables_.data(), (int)variables_.size(),
+      partial_assignment.data(), (int)partial_assignment.size(),
+      variable_order ? variable_order->data() : nullptr);
 
   return res != 0;
 }
 
 bitset_uint64 sylvan_idd::get_valid_variable_assignments(
     uint32_t variable, uint32_t domain_size,
-    const std::vector<int>& partial_assignment) const {
+    const std::vector<int>& partial_assignment,
+    const std::vector<unsigned int>* variable_order) const {
 
   bitset_uint64 valid_values_as_bitset(domain_size);
 
   MDD valid_values_as_ldd = sylvan_idd_get_valid_variable_assignments(
-      idd_, variables_.data(), variables_.size(), partial_assignment.data(),
-      partial_assignment.size(), variable, domain_size);
+      idd_, variables_.data(), (int)variables_.size(),
+      partial_assignment.data(), (int)partial_assignment.size(), variable,
+      domain_size, variable_order ? variable_order->data() : nullptr);
 
   if (valid_values_as_ldd == lddmc_true) {
     for (uint32_t v = 0; v < domain_size; ++v) {
@@ -2170,19 +2227,23 @@ bitset_uint64 sylvan_idd::get_valid_variable_assignments(
 }
 
 void sylvan_idd::get_sat_one_under_partial_assignment(
-    std::vector<int>& assignment) const {
+    std::vector<int>& assignment,
+    const std::vector<unsigned int>* variable_order) const {
 
   MDD cube = sylvan_idd_full_sat_one_under_partial_assignment(
-      idd_, variables_.data(), variables_.size(), assignment.data(),
-      assignment.size());
+      idd_, variables_.data(), (int)variables_.size(), assignment.data(),
+      (int)assignment.size(),
+      variable_order ? variable_order->data() : nullptr);
 
   int var_idx = 0;
   while (cube != lddmc_true && cube != lddmc_false) {
     mddnode_t node = LDD_GETNODE(cube);
-    if (assignment[variables_[var_idx]] < 0) {
+    uint32_t level = variables_[var_idx];
+    uint32_t target_idx = variable_order ? (*variable_order)[level] : level;
+    if (assignment[target_idx] < 0) {
       uint32_t n_value = mddnode_getvalue(node);
       interval ival = decode_interval(n_value);
-      assignment[variables_[var_idx]] = ival.lb;
+      assignment[target_idx] = ival.lb;
     }
     cube = mddnode_getdown(node);
     ++var_idx;

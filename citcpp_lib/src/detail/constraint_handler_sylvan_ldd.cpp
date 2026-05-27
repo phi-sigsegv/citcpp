@@ -638,28 +638,16 @@ void constraint_handler_sylvan_idd::initialize_variable_order(
   }
 }
 
-std::vector<int> constraint_handler_sylvan_idd::get_reordered_values(
-    const std::vector<int>& values) const {
-
-  std::vector<int> reordered(values.size());
-  for (unsigned int level = 0; level < variable_order_.size(); ++level) {
-    reordered[level] = values[variable_order_[level]];
-  }
-
-  return reordered;
-}
-
 bool constraint_handler_sylvan_idd::is_thread_safe() const { return false; }
 
 bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
-  std::vector<int> reordered_values = get_reordered_values(t.get_values());
-
   auto it = test_to_idd_.find(&t);
   if (it != test_to_idd_.end()) {
-    return it->second.is_sat_with_partial_assignment(reordered_values);
+    return it->second.is_sat_with_partial_assignment(t.get_values(),
+                                                     &variable_order_);
   }
 
-  return idd_.is_sat_with_partial_assignment(reordered_values);
+  return idd_.is_sat_with_partial_assignment(t.get_values(), &variable_order_);
 }
 
 void constraint_handler_sylvan_idd::mark_valid_tuples(
@@ -683,17 +671,18 @@ bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
 bitset_uint64 constraint_handler_sylvan_idd::get_valid_parameter_assignments(
     const test& t, unsigned int param_idx) const {
 
-  std::vector<int> reordered_values = get_reordered_values(t.get_values());
   auto it = test_to_idd_.find(&t);
   if (it != test_to_idd_.end()) {
     return it->second.get_valid_variable_assignments(
         parameter_to_level_[param_idx],
-        model_.get_parameter_num_values()[param_idx], reordered_values);
+        model_.get_parameter_num_values()[param_idx], t.get_values(),
+        &variable_order_);
   }
 
   return idd_.get_valid_variable_assignments(
       parameter_to_level_[param_idx],
-      model_.get_parameter_num_values()[param_idx], reordered_values);
+      model_.get_parameter_num_values()[param_idx], t.get_values(),
+      &variable_order_);
 }
 
 std::vector<bitset_uint64>
@@ -709,17 +698,12 @@ constraint_handler_sylvan_idd::get_valid_parameter_assignments(
 }
 
 void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
-  std::vector<int> reordered_values = get_reordered_values(t.get_values());
-
   auto it = test_to_idd_.find(&t);
   if (it != test_to_idd_.end()) {
-    it->second.get_sat_one_under_partial_assignment(reordered_values);
+    it->second.get_sat_one_under_partial_assignment(t.get_values(),
+                                                    &variable_order_);
   } else {
-    idd_.get_sat_one_under_partial_assignment(reordered_values);
-  }
-
-  for (unsigned int level = 0; level < variable_order_.size(); ++level) {
-    t.get_values()[variable_order_[level]] = reordered_values[level];
+    idd_.get_sat_one_under_partial_assignment(t.get_values(), &variable_order_);
   }
 
   // The call above only replaces don't care values for constrained variables.
@@ -742,8 +726,9 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(
 
 void constraint_handler_sylvan_idd::cache_partial_test(const test* t) {
   if (is_per_test_idd_enabled_) {
-    test_to_idd_.emplace(t, sylvan_idd::project_intersect(
-                                idd_, get_reordered_values(t->get_values())));
+    test_to_idd_.emplace(
+        t, sylvan_idd::project_intersect(idd_, sylvan_idd(t->get_values(),
+                                                          &variable_order_)));
   }
 }
 
@@ -751,8 +736,8 @@ void constraint_handler_sylvan_idd::update_cached_partial_test(const test* t) {
   if (is_per_test_idd_enabled_) {
     auto it = test_to_idd_.find(t);
     if (it != test_to_idd_.end()) {
-      it->second.project_intersect(
-          sylvan_idd(get_reordered_values(t->get_values())));
+      it->second.project_intersect(sylvan_idd(t->get_values(),
+                                              &variable_order_));
     } else {
       cache_partial_test(t);
     }
@@ -770,12 +755,13 @@ void constraint_handler_sylvan_idd::update_cached_partial_test(
     } else {
       auto emplace_result = test_to_idd_.emplace(
           t, sylvan_idd::project_intersect(
-                 idd_, get_reordered_values(t->get_values())));
+                 idd_, sylvan_idd(t->get_values(), &variable_order_)));
       emplace_result.first->second.project_intersect(
           sylvan_idd(parameter_to_level_[param_idx], value));
     }
   }
 }
+
 
 bool constraint_handler_sylvan_idd::is_per_test_idd_enabled() const {
   return is_per_test_idd_enabled_;
