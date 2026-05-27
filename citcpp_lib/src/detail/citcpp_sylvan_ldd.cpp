@@ -2050,7 +2050,8 @@ sylvan_idd sylvan_idd::project(
 
 void sylvan_idd::mark_valid_value_combinations(
     coverage_map_second_level& value_combinations,
-    const std::vector<unsigned int>& domain_sizes) const {
+    const std::vector<unsigned int>& domain_sizes,
+    const std::vector<unsigned int>* parameter_to_level) const {
 
   if (idd_ == lddmc_false) return;
   if (value_combinations.all_valid()) return;
@@ -2076,7 +2077,11 @@ void sylvan_idd::mark_valid_value_combinations(
       int pos;
   };
   std::vector<p_info> sorted_p;
-  for (int i = 0; i < t; ++i) sorted_p.push_back({p_indices[i], i});
+  for (int i = 0; i < t; ++i) {
+    uint32_t p_id =
+        parameter_to_level ? (*parameter_to_level)[p_indices[i]] : p_indices[i];
+    sorted_p.push_back({p_id, i});
+  }
   std::sort(sorted_p.begin(), sorted_p.end(),
             [](const p_info& a, const p_info& b) { return a.id < b.id; });
 

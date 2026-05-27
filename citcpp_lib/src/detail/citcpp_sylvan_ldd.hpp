@@ -119,7 +119,8 @@ class sylvan_idd {
      */
     void mark_valid_value_combinations(
         coverage_map_second_level& value_combinations,
-        const std::vector<unsigned int>& domain_sizes) const;
+        const std::vector<unsigned int>& domain_sizes,
+        const std::vector<unsigned int>* parameter_to_level = nullptr) const;
 
     /**
      * Return the number of nodes in this IDD.
