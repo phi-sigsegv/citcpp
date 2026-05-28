@@ -28,8 +28,12 @@ class constraint_to_xdd_visitor {
   public:
     constraint_to_xdd_visitor(
         const citcpp::detail::internal_model& model,
-        const std::vector<unsigned int>& parameter_to_level)
-        : model_(model), param_to_level_(), negate_(false) {
+        const std::vector<unsigned int>& parameter_to_level,
+        const std::vector<unsigned int>& reordered_domain_sizes)
+        : model_(model),
+          param_to_level_(),
+          reordered_domain_sizes_(reordered_domain_sizes),
+          negate_(false) {
 
       int idx = 0;
       for (const auto& param : model_.get_input_model().get_parameters()) {
@@ -261,10 +265,9 @@ class constraint_to_xdd_visitor {
 
       T_DD consequence = impl.get_right_operand()->accept<T_DD>(*this);
 
-      T_DD ldd = negate_
-                     ? T_DD::project_intersect(premise, consequence)
-                     : T_DD::project_union(premise, consequence,
-                                           model_.get_parameter_num_values());
+      T_DD ldd = negate_ ? T_DD::project_intersect(premise, consequence)
+                         : T_DD::project_union(premise, consequence,
+                                               reordered_domain_sizes_);
 
       return ldd;
     }
@@ -283,7 +286,7 @@ class constraint_to_xdd_visitor {
         } else {
           if (negate_) {
             ldd.project_union(operand->accept<T_DD>(*this),
-                              model_.get_parameter_num_values());
+                              reordered_domain_sizes_);
           } else {
             ldd.project_intersect(operand->accept<T_DD>(*this));
           }
@@ -309,7 +312,7 @@ class constraint_to_xdd_visitor {
             ldd.project_intersect(operand->accept<T_DD>(*this));
           } else {
             ldd.project_union(operand->accept<T_DD>(*this),
-                              model_.get_parameter_num_values());
+                              reordered_domain_sizes_);
           }
         }
       }
@@ -324,6 +327,7 @@ class constraint_to_xdd_visitor {
     std::unordered_map<citcpp::parameter_reference, int,
                        citcpp::parameter_reference_hash>
         param_to_level_;
+    const std::vector<unsigned int>& reordered_domain_sizes_;
     bool negate_;
 };
 
@@ -571,7 +575,8 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
 
   initialize_variable_order(variable_order);
 
-  constraint_to_xdd_visitor<sylvan_idd> visitor(model, parameter_to_level_);
+  constraint_to_xdd_visitor<sylvan_idd> visitor(model, parameter_to_level_,
+                                                reordered_domain_sizes_);
   sylvan_idd idd_true = sylvan_idd::iddTrue();
   sylvan_idd idd = idd_true;
   for (const auto& constr : model.get_input_model().get_constraints()) {
@@ -600,7 +605,8 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
 
   initialize_variable_order(variable_order);
 
-  constraint_to_xdd_visitor<sylvan_idd> visitor(model, parameter_to_level_);
+  constraint_to_xdd_visitor<sylvan_idd> visitor(model, parameter_to_level_,
+                                                reordered_domain_sizes_);
   sylvan_idd idd_true = sylvan_idd::iddTrue();
   sylvan_idd idd = idd_true;
   for (const auto& constr : model.get_input_model().get_constraints()) {
@@ -727,8 +733,8 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(
 void constraint_handler_sylvan_idd::cache_partial_test(const test* t) {
   if (is_per_test_idd_enabled_) {
     test_to_idd_.emplace(
-        t, sylvan_idd::project_intersect(idd_, sylvan_idd(t->get_values(),
-                                                          &variable_order_)));
+        t, sylvan_idd::project_intersect(
+               idd_, sylvan_idd(t->get_values(), &variable_order_)));
   }
 }
 
@@ -736,8 +742,8 @@ void constraint_handler_sylvan_idd::update_cached_partial_test(const test* t) {
   if (is_per_test_idd_enabled_) {
     auto it = test_to_idd_.find(t);
     if (it != test_to_idd_.end()) {
-      it->second.project_intersect(sylvan_idd(t->get_values(),
-                                              &variable_order_));
+      it->second.project_intersect(
+          sylvan_idd(t->get_values(), &variable_order_));
     } else {
       cache_partial_test(t);
     }
@@ -761,7 +767,6 @@ void constraint_handler_sylvan_idd::update_cached_partial_test(
     }
   }
 }
-
 
 bool constraint_handler_sylvan_idd::is_per_test_idd_enabled() const {
   return is_per_test_idd_enabled_;

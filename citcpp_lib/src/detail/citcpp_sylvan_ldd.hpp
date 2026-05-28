@@ -141,7 +141,9 @@ class sylvan_idd {
      * vector. The vector is expected to be large enough such that
      * for each variable of this IDD a value can be written to it.
      */
-    void get_sat_one(std::vector<int>& assignment) const;
+    void get_sat_one(
+        std::vector<int>& assignment,
+        const std::vector<unsigned int>* variable_order = nullptr) const;
 
     /**
      * Writes this IDD to the specified file as a DOT representation.
