@@ -33,6 +33,25 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
         constraint_handler_init_progress& exec_handle);
 
     /**
+     * Constructs a constraint handler with a custom variable order.
+     * The variable order is specified as a mapping from variable level in the
+     * IDD to the index of the parameter in the model.
+     */
+    constraint_handler_sylvan_idd(
+        const internal_model& model,
+        const std::vector<unsigned int>& variable_order, int num_workers);
+
+    /**
+     * Constructs a constraint handler with a custom variable order.
+     * The variable order is specified as a mapping from variable level in the
+     * IDD to the index of the parameter in the model.
+     */
+    constraint_handler_sylvan_idd(
+        const internal_model& model,
+        const std::vector<unsigned int>& variable_order, int num_workers,
+        constraint_handler_init_progress& exec_handle);
+
+    /**
      * See constraint_handler interface.
      */
     bool is_thread_safe() const override;
@@ -109,10 +128,23 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     const sylvan_idd& getIdd() const;
 
   private:
+    void initialize_variable_order(
+        const std::vector<unsigned int>& variable_order);
+
+    std::vector<int> get_reordered_values(const std::vector<int>& values) const;
+
+  private:
     const internal_model& model_;
     sylvan_idd idd_;
     std::unordered_map<const test*, sylvan_idd> test_to_idd_;
     bool is_per_test_idd_enabled_;
+
+    // Mapping from variable level in the IDD to parameter index in the model.
+    std::vector<unsigned int> variable_order_;
+    // Mapping from parameter index in the model to variable level in the IDD.
+    std::vector<unsigned int> parameter_to_level_;
+    // Domain sizes of the parameters, ordered according to the variable order.
+    std::vector<unsigned int> reordered_domain_sizes_;
 };
 
 }  // namespace detail

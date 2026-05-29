@@ -2,6 +2,7 @@
 
 #include "constraint_handler_sylvan_ldd.hpp"
 #include "constraint_handler_void.hpp"
+#include "idd_variable_ordering.hpp"
 
 namespace citcpp {
 namespace detail {
@@ -59,8 +60,12 @@ constraint_handler::create_constraint_handler(
     exec_handle.set_constraint_handler_init_progress_target(
         model.get_input_model().get_constraints().size());
     exec_handle.set_constraint_handler_init_progress_current(0);
+
+    std::vector<unsigned int> variable_order =
+        compute_mcmf_variable_order(model);
+
     constraint_handler_sylvan_idd* handler = new constraint_handler_sylvan_idd(
-        model, num_worker_threads, exec_handle);
+        model, variable_order, num_worker_threads, exec_handle);
     handler->use_per_test_idd(true);
     return std::unique_ptr<constraint_handler_sylvan_idd>(handler);
   }

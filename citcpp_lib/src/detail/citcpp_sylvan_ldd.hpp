@@ -30,8 +30,11 @@ class sylvan_idd {
      * vector identify a variable and the value at that
      * index is its value. Negative values are ignored
      * and are thus skipped in the cube.
+     * If variable_order is given, it specifies the mapping from level
+     * to variable index.
      */
-    sylvan_idd(const std::vector<int>& assignments);
+    sylvan_idd(const std::vector<int>& assignments,
+               const std::vector<unsigned int>* variable_order = nullptr);
 
     /**
      * Create an IDD, which represents the expression X OP value, where OP
@@ -119,7 +122,8 @@ class sylvan_idd {
      */
     void mark_valid_value_combinations(
         coverage_map_second_level& value_combinations,
-        const std::vector<unsigned int>& domain_sizes) const;
+        const std::vector<unsigned int>& domain_sizes,
+        const std::vector<unsigned int>* parameter_to_level = nullptr) const;
 
     /**
      * Return the number of nodes in this IDD.
@@ -137,7 +141,9 @@ class sylvan_idd {
      * vector. The vector is expected to be large enough such that
      * for each variable of this IDD a value can be written to it.
      */
-    void get_sat_one(std::vector<int>& assignment) const;
+    void get_sat_one(
+        std::vector<int>& assignment,
+        const std::vector<unsigned int>* variable_order = nullptr) const;
 
     /**
      * Writes this IDD to the specified file as a DOT representation.
@@ -151,9 +157,12 @@ class sylvan_idd {
      * the variables of this IDD. An unassigned/free variable shall be denoted
      * by a negative values at the corresponding index of the given
      * assignment specification.
+     * If variable_order is given, it specifies the mapping from level
+     * to variable index.
      */
     bool is_sat_with_partial_assignment(
-        const std::vector<int>& partial_assignment) const;
+        const std::vector<int>& partial_assignment,
+        const std::vector<unsigned int>* variable_order = nullptr) const;
 
     /**
      * Returns a bitset that represents which values of the specified variable
@@ -166,10 +175,14 @@ class sylvan_idd {
      *
      * The returned bitset has bits enabled at indices corresponding to the
      * indices of values in the domain definition of the variable.
+     *
+     * If variable_order is given, it specifies the mapping from level
+     * to variable index.
      */
     bitset_uint64 get_valid_variable_assignments(
         uint32_t variable, uint32_t domain_size,
-        const std::vector<int>& partial_assignment) const;
+        const std::vector<int>& partial_assignment,
+        const std::vector<unsigned int>* variable_order = nullptr) const;
 
     /**
      * Gets a full satisfying assignment, writing it to the given
@@ -179,9 +192,13 @@ class sylvan_idd {
      * Compared to {@link #get_sat_one}, this method analyzes the
      * given vector for a partial assignment, such that the extracted
      * full assignment is guaranteed to be consistent with it.
+     *
+     * If variable_order is given, it specifies the mapping from level
+     * to variable index.
      */
     void get_sat_one_under_partial_assignment(
-        std::vector<int>& assignment) const;
+        std::vector<int>& assignment,
+        const std::vector<unsigned int>* variable_order = nullptr) const;
 
   private:
     sylvan_idd(uint64_t ldd, const std::vector<uint32_t>& variables);

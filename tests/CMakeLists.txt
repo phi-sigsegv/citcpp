@@ -8,6 +8,8 @@ list(APPEND CITCPP_UNITTESTS
   test_sylvan_idd
   test_idd_projection
   test_sylvan_idd_constraint_handler
+  test_sylvan_idd_custom_order
+  test_mcmf_ordering
   test_cagen
   test_cagen_extend
   test_cagen_relations
