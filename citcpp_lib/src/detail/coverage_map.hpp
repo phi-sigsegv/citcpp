@@ -6,58 +6,47 @@
 #include <vector>
 
 #include "binom_coeff_table.hpp"
-#include "bitset.hpp"
+#include "coverage_bitset.hpp"
 #include "datatypes_config.hpp"
 #include "internal_model.hpp"
 
 namespace citcpp {
 namespace detail {
 
-class coverage_map_second_level {
-  public:
-    typedef std::uint32_t size_type;
+class coverage_map_second_level : public coverage_bitset_tmpl<bitset_uint64> {
+    typedef coverage_bitset_tmpl<bitset_uint64> base_type;
 
-    coverage_map_second_level()
-        : bitset_(0), param_indices_(), cov_num_ones_(0), valid_num_ones_(0) {}
+  public:
+    typedef typename base_type::size_type size_type;
+
+    coverage_map_second_level() : base_type(), param_indices_() {}
 
     coverage_map_second_level(size_type num_bits,
                               const param_vector& param_indices)
-        : bitset_(num_bits << 1),
-          param_indices_(param_indices),
-          cov_num_ones_(0),
-          valid_num_ones_(0) {}
+        : base_type(num_bits), param_indices_(param_indices) {}
 
     coverage_map_second_level(const coverage_map_second_level& other)
-        : bitset_(other.bitset_),
-          param_indices_(other.param_indices_),
-          cov_num_ones_(other.cov_num_ones_.load()),
-          valid_num_ones_(other.valid_num_ones_.load()) {}
+        : base_type(other), param_indices_(other.param_indices_) {}
 
     coverage_map_second_level(coverage_map_second_level&& other)
-        : bitset_(std::move(other.bitset_)),
-          param_indices_(std::move(other.param_indices_)),
-          cov_num_ones_(other.cov_num_ones_.load()),
-          valid_num_ones_(other.valid_num_ones_.load()) {}
+        : base_type(std::move(other)),
+          param_indices_(std::move(other.param_indices_)) {}
 
     ~coverage_map_second_level() {}
 
     coverage_map_second_level& operator=(
         const coverage_map_second_level& other) {
       if (this != &other) {
-        bitset_ = other.bitset_;
+        base_type::operator=(other);
         param_indices_ = other.param_indices_;
-        cov_num_ones_ = other.cov_num_ones_.load();
-        valid_num_ones_ = other.valid_num_ones_.load();
       }
       return *this;
     }
 
     coverage_map_second_level& operator=(coverage_map_second_level&& other) {
       if (this != &other) {
-        bitset_ = std::move(other.bitset_);
+        base_type::operator=(std::move(other));
         param_indices_ = std::move(other.param_indices_);
-        cov_num_ones_ = other.cov_num_ones_.load();
-        valid_num_ones_ = other.valid_num_ones_.load();
       }
       return *this;
     }
@@ -66,100 +55,14 @@ class coverage_map_second_level {
      * Swaps this and the given other bitset.
      */
     void swap(coverage_map_second_level& other) {
-      std::swap(bitset_, other.bitset_);
+      base_type::swap(other);
       std::swap(param_indices_, other.param_indices_);
-      size_type this_cov = cov_num_ones_.load();
-      cov_num_ones_.store(other.cov_num_ones_.load());
-      other.cov_num_ones_.store(this_cov);
-      size_type this_valid = valid_num_ones_.load();
-      valid_num_ones_.store(other.valid_num_ones_.load());
-      other.valid_num_ones_.store(this_valid);
-    }
-
-    /**
-     * Checks if all values are marked as covered.
-     */
-    bool all_covered() const {
-      return (cov_num_ones_.load(std::memory_order_relaxed) << 1) ==
-             bitset_.size();
-    }
-
-    /**
-     * Accesses the bit at the given position that represents
-     * coverage of a value combination.
-     * This method does no range checking. Passing an invalid position
-     * results in undefined behavior.
-     */
-    bool is_marked_covered(size_type bit_pos) const {
-      return bitset_.test(bit_pos << 1);
-    }
-
-    /**
-     * Accesses the bit at the given position that represents
-     * coverage of a value combination and sets it to true.
-     * This method returns the previous value stored at the
-     * position.
-     * This method does no range checking. Passing an invalid position
-     * results in undefined behavior.
-     */
-    bool test_and_set_covered(size_type bit_pos) {
-      const size_type prev_num_ones = bitset_.count();
-      const bool previous_value = bitset_.test_and_set(bit_pos << 1);
-      if (bitset_.count() > prev_num_ones) {
-        cov_num_ones_.fetch_add(1, std::memory_order_relaxed);
-      }
-      return previous_value;
-    }
-
-    /**
-     * Checks if all values are marked as valid.
-     */
-    bool all_valid() const {
-      return (valid_num_ones_.load(std::memory_order_relaxed) << 1) ==
-             bitset_.size();
-    }
-
-    /**
-     * Accesses the bit at the given position that represents
-     * validity of a value combination.
-     * This method does no range checking. Passing an invalid position
-     * results in undefined behavior.
-     */
-    bool is_valid(size_type bit_pos) const {
-      return bitset_.test((bit_pos << 1) + 1);
-    }
-
-    /**
-     * Sets the bit at the given position that represents
-     * validity of a value combination.
-     * This method does no range checking. Passing an invalid position
-     * results in undefined behavior.
-     */
-    void set_valid(size_type bit_pos) {
-      const size_type prev_num_ones = bitset_.count();
-      bitset_.set((bit_pos << 1) + 1);
-      if (bitset_.count() > prev_num_ones) {
-        valid_num_ones_.fetch_add(1, std::memory_order_relaxed);
-      }
-    }
-
-    /**
-     * Sets the bits for all value combinations to valid.
-     */
-    void set_all_valid() {
-      const size_type size = bitset_.size() >> 1;
-      for (size_type i = 0; i < size; ++i) {
-        set_valid(i);
-      }
     }
 
     const param_vector& get_parameter_indices() const { return param_indices_; }
 
   private:
-    bitset_uint64 bitset_;
     param_vector param_indices_;
-    std::atomic<size_type> cov_num_ones_;
-    std::atomic<size_type> valid_num_ones_;
 };
 
 /**
