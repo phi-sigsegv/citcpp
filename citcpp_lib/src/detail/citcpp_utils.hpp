@@ -19,7 +19,7 @@ bool recursively_visit_all_value_combos_of_param_combo(
     const citcpp::detail::internal_model& model,
     const citcpp::detail::param_vector& param_indices,
     citcpp::detail::value_vector& value_indices, int current_index,
-    citcpp::detail::bitset_non_owning_uint64::size_type partial_bit_pos,
+    citcpp::detail::bitset_uint64::size_type partial_bit_pos,
     T_VISITOR& visitor,
     T_ADDITIONAL_VISITOR_ARGS&&... additional_visitor_args) {
   using namespace citcpp::detail;
@@ -28,7 +28,7 @@ bool recursively_visit_all_value_combos_of_param_combo(
   const unsigned int max_val =
       model.get_parameter_num_values()[param_indices[current_index]];
 
-  bitset_non_owning_uint64::size_type bit_pos_value_factor = 1;
+  bitset_uint64::size_type bit_pos_value_factor = 1;
   for (std::vector<unsigned int>::size_type j = current_index + 1;
        j < param_indices.size(); ++j) {
     bit_pos_value_factor *= model.get_parameter_num_values()[param_indices[j]];
@@ -40,7 +40,7 @@ bool recursively_visit_all_value_combos_of_param_combo(
     bool ret = true;
 
     if (current_index == 0) {
-      bitset_non_owning_uint64::size_type bit_pos =
+      bitset_uint64::size_type bit_pos =
           partial_bit_pos + i * bit_pos_value_factor;
       // Call the visitor.
       ret = visitor(

@@ -5,7 +5,6 @@
 #include "citcpp_utils.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "param_combo_iteration.hpp"
-#include "shared_aux_types.hpp"
 #include "shared_constants.hpp"
 
 namespace citcpp {
@@ -67,20 +66,18 @@ class covm_per_param_combo_functor {
           validity_pred_(validity_pred),
           value_indices_(strength),
           scratch_test_(model.get_parameter_num_values().size(), -1),
-          bitset_backing_array_(bitset_backing_array_size),
+          values_combo_bitset_(bitset_backing_array_size),
           num_invalid_tuples_(0),
           covered_tuples_(test_set.get_list_of_tests().size(), 0),
           cov_level_to_num_param_combos_{0},
           exec_handle_(exec_handle) {}
 
     bool operator()(const param_vector& param_indices) {
-      bitset_non_owning_uint64::size_type bitset_size = 1;
+      bitset_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
         bitset_size *= model_.get_parameter_num_values()[p];
       }
-      bitset_non_owning_uint64 values_combo_bitset(bitset_size);
-      values_combo_bitset.set_backing_array(bitset_backing_array_.get_array());
-      values_combo_bitset.reset();
+      values_combo_bitset_.reset_with_new_size(bitset_size);
 
       int test_index = 0;
       for (const test& test : test_set_.get_list_of_tests()) {
@@ -89,7 +86,7 @@ class covm_per_param_combo_functor {
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
         // values for p_i. If we now have values x_0, x_1, x_2, then the index
         // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        bitset_non_owning_uint64::size_type index = 0;
+        bitset_uint64::size_type index = 0;
         bool found_dont_care = false;
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size(); ++i) {
@@ -105,7 +102,7 @@ class covm_per_param_combo_functor {
             break;
           }
 
-          bitset_non_owning_uint64::size_type addend = param_value;
+          bitset_uint64::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
             addend *= model_.get_parameter_num_values()[param_indices[j]];
@@ -114,7 +111,7 @@ class covm_per_param_combo_functor {
         }
 
         if (!found_dont_care) {
-          if (!values_combo_bitset.test_and_set(index)) {
+          if (!values_combo_bitset_.test_and_set(index)) {
             covered_tuples_[test_index]++;
           }
         }
@@ -122,15 +119,14 @@ class covm_per_param_combo_functor {
         ++test_index;
       }
 
-      if (!values_combo_bitset.all()) {
+      if (!values_combo_bitset_.all()) {
         visit_all_value_combos_of_param_combo(
-            model_, param_indices, value_indices_, *this, param_indices,
-            values_combo_bitset);
+            model_, param_indices, value_indices_, *this, param_indices);
         reset_scratch_test(param_indices);
       }
 
-      double param_coverage_fraction = (double)values_combo_bitset.count() /
-                                       (double)values_combo_bitset.size();
+      double param_coverage_fraction = (double)values_combo_bitset_.count() /
+                                       (double)values_combo_bitset_.size();
 
       param_coverage_fraction =
           std::max(std::min(param_coverage_fraction, 1.0), 0.0);
@@ -148,7 +144,7 @@ class covm_per_param_combo_functor {
       }
 
       exec_handle_.add_number_of_processed_combinations(
-          values_combo_bitset.size());
+          values_combo_bitset_.size());
 
       if (exec_handle_.is_job_aborted()) {
         return false;
@@ -158,19 +154,18 @@ class covm_per_param_combo_functor {
     }
 
     bool operator()(const value_vector& value_indices,
-                    bitset_non_owning_uint64::size_type bitpos,
-                    const param_vector& param_indices,
-                    bitset_non_owning_uint64& values_combo_bitset) {
+                    bitset_uint64::size_type bitpos,
+                    const param_vector& param_indices) {
 
-      if (!values_combo_bitset.test(bitpos)) {
+      if (!values_combo_bitset_.test(bitpos)) {
         const bool valid_tuple = is_valid_tuple(param_indices, value_indices);
         if (!valid_tuple) {
-          values_combo_bitset.set(bitpos);
+          values_combo_bitset_.set(bitpos);
           ++num_invalid_tuples_;
         }
       }
 
-      return !values_combo_bitset.all();
+      return !values_combo_bitset_.all();
     }
 
     unsigned long long get_num_invalid_tuples() const {
@@ -215,7 +210,7 @@ class covm_per_param_combo_functor {
     const T_PARTIAL_TEST_VALIDITY_PRED& validity_pred_;
     value_vector value_indices_;
     test scratch_test_;
-    array_wrapper_uint64 bitset_backing_array_;
+    bitset_uint64 values_combo_bitset_;
     unsigned long long num_invalid_tuples_;
     std::vector<unsigned long long> covered_tuples_;
     citcpp::coverage_measurement::t_coverage_level_to_num_param_combos

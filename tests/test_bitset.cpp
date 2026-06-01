@@ -7,7 +7,7 @@
 TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
   using namespace citcpp::detail;
 
-  bitset<std::uint64_t> sut(70);
+  bitset_tmpl<std::uint64_t> sut(70);
 
   SUBCASE("Test size()") { CHECK(sut.size() == 70); }
 
@@ -353,7 +353,7 @@ TEST_CASE("bitset, testing API, 70 bits, std::uint64_t storage type") {
 TEST_CASE("bitset, testing copying, moving, assigning") {
   using namespace citcpp::detail;
 
-  bitset<std::uint64_t> sut(70);
+  bitset_tmpl<std::uint64_t> sut(70);
 
   SUBCASE("Test copy constructor") {
     using namespace citcpp::detail;
@@ -373,7 +373,7 @@ TEST_CASE("bitset, testing copying, moving, assigning") {
     CHECK(!sut.none());
     CHECK(sut.count() == 4);
 
-    bitset<std::uint64_t> other(sut);
+    bitset_tmpl<std::uint64_t> other(sut);
 
     CHECK(!other.all());
     CHECK(other.any());
@@ -409,7 +409,7 @@ TEST_CASE("bitset, testing copying, moving, assigning") {
     CHECK(!sut.none());
     CHECK(sut.count() == 4);
 
-    bitset<std::uint64_t> other(std::move(sut));
+    bitset_tmpl<std::uint64_t> other(std::move(sut));
 
     CHECK(!other.all());
     CHECK(other.any());
@@ -440,7 +440,7 @@ TEST_CASE("bitset, testing copying, moving, assigning") {
     CHECK(!sut.none());
     CHECK(sut.count() == 4);
 
-    bitset<std::uint64_t> other;
+    bitset_tmpl<std::uint64_t> other;
     other = sut;
 
     CHECK(!other.all());
@@ -477,7 +477,7 @@ TEST_CASE("bitset, testing copying, moving, assigning") {
     CHECK(!sut.none());
     CHECK(sut.count() == 4);
 
-    bitset<std::uint64_t> other;
+    bitset_tmpl<std::uint64_t> other;
     other = std::move(sut);
 
     CHECK(!other.all());
@@ -509,7 +509,7 @@ TEST_CASE("bitset, testing copying, moving, assigning") {
     CHECK(!sut.none());
     CHECK(sut.count() == 4);
 
-    bitset<std::uint64_t> other;
+    bitset_tmpl<std::uint64_t> other;
     other.swap(sut);
 
     CHECK(!other.all());

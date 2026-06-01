@@ -1429,7 +1429,8 @@ struct marking_context {
     int t;
     const uint32_t* idd_vars;
     citcpp::detail::spin_lock* lock;
-    citcpp::detail::coverage_map_second_level* value_combinations;
+    citcpp::detail::coverage_bitset* value_combinations;
+    const citcpp::detail::param_vector* param_indices;
     uint64_t invocation_id;
 };
 
@@ -1450,9 +1451,7 @@ static int sylvan_idd_fill_all_recursive(MDD cube, size_t current_index,
   mddnode_t n_cube = LDD_GETNODE(cube);
   uint32_t cube_val = mddnode_getvalue(n_cube);
   uint32_t p_idx = cube_val & 0xFFFF;
-  uint32_t domain_size =
-      ctx->domain_sizes[ctx->value_combinations
-                            ->get_parameter_indices()[p_idx]];
+  uint32_t domain_size = ctx->domain_sizes[(*ctx->param_indices)[p_idx]];
   size_t weight = ctx->weights[p_idx];
   MDD down_cube = mddnode_getdown(n_cube);
 
@@ -1533,9 +1532,7 @@ TASK_5(int, sylvan_idd_mark_valid_recursive, MDD, ldd, MDD, cube, int,
   } else {
     // var_ldd > var_cube: Variable of interest is not constrained in IDD (it's
     // free).
-    uint32_t domain_size =
-        ctx->domain_sizes[ctx->value_combinations
-                              ->get_parameter_indices()[p_idx]];
+    uint32_t domain_size = ctx->domain_sizes[(*ctx->param_indices)[p_idx]];
     size_t weight = ctx->weights[p_idx];
     MDD down_cube = mddnode_getdown(n_cube);
 
@@ -2104,7 +2101,7 @@ sylvan_idd sylvan_idd::project(
 }
 
 void sylvan_idd::mark_valid_value_combinations(
-    coverage_map_second_level& value_combinations,
+    coverage_bitset& value_combinations, const param_vector& param_indices,
     const std::vector<unsigned int>& domain_sizes,
     const std::vector<unsigned int>* parameter_to_level) const {
 
@@ -2115,14 +2112,13 @@ void sylvan_idd::mark_valid_value_combinations(
   uint64_t invocation_id =
       next_invocation_id.fetch_add(1, std::memory_order_relaxed);
 
-  const auto& p_indices = value_combinations.get_parameter_indices();
-  const int t = p_indices.size();
+  const int t = param_indices.size();
 
   std::vector<size_t> weights(t);
   size_t current_weight = 1;
   for (int i = t - 1; i >= 0; --i) {
     weights[i] = current_weight;
-    current_weight *= domain_sizes[p_indices[i]];
+    current_weight *= domain_sizes[param_indices[i]];
   }
 
   // Prepare parameters of interest sorted by their ID (which is their level in
@@ -2133,8 +2129,8 @@ void sylvan_idd::mark_valid_value_combinations(
   };
   std::vector<p_info> sorted_p;
   for (int i = 0; i < t; ++i) {
-    uint32_t p_id =
-        parameter_to_level ? (*parameter_to_level)[p_indices[i]] : p_indices[i];
+    uint32_t p_id = parameter_to_level ? (*parameter_to_level)[param_indices[i]]
+                                       : param_indices[i];
     sorted_p.push_back({p_id, i});
   }
   std::sort(sorted_p.begin(), sorted_p.end(),
@@ -2155,6 +2151,7 @@ void sylvan_idd::mark_valid_value_combinations(
   ctx.idd_vars = variables_.data();
   ctx.lock = &lock;
   ctx.value_combinations = &value_combinations;
+  ctx.param_indices = &param_indices;
   ctx.invocation_id = invocation_id;
 
   sylvan_idd_mark_valid_recursive(idd_, cube, 0, 0, &ctx);

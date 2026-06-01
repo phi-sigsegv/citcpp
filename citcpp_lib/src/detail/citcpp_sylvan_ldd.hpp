@@ -6,7 +6,8 @@
 #include <vector>
 
 #include "bitset.hpp"
-#include "coverage_map.hpp"
+#include "coverage_bitset.hpp"
+#include "datatypes_config.hpp"
 
 namespace citcpp {
 namespace detail {
@@ -121,7 +122,7 @@ class sylvan_idd {
      * @param domain_sizes The domain sizes of all parameters in the model.
      */
     void mark_valid_value_combinations(
-        coverage_map_second_level& value_combinations,
+        coverage_bitset& value_combinations, const param_vector& param_indices,
         const std::vector<unsigned int>& domain_sizes,
         const std::vector<unsigned int>* parameter_to_level = nullptr) const;
 

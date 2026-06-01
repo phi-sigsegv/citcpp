@@ -3,12 +3,12 @@
 
 #include "bitset.hpp"
 #include "constraint_handler_init_progress.hpp"
+#include "coverage_bitset.hpp"
+#include "datatypes_config.hpp"
 #include "internal_test_set.hpp"
 
 namespace citcpp {
 namespace detail {
-
-class coverage_map_second_level;
 
 /**
  * This defines an interface for a constraint handler, as needed
@@ -40,8 +40,8 @@ class constraint_handler {
      * the validity of value combinations that are feasible according to
      * constraints.
      */
-    virtual void mark_valid_tuples(
-        coverage_map_second_level& value_combinations) const = 0;
+    virtual void mark_valid_tuples(coverage_bitset& value_combinations,
+                                   const param_vector& param_indices) const = 0;
 
     /**
      * This method reads the given partial tests, in particular the
