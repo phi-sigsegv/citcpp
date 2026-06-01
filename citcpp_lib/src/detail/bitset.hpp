@@ -18,22 +18,76 @@ struct all_ones_tmpl {
     static constexpr T value = static_cast<T>(-1);
 };
 
-template <typename T_FUNDAMENTAL_STORAGE_TYPE, typename T_BASE>
-class bitset_operations : public T_BASE {
+template <typename T_FUNDAMENTAL_STORAGE_TYPE>
+class bitset_tmpl {
   public:
     typedef T_FUNDAMENTAL_STORAGE_TYPE storage_type;
     typedef std::uint32_t size_type;
 
   public:
-    bitset_operations() : T_BASE(), num_ones_(0) {}
+    bitset_tmpl() : bits_(nullptr), size_(0), num_ones_(0) {}
 
-    bitset_operations(size_type num_bits) : T_BASE(num_bits), num_ones_(0) {}
+    bitset_tmpl(size_type num_bits)
+        : bits_(new storage_type[calculate_num_storage_blocks_from_num_bits(
+              num_bits)]{}),
+          size_(num_bits),
+          num_ones_(0) {}
+
+    bitset_tmpl(const bitset_tmpl& other)
+        : bits_(new storage_type[calculate_num_storage_blocks_from_num_bits(
+              other.size_)]{}),
+          size_(other.size_),
+          num_ones_(other.num_ones_) {
+
+      std::memcpy(bits_, other.bits_,
+                  calculate_num_storage_blocks_from_num_bits(size_) *
+                      sizeof(storage_type));
+    }
+
+    bitset_tmpl(bitset_tmpl&& other)
+        : bits_(other.bits_), size_(other.size_), num_ones_(other.num_ones_) {
+      other.bits_ = nullptr;
+      other.size_ = 0;
+      other.num_ones_ = 0;
+    }
+
+    ~bitset_tmpl() { delete[] bits_; }
+
+    bitset_tmpl& operator=(const bitset_tmpl& other) {
+      if (&other != this) {
+        delete[] bits_;
+        size_ = other.size_;
+        size_type num_storage_blocks =
+            calculate_num_storage_blocks_from_num_bits(size_);
+        bits_ = new storage_type[num_storage_blocks];
+        std::memcpy(bits_, other.bits_,
+                    num_storage_blocks * sizeof(storage_type));
+        num_ones_ = other.num_ones_;
+      }
+
+      return *this;
+    }
+
+    bitset_tmpl& operator=(bitset_tmpl&& other) {
+      if (&other != this) {
+        delete[] bits_;
+        bits_ = other.bits_;
+        size_ = other.size_;
+        num_ones_ = other.num_ones_;
+        other.bits_ = nullptr;
+        other.size_ = 0;
+        other.num_ones_ = 0;
+      }
+
+      return *this;
+    }
 
     /**
      * Swaps this and the given other bitset.
      */
-    void swap(bitset_operations& other) {
-      T_BASE::swap(other);
+    void swap(bitset_tmpl& other) {
+      std::swap(bits_, other.bits_);
+      std::swap(size_, other.size_);
       std::swap(num_ones_, other.num_ones_);
     }
 
@@ -200,7 +254,17 @@ class bitset_operations : public T_BASE {
       num_ones_ = 0;
     }
 
-  public:
+    /**
+     * Sets a new size for this bitset and clear all of its bits.
+     * Care must be taken to not set a size greater than the size
+     * of the underlying storage.
+     */
+    void reset_with_new_size(size_type size) {
+      size_ = size;
+      reset();
+    }
+
+  private:
     static size_type calculate_num_storage_blocks_from_num_bits(
         size_type num_bits) {
       return num_bits / std::numeric_limits<storage_type>::digits +
@@ -208,7 +272,6 @@ class bitset_operations : public T_BASE {
                  num_bits % std::numeric_limits<storage_type>::digits != 0);
     }
 
-  private:
     static size_type calculate_storage_block_index(size_type bit_pos) {
       return bit_pos / std::numeric_limits<storage_type>::digits;
     }
@@ -227,153 +290,15 @@ class bitset_operations : public T_BASE {
     }
 
   private:
+    static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>,
+                  "The underlying type must be a fundamental type");
+
+    storage_type* bits_;
+    size_type size_;
     size_type num_ones_;
 };
 
-template <typename T_FUNDAMENTAL_STORAGE_TYPE>
-class array_owning_wrapper {
-  public:
-    typedef T_FUNDAMENTAL_STORAGE_TYPE storage_type;
-    typedef std::uint32_t size_type;
-
-  public:
-    array_owning_wrapper() : bits_(nullptr), size_(0) {}
-
-    array_owning_wrapper(size_type num_bits)
-        : bits_(new storage_type[bitset_operations<
-              storage_type, array_owning_wrapper<storage_type>>::
-                                     calculate_num_storage_blocks_from_num_bits(
-                                         num_bits)]{}),
-          size_(num_bits) {}
-
-    array_owning_wrapper(const array_owning_wrapper& other)
-        : bits_(new storage_type[bitset_operations<
-              storage_type, array_owning_wrapper<storage_type>>::
-                                     calculate_num_storage_blocks_from_num_bits(
-                                         other.size_)]{}),
-          size_(other.size_) {
-      std::memcpy(
-          bits_, other.bits_,
-          bitset_operations<storage_type, array_owning_wrapper<storage_type>>::
-                  calculate_num_storage_blocks_from_num_bits(size_) *
-              sizeof(storage_type));
-    }
-
-    array_owning_wrapper(array_owning_wrapper&& other)
-        : bits_(other.bits_), size_(other.size_) {
-      other.bits_ = nullptr;
-      other.size_ = 0;
-    }
-
-    ~array_owning_wrapper() { delete[] bits_; }
-
-    array_owning_wrapper& operator=(const array_owning_wrapper& other) {
-      if (&other != this) {
-        delete[] bits_;
-        size_ = other.size_;
-        size_type num_storage_blocks =
-            bitset_operations<storage_type,
-                              array_owning_wrapper<storage_type>>::
-                calculate_num_storage_blocks_from_num_bits(size_);
-        bits_ = new storage_type[num_storage_blocks];
-        std::memcpy(bits_, other.bits_,
-                    num_storage_blocks * sizeof(storage_type));
-      }
-
-      return *this;
-    }
-
-    array_owning_wrapper& operator=(array_owning_wrapper&& other) {
-      if (&other != this) {
-        delete[] bits_;
-        bits_ = other.bits_;
-        size_ = other.size_;
-        other.bits_ = nullptr;
-        other.size_ = 0;
-      }
-
-      return *this;
-    }
-
-    void swap(array_owning_wrapper& other) {
-      std::swap(bits_, other.bits_);
-      std::swap(size_, other.size_);
-    }
-
-    storage_type* get_array() const { return bits_; }
-
-  protected:
-    static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>,
-                  "The underlying type must be a fundamental type");
-
-    storage_type* bits_;
-    size_type size_;
-};
-
-template <typename T_FUNDAMENTAL_STORAGE_TYPE>
-class array_non_owning_wrapper {
-  public:
-    typedef T_FUNDAMENTAL_STORAGE_TYPE storage_type;
-    typedef std::uint32_t size_type;
-
-  public:
-    array_non_owning_wrapper() : bits_(nullptr), size_(0) {}
-
-    array_non_owning_wrapper(size_type num_bits)
-        : bits_(nullptr), size_(num_bits) {}
-
-    array_non_owning_wrapper(const array_non_owning_wrapper& other) = delete;
-
-    array_non_owning_wrapper(array_non_owning_wrapper&& other)
-        : bits_(other.bits_), size_(other.size_) {
-      other.bits_ = nullptr;
-      other.size_ = 0;
-    }
-
-    array_non_owning_wrapper& operator=(const array_non_owning_wrapper& other) =
-        delete;
-
-    array_non_owning_wrapper& operator=(array_non_owning_wrapper&& other) {
-      if (&other != this) {
-        bits_ = other.bits_;
-        size_ = other.size_;
-        other.bits_ = nullptr;
-        other.size_ = 0;
-      }
-
-      return *this;
-    }
-
-    void swap(array_non_owning_wrapper& other) {
-      std::swap(bits_, other.bits_);
-      std::swap(size_, other.size_);
-    }
-
-    void set_backing_array(storage_type* bits) { bits_ = bits; }
-
-  protected:
-    static_assert(std::is_fundamental_v<T_FUNDAMENTAL_STORAGE_TYPE>,
-                  "The underlying type must be a fundamental type");
-
-    storage_type* bits_;
-    size_type size_;
-};
-
-using array_wrapper_uint64 = array_owning_wrapper<std::uint64_t>;
-
-template <typename T_FUNDAMENTAL_STORAGE_TYPE>
-using bitset =
-    bitset_operations<T_FUNDAMENTAL_STORAGE_TYPE,
-                      array_owning_wrapper<T_FUNDAMENTAL_STORAGE_TYPE>>;
-
-using bitset_uint64 = bitset<std::uint64_t>;
-
-template <typename T_FUNDAMENTAL_STORAGE_TYPE>
-using bitset_non_owning =
-    bitset_operations<T_FUNDAMENTAL_STORAGE_TYPE,
-                      array_non_owning_wrapper<T_FUNDAMENTAL_STORAGE_TYPE>>;
-
-using bitset_non_owning_uint64 = bitset_non_owning<std::uint64_t>;
+using bitset_uint64 = bitset_tmpl<std::uint64_t>;
 
 }  // namespace detail
 }  // namespace citcpp

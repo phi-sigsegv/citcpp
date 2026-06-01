@@ -525,9 +525,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
     sylvan_idd constraint = sylvan_idd::project_union(c1, c2, domain_sizes);
 
     param_vector p_indices = {0, 1};
-    coverage_map_second_level cov(4, p_indices);
+    coverage_bitset cov(4);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     CHECK(cov.is_valid(1));   // (0, 1)
     CHECK(cov.is_valid(2));   // (1, 0)
@@ -542,9 +542,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
     sylvan_idd constraint(0, 0);  // P0 = 0
 
     param_vector p_indices = {0, 1};
-    coverage_map_second_level cov(4, p_indices);
+    coverage_bitset cov(4);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     CHECK(cov.is_valid(0));   // (0, 0)
     CHECK(cov.is_valid(1));   // (0, 1)
@@ -560,9 +560,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
         sylvan_idd::project_intersect(sylvan_idd(0, 0), sylvan_idd(1, 0));
 
     param_vector p_indices = {0};
-    coverage_map_second_level cov(2, p_indices);
+    coverage_bitset cov(2);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     CHECK(cov.is_valid(0));   // P0=0 is valid
     CHECK(!cov.is_valid(1));  // P0=1 is invalid
@@ -581,9 +581,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
 
     // Tuple (P1, P0)
     param_vector p_indices = {1, 0};
-    coverage_map_second_level cov(4, p_indices);
+    coverage_bitset cov(4);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     // Valid combinations: P1=1, P0=0 -> index 1*2 + 0 = 2
     //                    P1=0, P0=1 -> index 0*2 + 1 = 1
@@ -598,9 +598,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
     sylvan_idd constraint = sylvan_idd::iddFalse();
 
     param_vector p_indices = {0, 1};
-    coverage_map_second_level cov(4, p_indices);
+    coverage_bitset cov(4);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     CHECK(!cov.is_valid(0));
     CHECK(!cov.is_valid(1));
@@ -613,9 +613,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
     sylvan_idd constraint = sylvan_idd::iddTrue();
 
     param_vector p_indices = {0, 1};
-    coverage_map_second_level cov(4, p_indices);
+    coverage_bitset cov(4);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     CHECK(cov.is_valid(0));
     CHECK(cov.is_valid(1));
@@ -633,9 +633,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
     sylvan_idd constraint = sylvan_idd::project_intersect(c0, c1);
 
     param_vector p_indices = {0, 1, 2};
-    coverage_map_second_level cov(125, p_indices);
+    coverage_bitset cov(125);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     // Check some points
     // (0, 1, 0) -> 0*25 + 1*5 + 0 = 5. Should be valid.
@@ -658,9 +658,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
         sylvan_idd::project_intersect(sylvan_idd(0, 0), sylvan_idd(2, 0));
 
     param_vector p_indices = {0, 1, 2};
-    coverage_map_second_level cov(8, p_indices);
+    coverage_bitset cov(8);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     // (0, 0, 0) -> 0. Valid.
     CHECK(cov.is_valid(0));
@@ -681,9 +681,9 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
         sylvan_idd(4, 0));
 
     param_vector p_indices = {1, 3, 4};
-    coverage_map_second_level cov(8, p_indices);
+    coverage_bitset cov(8);
 
-    constraint.mark_valid_value_combinations(cov, domain_sizes);
+    constraint.mark_valid_value_combinations(cov, p_indices, domain_sizes);
 
     // Any value of P1, P3 is valid as long as P4=0.
     // (P1=0, P3=0, P4=0) -> 0. Valid.

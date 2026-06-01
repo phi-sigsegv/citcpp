@@ -13,23 +13,22 @@
 namespace citcpp {
 namespace detail {
 
-class coverage_map_second_level : public coverage_bitset_tmpl<bitset_uint64> {
-    typedef coverage_bitset_tmpl<bitset_uint64> base_type;
+class coverage_map_second_level : public coverage_bitset {
 
   public:
-    typedef typename base_type::size_type size_type;
+    typedef typename coverage_bitset::size_type size_type;
 
-    coverage_map_second_level() : base_type(), param_indices_() {}
+    coverage_map_second_level() : coverage_bitset(), param_indices_() {}
 
     coverage_map_second_level(size_type num_bits,
                               const param_vector& param_indices)
-        : base_type(num_bits), param_indices_(param_indices) {}
+        : coverage_bitset(num_bits), param_indices_(param_indices) {}
 
     coverage_map_second_level(const coverage_map_second_level& other)
-        : base_type(other), param_indices_(other.param_indices_) {}
+        : coverage_bitset(other), param_indices_(other.param_indices_) {}
 
     coverage_map_second_level(coverage_map_second_level&& other)
-        : base_type(std::move(other)),
+        : coverage_bitset(std::move(other)),
           param_indices_(std::move(other.param_indices_)) {}
 
     ~coverage_map_second_level() {}
@@ -37,7 +36,7 @@ class coverage_map_second_level : public coverage_bitset_tmpl<bitset_uint64> {
     coverage_map_second_level& operator=(
         const coverage_map_second_level& other) {
       if (this != &other) {
-        base_type::operator=(other);
+        coverage_bitset::operator=(other);
         param_indices_ = other.param_indices_;
       }
       return *this;
@@ -45,7 +44,7 @@ class coverage_map_second_level : public coverage_bitset_tmpl<bitset_uint64> {
 
     coverage_map_second_level& operator=(coverage_map_second_level&& other) {
       if (this != &other) {
-        base_type::operator=(std::move(other));
+        coverage_bitset::operator=(std::move(other));
         param_indices_ = std::move(other.param_indices_);
       }
       return *this;
@@ -55,7 +54,7 @@ class coverage_map_second_level : public coverage_bitset_tmpl<bitset_uint64> {
      * Swaps this and the given other bitset.
      */
     void swap(coverage_map_second_level& other) {
-      base_type::swap(other);
+      coverage_bitset::swap(other);
       std::swap(param_indices_, other.param_indices_);
     }
 
@@ -170,7 +169,7 @@ class coverage_map_tmpl : public coverage_map_base {
     std::vector<second_level_type> cov_map_;
 };
 
-typedef coverage_map_tmpl<coverage_map_second_level> ipog_coverage_map;
+using ipog_coverage_map = coverage_map_tmpl<coverage_map_second_level>;
 
 }  // namespace detail
 }  // namespace citcpp

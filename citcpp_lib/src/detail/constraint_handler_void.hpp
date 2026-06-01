@@ -30,8 +30,8 @@ class constraint_handler_void : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
-    void mark_valid_tuples(
-        coverage_map_second_level& value_combinations) const override;
+    void mark_valid_tuples(coverage_bitset& value_combinations,
+                           const param_vector& param_indices) const override;
 
     /**
      * See constraint_handler interface.

@@ -190,6 +190,8 @@ class coverage_bitset_tmpl {
     std::atomic<size_type> valid_num_ones_;
 };
 
+using coverage_bitset = coverage_bitset_tmpl<bitset_uint64>;
+
 }  // namespace detail
 }  // namespace citcpp
 

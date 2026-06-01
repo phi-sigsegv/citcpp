@@ -126,8 +126,10 @@ bool concurrent_constraint_handler<T_EXEC>::is_valid_partial_test(
 
 template <conc_is_void_functor_executor T_EXEC>
 void concurrent_constraint_handler<T_EXEC>::mark_valid_tuples(
-    coverage_map_second_level& value_combinations) const {
-  handler_.mark_valid_tuples(value_combinations);
+    coverage_bitset& value_combinations,
+    const param_vector& param_indices) const {
+
+  handler_.mark_valid_tuples(value_combinations, param_indices);
 }
 
 template <conc_is_void_functor_executor T_EXEC>

@@ -4,7 +4,6 @@
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
 #include "param_combo_iteration.hpp"
-#include "shared_aux_types.hpp"
 #include "shared_constants.hpp"
 
 namespace citcpp {
@@ -94,17 +93,15 @@ class num_combos_per_param_combo_functor {
         const unsigned int bitset_backing_array_size)
         : model_(model),
           test_set_(test_set),
-          bitset_backing_array_(bitset_backing_array_size),
+          values_combo_bitset_(bitset_backing_array_size),
           num_combos_{0, 0} {}
 
     bool operator()(const param_vector& param_indices) {
-      bitset_non_owning_uint64::size_type bitset_size = 1;
+      bitset_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
         bitset_size *= model_.get_parameter_num_values()[p];
       }
-      bitset_non_owning_uint64 values_combo_bitset(bitset_size);
-      values_combo_bitset.set_backing_array(bitset_backing_array_.get_array());
-      values_combo_bitset.reset();
+      values_combo_bitset_.reset_with_new_size(bitset_size);
 
       num_combos_.num_combos_to_cover += bitset_size;
 
@@ -114,7 +111,7 @@ class num_combos_per_param_combo_functor {
         // three parameters p_0, p_1, p_2. Now say that v_i is the number of
         // values for p_i. If we now have values x_0, x_1, x_2, then the index
         // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        bitset_non_owning_uint64::size_type index = 0;
+        bitset_uint64::size_type index = 0;
         bool found_dont_care = false;
         for (std::vector<unsigned int>::size_type i = 0;
              i < param_indices.size(); ++i) {
@@ -130,7 +127,7 @@ class num_combos_per_param_combo_functor {
             break;
           }
 
-          bitset_non_owning_uint64::size_type addend = param_value;
+          bitset_uint64::size_type addend = param_value;
           for (std::vector<unsigned int>::size_type j = i + 1;
                j < param_indices.size(); ++j) {
             addend *= model_.get_parameter_num_values()[param_indices[j]];
@@ -139,7 +136,7 @@ class num_combos_per_param_combo_functor {
         }
 
         if (!found_dont_care) {
-          if (!values_combo_bitset.test_and_set(index)) {
+          if (!values_combo_bitset_.test_and_set(index)) {
             num_combos_.num_covered_combos++;
           }
         }
@@ -155,7 +152,7 @@ class num_combos_per_param_combo_functor {
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
-    array_wrapper_uint64 bitset_backing_array_;
+    bitset_uint64 values_combo_bitset_;
     number_of_combinations num_combos_;
 };
 

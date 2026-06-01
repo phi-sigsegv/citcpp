@@ -1,7 +1,5 @@
 #include "constraint_handler_void.hpp"
 
-#include "coverage_map.hpp"
-
 namespace citcpp {
 namespace detail {
 
@@ -15,7 +13,9 @@ bool constraint_handler_void::is_valid_partial_test(const test& t) const {
 }
 
 void constraint_handler_void::mark_valid_tuples(
-    coverage_map_second_level& value_combinations) const {
+    coverage_bitset& value_combinations,
+    const param_vector& param_indices) const {
+
   value_combinations.set_all_valid();
 }
 

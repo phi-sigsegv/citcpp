@@ -5,9 +5,6 @@
 #include <mutex>
 #include <numeric>
 
-#include "coverage_map.hpp"
-#include "datatypes_config.hpp"
-
 namespace {
 
 template <typename T_DD>
@@ -657,9 +654,10 @@ bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
 }
 
 void constraint_handler_sylvan_idd::mark_valid_tuples(
-    coverage_map_second_level& value_combinations) const {
+    coverage_bitset& value_combinations,
+    const param_vector& param_indices) const {
 
-  idd_.mark_valid_value_combinations(value_combinations,
+  idd_.mark_valid_value_combinations(value_combinations, param_indices,
                                      model_.get_parameter_num_values(),
                                      &parameter_to_level_);
 }
