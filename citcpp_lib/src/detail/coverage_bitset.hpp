@@ -175,14 +175,15 @@ class coverage_bitset_tmpl {
     }
 
     /**
-     * Returns a reference to the underlying bitset.
+     * Sets a new size for this coverage bitset and resets its state.
+     * Care must be taken to not set a size greater than the size
+     * of the underlying bitset.
      */
-    const T_BITSET& get_bitset() const { return bitset_; }
-
-    /**
-     * Returns a reference to the underlying bitset.
-     */
-    T_BITSET& get_bitset() { return bitset_; }
+    void reset_with_new_size(size_type size) {
+      bitset_.reset_with_new_size(size << 1);
+      cov_num_ones_.store(0, std::memory_order_relaxed);
+      valid_num_ones_.store(0, std::memory_order_relaxed);
+    }
 
   private:
     T_BITSET bitset_;

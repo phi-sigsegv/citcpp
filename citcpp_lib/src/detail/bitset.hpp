@@ -255,7 +255,7 @@ class bitset_tmpl {
     }
 
     /**
-     * Sets a new size for this bitset and clear all of its bits.
+     * Sets a new size for this bitset and resets its state.
      * Care must be taken to not set a size greater than the size
      * of the underlying storage.
      */
