@@ -16,9 +16,25 @@ set(CITCPP_3RD_PARTY_DIR ${PROJECT_SOURCE_DIR}/3rd_party)
 
 message(STATUS "CITCPP_BUILD_TESTS: " ${CITCPP_BUILD_TESTS})
 
-add_subdirectory(${CITCPP_3RD_PARTY_DIR}/lace EXCLUDE_FROM_ALL)
+set(LACE_NATIVE_OPT OFF)
+set(SYLVAN_NATIVE_OPT OFF)
 set(SYLVAN_BUILD_CPP OFF)
+
+if(BUILD_SHARED_LIBS)
+  set(LACE_ENABLE_PIC ON)
+  set(SYLVAN_ENABLE_PIC ON)
+else()
+  set(LACE_ENABLE_PIC OFF)
+  set(SYLVAN_ENABLE_PIC OFF)
+endif()
+
+# We want lace and sylvan to be static libraries even if BUILD_SHARED_LIBS is ON.
+# Sylvan is already static by default, but Lace respects BUILD_SHARED_LIBS.
+set(OLD_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+set(BUILD_SHARED_LIBS OFF)
+add_subdirectory(${CITCPP_3RD_PARTY_DIR}/lace EXCLUDE_FROM_ALL)
 add_subdirectory(${CITCPP_3RD_PARTY_DIR}/sylvan EXCLUDE_FROM_ALL)
+set(BUILD_SHARED_LIBS ${OLD_BUILD_SHARED_LIBS})
 
 add_subdirectory(citcpp_lib)
 
