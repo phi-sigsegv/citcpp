@@ -1,13 +1,13 @@
 #ifndef TEST_SET_PARSER_HPP_
 #define TEST_SET_PARSER_HPP_
 
-#include <citcpp/model.hpp>
-#include <citcpp/test_set.hpp>
 #include <memory>
 #include <string_view>
 
+#include "model.hpp"
+#include "test_set.hpp"
+
 namespace citcpp {
-namespace detail {
 
 class test_set_parser {
   public:
@@ -38,7 +38,6 @@ class test_set_parser {
     std::unique_ptr<impl> impl_;
 };
 
-}  // namespace detail
 }  // namespace citcpp
 
 #endif /* TEST_SET_PARSER_HPP_ */
