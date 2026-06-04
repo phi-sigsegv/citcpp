@@ -22,6 +22,7 @@ class ipog_vertical_extension_functor {
               partitioning_of_tests_according_to_current_values),
           modified_tests_(modified_tests),
           value_indices_(strength),
+          weights_(strength),
           scratch_test_(model.get_parameter_num_values().size(), -1),
           num_missing_combinations_to_cover_(num_missing_combinations_to_cover),
           num_checked_tuples_(0),
@@ -67,6 +68,13 @@ class ipog_vertical_extension_functor {
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
+      // Pre-calculate weights for index computation
+      ipog_coverage_map::second_level_type::size_type weight = 1;
+      for (int i = (int)param_indices.size() - 1; i >= 0; --i) {
+        weights_[i] = weight;
+        weight *= model_.get_parameter_num_values()[param_indices[i]];
+      }
+
       for (test_list_intrusive_integ& t : modified_tests_) {
         // Here we compute an index into the bitset. To do so, we treat the
         // number of values of each parameter as a kind of radix. Consider
@@ -88,12 +96,9 @@ class ipog_vertical_extension_functor {
             break;
           }
 
-          ipog_coverage_map::second_level_type::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameter_num_values()[param_indices[j]];
-          }
-          index += addend;
+          index +=
+              (ipog_coverage_map::second_level_type::size_type)param_value *
+              weights_[i];
         }
 
         if (index_valid) {
@@ -282,6 +287,7 @@ class ipog_vertical_extension_functor {
         partitioning_of_tests_according_to_current_values_;
     list_intrusive<test_list_intrusive_integ>& modified_tests_;
     value_vector value_indices_;
+    std::vector<ipog_coverage_map::second_level_type::size_type> weights_;
     test scratch_test_;
     const unsigned long long num_missing_combinations_to_cover_;
     unsigned long long num_checked_tuples_;

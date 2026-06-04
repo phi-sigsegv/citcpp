@@ -16,8 +16,11 @@ typedef std::uint16_t param_index;
 
 // using param_vector = std::vector<param_index>;
 // using value_vector = std::vector<int>;
-using param_vector = SmallVector<param_index, 6>;
-using value_vector = SmallVector<int, 6>;
+template <typename T>
+using small_vector = SmallVector<T, 6>;
+
+using param_vector = small_vector<param_index>;
+using value_vector = small_vector<int>;
 
 template <typename T>
 using thread_local_vector =
