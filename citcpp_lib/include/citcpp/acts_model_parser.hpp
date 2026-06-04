@@ -1,12 +1,12 @@
 #ifndef ACTS_MODEL_PARSER_HPP_
 #define ACTS_MODEL_PARSER_HPP_
 
-#include <citcpp/model.hpp>
 #include <memory>
 #include <string_view>
 
+#include "model.hpp"
+
 namespace citcpp {
-namespace detail {
 
 class acts_model_parser {
   public:
@@ -36,7 +36,6 @@ class acts_model_parser {
     std::unique_ptr<impl> impl_;
 };
 
-}  // namespace detail
 }  // namespace citcpp
 
 #endif /* ACTS_MODEL_PARSER_HPP_ */

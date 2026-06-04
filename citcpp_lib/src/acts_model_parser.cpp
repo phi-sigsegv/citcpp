@@ -1,7 +1,6 @@
-#include "acts_model_parser.hpp"
-
 #include <peglib.h>
 
+#include <citcpp/acts_model_parser.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -265,7 +264,6 @@ LineComment       <- '--' (!Eol .)* &Eol
 }  // namespace
 
 namespace citcpp {
-namespace detail {
 
 class acts_model_parser::impl : input_model_data_consumer {
   public:
@@ -570,5 +568,4 @@ std::string_view acts_model_parser::get_last_error_message() const {
   return impl_->get_last_error_message();
 }
 
-}  // namespace detail
 }  // namespace citcpp

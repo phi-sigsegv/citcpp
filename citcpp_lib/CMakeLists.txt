@@ -26,13 +26,17 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/coverage_measurement.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/constraints.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/parser_utils.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/acts_model_parser.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set_parser.cpp
 )
 
 add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
 
 target_include_directories(citcpp_lib PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+  PRIVATE "${CITCPP_3RD_PARTY_DIR}/cpp-peglib")
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
 target_link_libraries(citcpp_lib PUBLIC Threads::Threads PRIVATE sylvan::sylvan)
 

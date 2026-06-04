@@ -1,7 +1,9 @@
 #include <CLI11.hpp>
 #include <atomic>
 #include <chrono>
+#include <citcpp/acts_model_parser.hpp>
 #include <citcpp/citcpp.hpp>
+#include <citcpp/test_set_parser.hpp>
 #include <csignal>
 #include <fstream>
 #include <iomanip>
@@ -11,11 +13,9 @@
 #include <sstream>
 #include <thread>
 
-#include "acts_model_parser.hpp"
 #include "config.hpp"
 #include "covm_json.hpp"
 #include "duration_wrapper.hpp"
-#include "test_set_parser.hpp"
 
 namespace {
 

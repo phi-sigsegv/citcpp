@@ -1,9 +1,8 @@
-#include "test_set_parser.hpp"
-
 #include <peglib.h>
 
 #include <algorithm>
 #include <cctype>
+#include <citcpp/test_set_parser.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -121,7 +120,6 @@ bool i_string_equals(const std::string& a, const std::string& b) {
 }  // namespace
 
 namespace citcpp {
-namespace detail {
 
 class test_set_parser::impl : test_set_data_consumer {
   public:
@@ -296,5 +294,4 @@ std::string_view test_set_parser::get_last_error_message() const {
   return impl_->get_last_error_message();
 }
 
-}  // namespace detail
 }  // namespace citcpp
