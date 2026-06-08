@@ -65,6 +65,7 @@ class covm_per_param_combo_functor {
           test_set_(test_set),
           validity_pred_(validity_pred),
           value_indices_(strength),
+          weights_(strength),
           scratch_test_(model.get_parameter_num_values().size(), -1),
           values_combo_bitset_(bitset_backing_array_size),
           num_invalid_tuples_(0),
@@ -78,6 +79,13 @@ class covm_per_param_combo_functor {
         bitset_size *= model_.get_parameter_num_values()[p];
       }
       values_combo_bitset_.reset_with_new_size(bitset_size);
+
+      // Pre-calculate weights for index computation
+      bitset_uint64::size_type weight = 1;
+      for (int i = (int)param_indices.size() - 1; i >= 0; --i) {
+        weights_[i] = weight;
+        weight *= model_.get_parameter_num_values()[param_indices[i]];
+      }
 
       int test_index = 0;
       for (const test& test : test_set_.get_list_of_tests()) {
@@ -102,12 +110,7 @@ class covm_per_param_combo_functor {
             break;
           }
 
-          bitset_uint64::size_type addend = param_value;
-          for (std::vector<unsigned int>::size_type j = i + 1;
-               j < param_indices.size(); ++j) {
-            addend *= model_.get_parameter_num_values()[param_indices[j]];
-          }
-          index += addend;
+          index += (bitset_uint64::size_type)param_value * weights_[i];
         }
 
         if (!found_dont_care) {
@@ -209,6 +212,7 @@ class covm_per_param_combo_functor {
     const internal_test_set& test_set_;
     const T_PARTIAL_TEST_VALIDITY_PRED& validity_pred_;
     value_vector value_indices_;
+    std::vector<bitset_uint64::size_type> weights_;
     test scratch_test_;
     bitset_uint64 values_combo_bitset_;
     unsigned long long num_invalid_tuples_;
