@@ -39,30 +39,11 @@ void internal_model::convert_test_set(const internal_test_set& src,
                                       test_set& tgt) const {
 
   for (const parameter& param : input_model_.get_parameters()) {
-    tgt.add_parameter(
-        parameter_def().name(param.get_name()).type(param.get_type()));
+    tgt.add_parameter(param);
   }
 
   for (const test& test : src.get_list_of_tests()) {
-    tgt.get_list_of_tests().emplace_back(std::vector<parameter_value>(
-        test.get_values().size(), DONT_CARE_PARAMETER_VALUE));
-    convert_test(test, tgt.get_list_of_tests().back());
-  }
-}
-
-void internal_model::convert_test(const test& src,
-                                  std::vector<parameter_value>& tgt) const {
-
-  for (test::size_type p = 0; p < src.get_values().size(); ++p) {
-    int pv = src.get_values().at(p);
-
-    const parameter& param = input_model_.get_parameters()[p];
-    if (pv >= 0 && (std::vector<parameter_value>::size_type)pv <
-                       param.get_values().size()) {
-      tgt[p] = param.get_values()[pv];
-    } else {
-      tgt[p] = DONT_CARE_PARAMETER_VALUE;
-    }
+    tgt.get_list_of_tests().emplace_back(test.get_values());
   }
 }
 

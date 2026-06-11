@@ -20,6 +20,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_sylvan_ldd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/idd_variable_ordering.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/lace_lifecycle.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/parameter.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp

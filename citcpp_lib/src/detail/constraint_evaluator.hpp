@@ -17,14 +17,6 @@ namespace detail {
  */
 class constraint_evaluator {
   public:
-    constraint_evaluator(const std::vector<parameter_def>& parameters) {
-      int idx = 0;
-      for (const auto& param : parameters) {
-        param_to_index_.emplace(param.get_name(), idx);
-        ++idx;
-      }
-    }
-
     constraint_evaluator(const std::vector<parameter>& parameters) {
       int idx = 0;
       for (const auto& param : parameters) {
@@ -32,19 +24,6 @@ class constraint_evaluator {
         ++idx;
       }
     }
-
-    /**
-     * Evaluates whether the given test fulfills the given constraint.
-     */
-    bool operator()(const std::vector<parameter_value>& test,
-                    const constraint& constr) const;
-
-    /**
-     * Evaluates whether the given test fulfills all the given constraints.
-     */
-    bool operator()(
-        const std::vector<parameter_value>& test,
-        const std::vector<std::shared_ptr<constraint>>& constraints) const;
 
     /**
      * Evaluates whether all tests in a given testset fulfill all the given

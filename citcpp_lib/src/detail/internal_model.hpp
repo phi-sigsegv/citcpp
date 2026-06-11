@@ -51,7 +51,6 @@ class internal_model {
 
   private:
     void convert_test_set(const internal_test_set& src, test_set& tgt) const;
-    void convert_test(const test& src, std::vector<parameter_value>& tgt) const;
 
   private:
     const model& input_model_;

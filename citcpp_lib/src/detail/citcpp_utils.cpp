@@ -9,7 +9,6 @@ namespace detail {
 
 const std::string EMPTY_VALUE_SEPARATOR = "";
 const std::string DEFAULT_VALUE_SEPARATOR = ", ";
-const citcpp::parameter_value DONT_CARE_PARAMETER_VALUE{"*"};
 
 internal_test_set create_internal_test_set(const model& input_model,
                                            const test_set& tests) {
@@ -47,11 +46,11 @@ internal_test_set create_internal_test_set(const model& input_model,
 
   {
     int test_param_index = 0;
-    for (const parameter_def& param_def : tests.get_parameters()) {
+    for (const parameter& param_in_test : tests.get_parameters()) {
       int model_param_index = 0;
-      for (const parameter& param : input_model.get_parameters()) {
-        if (param.get_name() == param_def.get_name() &&
-            param.get_type() == param_def.get_type()) {
+      for (const parameter& param_in_model : input_model.get_parameters()) {
+        if (param_in_model.get_name() == param_in_test.get_name() &&
+            param_in_model.get_type() == param_in_test.get_type()) {
 
           param_mapping[test_param_index] = model_param_index;
           break;
@@ -67,25 +66,25 @@ internal_test_set create_internal_test_set(const model& input_model,
   internal_test_set internal_test_set;
 
   {
-    for (const std::vector<parameter_value>& values :
-         tests.get_list_of_tests()) {
-
+    for (const std::vector<int>& values : tests.get_list_of_tests()) {
       test internal_test(all_param_value_mappings.size(), -2);
       int test_param_index = 0;
-      for (const parameter_value& param_value : values) {
+      for (const int test_param_value_idx : values) {
         if (param_mapping[test_param_index] >= 0) {
           int model_param_index = param_mapping[test_param_index];
-          const auto& param_value_mappings =
-              all_param_value_mappings[model_param_index];
-
-          auto param_value_idx_it = param_value_mappings.find(param_value);
-          if (param_value_idx_it != param_value_mappings.end()) {
-            internal_test.get_values()[model_param_index] =
-                param_value_idx_it->second;
-          } else if (param_value == DONT_CARE_PARAMETER_VALUE) {
-            // Cannot find value. If it is a don't care, then set its index to
-            // -1.
+          if (test_param_value_idx < 0) {
             internal_test.get_values()[model_param_index] = -1;
+          } else {
+            const auto& param_value_mappings =
+                all_param_value_mappings[model_param_index];
+
+            auto param_value_idx_it = param_value_mappings.find(
+                tests.get_parameters()[test_param_index]
+                    .get_values()[test_param_value_idx]);
+            if (param_value_idx_it != param_value_mappings.end()) {
+              internal_test.get_values()[model_param_index] =
+                  param_value_idx_it->second;
+            }
           }
         }
 
