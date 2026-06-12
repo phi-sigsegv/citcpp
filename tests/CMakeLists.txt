@@ -13,6 +13,9 @@ list(APPEND CITCPP_UNITTESTS
   test_cagen
   test_cagen_extend
   test_cagen_relations
+  test_cagen_parsed
+  test_cagen_extend_parsed
+  test_cagen_relations_parsed
   test_constrained_cagen
   test_cov_measure_result
   test_cov_measure

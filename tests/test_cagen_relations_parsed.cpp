@@ -3,10 +3,12 @@
 #include <doctest.h>
 
 #include <chrono>
+#include <citcpp/acts_model_parser.hpp>
 #include <citcpp/citcpp.hpp>
 #include <duration_wrapper.hpp>
 #include <iostream>
 #include <ranges>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -15,60 +17,26 @@ namespace {
 citcpp::model create_pict_example_model() {
   using namespace citcpp;
 
-  model model;
+  std::stringstream s;
 
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("PLATFORM")
-                          .values({{"x86"}, {"x64"}, {"arm"}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::INTEGER)
-                          .name("CPUS")
-                          .values({{1}, {2}, {4}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("RAM")
-                          .values({{"1GB"}, {"4GB"}, {"64GB"}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("HDD")
-                          .values({{"SCSI"}, {"IDE"}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("OS")
-                          .values({{"Win7"}, {"Win8"}, {"Win10"}}));
-  model.add_parameter(
-      parameter()
-          .type(parameter_type::ENUM)
-          .name("Browser")
-          .values({{"Edge"}, {"Opera"}, {"Chrome"}, {"Firefox"}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("APP")
-                          .values({{"Word"}, {"Excel"}, {"Powerpoint"}}));
+  s << "[System]\n"
+    << "Name: PICT_example\n"
+    << "\n"
+    << "[Parameter]\n"
+    << "PLATFORM (enum) : x86, x64, arm\n"
+    << "CPUS (int) : 1, 2, 4\n"
+    << "RAM (enum) : 1GB, 4GB, 64GB\n"
+    << "HDD (enum) : SCSI, IDE\n"
+    << "OS (enum) : Win7, Win8, Win10\n"
+    << "Browser (enum) : Edge, Opera, Chrome, Firefox\n"
+    << "APP (enum) : Word, Excel, Powerpoint" << std::endl;
 
-  return model;
-}
+  std::string model_str = s.str();
 
-citcpp::model create_simple_four_param_model() {
-  using namespace citcpp;
+  acts_model_parser acts_parser;
 
-  model model;
-
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("P1")
-                          .values({{"a"}, {"b"}, {"c"}, {"d"}, {"e"}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("P2")
-                          .values({{"a"}, {"b"}, {"c"}, {"d"}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("P3")
-                          .values({{"a"}, {"b"}, {"c"}}));
-  model.add_parameter(
-      parameter().type(parameter_type::ENUM).name("P4").values({{"a"}, {"b"}}));
+  citcpp::model model;
+  acts_parser.parse_input_model(model_str, model);
 
   return model;
 }
@@ -131,85 +99,6 @@ void check_non_relation_params_are_dont_care(
 }
 
 }  // namespace
-
-TEST_CASE("cagen relations, testing PICT example model, R1") {
-  using namespace citcpp;
-
-  model model{create_pict_example_model()};
-  model.add_relation(
-      create_relation(model, "R1", {"PLATFORM", "CPUS", "RAM", "HDD"}, 1));
-
-  test_set ipog_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, -1,
-            covering_array_computation_config().with_replace_dont_care_values(
-                false));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-
-    // The parameter of the relation with the largest number of values has 3
-    // values. Thus, for 1-way coverage we shall get a testset with exactly
-    // three rows.
-    CHECK(ipog_test_set.get_list_of_tests().size() == 3);
-
-    // Check all values in the created test set and whether they are don't care
-    // for all parameters not contained in the relations.
-    check_non_relation_params_are_dont_care(ipog_test_set,
-                                            {"PLATFORM", "CPUS", "RAM", "HDD"});
-
-    CHECK(handle->get_number_of_processed_parameters() == 4);
-    CHECK(handle->get_number_of_covered_combinations() == 11);
-  }
-}
-
-TEST_CASE("cagen relations, testing PICT example model, R2") {
-  using namespace citcpp;
-
-  model model{create_pict_example_model()};
-  model.add_relation(
-      create_relation(model, "R2", {"PLATFORM", "CPUS", "RAM", "HDD"}, 2));
-
-  test_set ipog_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, -1,
-            covering_array_computation_config().with_replace_dont_care_values(
-                false));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-
-    // Check all values in the created test set and whether they are don't care
-    // for all parameters not contained in the relations.
-    check_non_relation_params_are_dont_care(ipog_test_set,
-                                            {"PLATFORM", "CPUS", "RAM", "HDD"});
-
-    CHECK(handle->get_number_of_processed_parameters() == 4);
-    CHECK(handle->get_number_of_covered_combinations() == 45);
-  }
-}
 
 TEST_CASE("cagen relations, testing PICT example model, R3") {
   using namespace citcpp;
@@ -282,43 +171,6 @@ TEST_CASE("cagen relations, testing PICT example model, R4") {
 
     CHECK(handle->get_number_of_processed_parameters() == 4);
     CHECK(handle->get_number_of_covered_combinations() == 54);
-  }
-}
-
-TEST_CASE(
-    "cagen relations, testing simple model, mixed strength non-overlapping") {
-  using namespace citcpp;
-
-  model model{create_simple_four_param_model()};
-  model.add_relation(create_relation(model, "R2", {"P1", "P3"}, 2));
-  model.add_relation(create_relation(model, "R1", {"P2"}, 1));
-
-  test_set ipog_test_set;
-  {
-    std::unique_ptr<cagen_exec_handle_ipog> handle =
-        compute_covering_array_ipog(
-            model, -1,
-            covering_array_computation_config().with_replace_dont_care_values(
-                false));
-    auto f = handle->get_test_set();
-    cagen_exec_result result(f.get());
-    ipog_test_set = result.get_result();
-
-    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
-                                          COVERING_ARRAY_GENERATION_COMPLETED);
-
-    std::cout << "Test set generated using IPOG in "
-              << duration_wrapper(std::chrono::milliseconds(
-                     handle->get_duration_in_milli_seconds()))
-              << " and has " << ipog_test_set.get_list_of_tests().size()
-              << " rows." << std::endl;
-
-    // Check all values in the created test set and whether they are don't care
-    // for all parameters not contained in the relations.
-    check_non_relation_params_are_dont_care(ipog_test_set, {"P1", "P2", "P3"});
-
-    CHECK(handle->get_number_of_processed_parameters() == 3);
-    CHECK(handle->get_number_of_covered_combinations() == 19);
   }
 }
 

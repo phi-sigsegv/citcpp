@@ -3,102 +3,47 @@
 #include <doctest.h>
 
 #include <chrono>
+#include <citcpp/acts_model_parser.hpp>
 #include <citcpp/citcpp.hpp>
 #include <duration_wrapper.hpp>
 #include <iostream>
+#include <sstream>
 
 namespace {
 
 citcpp::model create_acts_example_model() {
   using namespace citcpp;
 
-  model model;
+  std::stringstream s;
 
-  model.set_name("TCAS");
+  s << "[System]\n"
+    << "Name: TCAS\n"
+    << "\n"
+    << "[Parameter]\n"
+    << "Cur_Vertical_Sep (int) : 299, 300, 601\n"
+    << "High_Confidence (boolean) : TRUE, FALSE\n"
+    << "Two_of_Three_Reports_Valid (boolean) : TRUE, FALSE\n"
+    << "Own_Tracked_Alt (int) : 1, 2\n"
+    << "Other_Tracked_Alt (int) : 1, 2\n"
+    << "Own_Tracked_Alt_Rate (int) : 600, 601\n"
+    << "Alt_Layer_Value (int) : 0, 1, 2, 3\n"
+    << "Up_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, 840\n"
+    << "Down_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, "
+       "840\n"
+    << "Other_RAC (enum) : NO_INTENT, DO_NOT_CLIMB, DO_NOT_DESCEND\n"
+    << "Other_Capability (enum) : TCAS_TA, OTHER\n"
+    << "Climb_Inhibit (boolean) : TRUE, FALSE\n"
+    << "\n"
+    << "[Constraint]\n"
+    << "Cur_Vertical_Sep != 299 => Other_Capability != \"OTHER\"\n"
+    << "Climb_Inhibit = true => Up_Separation > 399" << std::endl;
 
-  model.add_parameter(parameter()
-                          .type(parameter_type::INTEGER)
-                          .name("Cur_Vertical_Sep")
-                          .values({{299}, {300}, {601}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::BOOLEAN)
-                          .name("High_Confidence")
-                          .values({{true}, {false}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::BOOLEAN)
-                          .name("Two_of_Three_Reports_Valid")
-                          .values({{true}, {false}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::INTEGER)
-                          .name("Own_Tracked_Alt")
-                          .values({{1}, {2}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::INTEGER)
-                          .name("Other_Tracked_Alt")
-                          .values({{1}, {2}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::INTEGER)
-                          .name("Own_Tracked_Alt_Rate")
-                          .values({{600}, {601}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::INTEGER)
-                          .name("Alt_Layer_Value")
-                          .values({{0}, {1}, {2}, {3}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::INTEGER)
-                          .name("Up_Separation")
-                          .values({{0},
-                                   {399},
-                                   {400},
-                                   {499},
-                                   {500},
-                                   {639},
-                                   {640},
-                                   {739},
-                                   {740},
-                                   {840}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::INTEGER)
-                          .name("Down_Separation")
-                          .values({{0},
-                                   {399},
-                                   {400},
-                                   {499},
-                                   {500},
-                                   {639},
-                                   {640},
-                                   {739},
-                                   {740},
-                                   {840}}));
-  model.add_parameter(
-      parameter()
-          .type(parameter_type::ENUM)
-          .name("Other_RAC")
-          .values({{"NO_INTENT"}, {"DO_NOT_CLIMB"}, {"DO_NOT_DESCEND"}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::ENUM)
-                          .name("Other_Capability")
-                          .values({{"TCAS_TA"}, {"OTHER"}}));
-  model.add_parameter(parameter()
-                          .type(parameter_type::BOOLEAN)
-                          .name("Climb_Inhibit")
-                          .values({{true}, {false}}));
+  std::string model_str = s.str();
 
-  auto Cur_Vertical_Sep_NEQ_299 = std::make_shared<int_proposition>(
-      parameter_reference("Cur_Vertical_Sep"), relational_operator::NEQ, 299);
-  auto Other_Capability_NEQ_OTHER = std::make_shared<enum_proposition>(
-      parameter_reference("Other_Capability"), relational_operator::NEQ,
-      "OTHER");
-  model.add_constraint(
-      std::make_shared<implication>(std::move(Cur_Vertical_Sep_NEQ_299),
-                                    std::move(Other_Capability_NEQ_OTHER)));
+  acts_model_parser acts_parser;
 
-  auto Climb_Inhibit_EQ_TRUE = std::make_shared<boolean_proposition>(
-      parameter_reference("Climb_Inhibit"), relational_operator::EQ, true);
-  auto Up_Separation_GT_399 = std::make_shared<int_proposition>(
-      parameter_reference("Up_Separation"), relational_operator::GT, 399);
-  model.add_constraint(std::make_shared<implication>(
-      std::move(Climb_Inhibit_EQ_TRUE), std::move(Up_Separation_GT_399)));
+  citcpp::model model;
+  acts_parser.parse_input_model(model_str, model);
 
   return model;
 }
