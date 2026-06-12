@@ -121,12 +121,14 @@ bool i_string_equals(const std::string& a, const std::string& b) {
 
 namespace citcpp {
 
+#include <variant>
+
 class test_set_parser::impl : test_set_data_consumer {
   public:
     impl(const model& model, std::string_view separator)
         : test_set_data_consumer(),
           model_(model),
-          parameter_to_type_map_(),
+          name_to_param_map_(),
           param_identifier_consumer_(param_identifier_consumer(this)),
           param_declarations_end_consumer_(
               param_declarations_end_consumer(this)),
@@ -135,13 +137,12 @@ class test_set_parser::impl : test_set_data_consumer {
           test_set_parser_(create_test_set_parser(separator)),
           error_occurred_(false),
           error_message_(),
-          current_param_(parameter_def()),
           current_test_(),
           current_param_index_(0),
           test_set_(nullptr) {
 
       for (const parameter& param : model_.get_parameters()) {
-        parameter_to_type_map_[param.get_name()] = param.get_type();
+        name_to_param_map_[param.get_name()] = &param;
       }
 
       test_set_parser_["Parameter"] = param_identifier_consumer_;
@@ -162,16 +163,23 @@ class test_set_parser::impl : test_set_data_consumer {
     void set_test_set(test_set* t) { test_set_ = t; }
 
     void set_param_identifier(const std::string& identifier) {
-      current_param_.set_name(identifier);
-
-      auto it = parameter_to_type_map_.find(identifier);
-      if (it != parameter_to_type_map_.end()) {
-        current_param_.set_type(it->second);
+      auto it = name_to_param_map_.find(identifier);
+      if (it != name_to_param_map_.end()) {
+        test_set_->add_parameter(*(it->second));
       } else {
-        current_param_.set_type(parameter_type::ENUM);
-      }
+        error_occurred_ = true;
+        std::ostringstream oss;
+        oss << "Error in test set file -> Parameter '" << identifier
+            << "' not found in the model";
 
-      test_set_->add_parameter(current_param_);
+        error_message_ = oss.str();
+
+        // Defensively add an empty parameter to keep test_set parameters size in sync
+        parameter dummy;
+        dummy.set_name(identifier);
+        dummy.set_type(parameter_type::ENUM);
+        test_set_->add_parameter(dummy);
+      }
     }
 
     void end_param_declarations() {
@@ -181,45 +189,72 @@ class test_set_parser::impl : test_set_data_consumer {
 
     void parse_param_value(const std::string& value, size_t line, size_t col) {
       if (current_param_index_ < test_set_->get_parameters().size()) {
-        switch (test_set_->get_parameters()[current_param_index_].get_type()) {
-          case parameter_type::BOOLEAN:
-            if (value == "*") {
-              current_test_.push_back(std::move(parameter_value(value)));
-            } else {
-              if (i_string_equals(value, "true")) {
-                current_test_.push_back(std::move(parameter_value(true)));
-              } else if (i_string_equals(value, "false")) {
-                current_test_.push_back(std::move(parameter_value(false)));
-              } else {
-                error_occurred_ = true;
-                std::ostringstream oss;
-                oss << "Error in test set file at " << line << ":" << col
-                    << " -> Expecting boolean value or *";
+        const parameter& param = test_set_->get_parameters()[current_param_index_];
+        if (value == "*") {
+          current_test_.push_back(-1);
+        } else {
+          int found_idx = -1;
+          const auto& param_values = param.get_values();
 
-                error_message_ = oss.str();
+          if (param.get_type() == parameter_type::BOOLEAN) {
+            bool bool_val = false;
+            bool valid_bool = false;
+            if (i_string_equals(value, "true")) {
+              bool_val = true;
+              valid_bool = true;
+            } else if (i_string_equals(value, "false")) {
+              bool_val = false;
+              valid_bool = true;
+            }
+
+            if (valid_bool) {
+              for (size_t i = 0; i < param_values.size(); ++i) {
+                const auto& var_val = param_values[i].get_variant_value();
+                if (std::holds_alternative<bool>(var_val) &&
+                    std::get<bool>(var_val) == bool_val) {
+                  found_idx = static_cast<int>(i);
+                  break;
+                }
               }
             }
-            break;
-          case parameter_type::INTEGER:
-            if (value == "*") {
-              current_test_.push_back(std::move(parameter_value(value)));
-            } else {
-              try {
-                const int int_value{std::stoi(value)};
-                current_test_.push_back(std::move(parameter_value(int_value)));
-              } catch (std::invalid_argument const& ex) {
-                error_occurred_ = true;
-                std::ostringstream oss;
-                oss << "Error in test set file at " << line << ":" << col
-                    << " -> Expecting integer value or *";
-
-                error_message_ = oss.str();
+          } else if (param.get_type() == parameter_type::INTEGER) {
+            try {
+              const int int_val = std::stoi(value);
+              for (size_t i = 0; i < param_values.size(); ++i) {
+                const auto& var_val = param_values[i].get_variant_value();
+                if (std::holds_alternative<int>(var_val) &&
+                    std::get<int>(var_val) == int_val) {
+                  found_idx = static_cast<int>(i);
+                  break;
+                }
+              }
+            } catch (const std::exception& ex) {
+              // std::stoi failed or type mismatch
+            }
+          } else if (param.get_type() == parameter_type::ENUM) {
+            for (size_t i = 0; i < param_values.size(); ++i) {
+              const auto& var_val = param_values[i].get_variant_value();
+              if (std::holds_alternative<std::string>(var_val) &&
+                  std::get<std::string>(var_val) == value) {
+                found_idx = static_cast<int>(i);
+                break;
               }
             }
-            break;
-          case parameter_type::ENUM:
-            current_test_.push_back(std::move(parameter_value(value)));
-            break;
+          }
+
+          if (found_idx != -1) {
+            current_test_.push_back(found_idx);
+          } else {
+            error_occurred_ = true;
+            std::ostringstream oss;
+            oss << "Error in test set file at " << line << ":" << col
+                << " -> Value '" << value
+                << "' is not in the domain of parameter '" << param.get_name()
+                << "'";
+
+            error_message_ = oss.str();
+            current_test_.push_back(-1);
+          }
         }
       } else {
         error_occurred_ = true;
@@ -266,7 +301,7 @@ class test_set_parser::impl : test_set_data_consumer {
 
   private:
     const model model_;
-    std::unordered_map<std::string, parameter_type> parameter_to_type_map_;
+    std::unordered_map<std::string, const parameter*> name_to_param_map_;
     param_identifier_consumer param_identifier_consumer_;
     param_declarations_end_consumer param_declarations_end_consumer_;
     test_value_consumer test_value_consumer_;
@@ -274,8 +309,7 @@ class test_set_parser::impl : test_set_data_consumer {
     peg::parser test_set_parser_;
     bool error_occurred_;
     std::string error_message_;
-    parameter_def current_param_;
-    std::vector<parameter_value> current_test_;
+    std::vector<int> current_test_;
     int current_param_index_;
     test_set* test_set_;
 };

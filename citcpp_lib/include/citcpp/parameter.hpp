@@ -70,6 +70,8 @@ class parameter_value {
     std::variant<bool, std::string, int> value_;
 };
 
+extern const parameter_value DONT_CARE_PARAMETER_VALUE;
+
 enum class parameter_type { BOOLEAN, ENUM, INTEGER };
 
 /**

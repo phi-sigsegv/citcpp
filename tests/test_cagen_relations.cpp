@@ -113,10 +113,10 @@ void check_non_relation_params_are_dont_care(
   }
 
   auto not_in_relation_params =
-      [&relation_param_names](const parameter_def& p) {
+      [&relation_param_names](const parameter& p) {
         return !relation_param_names.contains(p.get_name());
       };
-  auto to_param_index = [&param_to_index_map](const parameter_def& p) {
+  auto to_param_index = [&param_to_index_map](const parameter& p) {
     return param_to_index_map[p.get_name()];
   };
   std::vector<unsigned int> param_indices_expect_dont_care;
@@ -128,7 +128,7 @@ void check_non_relation_params_are_dont_care(
 
   for (const auto& t : tests.get_list_of_tests()) {
     for (unsigned int param_idx : param_indices_expect_dont_care) {
-      CHECK(t[param_idx] == DONT_CARE_PARAMETER_VALUE);
+      CHECK(t[param_idx] == -1);
     }
   }
 }
