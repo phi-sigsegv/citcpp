@@ -65,6 +65,49 @@ citcpp::relation create_relation(const citcpp::model& model,
   return rel;
 }
 
+citcpp::model create_acts_example_model_with_relations() {
+  using namespace citcpp;
+
+  std::stringstream s;
+
+  s << "[System]\n"
+    << "Name: TCAS\n"
+    << "\n"
+    << "[Parameter]\n"
+    << "Cur_Vertical_Sep (int) : 299, 300, 601\n"
+    << "High_Confidence (boolean) : TRUE, FALSE\n"
+    << "Two_of_Three_Reports_Valid (boolean) : TRUE, FALSE\n"
+    << "Own_Tracked_Alt (int) : 1, 2\n"
+    << "Other_Tracked_Alt (int) : 1, 2\n"
+    << "Own_Tracked_Alt_Rate (int) : 600, 601\n"
+    << "Alt_Layer_Value (int) : 0, 1, 2, 3\n"
+    << "Up_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, 840\n"
+    << "Down_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, "
+       "840\n"
+    << "Other_RAC (enum) : NO_INTENT, DO_NOT_CLIMB, DO_NOT_DESCEND\n"
+    << "Other_Capability (enum) : TCAS_TA, OTHER\n"
+    << "Climb_Inhibit (boolean) : TRUE, FALSE\n"
+    << "\n"
+    << "[Relation]\n"
+    << "R2: (Cur_Vertical_Sep, Other_RAC, Other_Capability, 2)\n"
+    << "R3: (Cur_Vertical_Sep, Alt_Layer_Value, Other_Capability, "
+       "Own_Tracked_Alt_Rate, "
+       "3)\n"
+    << "\n"
+    << "[Constraint]\n"
+    << "Cur_Vertical_Sep != 299 => Other_Capability != \"OTHER\"\n"
+    << "Climb_Inhibit = true => Up_Separation > 399" << std::endl;
+
+  std::string model_str = s.str();
+
+  acts_model_parser acts_parser;
+
+  citcpp::model model;
+  acts_parser.parse_input_model(model_str, model);
+
+  return model;
+}
+
 void check_non_relation_params_are_dont_care(
     const citcpp::test_set& tests,
     std::unordered_set<std::string> relation_param_names) {
@@ -251,5 +294,54 @@ TEST_CASE(
 
     CHECK(handle->get_number_of_processed_parameters() == 6);
     CHECK(handle->get_number_of_covered_combinations() == 81);
+  }
+}
+
+TEST_CASE(
+    "cagen relations, testing ACTS example model, mixed strength overlapping") {
+  using namespace citcpp;
+
+  model model{create_acts_example_model_with_relations()};
+
+  test_set ipog_test_set;
+  {
+    std::unique_ptr<cagen_exec_handle_ipog> handle =
+        compute_covering_array_ipog(model, -1,
+                                    covering_array_computation_config());
+    auto f = handle->get_test_set();
+    cagen_exec_result result(f.get());
+    ipog_test_set = result.get_result();
+
+    CHECK(result.get_result_code() == cagen_exec_result::cagen_result_code::
+                                          COVERING_ARRAY_GENERATION_COMPLETED);
+
+    std::cout << "Test set generated using IPOG in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     handle->get_duration_in_milli_seconds()))
+              << " and has " << ipog_test_set.get_list_of_tests().size()
+              << " rows." << std::endl;
+
+    std::unique_ptr<covm_exec_handle> covm_handle = measure_coverage(
+        model, ipog_test_set, -1, coverage_measurement_config());
+    auto covm_f = covm_handle->get_coverage_measurement();
+    covm_exec_result covm_result(covm_f.get());
+
+    std::cout << "Coverage measured in "
+              << duration_wrapper(std::chrono::milliseconds(
+                     covm_handle->get_duration_in_milli_seconds()))
+              << std::endl;
+
+    CHECK(covm_result.get_result_code() ==
+          covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+    const coverage_measurement& covm_r2 = covm_result.get_result().at("R2");
+    CHECK(
+        covm_r2.get_covered_tuples()[covm_r2.get_covered_tuples().size() - 1] ==
+        19);
+
+    const coverage_measurement& covm_r3 = covm_result.get_result().at("R3");
+    CHECK(
+        covm_r3.get_covered_tuples()[covm_r3.get_covered_tuples().size() - 1] ==
+        64);
   }
 }
