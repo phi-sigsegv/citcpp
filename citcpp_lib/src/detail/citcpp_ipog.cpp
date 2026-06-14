@@ -199,6 +199,10 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   std::vector<unsigned int> parameter_index_map(
       citcpp_ipog_base::create_parameter_index_map(relations, model));
 
+  for (auto& relation : relations) {
+    relation.sort_parameters(parameter_index_map);
+  }
+
   // First we compute the number of combination we have to cover, as well as
   // some key properties of the relations.
   std::unordered_map<const internal_relation*, unsigned long long>
@@ -375,6 +379,10 @@ void main_ipog_loop_extend_test_set(
 
   std::vector<unsigned int> parameter_index_map(
       citcpp_ipog_base::create_parameter_index_map(relations, model));
+
+  for (auto& relation : relations) {
+    relation.sort_parameters(parameter_index_map);
+  }
 
   exec_handle.set_number_of_parameters_to_process(parameter_index_map.size());
 
