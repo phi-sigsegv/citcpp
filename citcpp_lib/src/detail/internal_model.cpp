@@ -1,5 +1,7 @@
 #include "internal_model.hpp"
 
+#include <unordered_map>
+
 #include "citcpp_utils.hpp"
 
 namespace citcpp {
@@ -60,6 +62,21 @@ internal_relation::internal_relation(
     : parameter_index_map_(std::move(parameter_index_map)),
       specified_interaction_strength_(specified_interaction_strength),
       current_param_idx_(0) {}
+
+void internal_relation::sort_parameters(
+    const std::vector<unsigned int>& parameter_index_map) {
+
+  std::unordered_map<unsigned int, unsigned int> param_to_order_map;
+  for (unsigned int i = 0; i < parameter_index_map.size(); ++i) {
+    param_to_order_map[parameter_index_map[i]] = i;
+  }
+
+  std::sort(parameter_index_map_.begin(), parameter_index_map_.end(),
+            [&param_to_order_map](const unsigned int& index1,
+                                  const unsigned int& index2) {
+              return param_to_order_map[index1] < param_to_order_map[index2];
+            });
+}
 
 }  // namespace detail
 }  // namespace citcpp

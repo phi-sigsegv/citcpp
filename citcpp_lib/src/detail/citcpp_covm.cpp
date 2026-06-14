@@ -22,15 +22,16 @@
 namespace {
 
 std::vector<citcpp::detail::internal_relation> create_relations(
-    const citcpp::model& model, int strength) {
+    const citcpp::model& input_model,
+    const citcpp::detail::internal_model& model, int strength) {
   using namespace citcpp::detail;
 
   std::vector<unsigned int> model_parameter_index_map(
-      model.get_parameters().size());
+      input_model.get_parameters().size());
   std::unordered_map<std::string, unsigned int> param_name_to_index_map;
   {
     unsigned int param_index = 0;
-    for (const auto& param : model.get_parameters()) {
+    for (const auto& param : input_model.get_parameters()) {
       param_name_to_index_map[param.get_name()] = param_index;
       model_parameter_index_map[param_index] = param_index;
       ++param_index;
@@ -42,7 +43,7 @@ std::vector<citcpp::detail::internal_relation> create_relations(
   if (strength >= 1) {
     relations.emplace_back(std::move(model_parameter_index_map), strength);
   } else {
-    for (const auto& relation : model.get_relations()) {
+    for (const auto& relation : input_model.get_relations()) {
       std::vector<unsigned int> parameter_index_map;
 
       // Find the indices of referenced parameters and add them to the relation.
@@ -50,6 +51,16 @@ std::vector<citcpp::detail::internal_relation> create_relations(
         unsigned int param_idx = param_name_to_index_map[param_ref.get_name()];
         parameter_index_map.push_back(param_idx);
       }
+
+      std::sort(
+          parameter_index_map.begin(), parameter_index_map.end(),
+          [&model](const unsigned int& index1, const unsigned int& index2) {
+            const auto& param_num_values = model.get_parameter_num_values();
+            if (param_num_values[index1] != param_num_values[index2]) {
+              return param_num_values[index1] > param_num_values[index2];
+            }
+            return index1 < index2;
+          });
 
       relations.emplace_back(std::move(parameter_index_map),
                              relation.get_interaction_strength());
@@ -73,7 +84,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
   const bool with_mt = exec.get_num_workers() > 1;
 
   std::vector<internal_relation> relations(
-      create_relations(input_model, strength));
+      create_relations(input_model, model, strength));
 
   const binom_coeff_table binomial_coeffs(
       model.get_parameter_num_values().size());

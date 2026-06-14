@@ -88,6 +88,12 @@ class internal_relation {
       current_param_idx_ = current_param_idx;
     }
 
+    /**
+     * Sorts the parameters of the relation according to their position in the
+     * given parameter index map.
+     */
+    void sort_parameters(const std::vector<unsigned int>& parameter_index_map);
+
   private:
     std::vector<unsigned int> parameter_index_map_;
     unsigned int specified_interaction_strength_;

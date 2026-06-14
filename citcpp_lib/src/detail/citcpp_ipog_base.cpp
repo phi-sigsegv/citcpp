@@ -69,7 +69,10 @@ std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
   std::sort(parameter_index_map.begin(), parameter_index_map.end(),
             [&param_num_values](const unsigned int& index1,
                                 const unsigned int& index2) {
-              return param_num_values[index1] > param_num_values[index2];
+              if (param_num_values[index1] != param_num_values[index2]) {
+                return param_num_values[index1] > param_num_values[index2];
+              }
+              return index1 < index2;
             });
 
   return parameter_index_map;
@@ -142,7 +145,10 @@ std::vector<internal_relation> citcpp_ipog_base::create_relations(
       std::sort(parameter_index_map.begin(), parameter_index_map.end(),
                 [&param_num_values](const unsigned int& index1,
                                     const unsigned int& index2) {
-                  return param_num_values[index1] > param_num_values[index2];
+                  if (param_num_values[index1] != param_num_values[index2]) {
+                    return param_num_values[index1] > param_num_values[index2];
+                  }
+                  return index1 < index2;
                 });
 
       // We walk over the relation created so far, and remove any relation,
