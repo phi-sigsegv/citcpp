@@ -246,7 +246,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
     create_all_value_combinations(first_param_idx, model, parameter_index_map,
                                   constr_handler, test_set);
 
-    // Cache the test in the constraint handler.
+    // Cache the tests in the constraint handler.
     for (const auto& t : test_set.get_list_of_tests()) {
       constr_handler.cache_partial_test(&t);
     }
@@ -388,6 +388,11 @@ void main_ipog_loop_extend_test_set(
 
   // Here is the main IPOG loop.
   const binom_coeff_table binomial_coeffs(parameter_index_map.size());
+
+  // Cache the tests in the constraint handler.
+  for (const auto& t : test_set.get_list_of_tests()) {
+    constr_handler.cache_partial_test(&t);
+  }
 
   for (unsigned int current_param_idx = 0;
        current_param_idx < parameter_index_map.size(); ++current_param_idx) {
