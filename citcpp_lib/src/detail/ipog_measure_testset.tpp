@@ -10,12 +10,18 @@ inline void measure_coverage(
     ipog_coverage_map::second_level_type& value_combinations,
     const std::vector<ipog_coverage_map::second_level_type::size_type>& weights,
     const internal_model& model, const internal_test_set& test_set,
+    const unsigned int num_seeded_tests,
     unsigned long long& num_covered_tuples) {
 
   const param_vector& param_indices =
       value_combinations.get_parameter_indices();
 
+  unsigned int test_index = 0;
   for (const test& test : test_set.get_list_of_tests()) {
+    if (test_index >= num_seeded_tests) {
+      break;
+    }
+
     // Here we compute an index into the bitset. To do so, we treat the
     // number of values of each parameter as a kind of radix. Consider
     // three parameters p_0, p_1, p_2. Now say that v_i is the number of
@@ -46,6 +52,8 @@ inline void measure_coverage(
         ++num_covered_tuples;
       }
     }
+
+    ++test_index;
   }
 }
 
@@ -53,9 +61,11 @@ class ipog_measure_per_param_combo_functor {
   public:
     ipog_measure_per_param_combo_functor(const internal_model& model,
                                          const internal_test_set& test_set,
+                                         const unsigned int num_seeded_tests,
                                          const unsigned int max_strength)
         : model_(model),
           test_set_(test_set),
+          num_seeded_tests_(num_seeded_tests),
           num_covered_tuples_(0),
           weights_(max_strength) {}
 
@@ -71,7 +81,7 @@ class ipog_measure_per_param_combo_functor {
       }
 
       measure_coverage(value_combinations, weights_, model_, test_set_,
-                       num_covered_tuples_);
+                       num_seeded_tests_, num_covered_tuples_);
     }
 
     unsigned long long get_num_covered_tuples() const {
@@ -83,6 +93,7 @@ class ipog_measure_per_param_combo_functor {
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
+    const unsigned int num_seeded_tests_;
     unsigned long long num_covered_tuples_;
     std::vector<ipog_coverage_map::second_level_type::size_type> weights_;
 };
@@ -101,8 +112,9 @@ class alignas(false_sharing_avoidance_alignment)
   public:
     ipog_measure_per_param_combo_functor_parallel(
         const internal_model& model, const internal_test_set& test_set,
-        const unsigned int max_strength)
-        : per_param_combo_functor_(model, test_set, max_strength),
+        const unsigned int num_seeded_tests, const unsigned int max_strength)
+        : per_param_combo_functor_(model, test_set, num_seeded_tests,
+                                   max_strength),
           cov_map_(nullptr),
           start_index_(0),
           end_index_(0) {}
@@ -139,6 +151,7 @@ class alignas(false_sharing_avoidance_alignment)
 
 inline ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
+    const unsigned int num_seeded_tests,
     std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations) {
 
@@ -152,8 +165,8 @@ inline ipog_measure_testset_result ipog_measure_testset(
                  rel_and_cov_map.second.get_number_of_parameters_to_select());
   }
 
-  ipog_measure_per_param_combo_functor per_param_combo_functor(model, test_set,
-                                                               max_strength);
+  ipog_measure_per_param_combo_functor per_param_combo_functor(
+      model, test_set, num_seeded_tests, max_strength);
 
   for (auto& rel_and_cov_map : relations) {
     per_param_combo_functor.reset();
@@ -171,6 +184,7 @@ inline ipog_measure_testset_result ipog_measure_testset(
 template <conc_is_void_functor_executor T_EXEC>
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
+    const unsigned int num_seeded_tests,
     std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations,
     T_EXEC& exec) {
@@ -187,7 +201,7 @@ ipog_measure_testset_result ipog_measure_testset(
 
   thread_local_vector<ipog_measure_per_param_combo_functor_parallel<T_EXEC>>
       thread_local_functors(exec.get_num_workers() * 8,
-                            {model, test_set, max_strength});
+                            {model, test_set, num_seeded_tests, max_strength});
 
   for (auto& rel_and_cov_map : relations) {
     ipog_coverage_map* cov_map = &rel_and_cov_map.second;

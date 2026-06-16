@@ -30,8 +30,8 @@ void main_ipog_loop_body(
     const std::vector<citcpp::detail::internal_relation>& relations,
     citcpp::detail::internal_test_set& test_set,
     citcpp::detail::constraint_handler& constr_handler,
-    const bool is_extend_mode, const unsigned int real_current_param_idx,
-    const bool with_mt,
+    const unsigned int num_seeded_tests,
+    const unsigned int real_current_param_idx, const bool with_mt,
     const citcpp::detail::binom_coeff_table& binomial_coeffs, T_EXEC& exec,
     citcpp::detail::cagen_exec_handle_ipog_impl& exec_handle) {
   using namespace citcpp::detail;
@@ -97,11 +97,12 @@ void main_ipog_loop_body(
       }
     }
 
-    if (is_extend_mode) {
+    if (num_seeded_tests > 0) {
       auto measure_coverage_res =
-          with_mt
-              ? ipog_measure_testset(model, test_set, relation_cov_maps, exec)
-              : ipog_measure_testset(model, test_set, relation_cov_maps);
+          with_mt ? ipog_measure_testset(model, test_set, num_seeded_tests,
+                                         relation_cov_maps, exec)
+                  : ipog_measure_testset(model, test_set, num_seeded_tests,
+                                         relation_cov_maps);
 
       for (const auto& relation_cov_result :
            measure_coverage_res.num_covered_tuples) {
@@ -313,7 +314,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
     const unsigned int real_current_param_idx =
         parameter_index_map[current_param_idx];
 
-    main_ipog_loop_body(model, relations, test_set, constr_handler, false,
+    main_ipog_loop_body(model, relations, test_set, constr_handler, 0,
                         real_current_param_idx, with_mt, binomial_coeffs, exec,
                         exec_handle);
 
@@ -394,6 +395,8 @@ void main_ipog_loop_extend_test_set(
     constr_handler.cache_partial_test(&t);
   }
 
+  const unsigned int num_seeded_tests = test_set.get_list_of_tests().size();
+
   for (unsigned int current_param_idx = 0;
        current_param_idx < parameter_index_map.size(); ++current_param_idx) {
 
@@ -404,9 +407,9 @@ void main_ipog_loop_extend_test_set(
     const unsigned int real_current_param_idx =
         parameter_index_map[current_param_idx];
 
-    main_ipog_loop_body(model, relations, test_set, constr_handler, true,
-                        real_current_param_idx, with_mt, binomial_coeffs, exec,
-                        exec_handle);
+    main_ipog_loop_body(model, relations, test_set, constr_handler,
+                        num_seeded_tests, real_current_param_idx, with_mt,
+                        binomial_coeffs, exec, exec_handle);
 
     exec_handle.set_number_of_processed_parameters(current_param_idx + 1);
 
