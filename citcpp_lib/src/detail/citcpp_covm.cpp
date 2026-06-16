@@ -206,24 +206,6 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   thread_pool tp(num_threads);
   functor_executor_thread_pool exec(tp);
 
-  // Filter out invalid tests.
-  std::vector<unsigned int> invalid_test_indices;
-  {
-    constraint_evaluator constr_eval(input_model_.get_parameters());
-    unsigned int test_idx = 0;
-    auto test_it = tests_.get_list_of_tests().begin();
-    while (test_it != tests_.get_list_of_tests().end()) {
-      const auto& t = *test_it;
-      if (!constr_eval(t, input_model_)) {
-        test_it = tests_.get_list_of_tests().erase(test_it);
-        invalid_test_indices.push_back(test_idx);
-      } else {
-        ++test_it;
-      }
-      ++test_idx;
-    }
-  }
-
   exec_handle.set_execution_phase(
       covm_exec_handle_impl::phase::CONSTRAINT_HANDLER_INIT);
 
@@ -237,6 +219,27 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
                 concurrent_constraint_handler<functor_executor_thread_pool>>(
                 *constr_handler_impl, exec)
           : constr_handler_impl;
+
+  // Filter out invalid tests.
+  std::vector<unsigned int> invalid_test_indices;
+  {
+    constraint_evaluator constr_eval(input_model_.get_parameters());
+    unsigned int test_idx = 0;
+    auto test_it = tests_.get_list_of_tests().begin();
+    while (test_it != tests_.get_list_of_tests().end()) {
+      const auto& t = *test_it;
+      const bool is_valid = t.has_dont_care_value()
+                                ? constr_handler->is_valid_partial_test(t)
+                                : constr_eval(t, input_model_);
+      if (!is_valid) {
+        test_it = tests_.get_list_of_tests().erase(test_it);
+        invalid_test_indices.push_back(test_idx);
+      } else {
+        ++test_it;
+      }
+      ++test_idx;
+    }
+  }
 
   exec_handle.set_execution_phase(
       covm_exec_handle_impl::phase::COVERAGE_MEASUREMENT);
