@@ -12,6 +12,7 @@
 #include "cagen_exec_result_impl.hpp"
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
+#include "constraint_evaluator.hpp"
 #include "constraint_handler.hpp"
 #include "constraint_handler_concurrent.hpp"
 #include "coverage_map.hpp"
@@ -497,6 +498,24 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
       cagen_exec_handle::phase::COVERING_ARRAY_CONSTRUCTION);
 
   internal_test_set tests(input_tests_);
+
+  // Filter out invalid tests.
+  {
+    constraint_evaluator constr_eval(input_model_.get_parameters());
+    auto test_it = tests.get_list_of_tests().begin();
+    while (test_it != tests.get_list_of_tests().end()) {
+      const auto& t = *test_it;
+      const bool is_valid = t.has_dont_care_value()
+                                ? constr_handler->is_valid_partial_test(t)
+                                : constr_eval(t, input_model_);
+      if (!is_valid) {
+        test_it = tests.get_list_of_tests().erase(test_it);
+      } else {
+        ++test_it;
+      }
+    }
+  }
+
   if (tests.get_list_of_tests().empty()) {
     main_ipog_loop(model_, relations, tests, *constr_handler, config_, exec,
                    exec_handle);

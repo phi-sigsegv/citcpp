@@ -128,6 +128,16 @@ class test {
 
     const values_list_type& get_values() const { return values_; }
 
+    bool has_dont_care_value() const {
+      for (int value : get_values()) {
+        if (value < 0) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
     test_list_intrusive_integ& get_value_partition_intrusive_list_node() {
       return value_partition_il_node_;
     }
