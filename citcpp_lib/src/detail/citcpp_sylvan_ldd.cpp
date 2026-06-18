@@ -2205,6 +2205,15 @@ bitset_uint64 sylvan_idd::get_valid_variable_assignments(
 
   bitset_uint64 valid_values_as_bitset(domain_size);
 
+  const int value = variable_order
+                        ? partial_assignment[(*variable_order)[variable]]
+                        : partial_assignment[variable];
+  if (value >= 0) {
+    valid_values_as_bitset.set(value);
+
+    return valid_values_as_bitset;
+  }
+
   MDD valid_values_as_ldd = sylvan_idd_get_valid_variable_assignments(
       idd_, variables_.data(), (int)variables_.size(),
       partial_assignment.data(), (int)partial_assignment.size(), variable,
