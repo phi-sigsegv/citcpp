@@ -110,7 +110,7 @@ class ipog_vertical_extension_functor {
         }
       }
 
-      constr_handler_.mark_valid_tuples(value_combinations, param_indices);
+      // constr_handler_.mark_valid_tuples(value_combinations, param_indices);
 
       visit_all_value_combos_of_param_combo(
           model_, param_indices, value_indices_, *this, value_combinations);
@@ -132,9 +132,13 @@ class ipog_vertical_extension_functor {
       ++num_checked_tuples_;
 
       if (!value_combinations.is_valid(bitpos)) {
-        // If the tuple is not valid, then it cannot be covered at all.
-        // So there's nothing to do for us here.
-        return;
+        if (!is_valid_tuple(param_indices, value_indices)) {
+          // Value tuple is invalid according to constraints.
+          return;
+        }
+        // // If the tuple is not valid, then it cannot be covered at all.
+        // // So there's nothing to do for us here.
+        // return;
       }
 
       ++num_new_covered_tuples_;
@@ -265,6 +269,20 @@ class ipog_vertical_extension_functor {
       constr_handler_.update_cached_partial_test(&t);
 
       return true;
+    }
+
+    bool is_valid_tuple(const param_vector& param_indices,
+                        const value_vector& value_indices) {
+
+      for (unsigned int i = 0; i < param_indices.size(); ++i) {
+        const unsigned int param_idx = param_indices[i];
+        const int param_value_to_cover = value_indices[i];
+        scratch_test_.get_values()[param_idx] = param_value_to_cover;
+      }
+
+      bool res = constr_handler_.is_valid_partial_test(scratch_test_);
+
+      return res;
     }
 
     void reset_scratch_test(
