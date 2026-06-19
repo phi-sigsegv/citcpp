@@ -666,10 +666,18 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
     CHECK(cov.is_valid(0));
     // (0, 1, 0) -> 0*4 + 1*2 + 0 = 2. Valid.
     CHECK(cov.is_valid(2));
-    // (0, 0, 1) -> 1. Invalid.
+    // (0, 0, 1) -> 0*4 + 0*2 + 1 = 1. Invalid.
     CHECK(!cov.is_valid(1));
-    // (1, 0, 0) -> 4. Invalid.
+    // (0, 1, 1) -> 0*4 + 1*2 + 1 = 3. Invalid.
+    CHECK(!cov.is_valid(3));
+    // (1, 0, 0) -> 1*4 + 0*2 + 0 = 4. Invalid.
     CHECK(!cov.is_valid(4));
+    // (1, 1, 0) -> 1*4 + 1*2 + 0 = 6. Invalid.
+    CHECK(!cov.is_valid(6));
+    // (1, 0, 1) -> 1*4 + 0*2 + 1 = 5. Invalid.
+    CHECK(!cov.is_valid(5));
+    // (1, 1, 1) -> 1*4 + 1*2 + 1 = 7. Invalid.
+    CHECK(!cov.is_valid(7));
   }
 
   SUBCASE("IDD variables interleaved with cube variables") {
@@ -688,10 +696,20 @@ TEST_CASE("sylvan IDD, mark_valid_value_combinations") {
     // Any value of P1, P3 is valid as long as P4=0.
     // (P1=0, P3=0, P4=0) -> 0. Valid.
     CHECK(cov.is_valid(0));
+    // (P1=0, P3=1, P4=0) -> 0*4 + 1*2 + 0 = 2. Valid.
+    CHECK(cov.is_valid(2));
+    // (P1=1, P3=0, P4=0) -> 1*4 + 0*2 + 0 = 4. Valid.
+    CHECK(cov.is_valid(4));
     // (P1=1, P3=1, P4=0) -> 1*4 + 1*2 + 0 = 6. Valid.
     CHECK(cov.is_valid(6));
     // (P1=0, P3=0, P4=1) -> 1. Invalid.
     CHECK(!cov.is_valid(1));
+    // (P1=0, P3=1, P4=1) -> 0*4 + 1*2 + 1 = 3. Invalid.
+    CHECK(!cov.is_valid(3));
+    // (P1=1, P3=0, P4=1) -> 1*4 + 0*2 + 1 = 5. Invalid.
+    CHECK(!cov.is_valid(5));
+    // (P1=1, P3=1, P4=1) -> 1*4 + 1*2 + 1 = 7. Invalid.
+    CHECK(!cov.is_valid(7));
   }
 }
 
