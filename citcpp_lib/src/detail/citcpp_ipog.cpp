@@ -14,7 +14,6 @@
 #include "citcpp_utils.hpp"
 #include "constraint_evaluator.hpp"
 #include "constraint_handler.hpp"
-#include "constraint_handler_concurrent.hpp"
 #include "coverage_map.hpp"
 #include "datatypes_config.hpp"
 #include "functor_executor_thread_pool.hpp"
@@ -483,16 +482,10 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   exec_handle.set_execution_phase(
       cagen_exec_handle::phase::CONSTRAINT_HANDLER_INIT);
 
-  std::shared_ptr<constraint_handler> constr_handler_impl =
+  std::shared_ptr<constraint_handler> constr_handler =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
           exec_handle.get_constraint_handler_init_progress());
-  std::shared_ptr<constraint_handler> constr_handler =
-      (constr_handler_impl->is_thread_safe() && num_threads > 1)
-          ? std::make_shared<
-                concurrent_constraint_handler<functor_executor_thread_pool>>(
-                *constr_handler_impl, exec)
-          : constr_handler_impl;
 
   exec_handle.set_execution_phase(
       cagen_exec_handle::phase::COVERING_ARRAY_CONSTRUCTION);

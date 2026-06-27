@@ -12,7 +12,6 @@
 #include "citcpp_utils.hpp"
 #include "constraint_evaluator.hpp"
 #include "constraint_handler.hpp"
-#include "constraint_handler_concurrent.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
 #include "covm_exec_result_impl.hpp"
@@ -209,16 +208,10 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   exec_handle.set_execution_phase(
       covm_exec_handle_impl::phase::CONSTRAINT_HANDLER_INIT);
 
-  std::shared_ptr<constraint_handler> constr_handler_impl =
+  std::shared_ptr<constraint_handler> constr_handler =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
           exec_handle.get_constraint_handler_init_progress());
-  std::shared_ptr<constraint_handler> constr_handler =
-      (constr_handler_impl->is_thread_safe() && num_threads > 1)
-          ? std::make_shared<
-                concurrent_constraint_handler<functor_executor_thread_pool>>(
-                *constr_handler_impl, exec)
-          : constr_handler_impl;
 
   // Filter out invalid tests.
   std::vector<unsigned int> invalid_test_indices;
