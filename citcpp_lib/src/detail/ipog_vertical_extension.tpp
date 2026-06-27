@@ -151,22 +151,32 @@ class ipog_vertical_extension_functor {
       // combination we want to cover.
       const int current_param_value_to_cover = value_indices.back();
 
-      // Iterate over the tests with the same value for the current parameter
-      // value we have to cover.
-      for (test_list_intrusive_integ& t :
-           partitioning_of_tests_according_to_current_values_
-               .value_to_row_mapping[current_param_value_to_cover]) {
+      // Try to inject the combination into a test with the same value for the
+      // current parameter value we have to cover.
+      {
+        test_list_intrusive_integ* node =
+            constr_handler_.get_first_test_valid_for_assignment(
+                partitioning_of_tests_according_to_current_values_
+                    .value_to_row_mapping[current_param_value_to_cover],
+                param_indices, value_indices);
 
-        if (ipog_vertical_extension_try_inject_value_combo(
-                param_indices, value_indices, t.get_test())) {
+        if (node) {
+          test& t = node->get_test();
           // Remember that we have modified the test and need to
           // evaluate it again whether also other combinations are covered.
-          if (!t.get_test()
-                   .get_vertical_extension_intrusive_list_node()
-                   .is_linked_up()) {
+          if (!t.get_vertical_extension_intrusive_list_node().is_linked_up()) {
             modified_tests_.push_back(
-                t.get_test().get_vertical_extension_intrusive_list_node());
+                t.get_vertical_extension_intrusive_list_node());
           }
+
+          for (unsigned int i = 0; i < param_indices.size(); ++i) {
+            const unsigned int param_idx = param_indices[i];
+            const int param_value_to_cover = value_indices[i];
+            t.get_values()[param_idx] = param_value_to_cover;
+          }
+
+          // Update the state of the test as seen by constraint hander.
+          constr_handler_.update_cached_partial_test(&t);
 
           // Return, since we have found a test and injected the value
           // combination.
@@ -174,20 +184,20 @@ class ipog_vertical_extension_functor {
         }
       }
 
-      // Now we iterate over the tests with a don't care value for the current
-      // parameter.
-      for (auto it = partitioning_of_tests_according_to_current_values_
-                         .rows_with_current_parameter_dont_care_value.begin();
-           it != partitioning_of_tests_according_to_current_values_
-                     .rows_with_current_parameter_dont_care_value.end();
-           ++it) {
-        test& t = it->get_test();
+      // Now we try to inject the combination into a test with a don't care
+      // value for the current parameter. we have to cover.
+      {
+        test_list_intrusive_integ* node =
+            constr_handler_.get_first_test_valid_for_assignment(
+                partitioning_of_tests_according_to_current_values_
+                    .rows_with_current_parameter_dont_care_value,
+                param_indices, value_indices);
 
-        if (ipog_vertical_extension_try_inject_value_combo(param_indices,
-                                                           value_indices, t)) {
+        if (node) {
+          test& t = node->get_test();
+          // Remember that we have modified the test and need to
+          // evaluate it again whether also other combinations are covered.
           if (!t.get_vertical_extension_intrusive_list_node().is_linked_up()) {
-            // Remember that we have modified the test and need to
-            // evaluate it again whether also other combinations are covered.
             modified_tests_.push_back(
                 t.get_vertical_extension_intrusive_list_node());
           }
@@ -197,10 +207,19 @@ class ipog_vertical_extension_functor {
           // inject other combinations with the same value for the current
           // parameter.
           partitioning_of_tests_according_to_current_values_
-              .rows_with_current_parameter_dont_care_value.erase(it);
+              .rows_with_current_parameter_dont_care_value.erase(*node);
           partitioning_of_tests_according_to_current_values_
               .value_to_row_mapping[current_param_value_to_cover]
               .push_back(t.get_value_partition_intrusive_list_node());
+
+          for (unsigned int i = 0; i < param_indices.size(); ++i) {
+            const unsigned int param_idx = param_indices[i];
+            const int param_value_to_cover = value_indices[i];
+            t.get_values()[param_idx] = param_value_to_cover;
+          }
+
+          // Update the state of the test as seen by constraint hander.
+          constr_handler_.update_cached_partial_test(&t);
 
           // Return, since we have found a test and injected the value
           // combination.
@@ -230,45 +249,6 @@ class ipog_vertical_extension_functor {
 
       // Cache the test in the constraint handler.
       constr_handler_.cache_partial_test(&test_set_.get_list_of_tests().back());
-    }
-
-    bool ipog_vertical_extension_try_inject_value_combo(
-        const param_vector& param_indices, const value_vector& value_indices,
-        test& t) {
-
-      bool covers_combo = true;
-      for (unsigned int i = 0; i < param_indices.size(); ++i) {
-        const unsigned int param_idx = param_indices[i];
-        const int param_value_to_cover = value_indices[i];
-        const int param_value_in_test = t.get_values()[param_idx];
-
-        scratch_test_.get_values()[param_idx] = param_value_in_test;
-        t.get_values()[param_idx] = param_value_to_cover;
-
-        if (param_value_in_test >= 0 &&
-            param_value_to_cover != param_value_in_test) {
-          // Cannot inject value combination in this test, moving on to the next
-          // one.
-          covers_combo = false;
-        }
-      }
-
-      covers_combo = covers_combo && constr_handler_.is_valid_partial_test(t);
-
-      if (!covers_combo) {
-        // We need to rollback the changes we did to the test.
-        for (unsigned int i = 0; i < param_indices.size(); ++i) {
-          const unsigned int param_idx = param_indices[i];
-          t.get_values()[param_idx] = scratch_test_.get_values()[param_idx];
-        }
-
-        return false;
-      }
-
-      // Update the state of the test as seen by constraint hander.
-      constr_handler_.update_cached_partial_test(&t);
-
-      return true;
     }
 
     bool is_valid_tuple(const param_vector& param_indices,

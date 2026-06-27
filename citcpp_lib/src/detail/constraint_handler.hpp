@@ -92,6 +92,16 @@ class constraint_handler {
     virtual void replace_dont_care_values(internal_test_set& test_set) const;
 
     /**
+     * Returns the first test in the given list of tests, where the specified
+     * assignment can be applied and the test is still valid with respect
+     * to the constraints.
+     */
+    virtual test_list_intrusive_integ* get_first_test_valid_for_assignment(
+        list_intrusive<test_list_intrusive_integ>& test_list,
+        const param_vector& param_indices,
+        const value_vector& value_indices) const = 0;
+
+    /**
      * Calling this method causes the constraint handler to remember
      * the given test and its current assignments, such that if
      * the test is being referenced by other calls, then those calls can make

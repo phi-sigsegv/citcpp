@@ -99,6 +99,14 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     /**
      * See constraint_handler interface.
      */
+    test_list_intrusive_integ* get_first_test_valid_for_assignment(
+        list_intrusive<test_list_intrusive_integ>& test_list,
+        const param_vector& param_indices,
+        const value_vector& value_indices) const override;
+
+    /**
+     * See constraint_handler interface.
+     */
     void cache_partial_test(const test* t) override;
 
     /**

@@ -728,6 +728,61 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(
   RUN(lace_replace_dont_care_values_in_testset_task, &test_set, this);
 }
 
+test_list_intrusive_integ*
+constraint_handler_sylvan_idd::get_first_test_valid_for_assignment(
+    list_intrusive<test_list_intrusive_integ>& test_list,
+    const param_vector& param_indices,
+    const value_vector& value_indices) const {
+
+  if (test_list.empty()) {
+    return nullptr;
+  }
+
+  constexpr size_t static_limit = 16;
+  int local_old_values[static_limit];
+  std::vector<int> heap_old_values;
+  int* old_values = local_old_values;
+  if (param_indices.size() > static_limit) {
+    heap_old_values.resize(param_indices.size());
+    old_values = heap_old_values.data();
+  }
+
+  for (test_list_intrusive_integ& list_node : test_list) {
+    test& t = list_node.get_test();
+
+    bool covers_combo = true;
+    for (unsigned int i = 0; i < param_indices.size(); ++i) {
+      const unsigned int param_idx = param_indices[i];
+      const int param_value_to_assign = value_indices[i];
+      const int param_value_in_test = t.get_values()[param_idx];
+
+      old_values[i] = param_value_in_test;
+      t.get_values()[param_idx] = param_value_to_assign;
+
+      if (param_value_in_test >= 0 &&
+          param_value_to_assign != param_value_in_test) {
+        // Cannot inject value combination in this test, moving on to the next
+        // one.
+        covers_combo = false;
+      }
+    }
+
+    covers_combo = covers_combo && is_valid_partial_test(t);
+
+    // We need to rollback the changes we did to the test.
+    for (unsigned int i = 0; i < param_indices.size(); ++i) {
+      const unsigned int param_idx = param_indices[i];
+      t.get_values()[param_idx] = old_values[i];
+    }
+
+    if (covers_combo) {
+      return &list_node;
+    }
+  }
+
+  return nullptr;
+}
+
 void constraint_handler_sylvan_idd::cache_partial_test(const test* t) {
   if (is_per_test_idd_enabled_) {
     test_to_idd_.emplace(
