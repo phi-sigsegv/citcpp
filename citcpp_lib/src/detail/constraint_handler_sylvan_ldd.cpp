@@ -540,12 +540,14 @@ struct lace_get_first_test_valid_for_assignment_ctx {
     const citcpp::detail::param_vector* param_indices;
     const citcpp::detail::value_vector* value_indices;
     std::atomic<size_t> min_valid_index;
+    citcpp::detail::test_list_intrusive_integ* test;
     citcpp::detail::spin_lock lock;
 };
 
 VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
-            const std::vector<citcpp::detail::test_list_intrusive_integ*>*,
-            tests, size_t, start, size_t, end,
+            citcpp::detail::list_intrusive<
+                citcpp::detail::test_list_intrusive_integ>::iterator,
+            test_it, size_t, start, size_t, end,
             const citcpp::detail::constraint_handler_sylvan_idd*, handler,
             lace_get_first_test_valid_for_assignment_ctx*, ctx) {
 
@@ -564,13 +566,13 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
       old_values = heap_old_values.data();
     }
 
-    for (size_t i = start; i < end; ++i) {
+    for (size_t i = start; i < end; ++i, ++test_it) {
       if (i >= ctx->min_valid_index.load(std::memory_order_relaxed)) {
         break;
       }
 
-      citcpp::detail::test_list_intrusive_integ* list_node = (*tests)[i];
-      citcpp::detail::test& t = list_node->get_test();
+      citcpp::detail::test_list_intrusive_integ& list_node = *test_it;
+      citcpp::detail::test& t = list_node.get_test();
 
       bool covers_combo = true;
 
@@ -603,6 +605,7 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
           std::lock_guard<citcpp::detail::spin_lock> guard(ctx->lock);
           if (i < current_min) {
             ctx->min_valid_index.store(i, std::memory_order_relaxed);
+            ctx->test = &list_node;
           }
         }
         break;
@@ -612,9 +615,9 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
   }
 
   size_t mid = start + (end - start) / 2;
-  SPAWN(lace_get_first_test_valid_for_assignment_task, tests, mid, end, handler,
-        ctx);
-  CALL(lace_get_first_test_valid_for_assignment_task, tests, start, mid,
+  SPAWN(lace_get_first_test_valid_for_assignment_task, test_it += (mid - start),
+        mid, end, handler, ctx);
+  CALL(lace_get_first_test_valid_for_assignment_task, test_it, start, mid,
        handler, ctx);
   SYNC(lace_get_first_test_valid_for_assignment_task);
 }
@@ -868,26 +871,16 @@ constraint_handler_sylvan_idd::get_first_test_valid_for_assignment(
     return nullptr;
   }
 
-  std::vector<test_list_intrusive_integ*> tests;
-  tests.reserve(test_list.size());
-  for (test_list_intrusive_integ& list_node : test_list) {
-    tests.push_back(&list_node);
-  }
-
   lace_get_first_test_valid_for_assignment_ctx ctx;
   ctx.param_indices = &param_indices;
   ctx.value_indices = &value_indices;
-  ctx.min_valid_index.store(tests.size(), std::memory_order_relaxed);
+  ctx.min_valid_index.store(test_list.size(), std::memory_order_relaxed);
+  ctx.test = nullptr;
 
-  RUN(lace_get_first_test_valid_for_assignment_task, &tests, 0, tests.size(),
-      this, &ctx);
+  RUN(lace_get_first_test_valid_for_assignment_task, test_list.begin(), 0,
+      test_list.size(), this, &ctx);
 
-  size_t final_index = ctx.min_valid_index.load(std::memory_order_acquire);
-  if (final_index < tests.size()) {
-    return tests[final_index];
-  }
-
-  return nullptr;
+  return ctx.test;
 }
 
 void constraint_handler_sylvan_idd::cache_partial_test(const test* t) {

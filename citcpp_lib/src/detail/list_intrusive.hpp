@@ -102,6 +102,24 @@ class list_intrusive {
           return tmp;
         }
 
+        list_intrusive_iterator& operator+=(difference_type n) {
+          if (n >= 0) {
+            while (n--) {
+              ++(*this);
+            }
+          } else {
+            while (n++) {
+              --(*this);
+            }
+          }
+
+          return *this;
+        }
+
+        list_intrusive_iterator& operator-=(difference_type n) {
+          return ((*this) += -n);
+        }
+
         friend bool operator==(const list_intrusive_iterator& lhs,
                                const list_intrusive_iterator& rhs) {
           return lhs.node_ == rhs.node_;
