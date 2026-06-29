@@ -540,6 +540,7 @@ struct lace_get_first_test_valid_for_assignment_ctx {
     const citcpp::detail::param_vector* param_indices;
     const citcpp::detail::value_vector* value_indices;
     std::atomic<size_t> min_valid_index;
+    citcpp::detail::spin_lock lock;
 };
 
 VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
@@ -598,9 +599,11 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
       if (covers_combo) {
         size_t current_min =
             ctx->min_valid_index.load(std::memory_order_relaxed);
-        while (i < current_min && !ctx->min_valid_index.compare_exchange_weak(
-                                      current_min, i, std::memory_order_release,
-                                      std::memory_order_relaxed)) {
+        if (i < current_min) {
+          std::lock_guard<citcpp::detail::spin_lock> guard(ctx->lock);
+          if (i < current_min) {
+            ctx->min_valid_index.store(i, std::memory_order_relaxed);
+          }
         }
         break;
       }
