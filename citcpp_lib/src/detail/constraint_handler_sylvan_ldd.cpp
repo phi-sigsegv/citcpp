@@ -2,8 +2,10 @@
 
 #include <lace.h>
 
+#include <atomic>
 #include <mutex>
 #include <numeric>
+#include <vector>
 
 namespace {
 
@@ -534,6 +536,92 @@ VOID_TASK_2(lace_replace_dont_care_values_in_testset_task,
   }
 }
 
+struct lace_get_first_test_valid_for_assignment_ctx {
+    const citcpp::detail::param_vector* param_indices;
+    const citcpp::detail::value_vector* value_indices;
+    std::atomic<size_t> min_valid_index;
+    citcpp::detail::test_list_intrusive_integ* test;
+    citcpp::detail::spin_lock lock;
+};
+
+VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
+            citcpp::detail::list_intrusive<
+                citcpp::detail::test_list_intrusive_integ>::iterator,
+            test_it, size_t, start, size_t, end,
+            const citcpp::detail::constraint_handler_sylvan_idd*, handler,
+            lace_get_first_test_valid_for_assignment_ctx*, ctx) {
+
+  if (end - start <= 64) {
+    const citcpp::detail::param_vector& param_indices = *(ctx->param_indices);
+    const citcpp::detail::value_vector& value_indices = *(ctx->value_indices);
+
+    // Small Buffer Optimization to completely avoid heap allocations for the
+    // rollback array
+    constexpr size_t static_limit = 8;
+    int local_old_values[static_limit];
+    std::vector<int> heap_old_values;
+    int* old_values = local_old_values;
+    if (param_indices.size() > static_limit) {
+      heap_old_values.resize(param_indices.size());
+      old_values = heap_old_values.data();
+    }
+
+    for (size_t i = start; i < end; ++i, ++test_it) {
+      if (i >= ctx->min_valid_index.load(std::memory_order_relaxed)) {
+        break;
+      }
+
+      citcpp::detail::test_list_intrusive_integ& list_node = *test_it;
+      citcpp::detail::test& t = list_node.get_test();
+
+      bool covers_combo = true;
+
+      for (unsigned int j = 0; j < param_indices.size(); ++j) {
+        const unsigned int param_idx = param_indices[j];
+        const int param_value_to_assign = value_indices[j];
+        const int param_value_in_test = t.get_values()[param_idx];
+
+        old_values[j] = param_value_in_test;
+        t.get_values()[param_idx] = param_value_to_assign;
+
+        if (param_value_in_test >= 0 &&
+            param_value_to_assign != param_value_in_test) {
+          covers_combo = false;
+        }
+      }
+
+      covers_combo = covers_combo && handler->is_valid_partial_test(t);
+
+      // Rollback the changes we did to the test.
+      for (unsigned int j = 0; j < param_indices.size(); ++j) {
+        const unsigned int param_idx = param_indices[j];
+        t.get_values()[param_idx] = old_values[j];
+      }
+
+      if (covers_combo) {
+        size_t current_min =
+            ctx->min_valid_index.load(std::memory_order_relaxed);
+        if (i < current_min) {
+          std::lock_guard<citcpp::detail::spin_lock> guard(ctx->lock);
+          if (i < current_min) {
+            ctx->min_valid_index.store(i, std::memory_order_relaxed);
+            ctx->test = &list_node;
+          }
+        }
+        break;
+      }
+    }
+    return;
+  }
+
+  size_t mid = start + (end - start) / 2;
+  SPAWN(lace_get_first_test_valid_for_assignment_task, test_it += (mid - start),
+        mid, end, handler, ctx);
+  CALL(lace_get_first_test_valid_for_assignment_task, test_it, start, mid,
+       handler, ctx);
+  SYNC(lace_get_first_test_valid_for_assignment_task);
+}
+
 }  // namespace
 
 namespace citcpp {
@@ -726,6 +814,73 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(
     internal_test_set& test_set) const {
 
   RUN(lace_replace_dont_care_values_in_testset_task, &test_set, this);
+}
+
+test_list_intrusive_integ*
+constraint_handler_sylvan_idd::get_first_test_valid_for_assignment(
+    list_intrusive<test_list_intrusive_integ>& test_list,
+    const param_vector& param_indices,
+    const value_vector& value_indices) const {
+
+  if (test_list.empty()) {
+    return nullptr;
+  }
+
+  // If there is only one worker thread or the list is small, run sequentially
+  // to avoid parallel setup/overhead.
+  if (lace_workers() <= 1 || test_list.size() < 64) {
+    constexpr size_t static_limit = 8;
+    int local_old_values[static_limit];
+    std::vector<int> heap_old_values;
+    int* old_values = local_old_values;
+    if (param_indices.size() > static_limit) {
+      heap_old_values.resize(param_indices.size());
+      old_values = heap_old_values.data();
+    }
+
+    for (test_list_intrusive_integ& list_node : test_list) {
+      test& t = list_node.get_test();
+
+      bool covers_combo = true;
+      for (unsigned int i = 0; i < param_indices.size(); ++i) {
+        const unsigned int param_idx = param_indices[i];
+        const int param_value_to_assign = value_indices[i];
+        const int param_value_in_test = t.get_values()[param_idx];
+
+        old_values[i] = param_value_in_test;
+        t.get_values()[param_idx] = param_value_to_assign;
+
+        if (param_value_in_test >= 0 &&
+            param_value_to_assign != param_value_in_test) {
+          covers_combo = false;
+        }
+      }
+
+      covers_combo = covers_combo && is_valid_partial_test(t);
+
+      // Rollback the changes we did to the test.
+      for (unsigned int i = 0; i < param_indices.size(); ++i) {
+        const unsigned int param_idx = param_indices[i];
+        t.get_values()[param_idx] = old_values[i];
+      }
+
+      if (covers_combo) {
+        return &list_node;
+      }
+    }
+    return nullptr;
+  }
+
+  lace_get_first_test_valid_for_assignment_ctx ctx;
+  ctx.param_indices = &param_indices;
+  ctx.value_indices = &value_indices;
+  ctx.min_valid_index.store(test_list.size(), std::memory_order_relaxed);
+  ctx.test = nullptr;
+
+  RUN(lace_get_first_test_valid_for_assignment_task, test_list.begin(), 0,
+      test_list.size(), this, &ctx);
+
+  return ctx.test;
 }
 
 void constraint_handler_sylvan_idd::cache_partial_test(const test* t) {

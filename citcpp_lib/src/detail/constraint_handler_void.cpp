@@ -40,6 +40,42 @@ void constraint_handler_void::replace_dont_care_values(test& t) const {
   }
 }
 
+test_list_intrusive_integ*
+constraint_handler_void::get_first_test_valid_for_assignment(
+    list_intrusive<test_list_intrusive_integ>& test_list,
+    const param_vector& param_indices,
+    const value_vector& value_indices) const {
+
+  if (test_list.empty()) {
+    return nullptr;
+  }
+
+  for (test_list_intrusive_integ& list_node : test_list) {
+    test& t = list_node.get_test();
+
+    bool covers_combo = true;
+    for (unsigned int i = 0; i < param_indices.size(); ++i) {
+      const unsigned int param_idx = param_indices[i];
+      const int param_value_to_assign = value_indices[i];
+      const int param_value_in_test = t.get_values()[param_idx];
+
+      if (param_value_in_test >= 0 &&
+          param_value_to_assign != param_value_in_test) {
+        // Cannot inject value combination in this test, moving on to the next
+        // one.
+        covers_combo = false;
+        break;
+      }
+    }
+
+    if (covers_combo) {
+      return &list_node;
+    }
+  }
+
+  return nullptr;
+}
+
 void constraint_handler_void::cache_partial_test(const test* t) {}
 
 void constraint_handler_void::update_cached_partial_test(const test* t) {}

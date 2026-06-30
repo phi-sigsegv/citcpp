@@ -9,8 +9,8 @@ namespace citcpp {
 namespace detail {
 
 struct sl_list_node_intrusive {
-    sl_list_node_intrusive *prev_node_;
-    sl_list_node_intrusive *next_node_;
+    sl_list_node_intrusive* prev_node_;
+    sl_list_node_intrusive* next_node_;
 };
 
 /**
@@ -42,22 +42,24 @@ class list_intrusive {
             is_const, const typename list_intrusive::node_type,
             typename list_intrusive::node_type>::type node_base_type;
 
-        node_base_type *node_;
+        node_base_type* node_;
 
       public:
         typedef T_VALUE value_type;
         typedef std::ptrdiff_t difference_type;
-        typedef typename std::conditional<is_const, const T_VALUE *,
-                                          T_VALUE *>::type pointer;
-        typedef typename std::conditional<is_const, const T_VALUE &,
-                                          T_VALUE &>::type reference;
+        typedef
+            typename std::conditional<is_const, const T_VALUE*, T_VALUE*>::type
+                pointer;
+        typedef
+            typename std::conditional<is_const, const T_VALUE&, T_VALUE&>::type
+                reference;
         typedef std::forward_iterator_tag iterator_category;
 
         list_intrusive_iterator() : node_(0) {}
 
-        explicit list_intrusive_iterator(node_base_type *node) : node_(node) {}
+        explicit list_intrusive_iterator(node_base_type* node) : node_(node) {}
 
-        list_intrusive_iterator(const list_intrusive_iterator<false> &other)
+        list_intrusive_iterator(const list_intrusive_iterator<false>& other)
             : node_(other.node_) {}
 
         bool valid() const { return (!!node_); }
@@ -72,7 +74,7 @@ class list_intrusive {
 
         // This is the overload of the prefix increment
         // operator.
-        list_intrusive_iterator &operator++() {
+        list_intrusive_iterator& operator++() {
           node_ = node_->next_node_;
           return *this;
         }
@@ -87,7 +89,7 @@ class list_intrusive {
 
         // This is the overload of the prefix decrement
         // operator.
-        list_intrusive_iterator &operator--() {
+        list_intrusive_iterator& operator--() {
           node_ = node_->prev_node_;
           return *this;
         }
@@ -100,25 +102,43 @@ class list_intrusive {
           return tmp;
         }
 
-        friend bool operator==(const list_intrusive_iterator &lhs,
-                               const list_intrusive_iterator &rhs) {
+        list_intrusive_iterator& operator+=(difference_type n) {
+          if (n >= 0) {
+            while (n--) {
+              ++(*this);
+            }
+          } else {
+            while (n++) {
+              --(*this);
+            }
+          }
+
+          return *this;
+        }
+
+        list_intrusive_iterator& operator-=(difference_type n) {
+          return ((*this) += -n);
+        }
+
+        friend bool operator==(const list_intrusive_iterator& lhs,
+                               const list_intrusive_iterator& rhs) {
           return lhs.node_ == rhs.node_;
         }
 
-        friend bool operator!=(const list_intrusive_iterator &lhs,
-                               const list_intrusive_iterator &rhs) {
+        friend bool operator!=(const list_intrusive_iterator& lhs,
+                               const list_intrusive_iterator& rhs) {
           return lhs.node_ != rhs.node_;
         }
 
       private:
-        node_base_type *get_node() { return node_; }
+        node_base_type* get_node() { return node_; }
     };
 
     typedef T_VALUE value_type;
-    typedef value_type &reference;
-    typedef const value_type &const_reference;
-    typedef value_type *pointer;
-    typedef const value_type *const_pointer;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef value_type* pointer;
+    typedef const value_type* const_pointer;
     typedef std::ptrdiff_t difference_type;
     typedef list_intrusive_iterator<false> iterator;
     typedef list_intrusive_iterator<true> const_iterator;
@@ -132,9 +152,9 @@ class list_intrusive {
     /**
      * Too lazy to implement/ensuring that it is well-defined.
      */
-    list_intrusive(const this_type &) = delete;
+    list_intrusive(const this_type&) = delete;
 
-    list_intrusive(this_type &&other)
+    list_intrusive(this_type&& other)
         : dummy_(other.dummy_), p_tail_(other.p_tail_), size_(other.size_) {
       other.dummy_.next_node_ = nullptr;
       if (p_tail_ == &other.dummy_) {
@@ -146,9 +166,9 @@ class list_intrusive {
     /**
      * Too lazy to implement/ensuring that it is well-defined.
      */
-    this_type &operator=(const this_type &) = delete;
+    this_type& operator=(const this_type&) = delete;
 
-    this_type &operator=(this_type &&other) {
+    this_type& operator=(this_type&& other) {
       dummy_ = other.dummy_;
       other.dummy_.next_node_ = nullptr;
       p_tail_ = other.p_tail_;
@@ -161,7 +181,7 @@ class list_intrusive {
       return *this;
     }
 
-    void swap(this_type &other) {
+    void swap(this_type& other) {
       using std::swap;
       swap(dummy_.next_node_, other.dummy_.next_node_);
       swap(p_tail_, other.p_tail_);
@@ -235,17 +255,24 @@ class list_intrusive {
     void pop_back() { erase_after(p_tail_->prev_node_); }
 
     iterator erase(iterator pos) {
-      node_type *node = pos.get_node();
-      node_type *prev_node = node->prev_node_;
+      node_type* node = pos.get_node();
+      node_type* prev_node = node->prev_node_;
       erase_after(prev_node);
 
       return iterator(prev_node->next_node_);
     }
 
+    node_type* erase(node_type& node) {
+      node_type* prev_node = node.prev_node_;
+      erase_after(prev_node);
+
+      return prev_node->next_node_;
+    }
+
     size_type size() const { return size_; }
 
   private:
-    void erase_after(node_type *node) {
+    void erase_after(node_type* node) {
       --size_;
       if (p_tail_ == node->next_node_) {
         p_tail_ = node;
@@ -257,7 +284,7 @@ class list_intrusive {
     }
 
     node_type dummy_;
-    node_type *p_tail_;
+    node_type* p_tail_;
     size_type size_;
 };
 
