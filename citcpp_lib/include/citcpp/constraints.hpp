@@ -14,6 +14,7 @@
 
 namespace citcpp {
 
+class boolean_literal;
 class boolean_proposition;
 class enum_proposition;
 class int_proposition;
@@ -30,9 +31,9 @@ struct constraint_view_helper {
 };
 
 using constraint_view_types =
-    constraint_view_helper<boolean_proposition, enum_proposition,
-                           int_proposition, implication, and_expression,
-                           or_expression>;
+    constraint_view_helper<boolean_literal, boolean_proposition,
+                           enum_proposition, int_proposition, implication,
+                           and_expression, or_expression>;
 
 using mutable_constraint_view = constraint_view_types::mutable_constraint_view;
 using const_constraint_view = constraint_view_types::const_constraint_view;
@@ -130,6 +131,32 @@ class constraint {
     virtual void dispatch(
         function_ref<void(const_constraint_view)> cb) const = 0;
 };
+
+/**
+ * This class represents a boolean literal.
+ */
+class boolean_literal : public constraint {
+  public:
+    boolean_literal(bool value) : value_(value) {}
+
+    bool get_value() const { return value_; }
+
+    operator bool() const { return get_value(); }
+
+  protected:
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
+      cb(std::ref(*this));
+    }
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
+      cb(std::cref(*this));
+    }
+
+  private:
+    bool value_;
+};
+
+extern const boolean_literal FALSE_LITERAL;
+extern const boolean_literal TRUE_LITERAL;
 
 enum class relational_operator { EQ, NEQ, LT, LE, GE, GT };
 

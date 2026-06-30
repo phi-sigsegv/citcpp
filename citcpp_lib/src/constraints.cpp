@@ -5,6 +5,14 @@ namespace {
 class constraint_copy_construction_visitor {
   public:
     std::shared_ptr<citcpp::constraint> operator()(
+        const citcpp::boolean_literal& lit) const {
+
+      using namespace citcpp;
+
+      return std::make_shared<boolean_literal>(lit);
+    }
+
+    std::shared_ptr<citcpp::constraint> operator()(
         const citcpp::boolean_proposition& prop) const {
 
       using namespace citcpp;
@@ -101,6 +109,14 @@ class constraint_streaming_visitor {
   public:
     constraint_streaming_visitor(std::ostream& os) : os_(os) {}
 
+    void operator()(const citcpp::boolean_literal& lit) const {
+      if (lit) {
+        os_ << "true";
+      } else {
+        os_ << "false";
+      }
+    }
+
     void operator()(const citcpp::boolean_proposition& prop) const {
       os_ << prop.get_parameter() << " ";
       os_ << prop.get_operator() << " ";
@@ -159,6 +175,9 @@ class constraint_streaming_visitor {
 }  // namespace
 
 namespace citcpp {
+
+const boolean_literal FALSE_LITERAL{false};
+const boolean_literal TRUE_LITERAL{true};
 
 std::shared_ptr<constraint> constraint::create_copy() const {
   return this->accept<std::shared_ptr<citcpp::constraint>>(

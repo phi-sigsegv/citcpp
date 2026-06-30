@@ -11,6 +11,8 @@ class internal_test_constraint_eval_visitor {
         const citcpp::detail::test& test, const citcpp::model& model)
         : param_to_index_(param_to_index), test_(test), model_(model) {}
 
+    bool operator()(const citcpp::boolean_literal& lit) const { return lit; }
+
     bool operator()(const citcpp::boolean_proposition& prop) const {
       using namespace citcpp::detail;
       using namespace citcpp;
