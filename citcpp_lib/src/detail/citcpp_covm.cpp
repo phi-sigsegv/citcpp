@@ -17,6 +17,7 @@
 #include "covm_exec_result_impl.hpp"
 #include "datatypes_config.hpp"
 #include "functor_executor_thread_pool.hpp"
+#include "model_simplifier.hpp"
 
 namespace {
 
@@ -184,7 +185,7 @@ namespace detail {
 citcpp_covm::citcpp_covm(model input_model, test_set tests,
                          const coverage_measurement_config& config)
     : config_(config),
-      input_model_(std::move(input_model)),
+      input_model_(std::move(simplify_model(input_model))),
       model_(input_model_),
       tests_(create_internal_test_set(input_model_, tests)),
       strength_(1) {}
