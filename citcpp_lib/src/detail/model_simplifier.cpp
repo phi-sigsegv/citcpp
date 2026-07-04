@@ -217,16 +217,6 @@ class implication_resolving_visitor {
     bool negate_;
 };
 
-enum class constraint_type {
-  LIT,
-  PROP_BOOLEAN,
-  PROP_ENUM,
-  PROP_INT,
-  IMPL,
-  AND,
-  OR
-};
-
 /**
  * This visitor flattens nested nary expressions of the same type, i.e.
  * it turn an expression like (A && B && (C && D && (E || F)) && G)
@@ -236,39 +226,41 @@ class constraint_flattening_visitor {
   public:
     constraint_flattening_visitor() : last_nary_expr_(nullptr) {}
 
-    constraint_type operator()(const citcpp::boolean_literal& lit) {
-      return constraint_type::LIT;
+    citcpp::constraint_type operator()(const citcpp::boolean_literal& lit) {
+      return citcpp::constraint_type::LITERAL;
     }
 
-    constraint_type operator()(const citcpp::boolean_proposition& prop) {
-      return constraint_type::PROP_BOOLEAN;
+    citcpp::constraint_type operator()(
+        const citcpp::boolean_proposition& prop) {
+      return citcpp::constraint_type::PROP_BOOLEAN;
     }
 
-    constraint_type operator()(const citcpp::enum_proposition& prop) {
-      return constraint_type::PROP_ENUM;
+    citcpp::constraint_type operator()(const citcpp::enum_proposition& prop) {
+      return citcpp::constraint_type::PROP_ENUM;
     }
 
-    constraint_type operator()(const citcpp::int_proposition& prop) {
-      return constraint_type::PROP_INT;
+    citcpp::constraint_type operator()(const citcpp::int_proposition& prop) {
+      return citcpp::constraint_type::PROP_INT;
     }
 
-    constraint_type operator()(const citcpp::implication& impl) {
-      impl.get_left_operand()->accept<constraint_type>(*this);
-      impl.get_right_operand()->accept<constraint_type>(*this);
+    citcpp::constraint_type operator()(const citcpp::implication& impl) {
+      impl.get_left_operand()->accept<citcpp::constraint_type>(*this);
+      impl.get_right_operand()->accept<citcpp::constraint_type>(*this);
 
-      return constraint_type::IMPL;
+      return citcpp::constraint_type::IMPLICATION;
     }
 
-    constraint_type operator()(citcpp::and_expression& and_expr) {
+    citcpp::constraint_type operator()(citcpp::and_expression& and_expr) {
       for (int i = 0; i < and_expr.get_operands().size(); ++i) {
         // We create a new shared_ptr pointing at the operand, so that replacing
         // the object which the shared_ptr at and_expr.get_operands()[i]
         // points to does not immediately deletes the operand.
         std::shared_ptr<citcpp::constraint> operand =
             and_expr.get_operands()[i];
-        constraint_type operand_type = operand->accept<constraint_type>(*this);
+        citcpp::constraint_type operand_type =
+            operand->accept<citcpp::constraint_type>(*this);
 
-        if (operand_type == constraint_type::AND) {
+        if (operand_type == citcpp::constraint_type::AND_EXPR) {
           // Remove the sub-expression of the same type, and replace it
           // by the operands of the sub-expression.
           citcpp::nary_operation& sub_expr = *last_nary_expr_;
@@ -298,18 +290,19 @@ class constraint_flattening_visitor {
 
       last_nary_expr_ = &and_expr;
 
-      return constraint_type::AND;
+      return citcpp::constraint_type::AND_EXPR;
     }
 
-    constraint_type operator()(citcpp::or_expression& or_expr) {
+    citcpp::constraint_type operator()(citcpp::or_expression& or_expr) {
       for (int i = 0; i < or_expr.get_operands().size(); ++i) {
         // We create a new shared_ptr pointing at the operand, so that replacing
         // the object which the shared_ptr at or_expr.get_operands()[i]
         // points to does not immediately deletes the operand.
         std::shared_ptr<citcpp::constraint> operand = or_expr.get_operands()[i];
-        constraint_type operand_type = operand->accept<constraint_type>(*this);
+        citcpp::constraint_type operand_type =
+            operand->accept<citcpp::constraint_type>(*this);
 
-        if (operand_type == constraint_type::OR) {
+        if (operand_type == citcpp::constraint_type::OR_EXPR) {
           // Remove the sub-expression of the same type, and replace it
           // by the operands of the sub-expression.
           citcpp::nary_operation& sub_expr = *last_nary_expr_;
@@ -339,7 +332,7 @@ class constraint_flattening_visitor {
 
       last_nary_expr_ = &or_expr;
 
-      return constraint_type::OR;
+      return citcpp::constraint_type::OR_EXPR;
     }
 
     citcpp::nary_operation* get_last_nary_expression() const {
@@ -370,7 +363,7 @@ model& simplify_model(model& m) {
     constraint_type constr_type =
         constr->accept<constraint_type>(flattening_visitor);
 
-    if (constr_type == constraint_type::AND) {
+    if (constr_type == constraint_type::AND_EXPR) {
       // Remove the and-expression, and replace it by the operands
       // of the and-expression, turning them into top-level
       // constraints.
