@@ -486,6 +486,8 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   std::shared_ptr<constraint_handler> constr_handler =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
+          (std::size_t)config_.constraint_handler_memory_limit_gb() * 1024 *
+              1024 * 1024,
           exec_handle.get_constraint_handler_init_progress());
 
   exec_handle.set_execution_phase(

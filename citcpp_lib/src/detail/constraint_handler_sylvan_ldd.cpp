@@ -351,7 +351,8 @@ int& get_lobal_sylan_init_counter() {
   return count;
 }
 
-void maybe_initialize_sylvan(int num_workers) {
+void maybe_initialize_sylvan(int num_workers,
+                             std::size_t memory_limit_in_bytes) {
   using namespace citcpp::detail;
   using namespace citcpp;
 
@@ -360,7 +361,7 @@ void maybe_initialize_sylvan(int num_workers) {
   int& instance_cnt = get_lobal_sylan_init_counter();
   if (instance_cnt == 0) {
     sylvan::init_lace(num_workers, 0);
-    sylvan::init_package((size_t)8 * 1024 * 1024 * 1024, 3, 3);
+    sylvan::init_package(memory_limit_in_bytes, 3, 3);
     sylvan::init_ldd();
   }
 
@@ -641,10 +642,11 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
 namespace citcpp {
 namespace detail {
 
-constraint_handler_sylvan_base::constraint_handler_sylvan_base(int num_workers)
+constraint_handler_sylvan_base::constraint_handler_sylvan_base(
+    int num_workers, std::size_t memory_limit_in_bytes)
     : base_type() {
 
-  maybe_initialize_sylvan(num_workers);
+  maybe_initialize_sylvan(num_workers, memory_limit_in_bytes);
 }
 
 constraint_handler_sylvan_base::~constraint_handler_sylvan_base() {
@@ -652,18 +654,23 @@ constraint_handler_sylvan_base::~constraint_handler_sylvan_base() {
 }
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
-    const internal_model& model, int num_workers)
-    : constraint_handler_sylvan_idd(model, {}, num_workers) {}
+    const internal_model& model, int num_workers,
+    std::size_t memory_limit_in_bytes)
+    : constraint_handler_sylvan_idd(model, {}, num_workers,
+                                    memory_limit_in_bytes) {}
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     const internal_model& model, int num_workers,
+    std::size_t memory_limit_in_bytes,
     constraint_handler_init_progress& exec_handle)
-    : constraint_handler_sylvan_idd(model, {}, num_workers, exec_handle) {}
+    : constraint_handler_sylvan_idd(model, {}, num_workers,
+                                    memory_limit_in_bytes, exec_handle) {}
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     const internal_model& model,
-    const std::vector<unsigned int>& variable_order, int num_workers)
-    : base_type(num_workers),
+    const std::vector<unsigned int>& variable_order, int num_workers,
+    std::size_t memory_limit_in_bytes)
+    : base_type(num_workers, memory_limit_in_bytes),
       model_(model),
       idd_(),
       test_to_idd_(),
@@ -692,8 +699,9 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     const internal_model& model,
     const std::vector<unsigned int>& variable_order, int num_workers,
+    std::size_t memory_limit_in_bytes,
     constraint_handler_init_progress& exec_handle)
-    : base_type(num_workers),
+    : base_type(num_workers, memory_limit_in_bytes),
       model_(model),
       idd_(),
       test_to_idd_(),

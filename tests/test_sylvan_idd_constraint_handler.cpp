@@ -51,7 +51,8 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop") {
 
   internal_model i_model(model);
 
-  constraint_handler_sylvan_idd c_handler(i_model, 1);
+  constraint_handler_sylvan_idd c_handler(i_model, 1,
+                                          (std::size_t)1 * 1024 * 1024 * 1024);
   std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
             << std::endl;
   std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
@@ -90,7 +91,8 @@ TEST_CASE(
 
   internal_model i_model(model);
 
-  constraint_handler_sylvan_idd c_handler(i_model, 1);
+  constraint_handler_sylvan_idd c_handler(i_model, 1,
+                                          (std::size_t)1 * 1024 * 1024 * 1024);
   std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
             << std::endl;
   std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
@@ -135,7 +137,8 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop & AND") {
 
   internal_model i_model(model);
 
-  constraint_handler_sylvan_idd c_handler(i_model, 1);
+  constraint_handler_sylvan_idd c_handler(i_model, 1,
+                                          (std::size_t)1 * 1024 * 1024 * 1024);
   std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
             << std::endl;
   std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
@@ -180,7 +183,8 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop & OR") {
 
   internal_model i_model(model);
 
-  constraint_handler_sylvan_idd c_handler(i_model, 1);
+  constraint_handler_sylvan_idd c_handler(i_model, 1,
+                                          (std::size_t)1 * 1024 * 1024 * 1024);
   std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
             << std::endl;
   std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
@@ -240,7 +244,8 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop & IMPL") {
 
   internal_model i_model(model);
 
-  constraint_handler_sylvan_idd c_handler(i_model, 1);
+  constraint_handler_sylvan_idd c_handler(i_model, 1,
+                                          (std::size_t)1 * 1024 * 1024 * 1024);
   std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
             << std::endl;
   std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
@@ -319,7 +324,8 @@ TEST_CASE(
 
   internal_model i_model(model);
 
-  constraint_handler_sylvan_idd c_handler(i_model, 1);
+  constraint_handler_sylvan_idd c_handler(i_model, 1,
+                                          (std::size_t)1 * 1024 * 1024 * 1024);
   std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
             << std::endl;
   std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
@@ -483,7 +489,8 @@ TEST_CASE("constraint handler sylvan IDD, testing more cmplex constraints") {
 
   internal_model i_model(model);
 
-  constraint_handler_sylvan_idd c_handler(i_model, 1);
+  constraint_handler_sylvan_idd c_handler(i_model, 1,
+                                          (std::size_t)1 * 1024 * 1024 * 1024);
   std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
             << std::endl;
   std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;

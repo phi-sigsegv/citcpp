@@ -7,11 +7,13 @@ namespace citcpp {
 covering_array_computation_config::covering_array_computation_config()
     : replace_dont_care_values_(true),
       number_of_threads_(1),
+      c_handler_memory_limit_gib_(8),
       value_seperator_(detail::DEFAULT_VALUE_SEPARATOR),
       algo_(covering_array_computation_algorithm::IPOG) {}
 
 coverage_measurement_config::coverage_measurement_config()
     : number_of_threads_(1),
+      c_handler_memory_limit_gib_(8),
       value_seperator_(detail::DEFAULT_VALUE_SEPARATOR) {}
 
 std::ostream& operator<<(std::ostream& os,

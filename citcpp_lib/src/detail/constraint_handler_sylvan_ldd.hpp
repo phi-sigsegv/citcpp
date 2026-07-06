@@ -14,7 +14,8 @@ class constraint_handler_sylvan_base : public constraint_handler {
     typedef constraint_handler base_type;
 
   public:
-    constraint_handler_sylvan_base(int num_workers);
+    constraint_handler_sylvan_base(int num_workers,
+                                   std::size_t memory_limit_in_bytes);
     virtual ~constraint_handler_sylvan_base();
 };
 
@@ -26,10 +27,12 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     typedef constraint_handler_sylvan_base base_type;
 
   public:
-    constraint_handler_sylvan_idd(const internal_model& model, int num_workers);
+    constraint_handler_sylvan_idd(const internal_model& model, int num_workers,
+                                  std::size_t memory_limit_in_bytes);
 
     constraint_handler_sylvan_idd(
         const internal_model& model, int num_workers,
+        std::size_t memory_limit_in_bytes,
         constraint_handler_init_progress& exec_handle);
 
     /**
@@ -39,7 +42,8 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
      */
     constraint_handler_sylvan_idd(
         const internal_model& model,
-        const std::vector<unsigned int>& variable_order, int num_workers);
+        const std::vector<unsigned int>& variable_order, int num_workers,
+        std::size_t memory_limit_in_bytes);
 
     /**
      * Constructs a constraint handler with a custom variable order.
@@ -49,6 +53,7 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     constraint_handler_sylvan_idd(
         const internal_model& model,
         const std::vector<unsigned int>& variable_order, int num_workers,
+        std::size_t memory_limit_in_bytes,
         constraint_handler_init_progress& exec_handle);
 
     /**

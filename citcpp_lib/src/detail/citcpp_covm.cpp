@@ -212,6 +212,8 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   std::shared_ptr<constraint_handler> constr_handler =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
+          (std::size_t)config_.constraint_handler_memory_limit_gb() * 1024 *
+              1024 * 1024,
           exec_handle.get_constraint_handler_init_progress());
 
   // Filter out invalid tests.
