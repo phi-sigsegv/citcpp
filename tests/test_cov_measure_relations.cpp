@@ -113,6 +113,8 @@ TEST_CASE("covm, testing PICT example model, relation with strength 1") {
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
+
   const coverage_measurement& covm = covm_result.get_result().at("R1");
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
@@ -153,6 +155,8 @@ TEST_CASE("covm, testing PICT example model, relation with strength 2") {
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+  CHECK(covm_result.get_invalid_test_indices().empty());
 
   const coverage_measurement& covm = covm_result.get_result().at("R2");
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
@@ -195,6 +199,8 @@ TEST_CASE("covm, testing PICT example model, relation with strength 3") {
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
+
   const coverage_measurement& covm = covm_result.get_result().at("R3");
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
@@ -235,6 +241,8 @@ TEST_CASE("covm, testing PICT example model, relation with strength 4") {
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+  CHECK(covm_result.get_invalid_test_indices().empty());
 
   const coverage_measurement& covm = covm_result.get_result().at("R4");
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
@@ -277,6 +285,8 @@ TEST_CASE("covm, testing PICT example model, mixed strength non-overlapping") {
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+  CHECK(covm_result.get_invalid_test_indices().empty());
 
   {
     const coverage_measurement& covm = covm_result.get_result().at("R2");
@@ -328,6 +338,8 @@ TEST_CASE("covm, testing PICT example model, mixed strength overlapping") {
   covm_exec_result covm_result(covm_f.get());
   CHECK(covm_result.get_result_code() ==
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+
+  CHECK(covm_result.get_invalid_test_indices().empty());
 
   {
     const coverage_measurement& covm = covm_result.get_result().at("R2");
