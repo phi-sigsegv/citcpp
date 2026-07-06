@@ -17,6 +17,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_void.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/constraint_handler_sylvan_ldd.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/model_simplifier.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_sylvan_ldd.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/idd_variable_ordering.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/lace_lifecycle.cpp

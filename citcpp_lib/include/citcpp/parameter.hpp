@@ -70,6 +70,13 @@ class parameter_value {
     std::variant<bool, std::string, int> value_;
 };
 
+struct parameter_value_hash {
+    std::size_t operator()(const parameter_value& value) const noexcept {
+      return std::hash<std::variant<bool, std::string, int>>{}(
+          value.get_variant_value());
+    }
+};
+
 extern const parameter_value DONT_CARE_PARAMETER_VALUE;
 
 enum class parameter_type { BOOLEAN, ENUM, INTEGER };

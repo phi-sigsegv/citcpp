@@ -14,6 +14,7 @@
 
 namespace citcpp {
 
+class boolean_literal;
 class boolean_proposition;
 class enum_proposition;
 class int_proposition;
@@ -30,12 +31,22 @@ struct constraint_view_helper {
 };
 
 using constraint_view_types =
-    constraint_view_helper<boolean_proposition, enum_proposition,
-                           int_proposition, implication, and_expression,
-                           or_expression>;
+    constraint_view_helper<boolean_literal, boolean_proposition,
+                           enum_proposition, int_proposition, implication,
+                           and_expression, or_expression>;
 
 using mutable_constraint_view = constraint_view_types::mutable_constraint_view;
 using const_constraint_view = constraint_view_types::const_constraint_view;
+
+enum class constraint_type {
+  LITERAL,
+  PROP_BOOLEAN,
+  PROP_ENUM,
+  PROP_INT,
+  IMPLICATION,
+  AND_EXPR,
+  OR_EXPR
+};
 
 /**
  * This is the base class of all kinds of constraints.
@@ -43,6 +54,8 @@ using const_constraint_view = constraint_view_types::const_constraint_view;
 class constraint {
   public:
     virtual ~constraint() = default;
+
+    virtual constraint_type get_constraint_type() const = 0;
 
     /**
      * A method allowing to call a visitor with the correct type
@@ -131,6 +144,36 @@ class constraint {
         function_ref<void(const_constraint_view)> cb) const = 0;
 };
 
+/**
+ * This class represents a boolean literal.
+ */
+class boolean_literal : public constraint {
+  public:
+    boolean_literal(bool value) : value_(value) {}
+
+    constraint_type get_constraint_type() const override {
+      return constraint_type::LITERAL;
+    }
+
+    bool get_value() const { return value_; }
+
+    operator bool() const { return get_value(); }
+
+  protected:
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
+      cb(std::ref(*this));
+    }
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
+      cb(std::cref(*this));
+    }
+
+  private:
+    bool value_;
+};
+
+extern const boolean_literal FALSE_LITERAL;
+extern const boolean_literal TRUE_LITERAL;
+
 enum class relational_operator { EQ, NEQ, LT, LE, GE, GT };
 
 /**
@@ -161,6 +204,10 @@ class boolean_proposition : public atomic_proposition {
                         parameter_value value)
         : atomic_proposition(param, op), value_(value) {}
 
+    constraint_type get_constraint_type() const override {
+      return constraint_type::PROP_BOOLEAN;
+    }
+
     bool get_compared_value() const { return value_; }
 
   protected:
@@ -185,6 +232,10 @@ class enum_proposition : public atomic_proposition {
                      parameter_value value)
         : atomic_proposition(param, op), value_(value) {}
 
+    constraint_type get_constraint_type() const override {
+      return constraint_type::PROP_ENUM;
+    }
+
     const std::string& get_compared_value() const { return value_; }
 
   protected:
@@ -208,6 +259,10 @@ class int_proposition : public atomic_proposition {
     int_proposition(parameter_reference param, relational_operator op,
                     parameter_value value)
         : atomic_proposition(param, op), value_(value) {}
+
+    constraint_type get_constraint_type() const override {
+      return constraint_type::PROP_INT;
+    }
 
     int get_compared_value() const { return value_; }
 
@@ -267,6 +322,10 @@ class implication : public binary_operation {
         : binary_operation(std::move(lhs), binary_operator::IMPL,
                            std::move(rhs)) {}
 
+    constraint_type get_constraint_type() const override {
+      return constraint_type::IMPLICATION;
+    }
+
   protected:
     void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
       cb(std::ref(*this));
@@ -310,6 +369,10 @@ class and_expression : public nary_operation {
     and_expression(std::vector<std::shared_ptr<constraint>> operands)
         : nary_operation(nray_operator::AND, std::move(operands)) {}
 
+    constraint_type get_constraint_type() const override {
+      return constraint_type::AND_EXPR;
+    }
+
   protected:
     void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
       cb(std::ref(*this));
@@ -326,6 +389,10 @@ class or_expression : public nary_operation {
   public:
     or_expression(std::vector<std::shared_ptr<constraint>> operands)
         : nary_operation(nray_operator::OR, std::move(operands)) {}
+
+    constraint_type get_constraint_type() const override {
+      return constraint_type::OR_EXPR;
+    }
 
   protected:
     void dispatch(function_ref<void(mutable_constraint_view)> cb) override {

@@ -21,6 +21,7 @@
 #include "ipog_horizontal_extension.hpp"
 #include "ipog_measure_testset.hpp"
 #include "ipog_vertical_extension.hpp"
+#include "model_simplifier.hpp"
 
 namespace {
 
@@ -446,7 +447,7 @@ citcpp_ipog::citcpp_ipog(model input_model,
                          const covering_array_computation_config& config)
     : citcpp_ipog_base(),
       config_(config),
-      input_model_(std::move(input_model)),
+      input_model_(std::move(simplify_model(input_model))),
       model_(input_model_),
       input_tests_(),
       strength_(1) {}
@@ -455,7 +456,7 @@ citcpp_ipog::citcpp_ipog(model input_model, test_set tests,
                          const covering_array_computation_config& config)
     : citcpp_ipog_base(),
       config_(config),
-      input_model_(std::move(input_model)),
+      input_model_(std::move(simplify_model(input_model))),
       model_(input_model_),
       input_tests_(create_internal_test_set(input_model_, tests)),
       strength_(1) {}

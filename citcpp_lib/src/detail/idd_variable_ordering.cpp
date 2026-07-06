@@ -17,6 +17,8 @@ class parameter_collector_visitor {
         const std::unordered_map<std::string, unsigned int>& name_to_idx)
         : name_to_idx_(name_to_idx) {}
 
+    void operator()(const citcpp::boolean_literal& lit) {}
+
     void operator()(const citcpp::boolean_proposition& prop) {
       add_param(prop.get_parameter());
     }

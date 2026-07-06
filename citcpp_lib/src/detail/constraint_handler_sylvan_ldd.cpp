@@ -42,6 +42,17 @@ class constraint_to_xdd_visitor {
       }
     }
 
+    T_DD operator()(const citcpp::boolean_literal& lit) {
+
+      using namespace citcpp::detail;
+      using namespace citcpp;
+
+      T_DD dd = lit ? true_false_dd_trait<T_DD>::false_dd()
+                    : true_false_dd_trait<T_DD>::true_dd();
+
+      return dd;
+    }
+
     T_DD operator()(const citcpp::boolean_proposition& prop) {
 
       using namespace citcpp::detail;
