@@ -461,6 +461,7 @@ TEST_CASE(
 
   std::cout << covm << std::endl;
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -534,6 +535,7 @@ TEST_CASE(
 
   std::cout << covm << std::endl;
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -607,6 +609,7 @@ TEST_CASE(
 
   std::cout << covm << std::endl;
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -680,6 +683,7 @@ TEST_CASE(
 
   std::cout << covm << std::endl;
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -753,6 +757,7 @@ TEST_CASE(
 
   std::cout << covm << std::endl;
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -826,6 +831,7 @@ TEST_CASE(
 
   std::cout << covm << std::endl;
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
@@ -899,6 +905,7 @@ TEST_CASE(
 
   std::cout << covm << std::endl;
 
+  CHECK(covm_result.get_invalid_test_indices().empty());
   CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());

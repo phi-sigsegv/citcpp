@@ -8,28 +8,24 @@
 #include <duration_wrapper.hpp>
 #include <iostream>
 #include <iterator>
-#include <sstream>
 
 namespace {
 
 citcpp::model create_pict_example_model() {
   using namespace citcpp;
 
-  std::stringstream s;
-
-  s << "[System]\n"
-    << "Name: PICT_example\n"
-    << "\n"
-    << "[Parameter]\n"
-    << "PLATFORM (enum) : x86, x64, arm\n"
-    << "CPUS (int) : 1, 2, 4\n"
-    << "RAM (enum) : 1GB, 4GB, 64GB\n"
-    << "HDD (enum) : SCSI, IDE\n"
-    << "OS (enum) : Win7, Win8, Win10\n"
-    << "Browser (enum) : Edge, Opera, Chrome, Firefox\n"
-    << "APP (enum) : Word, Excel, Powerpoint" << std::endl;
-
-  std::string model_str = s.str();
+  std::string model_str = R"([System]
+Name: PICT_example
+  
+[Parameter]
+PLATFORM (enum) : x86, x64, arm
+CPUS (int) : 1, 2, 4
+RAM (enum) : 1GB, 4GB, 64GB
+HDD (enum) : SCSI, IDE
+OS (enum) : Win7, Win8, Win10
+Browser (enum) : Edge, Opera, Chrome, Firefox
+APP (enum) : Word, Excel, Powerpoint
+)";
 
   acts_model_parser acts_parser;
 
@@ -42,31 +38,30 @@ citcpp::model create_pict_example_model() {
 citcpp::model create_acts_example_model() {
   using namespace citcpp;
 
-  std::stringstream s;
+  std::string model_str = R"([System]
+-- specify system name
+Name: TCAS
 
-  s << "[System]\n"
-    << "Name: TCAS\n"
-    << "\n"
-    << "[Parameter]\n"
-    << "Cur_Vertical_Sep (int) : 299, 300, 601\n"
-    << "High_Confidence (boolean) : TRUE, FALSE\n"
-    << "Two_of_Three_Reports_Valid (boolean) : TRUE, FALSE\n"
-    << "Own_Tracked_Alt (int) : 1, 2\n"
-    << "Other_Tracked_Alt (int) : 1, 2\n"
-    << "Own_Tracked_Alt_Rate (int) : 600, 601\n"
-    << "Alt_Layer_Value (int) : 0, 1, 2, 3\n"
-    << "Up_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, 840\n"
-    << "Down_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, "
-       "840\n"
-    << "Other_RAC (enum) : NO_INTENT, DO_NOT_CLIMB, DO_NOT_DESCEND\n"
-    << "Other_Capability (enum) : TCAS_TA, OTHER\n"
-    << "Climb_Inhibit (boolean) : TRUE, FALSE\n"
-    << "\n"
-    << "[Constraint]\n"
-    << "Cur_Vertical_Sep != 299 => Other_Capability != \"OTHER\"\n"
-    << "Climb_Inhibit = true => Up_Separation > 399" << std::endl;
+[Parameter]
+-- general syntax is parameter_name (type) : value1, value2, ...
+Cur_Vertical_Sep (int) : 299, 300, 601
+High_Confidence (boolean) : TRUE, FALSE
+Two_of_Three_Reports_Valid (boolean) : TRUE, FALSE
+Own_Tracked_Alt (int) : 1, 2
+Other_Tracked_Alt (int) : 1, 2
+Own_Tracked_Alt_Rate (int) : 600, 601
+Alt_Layer_Value (int) : 0, 1, 2, 3
+Up_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, 840
+Down_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, 840
+Other_RAC (enum) : NO_INTENT, DO_NOT_CLIMB, DO_NOT_DESCEND
+Other_Capability (enum) : TCAS_TA, OTHER
+Climb_Inhibit (boolean) : TRUE, FALSE
 
-  std::string model_str = s.str();
+[Constraint]
+-- this section is also optional
+Cur_Vertical_Sep != 299 => Other_Capability != "OTHER"
+Climb_Inhibit = true => Up_Separation > 399
+)";
 
   acts_model_parser acts_parser;
 
@@ -79,27 +74,25 @@ citcpp::model create_acts_example_model() {
 citcpp::model create_acts_example_model_unconstrained() {
   using namespace citcpp;
 
-  std::stringstream s;
+  std::string model_str = R"([System]
+-- specify system name
+Name: TCAS
 
-  s << "[System]\n"
-    << "Name: TCAS\n"
-    << "\n"
-    << "[Parameter]\n"
-    << "Cur_Vertical_Sep (int) : 299, 300, 601\n"
-    << "High_Confidence (boolean) : TRUE, FALSE\n"
-    << "Two_of_Three_Reports_Valid (boolean) : TRUE, FALSE\n"
-    << "Own_Tracked_Alt (int) : 1, 2\n"
-    << "Other_Tracked_Alt (int) : 1, 2\n"
-    << "Own_Tracked_Alt_Rate (int) : 600, 601\n"
-    << "Alt_Layer_Value (int) : 0, 1, 2, 3\n"
-    << "Up_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, 840\n"
-    << "Down_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, "
-       "840\n"
-    << "Other_RAC (enum) : NO_INTENT, DO_NOT_CLIMB, DO_NOT_DESCEND\n"
-    << "Other_Capability (enum) : TCAS_TA, OTHER\n"
-    << "Climb_Inhibit (boolean) : TRUE, FALSE" << std::endl;
-
-  std::string model_str = s.str();
+[Parameter]
+-- general syntax is parameter_name (type) : value1, value2, ...
+Cur_Vertical_Sep (int) : 299, 300, 601
+High_Confidence (boolean) : TRUE, FALSE
+Two_of_Three_Reports_Valid (boolean) : TRUE, FALSE
+Own_Tracked_Alt (int) : 1, 2
+Other_Tracked_Alt (int) : 1, 2
+Own_Tracked_Alt_Rate (int) : 600, 601
+Alt_Layer_Value (int) : 0, 1, 2, 3
+Up_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, 840
+Down_Separation (int) : 0, 399, 400, 499, 500, 639, 640, 739, 740, 840
+Other_RAC (enum) : NO_INTENT, DO_NOT_CLIMB, DO_NOT_DESCEND
+Other_Capability (enum) : TCAS_TA, OTHER
+Climb_Inhibit (boolean) : TRUE, FALSE
+)";
 
   acts_model_parser acts_parser;
 

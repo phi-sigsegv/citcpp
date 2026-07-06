@@ -456,6 +456,11 @@ TEST_CASE("cagen, testing unconstrained ACTS example model, strength 1") {
 
     CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
           44);
+
+    CHECK(covm_result.get_invalid_test_indices().empty());
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          covm.get_number_of_combinations_to_cover());
+    CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
   }
 }
 
@@ -498,6 +503,11 @@ TEST_CASE("cagen, testing unconstrained ACTS example model, strength 2") {
 
     CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
           837);
+
+    CHECK(covm_result.get_invalid_test_indices().empty());
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          covm.get_number_of_combinations_to_cover());
+    CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
   }
 }
 
@@ -540,5 +550,10 @@ TEST_CASE("cagen, testing unconstrained ACTS example model, strength 3") {
 
     CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
           9158);
+
+    CHECK(covm_result.get_invalid_test_indices().empty());
+    CHECK(covm.get_covered_tuples()[covm.get_covered_tuples().size() - 1] ==
+          covm.get_number_of_combinations_to_cover());
+    CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
   }
 }
