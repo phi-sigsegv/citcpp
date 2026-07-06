@@ -615,8 +615,11 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
   }
 
   size_t mid = start + (end - start) / 2;
-  SPAWN(lace_get_first_test_valid_for_assignment_task, test_it += (mid - start),
-        mid, end, handler, ctx);
+  citcpp::detail::list_intrusive<citcpp::detail::test_list_intrusive_integ>::
+      iterator second_half_test_it(test_it);
+  second_half_test_it += (mid - start);
+  SPAWN(lace_get_first_test_valid_for_assignment_task, second_half_test_it, mid,
+        end, handler, ctx);
   CALL(lace_get_first_test_valid_for_assignment_task, test_it, start, mid,
        handler, ctx);
   SYNC(lace_get_first_test_valid_for_assignment_task);
