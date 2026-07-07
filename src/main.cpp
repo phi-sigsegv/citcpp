@@ -119,7 +119,7 @@ int execute_cagen(const std::string& model_file_path,
                   citcpp::covering_array_computation_algorithm cagen_algo,
                   int interaction_strength, bool show_progress,
                   const std::string& sep, unsigned int num_threads,
-                  bool rand_star) {
+                  unsigned int mem_limit_gb, bool rand_star) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -154,20 +154,23 @@ int execute_cagen(const std::string& model_file_path,
             << std::endl;
 
   std::unique_ptr<cagen_exec_handle_ipog> handle =
-      seed_test_set ? compute_covering_array_ipog(
-                          *model, *seed_test_set, interaction_strength,
-                          covering_array_computation_config()
-                              .with_algorithm(cagen_algo)
-                              .with_replace_dont_care_values(rand_star)
-                              .with_number_of_threads(num_threads)
-                              .with_value_separator(sep))
-                    : compute_covering_array_ipog(
-                          *model, interaction_strength,
-                          covering_array_computation_config()
-                              .with_algorithm(cagen_algo)
-                              .with_replace_dont_care_values(rand_star)
-                              .with_number_of_threads(num_threads)
-                              .with_value_separator(sep));
+      seed_test_set
+          ? compute_covering_array_ipog(
+                *model, *seed_test_set, interaction_strength,
+                covering_array_computation_config()
+                    .with_algorithm(cagen_algo)
+                    .with_replace_dont_care_values(rand_star)
+                    .with_number_of_threads(num_threads)
+                    .with_constraint_handler_memory_limit_gb(mem_limit_gb)
+                    .with_value_separator(sep))
+          : compute_covering_array_ipog(
+                *model, interaction_strength,
+                covering_array_computation_config()
+                    .with_algorithm(cagen_algo)
+                    .with_replace_dont_care_values(rand_star)
+                    .with_number_of_threads(num_threads)
+                    .with_constraint_handler_memory_limit_gb(mem_limit_gb)
+                    .with_value_separator(sep));
 
   const auto default_precision{std::cout.precision()};
   std::cout << std::setprecision(1);
@@ -276,7 +279,8 @@ int execute_covm(const std::string& model_file_path,
                  const std::string& test_set_file_path,
                  const std::string& coverage_measurement_file_path,
                  int interaction_strength, bool show_progress,
-                 const std::string& sep, unsigned int num_threads) {
+                 const std::string& sep, unsigned int num_threads,
+                 unsigned int mem_limit_gb) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -310,11 +314,12 @@ int execute_covm(const std::string& model_file_path,
   std::cout << "Testset size: " << tests->get_list_of_tests().size() << "\n"
             << std::endl;
 
-  std::unique_ptr<covm_exec_handle> handle =
-      measure_coverage(*model, *tests, interaction_strength,
-                       coverage_measurement_config()
-                           .with_number_of_threads(num_threads)
-                           .with_value_separator(sep));
+  std::unique_ptr<covm_exec_handle> handle = measure_coverage(
+      *model, *tests, interaction_strength,
+      coverage_measurement_config()
+          .with_number_of_threads(num_threads)
+          .with_constraint_handler_memory_limit_gb(mem_limit_gb)
+          .with_value_separator(sep));
 
   const auto default_precision{std::cout.precision()};
   std::cout << std::setprecision(1);
@@ -438,11 +443,21 @@ int main(int argc, char* argv[]) {
                    "default value is 2.")
       ->check(InteractionStrengthValidator());
 
-  unsigned int num_threads = 1;
+  unsigned int num_threads =
+      covering_array_computation_config().number_of_threads();
   command_cagen->add_option(
       "--num-threads", num_threads,
       "Sets the number of threads to use. The value 0 means that the number of "
-      "threads is chosen automatically. The default value is 1.");
+      "threads is chosen automatically. The default value is " +
+          std::to_string(num_threads) + ".");
+
+  unsigned int mem_limit_gb =
+      covering_array_computation_config().constraint_handler_memory_limit_gb();
+  command_cagen->add_option(
+      "--mem-limit", mem_limit_gb,
+      "Sets the memory limit used for the constraint handler in terms "
+      "of gigabytes. The default value is " +
+          std::to_string(mem_limit_gb) + ".");
 
   bool show_progress = false;
   command_cagen->add_flag(
@@ -495,7 +510,14 @@ int main(int argc, char* argv[]) {
   command_cov_measure->add_option(
       "--num-threads", num_threads,
       "Sets the number of threads to use. The value 0 means that the number of "
-      "threads is chosen automatically. The default value is 1.");
+      "threads is chosen automatically. The default value is " +
+          std::to_string(num_threads) + ".");
+
+  command_cov_measure->add_option(
+      "--mem-limit", mem_limit_gb,
+      "Sets the memory limit used for the constraint handler in terms "
+      "of gigabytes. The default value is " +
+          std::to_string(mem_limit_gb) + ".");
 
   command_cov_measure->add_flag(
       "--progress", show_progress,
@@ -548,11 +570,11 @@ int main(int argc, char* argv[]) {
     return execute_cagen(
         model_file_path, test_set_file_path, seed_test_set_file_path,
         covering_array_computation_algorithm::IPOG, interaction_strength,
-        show_progress, sep, num_threads, rand_star);
+        show_progress, sep, num_threads, mem_limit_gb, rand_star);
   }
   if (command_cov_measure->parsed()) {
     return execute_covm(model_file_path, test_set_file_path,
                         coverage_measurement_file_path, interaction_strength,
-                        show_progress, sep, num_threads);
+                        show_progress, sep, num_threads, mem_limit_gb);
   }
 }

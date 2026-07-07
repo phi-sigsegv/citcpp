@@ -50,6 +50,7 @@ void constraint_handler::replace_dont_care_values(
 std::unique_ptr<constraint_handler>
 constraint_handler::create_constraint_handler(
     const internal_model& model, int num_worker_threads,
+    std::size_t memory_limit_in_bytes,
     constraint_handler_init_progress& exec_handle) {
 
   if (model.get_input_model().get_constraints().empty()) {
@@ -65,7 +66,8 @@ constraint_handler::create_constraint_handler(
         compute_mcmf_variable_order(model);
 
     constraint_handler_sylvan_idd* handler = new constraint_handler_sylvan_idd(
-        model, variable_order, num_worker_threads, exec_handle);
+        model, variable_order, num_worker_threads, memory_limit_in_bytes,
+        exec_handle);
     handler->use_per_test_idd(false);
     return std::unique_ptr<constraint_handler_sylvan_idd>(handler);
   }

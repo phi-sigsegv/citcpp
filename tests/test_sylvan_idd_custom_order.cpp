@@ -38,7 +38,8 @@ TEST_CASE("constraint handler sylvan IDD, testing custom variable order") {
   // P1: idx 0, P2: idx 1, P3: idx 2
   std::vector<unsigned int> custom_order = {2, 0, 1};
 
-  constraint_handler_sylvan_idd handler(im, custom_order, 1);
+  constraint_handler_sylvan_idd handler(im, custom_order, 1,
+                                        (std::size_t)1 * 1024 * 1024 * 1024);
 
   SUBCASE("is_valid_partial_test") {
     test t1({1, -1,

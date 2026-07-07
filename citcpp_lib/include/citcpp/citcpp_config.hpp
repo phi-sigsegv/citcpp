@@ -43,6 +43,14 @@ class covering_array_computation_config {
     unsigned int number_of_threads() const { return number_of_threads_; }
 
     /**
+     * Returns the memory limit used for the constraint handler in terms
+     * of gigabytes.
+     */
+    unsigned int constraint_handler_memory_limit_gb() const {
+      return c_handler_memory_limit_gib_;
+    }
+
+    /**
      * Returns the value separator to use in the produced test set, as well
      * as for parsing an optional test set that shall be extended.
      */
@@ -77,6 +85,17 @@ class covering_array_computation_config {
     }
 
     /**
+     * Sets the memory limit used for the constraint handler in terms
+     * of gigabytes.
+     */
+    covering_array_computation_config& with_constraint_handler_memory_limit_gb(
+        unsigned int c_handler_memory_limit_gib) {
+      c_handler_memory_limit_gib_ = c_handler_memory_limit_gib;
+
+      return *this;
+    }
+
+    /**
      * Sets the value separator to use in the produced test set, as well
      * as for parsing an optional test set that shall be extended.
      */
@@ -100,6 +119,7 @@ class covering_array_computation_config {
   private:
     bool replace_dont_care_values_;
     unsigned int number_of_threads_;
+    unsigned int c_handler_memory_limit_gib_;
     std::string value_seperator_;
     covering_array_computation_algorithm algo_;
 };
@@ -116,6 +136,14 @@ class coverage_measurement_config {
      * number of threads is chosen automatically.
      */
     unsigned int number_of_threads() const { return number_of_threads_; }
+
+    /**
+     * Returns the memory limit used for the constraint handler in terms
+     * of gigabytes.
+     */
+    unsigned int constraint_handler_memory_limit_gb() const {
+      return c_handler_memory_limit_gib_;
+    }
 
     /**
      * Returns the value separator to assume when parsing the test set whose
@@ -136,6 +164,17 @@ class coverage_measurement_config {
     }
 
     /**
+     * Sets the memory limit used for the constraint handler in terms
+     * of gigabytes.
+     */
+    coverage_measurement_config& with_constraint_handler_memory_limit_gb(
+        unsigned int c_handler_memory_limit_gib) {
+      c_handler_memory_limit_gib_ = c_handler_memory_limit_gib;
+
+      return *this;
+    }
+
+    /**
      * Sets the value separator to assume when parsing the test set whose
      * coverage to measure.
      */
@@ -148,6 +187,7 @@ class coverage_measurement_config {
 
   private:
     unsigned int number_of_threads_;
+    unsigned int c_handler_memory_limit_gib_;
     std::string value_seperator_;
 };
 
