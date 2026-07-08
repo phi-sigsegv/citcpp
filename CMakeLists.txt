@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(citcpp VERSION 2.1.0)
+project(citcpp VERSION 3.0.0)
 
 include(GNUInstallDirs)
 
