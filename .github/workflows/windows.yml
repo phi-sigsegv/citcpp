@@ -1,0 +1,78 @@
+name: Windows
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  msys2-build:
+    name: '${{ matrix.icon }} ${{ matrix.sys }} ${{ matrix.build_type }}'
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { icon: '🟦', sys: mingw64, build_type: Release }
+          - { icon: '🟨', sys: ucrt64,  build_type: Release }
+          - { icon: '🟨', sys: ucrt64,  build_type: Debug   }
+          - { icon: '🟧', sys: clang64, build_type: Release }
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - name: '🧰 Checkout'
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    - name: '${{ matrix.icon }} Setup MSYS2'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{matrix.sys}}
+        update: true
+        install: >-
+          git
+          make
+        pacboy: >-
+          toolchain:p
+          cmake:p
+          ninja:p
+    - name: '🚧 Build'
+      run: |
+        cmake -G Ninja -S . -B build \
+          -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+          -DLACE_BUILD_TESTS=ON \
+          -DLACE_BUILD_BENCHMARKS=${{ matrix.build_type == 'Release' && 'ON' || 'OFF' }}
+        cmake --build build
+    - name: '🧪 Test'
+      working-directory: build
+      run: ctest --output-on-failure -C ${{ matrix.build_type }} -VV --timeout 30
+
+  msvc-build:
+    name: '🧱 MSVC ${{ matrix.build_type }}'
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Release, Debug]
+    steps:
+    - name: 🧰 Checkout
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: 🧰 Setup MSVC dev cmd
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: 🛠️ Configure
+      run: |
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLACE_BUILD_TESTS=ON -DLACE_BUILD_BENCHMARKS=ON
+
+    - name: 🏗️ Build
+      run: cmake --build build
+
+    - name: 🧪 Test
+      run: ctest --test-dir build --output-on-failure -VV --timeout 30
