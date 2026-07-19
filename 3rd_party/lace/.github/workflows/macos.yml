@@ -1,0 +1,30 @@
+name: macOS
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clang-build:
+    name: 'macOS-15 Apple Clang ${{matrix.build_type}}'
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Release, Debug]
+    steps:
+    - uses: actions/checkout@v6
+    - name: Configure
+      run: |
+        export CC=clang CXX=clang++
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+          -DLACE_BUILD_TESTS=ON \
+          -DLACE_BUILD_BENCHMARKS=${{ matrix.build_type == 'Release' && 'ON' || 'OFF' }}
+    - name: Build
+      run: cmake --build build
+    - name: Test
+      working-directory: build
+      run: ctest --output-on-failure -C ${{matrix.build_type}} -VV --timeout 30
