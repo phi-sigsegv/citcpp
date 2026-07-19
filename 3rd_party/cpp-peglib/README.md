@@ -12,32 +12,37 @@ You can also try the online version, PEG Playground at https://yhirose.github.io
 
 The PEG syntax is well described on page 2 in the [document](http://www.brynosaurus.com/pub/lang/peg.pdf) by Bryan Ford. *cpp-peglib* also supports the following additional syntax for now:
 
-  * `'...'i` (Case-insensitive literal operator)
-  * `[...]i` (Case-insensitive character class operator)
-  * `[^...]` (Negated character class operator)
-  * `[^...]i` (Case-insensitive negated character class operator)
-  * `{2,5}` (Regex-like repetition operator)
-  * `<` ... `>` (Token boundary operator)
-  * `~` (Ignore operator)
-  * `\x20` (Hex number char)
-  * `\u10FFFF` (Unicode char)
-  * `%whitespace` (Automatic whitespace skipping)
-  * `%word` (Word expression)
-  * `$name(` ... `)` (Capture scope operator)
-  * `$name<` ... `>` (Named capture operator)
-  * `$name` (Backreference operator)
-  * `|` (Dictionary operator)
-  * `↑` (Cut operator)
-  * `MACRO_NAME(` ... `)` (Parameterized rule or Macro)
-  * `{ precedence L - + L / * }` (Parsing infix expression)
-  * `%recovery(` ... `)` (Error recovery operator)
-  * `exp⇑label` or `exp^label` (Syntax sugar for `(exp / %recover(label))`)
-  * `label { error_message "..." }` (Error message instruction)
-  * `{ no_ast_opt }` (No AST node optimization instruction)
+* `'...'i` (Case-insensitive literal operator)
+* `[...]i` (Case-insensitive character class operator)
+* `[^...]` (Negated character class operator)
+* `[^...]i` (Case-insensitive negated character class operator)
+* `{2,5}` (Regex-like repetition operator)
+* `<` ... `>` (Token boundary operator)
+* `~` (Ignore operator)
+* `\x20` (Hex number char)
+* `\u10FFFF` (Unicode char)
+* `[\d\w\s]`, `[\D\W\S]` (Predefined character classes in a character class, ASCII semantics)
+* `[[:alpha:]]`, `[[:^alpha:]]` (POSIX character classes in a character class, ASCII semantics: `alnum`, `alpha`, `ascii`, `blank`, `cntrl`, `digit`, `graph`, `lower`, `print`, `punct`, `space`, `upper`, `word`, `xdigit`)
+* `%whitespace` (Automatic whitespace skipping)
+* `%word` (Word expression)
+* `$name(` ... `)` (Capture scope operator)
+* `$name<` ... `>` (Named capture operator)
+* `$name` (Backreference operator)
+* `|` (Dictionary operator)
+* `↑` (Cut operator)
+* `MACRO_NAME(` ... `)` (Parameterized rule or Macro)
+* `{ precedence L - + L / * }` (Parsing infix expression)
+* Left recursive rules (direct, indirect, and mutual left recursion)
+* `%recovery(` ... `)` (Error recovery operator)
+* `exp⇑label` or `exp^label` (Syntax sugar for `(exp / %recover(label))`)
+* `label { error_message "..." }` (Error message instruction)
+* `{ no_ast_opt }` (No AST node optimization instruction)
+* `{ no_whitespace }` (Disable `%whitespace` skipping inside the rule)
+* `{ ast_name: NodeTag }` (AST node name override instruction)
 
 'End of Input' check will be done as default. To disable the check, please call `disable_eoi_check`.
 
-This library supports the linear-time parsing known as the [*Packrat*](http://pdos.csail.mit.edu/~baford/packrat/thesis/thesis.pdf) parsing.
+This library supports the linear-time parsing known as the [*Packrat*](http://pdos.csail.mit.edu/~baford/packrat/thesis/thesis.pdf) parsing. It also supports *left recursive* grammars (direct, indirect, and mutual) via a seed-growing algorithm, allowing natural expression of left-associative operators.
 
 IMPORTANT NOTE for some Linux distributions such as Ubuntu and CentOS: Need `-pthread` option when linking. See [#23](https://github.com/yhirose/cpp-peglib/issues/23#issuecomment-261126127), [#46](https://github.com/yhirose/cpp-peglib/issues/46#issuecomment-417870473) and [#62](https://github.com/yhirose/cpp-peglib/issues/62#issuecomment-492032680).
 
@@ -136,10 +141,10 @@ There are four semantic actions available:
 
 `SemanticValues` value contains the following information:
 
- - Semantic values
- - Matched string information
- - Token information if the rule is literal or uses a token boundary operator
- - Choice number when the rule is 'prioritized choice'
+* Semantic values
+* Matched string information
+* Token information if the rule is literal or uses a token boundary operator
+* Choice number when the rule is 'prioritized choice'
 
 `any& dt` is a 'read-write' context data which can be used for whatever purposes. The initial context data is set in `peg::parser::parse` method.
 
@@ -246,6 +251,31 @@ ret = parser.parse("200", val);
 assert(ret == false);
 ```
 
+The predicate can pass data to the action via `predicate_data` to avoid redundant computation:
+
+```cpp
+peg::parser parser("NUMBER  <-  < [0-9]+ >");
+
+parser["NUMBER"].predicate = [](const SemanticValues &vs,
+                                const std::any & /*dt*/, std::string &msg,
+                                std::any &predicate_data) {
+  int value;
+  auto [ptr, err] = std::from_chars(
+      vs.token().data(), vs.token().data() + vs.token().size(), value);
+  if (err != std::errc()) {
+    msg = "Number out of range.";
+    return false;
+  }
+  predicate_data = value;
+  return true;
+};
+
+parser["NUMBER"] = [](const SemanticValues & /*vs*/, std::any & /*dt*/,
+                      const std::any &predicate_data) {
+  return std::any_cast<int>(predicate_data);
+};
+```
+
 *enter* and *leave* actions are also available.
 
 ```cpp
@@ -281,9 +311,9 @@ As you can see in the first example, we can ignore whitespaces between tokens au
 
 `%whitespace` rule can be applied to the following three conditions:
 
-  * trailing spaces on tokens
-  * leading spaces on text
-  * trailing spaces on literal strings in rules
+* trailing spaces on tokens
+* leading spaces on text
+* trailing spaces on literal strings in rules
 
 These are valid tokens:
 
@@ -304,6 +334,61 @@ PHRASE       <- < '"' (!'"' .)* '"' >
 
 %whitespace  <-  [ \t\r\n]*
 ```
+
+### How `%whitespace` works exactly
+
+Whitespace is skipped at exactly three points, and nowhere else:
+
+1. once at the beginning of the input text
+2. right after every matched literal string (`'...'`, `"..."`)
+3. right after every closed token boundary (`<` ... `>`)
+
+Inside a token boundary, whitespace skipping is completely disabled. Character classes (`[...]`) and `.` never skip whitespace by themselves. Knowing these rules explains most surprises with `%whitespace`:
+
+**A rule made only of character classes doesn't skip trailing whitespace.** ([#327](https://github.com/yhirose/cpp-peglib/issues/327)) With the grammar below, `main()` parses but `main ()` doesn't, because `NAME` is not a token — nothing skips the space after it. Wrap lexical rules in a token boundary.
+
+```
+DECL    <- NAME ARGS?    # `main ()` fails: whitespace after NAME is not skipped
+NAME    <- [a-zA-Z_][a-zA-Z0-9_]*
+ARGS    <- '(' ')'
+```
+
+```
+NAME    <- < [a-zA-Z_][a-zA-Z0-9_]* >   # OK: token boundary skips trailing whitespace
+```
+
+**A literal skips whitespace before a following predicate sees the input.** ([#319](https://github.com/yhirose/cpp-peglib/issues/319)) In `KEYWORD <- "create" !IDCHAR`, the literal `"create"` eats the whitespace after it, so `!IDCHAR` tests the character of the *next* word and the keyword check misfires on input like `create a`. Put the whole thing in a token boundary, or mark the rule with `{ no_whitespace }`, to keep the predicate right next to the literal (`peglint` warns about this pattern):
+
+```
+KEYWORD <- < "create" !IDCHAR >
+KEYWORD <- "create" !IDCHAR  { no_whitespace }
+```
+
+**To preserve whitespace locally** (e.g. inside string literals), mark the rule with the `{ no_whitespace }` instruction: whitespace skipping is disabled inside the rule and resumes after it, like a token boundary without the token capture. ([#44](https://github.com/yhirose/cpp-peglib/issues/44))
+
+```
+StrQuot   <- '"' (StrEscape / StrChars)* '"'  { no_whitespace }
+StrEscape <- '\\' .
+StrChars  <- (!'"' !'\\' .)+
+```
+
+The same can be written with nested token boundaries — the outer `<` ... `>` disables whitespace skipping for everything inside, and the inner one selects the text for `token()`:
+
+```
+StrQuot   <- < '"' < (StrEscape / StrChars)* > '"' >
+```
+
+**Rules whose name starts with `_` are hidden from error messages.** If you define `%whitespace` in terms of sub-rules (e.g. to support comments), name them with a leading `_`, otherwise syntax errors report `expecting <SPACE>` instead of what the user actually needs to fix. ([#292](https://github.com/yhirose/cpp-peglib/issues/292))
+
+```
+%whitespace <- (_SPACE / _COMMENT)*
+_SPACE      <- [ \t\r\n]
+_COMMENT    <- '#' (!'\n' .)*
+```
+
+**Keyword-like operators need `%word`.** In a scannerless parser, `'and'` happily matches the first three letters of `android`. Declare `%word` so literals that look like words are checked against a word boundary. ([#328](https://github.com/yhirose/cpp-peglib/issues/328)) See the next section.
+
+**Operators in `precedence` instructions must be literal tokens.** When using the infix-expression `precedence` feature, write the operators as plain literals (optionally wrapped in a token boundary in the OPERATOR rule) rather than as rules that manage whitespace themselves. ([#325](https://github.com/yhirose/cpp-peglib/issues/325))
 
 Word expression
 ---------------
@@ -454,6 +539,63 @@ Rule <- Atom (Operator Atom)* {
 
 *precedence* instruction contains precedence info entries. Each entry starts with *associativity* which is 'L' (left) or 'R' (right), then operator *literal* tokens follow. The first entry has the highest order level.
 
+Left Recursive Grammars
+-----------------------
+
+cpp-peglib supports left recursive rules, which are commonly used in expression grammars to achieve left-associative operators naturally. Left recursion is automatically detected at grammar compile time and handled via a seed-growing algorithm at parse time.
+
+```cpp
+parser parser(R"(
+  Expr   <- Expr '+' Term / Expr '-' Term / Term
+  Term   <- Term '*' Factor / Term '/' Factor / Factor
+  Factor <- '(' Expr ')' / Number
+  Number <- < [0-9]+ >
+  %whitespace <- [ \t]*
+)");
+
+parser["Expr"] = [](const SemanticValues &vs) {
+  switch (vs.choice()) {
+  case 0: return any_cast<long>(vs[0]) + any_cast<long>(vs[1]);
+  case 1: return any_cast<long>(vs[0]) - any_cast<long>(vs[1]);
+  default: return any_cast<long>(vs[0]);
+  }
+};
+
+parser["Term"] = [](const SemanticValues &vs) {
+  switch (vs.choice()) {
+  case 0: return any_cast<long>(vs[0]) * any_cast<long>(vs[1]);
+  case 1: return any_cast<long>(vs[0]) / any_cast<long>(vs[1]);
+  default: return any_cast<long>(vs[0]);
+  }
+};
+
+parser["Number"] = [](const SemanticValues &vs) {
+  return vs.token_to_number<long>();
+};
+
+long val;
+parser.parse("1 - 2 - 3", val);
+assert(val == -4);  // Left-associative: (1-2)-3 = -4
+
+parser.parse("8 / 4 / 2", val);
+assert(val == 1);   // Left-associative: (8/4)/2 = 1
+```
+
+Direct, indirect, and mutual left recursion are all supported. For example, indirect left recursion works as expected:
+
+```peg
+A <- B 'a'
+B <- A 'b' / 'b'
+```
+
+Left recursion support is enabled by default and adds zero overhead to non-left-recursive grammars. To disable it (reverting to the traditional error on left-recursive rules), call `enable_left_recursion(false)` before loading the grammar:
+
+```cpp
+peg::parser parser;
+parser.enable_left_recursion(false);
+parser.load_grammar(grammar);
+```
+
 AST generation
 --------------
 
@@ -482,7 +624,41 @@ if (parser.parse("...", ast)) {
 
 `optimize_ast` removes redundant nodes to make an AST simpler. If you want to disable this behavior from particular rules, `no_ast_opt` instruction can be used.
 
+By default an AST node carries the name of the rule that produced it. A rule can override that tag with the `{ ast_name: NodeTag }` instruction, so several rules can emit nodes under a shared tag.
+
+Multiple instructions can be combined in a single `{ ... }` block by separating them with `;`, e.g. `{ no_ast_opt; ast_name: NodeTag }`.
+
 It internally calls `peg::AstOptimizer` to do the job. You can make your own AST optimizers to fit your needs.
+
+Each AST node exposes the following fields:
+
+```cpp
+const std::string      name;     // rule (or ast_name) that produced the node
+const unsigned int     tag;      // str2tag(name) — for fast switch dispatch
+std::string_view       token;    // matched text (valid when is_token is true)
+bool                   is_token;
+size_t                 choice;   // which alternative of a prioritized choice matched
+size_t                 line, column, position, length;
+std::vector<std::shared_ptr<Ast>> nodes;  // child nodes
+std::weak_ptr<Ast>     parent;
+```
+
+To walk the tree, switching on `tag` avoids string comparison. The `_` literal
+in `peg::udl` turns a node name into the same compile-time tag value:
+
+```cpp
+using namespace peg::udl;
+
+void traverse(const std::shared_ptr<peg::Ast> &ast) {
+  switch (ast->tag) {
+  case "Additive"_: /* ... */ break;
+  case "Number"_:   /* ... */ break;
+  default:
+    for (auto &node : ast->nodes) { traverse(node); }
+    break;
+  }
+}
+```
 
 See actual usages in the [AST calculator example](https://github.com/yhirose/cpp-peglib/blob/master/example/calc3.cc) and [PL/0 language example](https://github.com/yhirose/cpp-peglib/blob/master/pl0/pl0.cc).
 
@@ -568,7 +744,12 @@ cpp-peglib supports the furthest failure error position report as described in t
 
 For better error report and recovery, cpp-peglib supports 'recovery' operator with label which can be associated with a recovery expression and a custom error message. This idea comes from the fantastic ["Syntax Error Recovery in Parsing Expression Grammars"](https://arxiv.org/pdf/1806.11150.pdf) paper by Sergio Medeiros and Fabio Mascarenhas.
 
-The custom message supports `%t` which is a placeholder for the unexpected token, and `%c` for the unexpected Unicode char.
+The custom message supports `%t` which is a placeholder for the unexpected token, and `%c` for the unexpected Unicode char. It can also reference a named capture with `%{name}`, which expands to the text captured by `$name<...>` earlier in the parse (an unknown name expands to an empty string):
+
+```peg
+Enum       <- 'enum' $name<NAME> '{' NAME+^enum_count '}'
+enum_count <- '' { error_message "enum '%{name}' must contain at least one member" }
+```
 
 Here is an example of Java-like grammar:
 
@@ -647,6 +828,24 @@ custom_message.txt:1:8: code format error...
 
 NOTE: If there is more than one element with an error message instruction in a prioritized choice, this feature may not work as you expect.
 
+### Structured error reports
+
+`set_logger` receives errors as formatted strings. To build tooling on top of the parser — error codes, localized messages, IDE diagnostics — use `set_error_reporter` instead, which receives the same errors as structured data before they are flattened into a display string:
+
+```cpp
+parser.set_error_reporter([](const peg::ErrorReport &r) {
+  // r.line, r.col          : 1-based error position
+  // r.position             : byte offset in the input
+  // r.unexpected_token     : the token found at the error position
+  // r.expected_literals    : e.g. {"}", ";"}
+  // r.expected_rules       : e.g. {"NAME"} (rules starting with '_' excluded)
+  // r.message              : custom error_message if any (placeholders resolved)
+  // r.label                : rule name or recovery label the error belongs to
+});
+```
+
+Both callbacks can be set at the same time; each error is delivered to both. With error recovery, the reporter is called once per recovered error, so a single parse can produce multiple reports. Mapping `r.label` to an application-defined error enum is the intended way to get typed errors.
+
 Change the Start Definition Rule
 --------------------------------
 
@@ -669,6 +868,28 @@ parser.load_grammar(grammar, "A"); // Start Rule is "A"
 
 parser.parse(" [one] , [two] "); // OK
 ```
+
+Tracing the parser
+------------------
+
+To see how the parser proceeds, `peg::enable_tracing` prints a trace of every
+rule the parser enters and leaves to the given output stream.
+
+```cpp
+peg::parser parser(grammar);
+
+peg::enable_tracing(parser, std::cout);
+
+parser.parse(" [one] , [two] ");
+```
+
+This is what `peglint --trace` uses internally. For full control over the trace
+output, call `parser.enable_trace(enter, leave)` with your own callbacks, and
+`parser.set_verbose_trace(true)` to trace the intermediate operators inside each
+rule rather than just the rule boundaries.
+
+Similarly, `peg::enable_profiling(parser, std::cout)` reports how often each rule
+is invoked and how much time it takes — the counterpart of `peglint --profile`.
 
 peglint - PEG syntax lint utility
 ---------------------------------
@@ -720,6 +941,47 @@ Number      <- < [0-9]+ >
 
 > peglint --source "1 + a * 3" a.peg
 [commandline]:1:3: syntax error
+```
+
+### Serialize a grammar for fast startup
+
+A compiled grammar can be serialized to a portable byte blob and later restored
+without re-running the meta-parse. Deserializing a blob is roughly 40x faster
+than `load_grammar`, so an application can embed a prebuilt blob and skip the
+grammar parsing on startup.
+
+```cpp
+peg::parser parser(R"(
+  ROOT <- _ TOKEN (',' _ TOKEN)*
+  ...
+)");
+
+// Serialize the loaded grammar to a byte blob.
+std::vector<uint8_t> blob = parser.serialize_grammar();
+
+// ...store/embed the blob, then later:
+
+peg::parser parser2;
+parser2.load_blob(blob); // skips the meta-parse
+
+// Re-apply semantic actions / enable_ast() etc. as needed:
+parser2["TOKEN"] = [](const SemanticValues& vs) { /* ... */ };
+```
+
+Notes:
+
+- Only the grammar *structure* is serialized. Semantic actions, `enable_ast()`,
+  and other callbacks are **not** included and must be re-applied after
+  `load_blob`.
+- First-sets are recomputed on load, and references are resolved by name.
+- Grammars that use the `precedence` instruction, a capture / back-reference, or
+  a User operator are not serializable (`serialize_grammar()` throws;
+  `load_blob()` returns `false` on a bad or incompatible blob).
+
+`peglint` can emit a blob with the `--blob` option:
+
+```
+> peglint --blob a.peg > a.blob
 ```
 
 ### AST
@@ -784,16 +1046,43 @@ Number      <- < [0-9]+ >
         - Primary/1[Number] (3)
 ```
 
+### Override an AST node's tag with `ast_name` instruction
+
+By default, an AST node carries the name of the rule that produced it. A rule
+annotated `{ ast_name: NodeTag }` emits its node under `NodeTag` instead. This
+lets two parallel productions converge onto a single AST tag, so a tree-walker
+needs only one case per logical nonterminal:
+
+```
+> cat a.peg
+Atom        <- Number / String
+Number      <- < [0-9]+ >          { ast_name: Literal }
+String      <- '"' < [^"]* > '"'   { ast_name: Literal }
+%whitespace <- [ \t\r\n]*
+
+> peglint --ast --source "123" a.peg
++ Atom/0
+  - Literal (123)
+
+> peglint --ast --source "\"hi\"" a.peg
++ Atom/1
+  - Literal (hi)
+```
+
+The override also works on parameterized rules (macros): each instantiation
+emits the same tag. `ast_name` composes with `no_ast_opt` — the AST optimizer's
+keep-list honors the overridden name.
+
 Sample codes
 ------------
 
-  * [Calculator](https://github.com/yhirose/cpp-peglib/blob/master/example/calc.cc)
-  * [Calculator (with parser operators)](https://github.com/yhirose/cpp-peglib/blob/master/example/calc2.cc)
-  * [Calculator (AST version)](https://github.com/yhirose/cpp-peglib/blob/master/example/calc3.cc)
-  * [Calculator (parsing expressions by precedence climbing)](https://github.com/yhirose/cpp-peglib/blob/master/example/calc4.cc)
-  * [Calculator (AST version and parsing expressions by precedence climbing)](https://github.com/yhirose/cpp-peglib/blob/master/example/calc5.cc)
-  * [A tiny PL/0 JIT compiler in less than 900 LOC with LLVM and PEG parser](https://github.com/yhirose/pl0-jit-compiler)
-  * [A Programming Language just for writing Fizz Buzz program. :)](https://github.com/yhirose/fizzbuzzlang)
+* [Calculator](https://github.com/yhirose/cpp-peglib/blob/master/example/calc.cc)
+* [Calculator (with parser operators)](https://github.com/yhirose/cpp-peglib/blob/master/example/calc2.cc)
+* [Calculator (AST version)](https://github.com/yhirose/cpp-peglib/blob/master/example/calc3.cc)
+* [Calculator (parsing expressions by precedence climbing)](https://github.com/yhirose/cpp-peglib/blob/master/example/calc4.cc)
+* [Calculator (AST version and parsing expressions by precedence climbing)](https://github.com/yhirose/cpp-peglib/blob/master/example/calc5.cc)
+* [A tiny PL/0 JIT compiler in less than 900 LOC with LLVM and PEG parser](https://github.com/yhirose/pl0-jit-compiler)
+* [A Programming Language just for writing Fizz Buzz program. :)](https://github.com/yhirose/fizzbuzzlang)
 
 License
 -------

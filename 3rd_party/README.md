@@ -47,5 +47,5 @@ All such third-party dependencies are located within the `3rd_party/` directory.
 | Dependency | Upstream Repository | Tracked Version / Tag | Local Path |
 | :--- | :--- | :--- | :--- |
 | **CLI11** | [github.com/CLIUtils/CLI11](https://github.com/CLIUtils/CLI11.git) | `v2.6.2` | `3rd_party/CLI11` |
-| **cpp-peglib** | [github.com/yhirose/cpp-peglib](https://github.com/yhirose/cpp-peglib.git) | `v1.9.1` | `3rd_party/cpp-peglib` |
+| **cpp-peglib** | [github.com/yhirose/cpp-peglib](https://github.com/yhirose/cpp-peglib.git) | `v1.15.0` | `3rd_party/cpp-peglib` |
 | **doctest** | [github.com/doctest/doctest](https://github.com/doctest/doctest.git) | `v2.4.12` | `3rd_party/doctest` |
