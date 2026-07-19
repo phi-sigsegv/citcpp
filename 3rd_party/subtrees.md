@@ -8,9 +8,10 @@ while tracking upstream repositories cleanly without the historical bloat.
 
 All subtrees are located within the `3rd_party/` directory.
 
-| Dependency | Upstream Repository | Local Path |
+| Dependency | Upstream Repository | Tracked Version / Tag | Local Path |
 | :--- | :--- | :--- | :--- |
-| **Lace** | [github.com/trolando/lace](https://github.com/trolando/lace.git) | `3rd_party/lace` |
+| **Lace** | [github.com/trolando/lace](https://github.com/trolando/lace.git) | `v1.6.0` | `3rd_party/lace` |
+| **Sylvan** | [github.com/trolando/sylvan](https://github.com/trolando/sylvan.git) | `v1.10.0` | `3rd_party/sylvan` |
 
 ---
 
