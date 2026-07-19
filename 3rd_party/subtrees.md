@@ -1,6 +1,6 @@
 # Third-Party Dependencies (Git Subtrees)
 
-This repository manages its third-party dependencies using **`git subtree`** where feasible. This approach ensures
+This repository manages its third-party dependencies using **`git subtree`** where meaningful. This approach ensures
 that the source code of the dependencies is physically included in the repository for reliable, offline-capable builds,
 while tracking upstream repositories cleanly without the historical bloat.
 
