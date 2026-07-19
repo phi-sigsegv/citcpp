@@ -2,6 +2,74 @@
 
 All notable changes to Lace will be documented in this file.
 
+## [1.7.0] - 2026-05-23
+
+### Added
+
+- **Per-worker scratch arena.** Each worker owns a private bump-allocated
+  arena backed by a virtual-memory reservation. Tasks can use
+  `lace_scratch_alloc` / `lace_scratch_mark` / `lace_scratch_reset` for
+  fast, contention-free task-local temporary storage; the
+  `LACE_SCRATCH_ALLOC` / `LACE_SCRATCH_MARK` / `LACE_SCRATCH_RESET`
+  convenience macros use the implicit `__lace_worker` inside TASK
+  bodies. The arena commits pages lazily on first use and releases
+  them back to the OS during deep backoff (the futex-wait stage of
+  the idle progression). Designed as an alternative to `alloca`/VLAs
+  (which overflow without warning and are unportable to MSVC) and
+  `malloc`/`free` (allocator contention dominates fine-grained
+  workloads). The default reservation is 1 GiB per worker on 64-bit
+  systems and 16 MiB per worker on 32-bit systems. Configurable via
+  `lace_set_scratch_size` and `lace_set_scratch_band`; set the size
+  to 0 to disable. Tasks that do not allocate scratch are unaffected:
+  the arena costs only virtual address space until something allocates.
+- **Idle leak detection for the scratch arena.** When a worker enters
+  the futex-wait stage with `scratch_top != scratch_base`, Lace warns
+  once per worker and automatically resets the arena, protecting
+  long-running programs from leaking missed `lace_scratch_reset` calls.
+
+
+## [1.6.3] - 2026-04-06
+
+### Added
+
+- Now also tests FreeBSD in the CI.
+- Added crash handler to the test programs to get better diagnostics on
+  CI failures.
+
+### Fixed
+
+- Minor fixes for FreeBSD systems.
+
+
+## [1.6.2] - 2026-04-05
+
+### Changed
+
+- Fixed libraries in the pkg-config files on Windows systems.
+- Tests now check if Lace can be installed and used correctly with pkg-config
+  and CMake.
+
+## [1.6.1] - 2026-04-04
+
+### Changed
+
+- Replaced nanosleep-based backoff with a futex-based progressive idle
+  system. Workers yield briefly, then enter `futex_wait` with a ramping
+  timeout (100 µs → 1 ms). Sleeping workers are woken promptly when
+  work appears (external task submission, successful steal with
+  remaining work). Uses platform-native futex primitives on Linux,
+  FreeBSD, macOS, and Windows.
+- Various changes to reduce external task overhead: per-task semaphore
+  replaced by futex on `atomic_int`, spin-before-futex on the
+  completion path, load-before-exchange in slot scanning, and
+  `LACE_STOLEN_LAST` to avoid spurious wake signals.
+- External-task-heavy workloads (e.g., JNI bridge of NDD): 77.8 s → 25.9 s
+  (3× improvement) on NQueens-12 with 20 workers. Single-worker
+  external task throughput improved from 80 s to 17 s. Standard Lace
+  benchmarks show no regression.
+- On Windows, now requires linking with `Synchronization.lib`.
+
+
 ## [1.6.0] - 2026-03-31
 
 This release backports correctness fixes, portable abstractions, and

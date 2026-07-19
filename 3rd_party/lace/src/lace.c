@@ -26,6 +26,7 @@
 
 #include <errno.h> // for errno
 #include <inttypes.h> // for PRIu64
+#include <limits.h> // for INT_MAX etc
 #include <stddef.h> // for size_t
 #include <stdio.h>  // for fprintf
 #include <stdlib.h> // for memalign, malloc
@@ -148,6 +149,212 @@ static size_t get_cache_line_size(void)
 static size_t cache_line_size;
 
 /**
+ * Portable futex support
+ */
+
+#if defined(__linux__)
+#include <linux/futex.h>
+#include <sys/syscall.h>
+
+LACE_UNUSED
+static int lace_futex_wait(atomic_int *addr, int expected, int64_t timeout_us)
+{
+    if (timeout_us < 0) {
+        return (int)syscall(SYS_futex, addr, FUTEX_WAIT_PRIVATE, expected, NULL, NULL, 0);
+    }
+    struct timespec ts;
+    ts.tv_sec = (time_t)(timeout_us / 1000000);
+    ts.tv_nsec = (long)((timeout_us % 1000000) * 1000);
+    return (int)syscall(SYS_futex, addr, FUTEX_WAIT_PRIVATE, expected, &ts, NULL, 0);
+}
+
+LACE_UNUSED
+static int lace_futex_wake_one(atomic_int *addr)
+{
+    return (int)syscall(SYS_futex, addr, FUTEX_WAKE_PRIVATE, 1, NULL, NULL, 0);
+}
+
+LACE_UNUSED
+static int lace_futex_wake_all(atomic_int *addr)
+{
+    return (int)syscall(SYS_futex, addr, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
+}
+
+#elif defined(__FreeBSD__)
+#include <sys/umtx.h>
+
+LACE_UNUSED
+static int lace_futex_wait(atomic_int *addr, int expected, int64_t timeout_us)
+{
+    struct _umtx_time ut;
+    if (timeout_us < 0) {
+        return _umtx_op(addr, UMTX_OP_WAIT_UINT_PRIVATE, (unsigned long)expected, NULL, NULL);
+    }
+    ut._flags = UMTX_ABSTIME;  /* we want relative, but FreeBSD wants this struct */
+    ut._clockid = CLOCK_MONOTONIC;
+    ut._timeout.tv_sec = (time_t)(timeout_us / 1000000);
+    ut._timeout.tv_nsec = (timeout_us % 1000000) * 1000;
+    /* Actually for relative timeout, don't set UMTX_ABSTIME */
+    ut._flags = 0;
+    return _umtx_op(addr, UMTX_OP_WAIT_UINT_PRIVATE, (unsigned long)expected,
+                    (void *)(uintptr_t)sizeof(ut), &ut);
+}
+
+LACE_UNUSED
+static int lace_futex_wake_one(atomic_int *addr)
+{
+    return _umtx_op(addr, UMTX_OP_WAKE_PRIVATE, 1, NULL, NULL);
+}
+
+LACE_UNUSED
+static int lace_futex_wake_all(atomic_int *addr)
+{
+    return _umtx_op(addr, UMTX_OP_WAKE_PRIVATE, INT_MAX, NULL, NULL);
+}
+
+#elif defined(__APPLE__)
+#include <Availability.h>
+
+#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 140400
+/* macOS 14.4+: public os_sync API */
+#include <os/os_sync_wait_on_address.h>
+
+LACE_UNUSED
+static int lace_futex_wait(atomic_int *addr, int expected, int64_t timeout_us)
+{
+    if (timeout_us < 0) {
+        return os_sync_wait_on_address(addr, (uint64_t)(unsigned int)expected,
+            sizeof(int), OS_SYNC_WAIT_ON_ADDRESS_NONE);
+    }
+    uint64_t timeout_ns = (uint64_t)timeout_us * 1000;
+    return os_sync_wait_on_address_with_timeout(addr, (uint64_t)(unsigned int)expected,
+        sizeof(int), OS_SYNC_WAIT_ON_ADDRESS_NONE,
+        OS_CLOCK_MACH_ABSOLUTE_TIME, timeout_ns);
+}
+
+LACE_UNUSED
+static int lace_futex_wake_one(atomic_int *addr)
+{
+    return os_sync_wake_by_address_any(addr, sizeof(int), OS_SYNC_WAKE_BY_ADDRESS_NONE);
+}
+
+LACE_UNUSED
+static int lace_futex_wake_all(atomic_int *addr)
+{
+    return os_sync_wake_by_address_all(addr, sizeof(int), OS_SYNC_WAKE_BY_ADDRESS_NONE);
+}
+
+#else
+/* macOS < 14.4: private __ulock API (used by Rust stdlib, Go runtime, libc++) */
+extern int __ulock_wait(uint32_t op, void *addr, uint64_t val, uint32_t timeout_us);
+extern int __ulock_wake(uint32_t op, void *addr, uint64_t val);
+#define UL_COMPARE_AND_WAIT 1
+#define ULF_WAKE_ALL        0x00000100
+
+LACE_UNUSED
+static int lace_futex_wait(atomic_int *addr, int expected, int64_t timeout_us)
+{
+    uint32_t tus = (timeout_us < 0) ? 0 : (uint32_t)timeout_us;
+    return __ulock_wait(UL_COMPARE_AND_WAIT, addr, (uint64_t)(unsigned int)expected, tus);
+}
+
+LACE_UNUSED
+static int lace_futex_wake_one(atomic_int *addr)
+{
+    return __ulock_wake(UL_COMPARE_AND_WAIT, addr, 0);
+}
+
+LACE_UNUSED
+static int lace_futex_wake_all(atomic_int *addr)
+{
+    return __ulock_wake(UL_COMPARE_AND_WAIT | ULF_WAKE_ALL, addr, 0);
+}
+#endif /* macOS version check */
+
+#elif defined(_WIN32)
+/* WaitOnAddress / WakeByAddress* — available since Windows 8 */
+/* synchapi.h is already included above for LACE_MSVC; link with Synchronization.lib */
+
+LACE_UNUSED
+static int lace_futex_wait(atomic_int *addr, int expected, int64_t timeout_us)
+{
+    DWORD ms;
+    if (timeout_us < 0) {
+        ms = INFINITE;
+    } else {
+        ms = (DWORD)((timeout_us + 999) / 1000);
+        if (ms == 0) ms = 1;
+    }
+    return WaitOnAddress((volatile void*)addr, &expected, sizeof(int), ms) ? 0 : -1;
+}
+
+LACE_UNUSED
+static int lace_futex_wake_one(atomic_int *addr)
+{
+    WakeByAddressSingle((void*)addr);
+    return 0;
+}
+
+LACE_UNUSED
+static int lace_futex_wake_all(atomic_int *addr)
+{
+    WakeByAddressAll((void*)addr);
+    return 0;
+}
+
+#else
+#error "No futex implementation available for this platform"
+#endif
+
+/**
+ * CPU pause/yield helpers
+ */
+
+#if defined(_MSC_VER)
+# include <intrin.h>
+#endif
+
+#if defined(__i386__) || defined(__x86_64__)
+# if !defined(_MSC_VER)
+#  include <emmintrin.h>   /* _mm_pause on Clang/GCC */
+# endif
+#endif
+
+LACE_UNUSED
+static inline void lace_cpu_pause(void)
+{
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
+    /* x86/x64: use intrinsics/builtins, no inline asm needed */
+# if defined(_MSC_VER)
+    _mm_pause();
+# elif defined(__clang__) || defined(__GNUC__)
+    _mm_pause();
+# else
+    __asm__ __volatile__("pause");
+# endif
+#elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
+    /* ARM/AArch64 */
+# if defined(_MSC_VER)
+    __yield();
+# else
+    __asm__ __volatile__("yield");
+# endif
+#else
+    /* no-op on other architectures */
+#endif
+}
+
+LACE_UNUSED
+static inline void lace_cpu_yield(void)
+{
+#if defined(_WIN32)
+    SwitchToThread();
+#else
+    sched_yield();
+#endif
+}
+
+/**
  * Thread handles
  */
 #if !LACE_MSVC
@@ -159,7 +366,7 @@ static HANDLE* handles = NULL;
 /**
  * Worker thread program stacks
  */
-#if LACE_USE_HWLOC || !defined(_WIN32)
+#if LACE_USE_HWLOC || (!defined(_WIN32) && !defined(__FreeBSD__))
 static void** worker_stacks = NULL;
 static size_t worker_stack_size = 0;
 static size_t worker_stack_page_size = 0;
@@ -222,6 +429,40 @@ static worker_data **workers_memory = NULL;
 static size_t workers_memory_size = 0;
 
 /**
+ * Per-worker scratch arena reservation size in bytes.
+ *
+ * Each worker reserves this many bytes of virtual address space at
+ * startup. No physical memory is committed until the first scratch
+ * allocation; pages are committed in page-sized chunks as needed and
+ * released back to the OS during deep backoff. Set to 0 to disable.
+ *
+ * On 64-bit systems the default is 1 GiB per worker, which costs only
+ * address space until used. On 32-bit systems the default is 16 MiB
+ * per worker, because user-mode address space is limited.
+ */
+#if UINTPTR_MAX > 0xFFFFFFFFu
+static size_t scratch_size = (size_t)1 << 30;   /* 1 GiB on 64-bit */
+#else
+static size_t scratch_size = (size_t)16 << 20;  /* 16 MiB on 32-bit */
+#endif
+
+/**
+ * Per-worker scratch committed band in bytes (default 1 MiB).
+ *
+ * The band is the number of bytes kept committed above the current
+ * scratch top, providing hysteresis so that small push/pop activity
+ * near the top does not trigger commit/decommit syscalls.
+ */
+static size_t scratch_band = (size_t)1 << 20;
+
+/**
+ * Cached system page size, populated by lace_scratch_init_page_size()
+ * during lace_start(). All scratch commit/decommit operates on
+ * page-aligned ranges.
+ */
+static size_t lace_scratch_page_size = 0;
+
+/**
  * (Secret) holds pointer to private Worker data, just for stats collection at end
  */
 static WorkerP **workers_p;
@@ -235,6 +476,17 @@ static atomic_int lace_quits = 0;
  * Flag whether lace is running
  */
 static int is_running = 0;
+
+/**
+ * Futex-based idle system for progressive worker sleeping
+ */
+static atomic_int wake_futex = 0;   /* futex word: incremented to wake sleeping workers */
+static atomic_int n_sleeping = 0;   /* count of workers currently in futex_wait */
+
+/* Progressive idle thresholds (failed steal iterations before transitioning) */
+#define LACE_IDLE_STAGE1_LIMIT  256   /* yield */
+#define LACE_IDLE_FUTEX_TIMEOUT_MIN 100
+#define LACE_IDLE_FUTEX_TIMEOUT_MAX 1000
 
 /**
  * Thread-specific mechanism to access current worker data
@@ -520,6 +772,192 @@ static inline void lace_rng_seed(WorkerP* w, uint64_t seed)
     if ((w->rng.s0 | w->rng.s1) == 0) w->rng.s1 = 1;
 }
 
+/* ========================================================================
+ * Scratch arena: virtual-memory-backed per-worker bump allocator.
+ *
+ * Each worker reserves a large VM range at startup with no physical
+ * memory committed. Allocations bump a per-worker top pointer. When
+ * the bump crosses the committed boundary, additional pages are
+ * committed (in chunks, with a configurable band above the top to
+ * absorb push/pop oscillation). When a worker reaches deep idle in
+ * the backoff progression, its arena is trimmed: pages above
+ * top+band are decommitted back to the OS.
+ *
+ * Tasks that need temporary storage call lace_scratch_mark() to save
+ * the current arena position, lace_scratch_alloc() to obtain memory,
+ * and lace_scratch_reset() to release it before returning. The arena
+ * is private to one worker and follows a strict LIFO discipline; no
+ * atomics, no locks. Tasks that do not allocate pay nothing.
+ * ======================================================================== */
+
+static LACE_UNUSED void
+lace_scratch_init_page_size(void)
+{
+    if (lace_scratch_page_size != 0) return;
+#if defined(_WIN32)
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    lace_scratch_page_size = (size_t)si.dwPageSize;
+#else
+    long ps = sysconf(_SC_PAGESIZE);
+    lace_scratch_page_size = (ps > 0) ? (size_t)ps : 4096;
+#endif
+    if (lace_scratch_page_size == 0) lace_scratch_page_size = 4096;
+}
+
+static LACE_UNUSED inline size_t
+lace_scratch_round_up_page(size_t n)
+{
+    size_t ps = lace_scratch_page_size;
+    return (n + ps - 1) & ~(ps - 1);
+}
+
+static LACE_UNUSED inline char *
+lace_scratch_round_up_ptr(char *p)
+{
+    size_t ps = lace_scratch_page_size;
+    uintptr_t u = (uintptr_t)p;
+    u = (u + ps - 1) & ~(uintptr_t)(ps - 1);
+    return (char *)u;
+}
+
+/**
+ * Portable wrapper around strerror(errno). MSVC deprecates plain
+ * strerror() and rejects it under /WX; use strerror_s there instead.
+ */
+static LACE_UNUSED const char *
+lace_strerror(char *buf, size_t bufsz)
+{
+#if defined(_MSC_VER)
+    strerror_s(buf, bufsz, errno);
+    return buf;
+#else
+    (void)buf;
+    (void)bufsz;
+    return strerror(errno);
+#endif
+}
+
+static LACE_UNUSED char *
+lace_scratch_reserve(size_t size)
+{
+#if defined(_WIN32)
+    void *p = VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
+    return (char *)p;
+#else
+    void *p = mmap(NULL, size, PROT_NONE,
+                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+    if (p == MAP_FAILED) return NULL;
+    return (char *)p;
+#endif
+}
+
+static LACE_UNUSED int
+lace_scratch_commit(char *addr, size_t len)
+{
+    if (len == 0) return 0;
+#if defined(_WIN32)
+    void *p = VirtualAlloc(addr, len, MEM_COMMIT, PAGE_READWRITE);
+    return (p == NULL) ? -1 : 0;
+#else
+    return mprotect(addr, len, PROT_READ | PROT_WRITE);
+#endif
+}
+
+static LACE_UNUSED void
+lace_scratch_decommit(char *addr, size_t len)
+{
+    if (len == 0) return;
+#if defined(_WIN32)
+    VirtualFree(addr, len, MEM_DECOMMIT);
+#else
+    (void)madvise(addr, len, MADV_DONTNEED);
+    (void)mprotect(addr, len, PROT_NONE);
+#endif
+}
+
+static LACE_UNUSED void
+lace_scratch_release(char *addr, size_t size)
+{
+    if (addr == NULL) return;
+#if defined(_WIN32)
+    (void)size;
+    VirtualFree(addr, 0, MEM_RELEASE);
+#else
+    munmap(addr, size);
+#endif
+}
+
+/**
+ * Slow path for lace_scratch_alloc(): commits more pages to satisfy
+ * an allocation that would have exceeded scratch_committed_end.
+ * Aborts the process if the reservation is exhausted.
+ */
+void *
+lace_scratch_grow(WorkerP *lw, size_t aligned_size)
+{
+    char *cur_top = lw->scratch_top;
+    char *new_top = cur_top + aligned_size;
+
+    if (LACE_UNLIKELY(new_top > lw->scratch_reserve_end)) {
+        fprintf(stderr,
+                "Lace fatal: scratch arena exhausted on worker %u "
+                "(reservation %zu bytes, request %zu bytes). "
+                "Call lace_set_scratch_size() with a larger value before lace_start().\n",
+                (unsigned)lw->worker,
+                (size_t)(lw->scratch_reserve_end - lw->scratch_base),
+                aligned_size);
+        abort();
+    }
+
+    char *desired_end = new_top + scratch_band;
+    if (desired_end < new_top /* overflow */
+        || desired_end > lw->scratch_reserve_end) {
+        desired_end = lw->scratch_reserve_end;
+    }
+    char *commit_to = lace_scratch_round_up_ptr(desired_end);
+    if (commit_to > lw->scratch_reserve_end) commit_to = lw->scratch_reserve_end;
+
+    char *commit_from = lw->scratch_committed_end;
+    if (commit_to > commit_from) {
+        if (lace_scratch_commit(commit_from, (size_t)(commit_to - commit_from)) != 0) {
+            char ebuf[128];
+            fprintf(stderr,
+                    "Lace fatal: scratch commit failed on worker %u "
+                    "(requested %zu bytes): %s\n",
+                    (unsigned)lw->worker,
+                    (size_t)(commit_to - commit_from),
+                    lace_strerror(ebuf, sizeof ebuf));
+            abort();
+        }
+        lw->scratch_committed_end = commit_to;
+    }
+
+    lw->scratch_top = new_top;
+    return cur_top;
+}
+
+static LACE_UNUSED void
+lace_scratch_trim(WorkerP *lw)
+{
+    if (lw->scratch_base == NULL) return;
+
+    char *keep_end = lw->scratch_top + scratch_band;
+    if (keep_end < lw->scratch_top /* overflow */
+        || keep_end > lw->scratch_reserve_end) {
+        keep_end = lw->scratch_reserve_end;
+    }
+    keep_end = lace_scratch_round_up_ptr(keep_end);
+    if (keep_end > lw->scratch_reserve_end) keep_end = lw->scratch_reserve_end;
+
+    char *decommit_from = keep_end;
+    char *decommit_to = lw->scratch_committed_end;
+    if (decommit_to > decommit_from) {
+        lace_scratch_decommit(decommit_from, (size_t)(decommit_to - decommit_from));
+        lw->scratch_committed_end = decommit_from;
+    }
+}
+
 LACE_NO_SANITIZE_THREAD
 static void
 lace_init_worker(unsigned int worker)
@@ -570,6 +1008,28 @@ lace_init_worker(unsigned int worker)
     w->time = lace_gethrtime();
     w->level = 0;
 #endif
+
+    if (scratch_size > 0) {
+        size_t reserve = lace_scratch_round_up_page(scratch_size);
+        char *base = lace_scratch_reserve(reserve);
+        if (base == NULL) {
+            char ebuf[128];
+            fprintf(stderr,
+                    "Lace error: unable to reserve %zu bytes of scratch VM for worker %u: %s\n",
+                    reserve, worker, lace_strerror(ebuf, sizeof ebuf));
+            exit(1);
+        }
+        w->scratch_base = base;
+        w->scratch_reserve_end = base + reserve;
+        w->scratch_top = base;
+        w->scratch_committed_end = base;
+    } else {
+        w->scratch_base = NULL;
+        w->scratch_reserve_end = NULL;
+        w->scratch_top = NULL;
+        w->scratch_committed_end = NULL;
+    }
+    w->scratch_leak_reported = 0;
 }
 
 /**
@@ -581,7 +1041,7 @@ lace_init_worker(unsigned int worker)
   */
 typedef struct ext_lace_task {
     Task* task;
-    lace_sem_t sem;
+    atomic_int done;
 } ExtTask;
 
 #define LACE_EXT_SLOTS 64
@@ -601,10 +1061,7 @@ lace_run_task(Task* task)
     ExtTask et;
     et.task = task;
     atomic_store_explicit(&et.task->thief, 0, memory_order_relaxed);
-    if (lace_sem_init(&et.sem, 0) != 0) {
-        fprintf(stderr, "Lace error: unable to create semaphore for external task!\n");
-        exit(1);
-    }
+    atomic_store_explicit(&et.done, 0, memory_order_relaxed);
 
     // Push into any empty slot
     while (1) {
@@ -620,14 +1077,25 @@ lace_run_task(Task* task)
     }
 pushed:
 
-    lace_sem_wait(&et.sem);
-    lace_sem_destroy(&et.sem);
+    /* Wake a sleeping worker to pick up the external task */
+    atomic_fetch_add_explicit(&wake_futex, 1, memory_order_release);
+    lace_futex_wake_one(&wake_futex);
+
+    for (int spin = 0; spin < 256; spin++) {
+        if (atomic_load_explicit(&et.done, memory_order_acquire)) return;
+        lace_cpu_pause();
+    }
+
+    while (!atomic_load_explicit(&et.done, memory_order_acquire)) {
+        lace_futex_wait(&et.done, 0, LACE_IDLE_FUTEX_TIMEOUT_MIN);
+    }
 }
 
 static inline void
 lace_steal_external(WorkerP* self, Task* head)
 {
     for (int i = 0; i < LACE_EXT_SLOTS; i++) {
+        if (atomic_load_explicit(&external_tasks[i], memory_order_relaxed) == NULL) continue;
         ExtTask* stolen = atomic_exchange_explicit(&external_tasks[i], NULL, memory_order_acquire);
         if (stolen != NULL) {
             // execute task
@@ -637,7 +1105,8 @@ lace_steal_external(WorkerP* self, Task* head)
             stolen->task->f(self, head, stolen->task);
             lace_time_event(self, 2);
             atomic_store_explicit(&stolen->task->thief, THIEF_COMPLETED, memory_order_relaxed);
-            lace_sem_post(&stolen->sem);
+            atomic_store_explicit(&stolen->done, 1, memory_order_release);
+            lace_futex_wake_one(&stolen->done);
             lace_time_event(self, 8);
             return;
         }
@@ -658,7 +1127,7 @@ TASK(void, lace_steal_random)
 
         PR_COUNTSTEALS(__lace_worker, CTR_steal_tries);
         Worker *res = lace_steal(__lace_worker, __lace_dq_head, victim);
-        if (res == LACE_STOLEN) {
+        if (res == LACE_STOLEN || res == LACE_STOLEN_LAST) {
             PR_COUNTSTEALS(__lace_worker, CTR_steals);
         } else if (res == LACE_BUSY) {
             PR_COUNTSTEALS(__lace_worker, CTR_steal_busy);
@@ -674,7 +1143,7 @@ LACE_NO_SANITIZE_THREAD
 TASK(void, lace_steal_loop, atomic_int*, quit)
 {
     // Determine who I am
-    const int worker_id = __lace_worker->worker;
+    const unsigned int worker_id =(unsigned int) __lace_worker->worker;
 
     // Prepare self, victim
     Worker ** const self = &workers[worker_id];
@@ -685,56 +1154,101 @@ TASK(void, lace_steal_loop, atomic_int*, quit)
 #endif
 
     unsigned int n = n_workers;
-#if LACE_BACKOFF
-    unsigned int backoff = 0;
-#endif
+    unsigned int last_victim = worker_id; // means no last victim
+    unsigned int idle_count = 0;
 
     while (1) {
-#if LACE_BACKOFF
-        backoff++;
-#endif
         if (n > 1) {
-            victim = workers + ((lace_rng(__lace_worker) % (n - 1)) + (uint64_t)worker_id + 1) % n;
+            // Victim selection: try last successful victim first, then random
+            if ((idle_count&1) == 0 && last_victim != worker_id) {
+                victim = workers + last_victim;
+            } else {
+                victim = workers + ((lace_rng(__lace_worker) % (n - 1)) + (uint64_t)worker_id + 1) % n;
+            }
 
             PR_COUNTSTEALS(__lace_worker, CTR_steal_tries);
             Worker* res = lace_steal(__lace_worker, __lace_dq_head , *victim);
-            if (res == LACE_STOLEN) {
+            if (res == LACE_STOLEN || res == LACE_STOLEN_LAST) {
                 PR_COUNTSTEALS(__lace_worker, CTR_steals);
-#if LACE_BACKOFF
-                backoff = 0;
-#endif
+                last_victim = (unsigned int)(victim - workers);
+                idle_count = 0;
+                // If workers are sleeping, wake one to help
+                if (res == LACE_STOLEN &&
+                    atomic_load_explicit(&n_sleeping, memory_order_relaxed) > 0) {
+                    atomic_fetch_add_explicit(&wake_futex, 1, memory_order_release);
+                    lace_futex_wake_one(&wake_futex);
+                }
             }
             else if (res == LACE_BUSY) {
                 PR_COUNTSTEALS(__lace_worker, CTR_steal_busy);
-#if LACE_BACKOFF
-                backoff = 0;
-#endif
+                idle_count = 0;
             }
             else { // LACE_NOWORK
+                idle_count++;
             }
         }
 
         YIELD_NEWFRAME();
 
-        if (LACE_UNLIKELY(atomic_load_explicit(&external_task_count, memory_order_acquire) > 0)) {
+        if (LACE_UNLIKELY(idle_count % 4 == 0 &&
+            atomic_load_explicit(&external_task_count, memory_order_acquire) > 0)) {
             lace_steal_external(__lace_worker, __lace_dq_head);
-#if LACE_BACKOFF
-            backoff = 0;
-#endif
+            idle_count = 0;
             continue;
         }
 
 #if LACE_BACKOFF
-        if (backoff > 1000) { // only back off after 1000 attempts
-            int64_t delay_us = ((int64_t)1) << ((backoff - 1000) / 50);
-            if (delay_us > 1000) delay_us = 1000; // cap at 1ms
+        // Progressive idle: pause → yield → futex sleep
+        if (idle_count > LACE_IDLE_STAGE1_LIMIT) {
+            /* Stage 2: futex wait with bounded timeout */
+            unsigned int futex_iters = idle_count - LACE_IDLE_STAGE1_LIMIT;
+
+            /* On the transition into deep idle, check for and recover
+             * from leaked scratch, then decommit unused pages back to
+             * the OS. We do this once per backoff sequence (idle_count
+             * resets on successful steal), so it does not become hot.
+             *
+             * At this point all task frames have unwound, so
+             * scratch_top should equal scratch_base. If a task forgot
+             * to lace_scratch_reset(), warn once per worker and recover. */
+            if (futex_iters == 1) {
+                if (__lace_worker->scratch_top != __lace_worker->scratch_base) {
+                    if (!__lace_worker->scratch_leak_reported) {
+                        __lace_worker->scratch_leak_reported = 1;
+                        fprintf(stderr,
+                                "Lace warning: worker %u entered idle with "
+                                "%zu bytes of leaked scratch. Some task "
+                                "did not lace_scratch_reset() before returning.\n",
+                                (unsigned)__lace_worker->worker,
+                                (size_t)(__lace_worker->scratch_top - __lace_worker->scratch_base));
+                    }
+                    __lace_worker->scratch_top = __lace_worker->scratch_base;
+                }
+                lace_scratch_trim(__lace_worker);
+            }
+
 #if LACE_PIE_TIMES
             uint64_t prev = lace_gethrtime();
 #endif
-            lace_sleep_us(delay_us);
+            int64_t timeout_us = LACE_IDLE_FUTEX_TIMEOUT_MIN * (1 + (int64_t)futex_iters);
+            if (timeout_us > LACE_IDLE_FUTEX_TIMEOUT_MAX) timeout_us = LACE_IDLE_FUTEX_TIMEOUT_MAX;
+
+            atomic_fetch_add_explicit(&n_sleeping, 1, memory_order_relaxed);
+            int val = atomic_load_explicit(&wake_futex, memory_order_acquire);
+            lace_futex_wait(&wake_futex, val, timeout_us);
+            atomic_fetch_sub_explicit(&n_sleeping, 1, memory_order_relaxed);
 #if LACE_PIE_TIMES
             PR_ADD(__lace_worker, CTR_backoff, lace_gethrtime() - prev);
 #endif
+
+            if (atomic_load_explicit(&external_task_count, memory_order_acquire) > 0) {
+                lace_steal_external(__lace_worker, __lace_dq_head);
+                idle_count = 0;
+                continue;
+            }
+        } else {
+            /* Stage 1: yield the CPU briefly */
+            lace_cpu_yield();
         }
 #endif
 
@@ -783,6 +1297,27 @@ void
 lace_set_verbosity(int level)
 {
     verbosity = level;
+}
+
+/**
+ * Configure the per-worker scratch arena reservation size in bytes.
+ * Call before lace_start(). Pass 0 to disable scratch entirely.
+ */
+void
+lace_set_scratch_size(size_t size)
+{
+    scratch_size = size;
+}
+
+/**
+ * Configure the per-worker scratch committed band in bytes.
+ * Call before lace_start(). The band is rounded up to a page-size
+ * multiple at use time.
+ */
+void
+lace_set_scratch_band(size_t size)
+{
+    scratch_band = size;
 }
 
 /**
@@ -838,6 +1373,9 @@ lace_get_pu_count(void)
 void
 lace_start(unsigned int _n_workers, size_t dequesize)
 {
+    /* Cache the OS page size for scratch-arena commit/decommit. */
+    lace_scratch_init_page_size();
+
 #if LACE_USE_HWLOC
     // Initialize topology and information about cpus
     hwloc_topology_init(&topo);
@@ -855,7 +1393,7 @@ lace_start(unsigned int _n_workers, size_t dequesize)
     else {
         n_pus = (unsigned)hwloc_get_nbobjs_by_type(topo, HWLOC_OBJ_PU);
     }
-    if (allowed) hwloc_bitmap_free(allowed); 
+    if (allowed) hwloc_bitmap_free(allowed);
 #else
     n_pus = lace_get_pu_count();
 #endif
@@ -1025,7 +1563,7 @@ lace_start(unsigned int _n_workers, size_t dequesize)
             worker_stacks[i] = stack;
             }
         }
-#elif !defined(_WIN32)
+#elif !defined(_WIN32) && !defined(__FreeBSD__)
     // Use mmap so first-touch places pages on the right NUMA node after pinning
     {
         long ps = sysconf(_SC_PAGESIZE);
@@ -1059,7 +1597,7 @@ lace_start(unsigned int _n_workers, size_t dequesize)
         }
     }
 #else
-    // _WIN32 without HWLOC: just set stack size, let the OS handle it
+    // _WIN32 or FreeBSD without HWLOC: just set stack size, let the OS handle it
     if (pthread_attr_setstacksize(&worker_attr, stacksize) != 0) {
         fprintf(stderr, "Lace error: unable to set stack size to %zu bytes!\n", stacksize);
         exit(1);
@@ -1112,7 +1650,7 @@ lace_start(unsigned int _n_workers, size_t dequesize)
     /* Spawn all workers */
     for (unsigned int i = 0; i < n_workers; i++) {
 #if !LACE_MSVC
-#if LACE_USE_HWLOC || !defined(_WIN32)
+#if LACE_USE_HWLOC || (!defined(_WIN32) && !defined(__FreeBSD__))
         if (pthread_attr_setstack(&worker_attr,
             (char*)worker_stacks[i] + worker_stack_page_size,
             worker_stack_size - worker_stack_page_size) != 0) {
@@ -1298,6 +1836,10 @@ void lace_stop(void)
 {
     atomic_store_explicit(&lace_quits, 1, memory_order_relaxed);
 
+    /* Wake all sleeping workers so they observe the quit flag */
+    atomic_fetch_add_explicit(&wake_futex, 1, memory_order_release);
+    lace_futex_wake_all(&wake_futex);
+
     for (unsigned int i = 0; i < n_workers; i++) {
 #if !LACE_MSVC
         pthread_join(handles[i], NULL);
@@ -1317,7 +1859,7 @@ void lace_stop(void)
         free(worker_stacks);
         worker_stacks = NULL;
     }
-#elif !defined(_WIN32)
+#elif !defined(_WIN32) && !defined(__FreeBSD__)
     if (worker_stacks != NULL) {
         for (unsigned int i = 0; i < n_workers; i++) {
             munmap(worker_stacks[i], worker_stack_size);
@@ -1335,6 +1877,11 @@ void lace_stop(void)
     lace_barrier_destroy();
 
     for (unsigned int i = 0; i < n_workers; i++) {
+        if (workers_p[i]->scratch_base != NULL) {
+            lace_scratch_release(workers_p[i]->scratch_base,
+                                 (size_t)(workers_p[i]->scratch_reserve_end
+                                          - workers_p[i]->scratch_base));
+        }
 #if defined(_WIN32)
         VirtualFree(workers_memory[i], 0, MEM_RELEASE);
 #else
