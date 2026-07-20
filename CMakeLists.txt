@@ -41,6 +41,17 @@ if(ENABLE_ASAN)
   endif()
 endif()
 
+if(NOT MSVC)
+  add_compile_options(
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wshadow            # Warnt, wenn Variablen globale/andere Variablen verdecken
+    -Wnon-virtual-dtor  # Warnt bei fehlendem virtuellen Destruktor
+    -Wnull-dereference  # Sucht statisch nach Pfaden, die zu Null-Pointer-Zugriff führen
+  )
+endif()
+
 # We want lace and sylvan to be static libraries even if BUILD_SHARED_LIBS is ON.
 # Sylvan is already static by default, but Lace respects BUILD_SHARED_LIBS.
 set(OLD_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
