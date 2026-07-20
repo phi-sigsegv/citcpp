@@ -11,10 +11,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 option(CITCPP_BUILD_TESTS "Enables builds of tests" ON)
+option(ENABLE_ASAN "Enable AddressSanitizer (ASan)" OFF)
 
 set(CITCPP_3RD_PARTY_DIR ${PROJECT_SOURCE_DIR}/3rd_party)
 
 message(STATUS "CITCPP_BUILD_TESTS: " ${CITCPP_BUILD_TESTS})
+message(STATUS "ENABLE_ASAN: " ${ENABLE_ASAN})
 
 set(LACE_NATIVE_OPT OFF)
 set(SYLVAN_NATIVE_OPT OFF)
@@ -26,6 +28,17 @@ if(BUILD_SHARED_LIBS)
 else()
   set(LACE_ENABLE_PIC OFF)
   set(SYLVAN_ENABLE_PIC OFF)
+endif()
+
+if(ENABLE_ASAN)
+  if(MSVC)
+    add_compile_options(/fsanitize=address)
+  else()
+    # GCC and Clang
+    # -fno-omit-frame-pointer results in clean, complete callstacks in error reports
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+  endif()
 endif()
 
 # We want lace and sylvan to be static libraries even if BUILD_SHARED_LIBS is ON.
