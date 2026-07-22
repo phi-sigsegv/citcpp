@@ -46,7 +46,6 @@ if(NOT MSVC)
   target_compile_options(citcpp_lib PRIVATE
     -Wall
     -Wextra
-    -Wpedantic          # Strict ISO C++ compliance
     -Wshadow           # Variable shadowing
     -Wnon-virtual-dtor # Missing virtual destructors
     -Wnull-dereference # Null pointer dereferences
