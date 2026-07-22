@@ -42,6 +42,24 @@ target_include_directories(citcpp_lib PUBLIC
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
 target_link_libraries(citcpp_lib PUBLIC Threads::Threads PRIVATE sylvan::sylvan)
 
+if (ENABLE_CPPCHECK)
+  find_program(CPPCHECK_PATH cppcheck)
+  if(CPPCHECK_PATH)
+    set_target_properties(citcpp_lib PROPERTIES
+      CXX_CPPCHECK "${CPPCHECK_PATH};--enable=warning,style,performance;--inconclusive;--inline-suppr;--suppress=missingIncludeSystem"
+    )
+  endif()
+endif()
+
+if (ENABLE_CLANG_TIDY)
+  find_program(CLANG_TIDY_PATH clang-tidy)
+  if(CLANG_TIDY_PATH)
+    set_target_properties(citcpp_lib PROPERTIES
+      CXX_CLANG_TIDY "${CLANG_TIDY_PATH};-checks=bugprone-*,clang-analyzer-*,cppcoreguidelines-*"
+    )
+  endif()
+endif()
+
 if(NOT MSVC)
   target_compile_options(citcpp_lib PRIVATE
     -Wall

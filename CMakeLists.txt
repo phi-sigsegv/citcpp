@@ -12,11 +12,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
 option(CITCPP_BUILD_TESTS "Enables builds of tests" ON)
 option(ENABLE_ASAN "Enable AddressSanitizer (ASan)" OFF)
+option(ENABLE_CPPCHECK "Enable analysis using cppcheck" OFF)
+option(ENABLE_CLANG_TIDY "Enable analysis using clang-tidy" OFF)
 
 set(CITCPP_3RD_PARTY_DIR ${PROJECT_SOURCE_DIR}/3rd_party)
 
 message(STATUS "CITCPP_BUILD_TESTS: " ${CITCPP_BUILD_TESTS})
 message(STATUS "ENABLE_ASAN: " ${ENABLE_ASAN})
+message(STATUS "ENABLE_CPPCHECK: " ${ENABLE_CPPCHECK})
+message(STATUS "ENABLE_CLANG_TIDY: " ${ENABLE_CLANG_TIDY})
 
 set(LACE_NATIVE_OPT OFF)
 set(SYLVAN_NATIVE_OPT OFF)
