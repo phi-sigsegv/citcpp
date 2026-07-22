@@ -51,14 +51,14 @@ binom_coeff_table::binom_coeff_table(unsigned int max_n)
 
 long long binom_coeff_table::get_coefficient(unsigned int n,
                                              unsigned int k) const {
-  if (k < 0 || k > n) {
+  if (k > n) {
     return 0;
   }
   return binom_coeffs_[n][k];
 }
 
 unsigned int binom_coeff_table::get_max_n() const {
-  return binom_coeffs_.size() - 1;
+  return static_cast<unsigned int>(binom_coeffs_.size() - 1);
 }
 
 }  // namespace detail

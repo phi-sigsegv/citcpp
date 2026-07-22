@@ -248,8 +248,9 @@ inline number_of_combinations get_number_of_combinations(
     bool fixed_last_parameter, const internal_test_set& test_set) {
 
   const unsigned int product_of_max_parameter_sizes =
-      get_product_of_max_n_parameter_sizes(parameter_index_map.size(), t, model,
-                                           parameter_index_map);
+      get_product_of_max_n_parameter_sizes(
+          static_cast<unsigned int>(parameter_index_map.size()), t, model,
+          parameter_index_map);
 
   num_combos_per_param_combo_functor per_param_combo_functor(
       model, test_set, product_of_max_parameter_sizes);
@@ -269,8 +270,9 @@ number_of_combinations get_number_of_combinations(
     T_EXEC& exec) {
 
   const unsigned int product_of_max_parameter_sizes =
-      get_product_of_max_n_parameter_sizes(parameter_index_map.size(), t, model,
-                                           parameter_index_map);
+      get_product_of_max_n_parameter_sizes(
+          static_cast<unsigned int>(parameter_index_map.size()), t, model,
+          parameter_index_map);
 
   param_combo_functor_parallel_iterator<num_combos_per_param_combo_functor,
                                         T_EXEC>

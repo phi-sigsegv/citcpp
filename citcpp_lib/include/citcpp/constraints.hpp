@@ -287,7 +287,7 @@ class binary_operation : public constraint {
   public:
     binary_operation(std::shared_ptr<constraint> lhs, binary_operator op,
                      std::shared_ptr<constraint> rhs)
-        : lhs_(std::move(lhs)), op_(op), rhs_(std::move(rhs)) {}
+        : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
 
     binary_operator get_operator() const { return op_; }
 

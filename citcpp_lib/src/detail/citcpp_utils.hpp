@@ -85,8 +85,10 @@ void visit_all_value_combos_of_param_combo(
     T_ADDITIONAL_VISITOR_ARGS&&... additional_visitor_args) {
   using namespace citcpp::detail;
 
+  const int max_index = static_cast<int>(value_indices.size() - 1);
+
   recursively_visit_all_value_combos_of_param_combo(
-      model, param_indices, value_indices, value_indices.size() - 1, 0, visitor,
+      model, param_indices, value_indices, max_index, 0, visitor,
       std::forward<T_ADDITIONAL_VISITOR_ARGS>(additional_visitor_args)...);
 }
 

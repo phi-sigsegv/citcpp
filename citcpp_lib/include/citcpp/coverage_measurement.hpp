@@ -114,10 +114,11 @@ class coverage_measurement {
       coverage_fraction = std::max(std::min(coverage_fraction, 1.0), 0.0);
 
       // Map the coverage fraction to the appropriate array index.
-      int index =
-          std::min((int)((double)(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
-                         coverage_fraction),
-                   NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
+      int index = std::min(
+          static_cast<int>(
+              static_cast<double>(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
+              coverage_fraction),
+          NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
 
       return cov_level_to_num_param_combos_[index];
     }
@@ -132,10 +133,11 @@ class coverage_measurement {
       coverage_fraction = std::max(std::min(coverage_fraction, 1.0), 0.0);
 
       // Map the coverage fraction to the appropriate array index.
-      int index =
-          std::min((int)((double)(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
-                         coverage_fraction),
-                   NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
+      int index = std::min(
+          static_cast<int>(
+              static_cast<double>(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
+              coverage_fraction),
+          NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
 
       for (; index >= 0; --index) {
         cov_level_to_num_param_combos_[index] += num_param_combos;
