@@ -30,6 +30,9 @@ else()
   set(SYLVAN_ENABLE_PIC OFF)
 endif()
 
+# Generates data necessary for clang-tidy
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 if(ENABLE_ASAN)
   if(MSVC)
     add_compile_options(/fsanitize=address)
@@ -39,17 +42,6 @@ if(ENABLE_ASAN)
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
   endif()
-endif()
-
-if(NOT MSVC)
-  add_compile_options(
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Wshadow            # Warnt, wenn Variablen globale/andere Variablen verdecken
-    -Wnon-virtual-dtor  # Warnt bei fehlendem virtuellen Destruktor
-    -Wnull-dereference  # Sucht statisch nach Pfaden, die zu Null-Pointer-Zugriff führen
-  )
 endif()
 
 # We want lace and sylvan to be static libraries even if BUILD_SHARED_LIBS is ON.
