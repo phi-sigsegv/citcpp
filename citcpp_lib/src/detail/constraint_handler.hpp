@@ -158,7 +158,7 @@ class constraint_handler {
      * Creates a constraint handler for the given model.
      */
     static std::unique_ptr<constraint_handler> create_constraint_handler(
-        const internal_model& model, int num_worker_threads,
+        const internal_model& model, unsigned int num_worker_threads,
         std::size_t memory_limit_in_bytes,
         constraint_handler_init_progress& exec_handle);
 };

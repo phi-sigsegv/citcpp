@@ -38,6 +38,7 @@ std::vector<std::vector<long long>> initialize_binomial_coefficients(
       }
     }
   }
+
   return coeffs;
 }
 

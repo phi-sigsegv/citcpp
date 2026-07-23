@@ -142,7 +142,7 @@ class list_intrusive {
     typedef std::ptrdiff_t difference_type;
     typedef list_intrusive_iterator<false> iterator;
     typedef list_intrusive_iterator<true> const_iterator;
-    typedef unsigned int size_type;
+    typedef std::size_t size_type;
 
     list_intrusive() : dummy_(), p_tail_(&dummy_), size_(0) {
       dummy_.prev_node_ = nullptr;

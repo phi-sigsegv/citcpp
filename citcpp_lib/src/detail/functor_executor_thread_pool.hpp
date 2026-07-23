@@ -11,7 +11,7 @@ namespace detail {
 class functor_execution_scope_thread_pool {
   public:
     functor_execution_scope_thread_pool(thread_pool& tp)
-        : tg_(tp.createTaskGroup()) {}
+        : tg_(tp.createTaskGroup()), num_spawned_(0) {}
 
     functor_execution_scope_thread_pool(
         const functor_execution_scope_thread_pool&) = delete;
@@ -35,7 +35,7 @@ class functor_execution_scope_thread_pool {
     template <class T_CALLABLE, typename T_ALLOC>
       requires std::derived_from<T_CALLABLE, functor_task_base<T_CALLABLE>>
     void spawn_execution(std::vector<T_CALLABLE, T_ALLOC>& tasks) {
-      for (int i = 0; i < tasks.size() - 1; ++i) {
+      for (std::size_t i = 0; i < tasks.size() - 1; ++i) {
         T_CALLABLE& task = tasks[i];
         tg_.spawn(num_spawned_++, &task);
       }
@@ -47,7 +47,7 @@ class functor_execution_scope_thread_pool {
     template <class T_CALLABLE, typename T_ALLOC>
       requires(!std::derived_from<T_CALLABLE, functor_task_base<T_CALLABLE>>)
     void spawn_execution(std::vector<T_CALLABLE, T_ALLOC>& callables) {
-      for (int i = 0; i < callables.size() - 1; ++i) {
+      for (std::size_t i = 0; i < callables.size() - 1; ++i) {
         T_CALLABLE& callable = callables[i];
         tg_.spawnCallable(num_spawned_++, callable);
       }
@@ -58,7 +58,7 @@ class functor_execution_scope_thread_pool {
 
   private:
     task_group tg_;
-    int num_spawned_;
+    std::size_t num_spawned_;
 };
 
 class functor_executor_thread_pool {
@@ -66,9 +66,9 @@ class functor_executor_thread_pool {
     functor_executor_thread_pool(thread_pool& tp) : tp_(tp) {}
     ~functor_executor_thread_pool() = default;
 
-    unsigned int get_num_workers() const { return tp_.get_num_workers(); }
+    std::size_t get_num_workers() const { return tp_.get_num_workers(); }
 
-    unsigned int get_worker_id() const { return tp_.get_worker_id(); }
+    std::size_t get_worker_id() const { return tp_.get_worker_id(); }
 
     void suspend_workers() { tp_.stop_workers(); }
 

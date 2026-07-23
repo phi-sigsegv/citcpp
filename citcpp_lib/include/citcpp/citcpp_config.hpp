@@ -46,7 +46,7 @@ class covering_array_computation_config {
      * Returns the memory limit used for the constraint handler in terms
      * of gigabytes.
      */
-    unsigned int constraint_handler_memory_limit_gb() const {
+    std::size_t constraint_handler_memory_limit_gb() const {
       return c_handler_memory_limit_gib_;
     }
 
@@ -89,7 +89,7 @@ class covering_array_computation_config {
      * of gigabytes.
      */
     covering_array_computation_config& with_constraint_handler_memory_limit_gb(
-        unsigned int c_handler_memory_limit_gib) {
+        std::size_t c_handler_memory_limit_gib) {
       c_handler_memory_limit_gib_ = c_handler_memory_limit_gib;
 
       return *this;
@@ -119,7 +119,7 @@ class covering_array_computation_config {
   private:
     bool replace_dont_care_values_;
     unsigned int number_of_threads_;
-    unsigned int c_handler_memory_limit_gib_;
+    std::size_t c_handler_memory_limit_gib_;
     std::string value_seperator_;
     covering_array_computation_algorithm algo_;
 };
@@ -135,13 +135,13 @@ class coverage_measurement_config {
      * Returns the number of threads to use. The value 0 means that the
      * number of threads is chosen automatically.
      */
-    unsigned int number_of_threads() const { return number_of_threads_; }
+    std::size_t number_of_threads() const { return number_of_threads_; }
 
     /**
      * Returns the memory limit used for the constraint handler in terms
      * of gigabytes.
      */
-    unsigned int constraint_handler_memory_limit_gb() const {
+    std::size_t constraint_handler_memory_limit_gb() const {
       return c_handler_memory_limit_gib_;
     }
 
@@ -157,7 +157,7 @@ class coverage_measurement_config {
      * The value 0 means that the number of threads is chosen automatically.
      */
     coverage_measurement_config& with_number_of_threads(
-        unsigned int number_of_threads) {
+        std::size_t number_of_threads) {
       number_of_threads_ = number_of_threads;
 
       return *this;
@@ -168,7 +168,7 @@ class coverage_measurement_config {
      * of gigabytes.
      */
     coverage_measurement_config& with_constraint_handler_memory_limit_gb(
-        unsigned int c_handler_memory_limit_gib) {
+        std::size_t c_handler_memory_limit_gib) {
       c_handler_memory_limit_gib_ = c_handler_memory_limit_gib;
 
       return *this;
@@ -186,8 +186,8 @@ class coverage_measurement_config {
     }
 
   private:
-    unsigned int number_of_threads_;
-    unsigned int c_handler_memory_limit_gib_;
+    std::size_t number_of_threads_;
+    std::size_t c_handler_memory_limit_gib_;
     std::string value_seperator_;
 };
 

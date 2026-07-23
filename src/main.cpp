@@ -119,7 +119,7 @@ int execute_cagen(const std::string& model_file_path,
                   citcpp::covering_array_computation_algorithm cagen_algo,
                   int interaction_strength, bool show_progress,
                   const std::string& sep, unsigned int num_threads,
-                  unsigned int mem_limit_gb, bool rand_star) {
+                  std::size_t mem_limit_gb, bool rand_star) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -280,7 +280,7 @@ int execute_covm(const std::string& model_file_path,
                  const std::string& coverage_measurement_file_path,
                  int interaction_strength, bool show_progress,
                  const std::string& sep, unsigned int num_threads,
-                 unsigned int mem_limit_gb) {
+                 std::size_t mem_limit_gb) {
 
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -451,7 +451,7 @@ int main(int argc, char* argv[]) {
       "threads is chosen automatically. The default value is " +
           std::to_string(num_threads) + ".");
 
-  unsigned int mem_limit_gb =
+  std::size_t mem_limit_gb =
       covering_array_computation_config().constraint_handler_memory_limit_gb();
   command_cagen->add_option(
       "--mem-limit", mem_limit_gb,

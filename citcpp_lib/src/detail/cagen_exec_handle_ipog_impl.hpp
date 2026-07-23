@@ -63,8 +63,8 @@ class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
     }
 
   private:
-    std::atomic_uint num_parameters_to_process_;
-    std::atomic_uint num_processed_parameters_;
+    unsigned int num_parameters_to_process_;
+    unsigned int num_processed_parameters_;
     std::unique_ptr<citcpp_ipog_base> runnable_;
 };
 

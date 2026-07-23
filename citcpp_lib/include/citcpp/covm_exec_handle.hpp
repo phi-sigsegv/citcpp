@@ -53,7 +53,7 @@ class covm_exec_result {
      * at least one constraint. Invalid tests are ignored during
      * the coverage measurement.
      */
-    const std::vector<unsigned int>& get_invalid_test_indices() const {
+    const std::vector<std::size_t>& get_invalid_test_indices() const {
       return invalid_test_indices_;
     }
 
@@ -71,7 +71,7 @@ class covm_exec_result {
 
   protected:
     std::unordered_map<std::string, coverage_measurement> result_;
-    std::vector<unsigned int> invalid_test_indices_;
+    std::vector<std::size_t> invalid_test_indices_;
     covm_result_code result_code_;
     std::string error_message_;
 };
@@ -166,7 +166,7 @@ class covm_exec_handle {
      * If the execution has not terminated yet, then calling this method
      * returns 0.0.
      */
-    virtual unsigned int get_duration_in_milli_seconds() const = 0;
+    virtual std::size_t get_duration_in_milli_seconds() const = 0;
 };
 
 }  // namespace citcpp

@@ -37,7 +37,7 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
 
   public:
     phase get_execution_phase() const override {
-      unsigned int v = exec_phase_;
+      std::size_t v = exec_phase_;
       return static_cast<phase>(v);
     }
 
@@ -63,7 +63,7 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
       return covered_combinations_;
     }
 
-    unsigned int get_testset_size() const override { return testset_size_; }
+    std::size_t get_testset_size() const override { return testset_size_; }
 
     void abort() override {
       is_aborted_.store(true, std::memory_order_relaxed);
@@ -73,12 +73,12 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
       return test_set_.get_future();
     }
 
-    unsigned int get_duration_in_milli_seconds() const override {
+    std::size_t get_duration_in_milli_seconds() const override {
       return duration_msec_;
     }
 
     void set_execution_phase(phase p) {
-      unsigned int v = static_cast<unsigned int>(p);
+      std::size_t v = static_cast<std::size_t>(p);
       exec_phase_ = v;
     }
 
@@ -113,11 +113,11 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
                                       std::memory_order_acq_rel);
     }
 
-    void set_testset_size(unsigned int testset_size) {
+    void set_testset_size(std::size_t testset_size) {
       testset_size_ = testset_size;
     }
 
-    void add_testset_size(unsigned int testset_size) {
+    void add_testset_size(std::size_t testset_size) {
       testset_size_.fetch_add(testset_size, std::memory_order_acq_rel);
     }
 
@@ -129,20 +129,20 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
       test_set_.set_value(std::move(test_set));
     }
 
-    void set_duration_in_milli_seconds(unsigned int duration_msec) {
+    void set_duration_in_milli_seconds(std::size_t duration_msec) {
       duration_msec_ = duration_msec;
     }
 
   public:
-    std::atomic_uint exec_phase_;
+    std::atomic_size_t exec_phase_;
     constraint_handler_init_progress c_handler_init_progress_;
     std::atomic_ullong num_combinations_to_process_;
     std::atomic_ullong processed_combinations_;
     std::atomic_ullong covered_combinations_;
-    std::atomic_uint testset_size_;
+    std::atomic_size_t testset_size_;
     std::atomic_bool is_aborted_;
     std::promise<citcpp::cagen_exec_result> test_set_;
-    std::atomic_uint duration_msec_;
+    std::atomic_size_t duration_msec_;
     std::thread thread_;
 };
 

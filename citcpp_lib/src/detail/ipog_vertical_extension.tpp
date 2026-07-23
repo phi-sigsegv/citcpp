@@ -9,12 +9,12 @@ namespace detail {
 class ipog_vertical_extension_functor {
   public:
     ipog_vertical_extension_functor(
-        const unsigned int strength, const internal_model& model,
+        unsigned int strength, const internal_model& model,
         constraint_handler& constr_handler, internal_test_set& test_set,
         ipog_horizontal_extension_result&
             partitioning_of_tests_according_to_current_values,
         list_intrusive<test_list_intrusive_integ>& modified_tests,
-        const unsigned long long num_missing_combinations_to_cover)
+        unsigned long long num_missing_combinations_to_cover)
         : model_(model),
           constr_handler_(constr_handler),
           test_set_(test_set),
@@ -39,7 +39,7 @@ class ipog_vertical_extension_functor {
     }
 
     bool operator()(const value_vector& value_indices,
-                    ipog_coverage_map::size_type bitpos,
+                    ipog_coverage_map::second_level_type::size_type bitpos,
                     ipog_coverage_map::second_level_type& value_combinations) {
 
       ipog_vertical_extension_value_combo_func(value_indices, bitpos,
@@ -70,9 +70,10 @@ class ipog_vertical_extension_functor {
 
       // Pre-calculate weights for index computation
       ipog_coverage_map::second_level_type::size_type weight = 1;
-      for (int i = (int)param_indices.size() - 1; i >= 0; --i) {
+      for (int i = static_cast<int>(param_indices.size() - 1); i >= 0; --i) {
         weights_[i] = weight;
-        weight *= model_.get_parameter_num_values()[param_indices[i]];
+        weight *= static_cast<ipog_coverage_map::second_level_type::size_type>(
+            model_.get_parameter_num_values()[param_indices[i]]);
       }
 
       for (test_list_intrusive_integ& t : modified_tests_) {
@@ -83,11 +84,8 @@ class ipog_vertical_extension_functor {
         // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
         ipog_coverage_map::second_level_type::size_type index = 0;
         bool index_valid = true;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size(); ++i) {
-
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = t.get_test().get_values()[param_idx];
+        for (std::size_t i = 0; i < param_indices.size(); ++i) {
+          const int param_value = t.get_test().get_values()[param_indices[i]];
 
           if (param_value < 0) {
             // We have found a don't care value for that combination in
@@ -96,9 +94,9 @@ class ipog_vertical_extension_functor {
             break;
           }
 
-          index +=
-              (ipog_coverage_map::second_level_type::size_type)param_value *
-              weights_[i];
+          index += static_cast<ipog_coverage_map::second_level_type::size_type>(
+                       param_value) *
+                   weights_[i];
         }
 
         if (index_valid) {
@@ -117,7 +115,8 @@ class ipog_vertical_extension_functor {
     }
 
     void ipog_vertical_extension_value_combo_func(
-        const value_vector& value_indices, ipog_coverage_map::size_type bitpos,
+        const value_vector& value_indices,
+        ipog_coverage_map::second_level_type::size_type bitpos,
         ipog_coverage_map::second_level_type& value_combinations) {
 
       // First we check whether the value combination is covered, because if it
@@ -169,10 +168,9 @@ class ipog_vertical_extension_functor {
                 t.get_vertical_extension_intrusive_list_node());
           }
 
-          for (unsigned int i = 0; i < param_indices.size(); ++i) {
-            const unsigned int param_idx = param_indices[i];
+          for (std::size_t i = 0; i < param_indices.size(); ++i) {
             const int param_value_to_cover = value_indices[i];
-            t.get_values()[param_idx] = param_value_to_cover;
+            t.get_values()[param_indices[i]] = param_value_to_cover;
           }
 
           // Update the state of the test as seen by constraint hander.
@@ -212,10 +210,9 @@ class ipog_vertical_extension_functor {
               .value_to_row_mapping[current_param_value_to_cover]
               .push_back(t.get_value_partition_intrusive_list_node());
 
-          for (unsigned int i = 0; i < param_indices.size(); ++i) {
-            const unsigned int param_idx = param_indices[i];
+          for (std::size_t i = 0; i < param_indices.size(); ++i) {
             const int param_value_to_cover = value_indices[i];
-            t.get_values()[param_idx] = param_value_to_cover;
+            t.get_values()[param_indices[i]] = param_value_to_cover;
           }
 
           // Update the state of the test as seen by constraint hander.
@@ -232,10 +229,9 @@ class ipog_vertical_extension_functor {
       // Initialize all values of the test with don't care.
       test t(model_.get_parameter_num_values().size(), -1);
 
-      for (unsigned int i = 0; i < param_indices.size(); ++i) {
-        const unsigned int param_idx = param_indices[i];
+      for (std::size_t i = 0; i < param_indices.size(); ++i) {
         const int param_value_to_cover = value_indices[i];
-        t.get_values()[param_idx] = param_value_to_cover;
+        t.get_values()[param_indices[i]] = param_value_to_cover;
       }
 
       test_set_.get_list_of_tests().push_back(std::move(t));
@@ -254,10 +250,9 @@ class ipog_vertical_extension_functor {
     bool is_valid_tuple(const param_vector& param_indices,
                         const value_vector& value_indices) {
 
-      for (unsigned int i = 0; i < param_indices.size(); ++i) {
-        const unsigned int param_idx = param_indices[i];
+      for (std::size_t i = 0; i < param_indices.size(); ++i) {
         const int param_value_to_cover = value_indices[i];
-        scratch_test_.get_values()[param_idx] = param_value_to_cover;
+        scratch_test_.get_values()[param_indices[i]] = param_value_to_cover;
       }
 
       bool res = constr_handler_.is_valid_partial_test(scratch_test_);
@@ -271,9 +266,8 @@ class ipog_vertical_extension_functor {
       const param_vector& param_indices =
           value_combinations.get_parameter_indices();
 
-      for (unsigned int i = 0; i < param_indices.size(); ++i) {
-        const unsigned int param_idx = param_indices[i];
-        scratch_test_.get_values()[param_idx] = -1;
+      for (std::size_t i = 0; i < param_indices.size(); ++i) {
+        scratch_test_.get_values()[param_indices[i]] = -1;
       }
     }
 
@@ -293,7 +287,7 @@ class ipog_vertical_extension_functor {
 };
 
 inline ipog_vertical_extension_result ipog_vertical_extension(
-    const unsigned long long num_missing_combinations_to_cover,
+    unsigned long long num_missing_combinations_to_cover,
     constraint_handler& constr_handler,
     ipog_horizontal_extension_result&
         partitioning_of_tests_according_to_current_values,

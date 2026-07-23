@@ -56,10 +56,10 @@ template <typename T_PARTIAL_TEST_VALIDITY_PRED>
 class covm_per_param_combo_functor {
   public:
     covm_per_param_combo_functor(
-        const unsigned int strength, const internal_model& model,
+        unsigned int strength, const internal_model& model,
         const internal_test_set& test_set,
         const T_PARTIAL_TEST_VALIDITY_PRED& validity_pred,
-        const unsigned int bitset_backing_array_size,
+        bitset_uint64::size_type bitset_backing_array_size,
         covm_exec_handle_impl& exec_handle)
         : model_(model),
           test_set_(test_set),
@@ -76,15 +76,17 @@ class covm_per_param_combo_functor {
     bool operator()(const param_vector& param_indices) {
       bitset_uint64::size_type bitset_size = 1;
       for (auto p : param_indices) {
-        bitset_size *= model_.get_parameter_num_values()[p];
+        bitset_size *= static_cast<bitset_uint64::size_type>(
+            model_.get_parameter_num_values()[p]);
       }
       values_combo_bitset_.reset_with_new_size(bitset_size);
 
       // Pre-calculate weights for index computation
       bitset_uint64::size_type weight = 1;
-      for (int i = (int)param_indices.size() - 1; i >= 0; --i) {
+      for (int i = static_cast<int>(param_indices.size() - 1); i >= 0; --i) {
         weights_[i] = weight;
-        weight *= model_.get_parameter_num_values()[param_indices[i]];
+        weight *= static_cast<bitset_uint64::size_type>(
+            model_.get_parameter_num_values()[param_indices[i]]);
       }
 
       int test_index = 0;
@@ -96,10 +98,8 @@ class covm_per_param_combo_functor {
         // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
         bitset_uint64::size_type index = 0;
         bool found_dont_care = false;
-        for (std::vector<unsigned int>::size_type i = 0;
-             i < param_indices.size(); ++i) {
-          const unsigned int param_idx = param_indices[i];
-          const int param_value = test.get_values()[param_idx];
+        for (std::size_t i = 0; i < param_indices.size(); ++i) {
+          const int param_value = test.get_values()[param_indices[i]];
 
           if (param_value < 0) {
             // We have found a don't care value for that combination in
@@ -110,7 +110,8 @@ class covm_per_param_combo_functor {
             break;
           }
 
-          index += (bitset_uint64::size_type)param_value * weights_[i];
+          index +=
+              static_cast<bitset_uint64::size_type>(param_value) * weights_[i];
         }
 
         if (!found_dont_care) {
@@ -128,18 +129,20 @@ class covm_per_param_combo_functor {
         reset_scratch_test(param_indices);
       }
 
-      double param_coverage_fraction = (double)values_combo_bitset_.count() /
-                                       (double)values_combo_bitset_.size();
+      double param_coverage_fraction =
+          static_cast<double>(values_combo_bitset_.count()) /
+          static_cast<double>(values_combo_bitset_.size());
 
       param_coverage_fraction =
           std::max(std::min(param_coverage_fraction, 1.0), 0.0);
 
       // Map the coverage fraction to the appropriate array index.
       int index = std::min(
-          (int)((double)(citcpp::coverage_measurement::
-                             NUM_DIFFERENTIATED_COVERAGE_LEVELS -
-                         1) *
-                param_coverage_fraction),
+          static_cast<unsigned int>(
+              static_cast<double>(citcpp::coverage_measurement::
+                                      NUM_DIFFERENTIATED_COVERAGE_LEVELS -
+                                  1) *
+              param_coverage_fraction),
           citcpp::coverage_measurement::NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
 
       for (; index >= 0; --index) {
@@ -189,10 +192,9 @@ class covm_per_param_combo_functor {
     bool is_valid_tuple(const param_vector& param_indices,
                         const value_vector& value_indices) {
 
-      for (unsigned int i = 0; i < param_indices.size(); ++i) {
-        const unsigned int param_idx = param_indices[i];
+      for (std::size_t i = 0; i < param_indices.size(); ++i) {
         const int param_value_to_cover = value_indices[i];
-        scratch_test_.get_values()[param_idx] = param_value_to_cover;
+        scratch_test_.get_values()[param_indices[i]] = param_value_to_cover;
       }
 
       bool res = validity_pred_(scratch_test_);
@@ -201,9 +203,8 @@ class covm_per_param_combo_functor {
     }
 
     void reset_scratch_test(const param_vector& param_indices) {
-      for (unsigned int i = 0; i < param_indices.size(); ++i) {
-        const unsigned int param_idx = param_indices[i];
-        scratch_test_.get_values()[param_idx] = -1;
+      for (std::size_t i = 0; i < param_indices.size(); ++i) {
+        scratch_test_.get_values()[param_indices[i]] = -1;
       }
     }
 
@@ -223,27 +224,29 @@ class covm_per_param_combo_functor {
 };
 
 inline void measure_coverage(
-    const unsigned int strength, const internal_model& model,
+    unsigned int strength, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map,
     const internal_test_set& test_set, const constraint_handler& constr_handler,
     covm_exec_handle_impl& exec_handle, citcpp::coverage_measurement& covm) {
 
   const unsigned int product_of_max_parameter_sizes =
-      get_product_of_max_n_parameter_sizes(parameter_index_map.size(), strength,
-                                           model, parameter_index_map);
+      get_product_of_max_n_parameter_sizes(
+          static_cast<unsigned int>(parameter_index_map.size()), strength,
+          model, parameter_index_map);
 
   test_validity_checker_sequential validity_pred(constr_handler);
   covm_per_param_combo_functor<test_validity_checker_sequential>
       per_param_combo_functor(strength, model, test_set, validity_pred,
                               product_of_max_parameter_sizes, exec_handle);
 
-  param_combo_iterator param_combo_it(parameter_index_map.size(), strength,
-                                      parameter_index_map, false);
+  param_combo_iterator param_combo_it(
+      static_cast<unsigned int>(parameter_index_map.size()), strength,
+      parameter_index_map, false);
   param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
 
   std::vector<unsigned long long> covered_tuples(
       per_param_combo_functor.get_coverered_tuples());
-  for (unsigned int test_index = 0; test_index < covered_tuples.size();
+  for (std::size_t test_index = 0; test_index < covered_tuples.size();
        ++test_index) {
 
     if (test_index > 0) {
@@ -261,7 +264,7 @@ inline void measure_coverage(
 }
 
 template <conc_is_void_functor_executor T_EXEC>
-void measure_coverage(const unsigned int strength, const internal_model& model,
+void measure_coverage(unsigned int strength, const internal_model& model,
                       const std::vector<unsigned int>& parameter_index_map,
                       const internal_test_set& test_set,
                       const constraint_handler& constr_handler,
@@ -269,17 +272,18 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
                       citcpp::coverage_measurement& covm, T_EXEC& exec) {
 
   const unsigned int product_of_max_parameter_sizes =
-      get_product_of_max_n_parameter_sizes(parameter_index_map.size(), strength,
-                                           model, parameter_index_map);
+      get_product_of_max_n_parameter_sizes(
+          static_cast<unsigned int>(parameter_index_map.size()), strength,
+          model, parameter_index_map);
 
   test_validity_checker_parallel validity_pred(constr_handler);
   param_combo_functor_parallel_iterator<
       covm_per_param_combo_functor<test_validity_checker_parallel>, T_EXEC>
       per_param_combo_functor_parallel(
-          parameter_index_map.size(), strength, parameter_index_map, false,
-          exec, strength, std::cref(model), std::cref(test_set),
-          std::cref(validity_pred), product_of_max_parameter_sizes,
-          std::ref(exec_handle));
+          static_cast<unsigned int>(parameter_index_map.size()), strength,
+          parameter_index_map, false, exec, strength, std::cref(model),
+          std::cref(test_set), std::cref(validity_pred),
+          product_of_max_parameter_sizes, std::ref(exec_handle));
 
   per_param_combo_functor_parallel.visit_all_parameter_combinations();
 
@@ -293,21 +297,20 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
       [&covered_tuples, &num_invalid_tuples, &cov_level_to_num_param_combos](
           const covm_per_param_combo_functor<test_validity_checker_parallel>&
               f) {
-        for (unsigned int test_index = 0; test_index < covered_tuples.size();
+        for (std::size_t test_index = 0; test_index < covered_tuples.size();
              ++test_index) {
           covered_tuples[test_index] += f.get_coverered_tuples()[test_index];
         }
 
         num_invalid_tuples += f.get_num_invalid_tuples();
 
-        for (unsigned int i = 0; i < cov_level_to_num_param_combos.size();
-             ++i) {
+        for (std::size_t i = 0; i < cov_level_to_num_param_combos.size(); ++i) {
           cov_level_to_num_param_combos[i] +=
               f.get_coverage_level_to_num_param_combos()[i];
         }
       });
 
-  for (unsigned int test_index = 0; test_index < covered_tuples.size();
+  for (std::size_t test_index = 0; test_index < covered_tuples.size();
        ++test_index) {
 
     if (test_index > 0) {

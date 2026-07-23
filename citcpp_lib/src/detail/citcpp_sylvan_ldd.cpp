@@ -83,11 +83,13 @@ TASK_3(MDD, sylvan_make_node, uint32_t, value, MDD, ifeq, MDD, ifneq) {
 TASK_3(MDD, sylvan_create_relational_proposition, citcpp::relational_operator,
        op, uint32_t, value, uint32_t, variable_domain_size) {
 
+  const int value_as_int = static_cast<int>(value);
+
   switch (op) {
     case citcpp::relational_operator::NEQ: {
       MDD prop_ldd = lddmc_false;
       for (int i = variable_domain_size - 1; i >= 0; --i) {
-        if (i != value) {
+        if (i != value_as_int) {
           prop_ldd = lddmc_makenode(i, lddmc_true, prop_ldd);
         }
       }
@@ -97,7 +99,7 @@ TASK_3(MDD, sylvan_create_relational_proposition, citcpp::relational_operator,
     case citcpp::relational_operator::LT: {
       MDD prop_ldd = lddmc_false;
       for (int i = variable_domain_size - 1; i >= 0; --i) {
-        if (i < value) {
+        if (i < value_as_int) {
           prop_ldd = lddmc_makenode(i, lddmc_true, prop_ldd);
         }
       }
@@ -107,7 +109,7 @@ TASK_3(MDD, sylvan_create_relational_proposition, citcpp::relational_operator,
     case citcpp::relational_operator::LE: {
       MDD prop_ldd = lddmc_false;
       for (int i = variable_domain_size - 1; i >= 0; --i) {
-        if (i <= value) {
+        if (i <= value_as_int) {
           prop_ldd = lddmc_makenode(i, lddmc_true, prop_ldd);
         }
       }
@@ -117,7 +119,7 @@ TASK_3(MDD, sylvan_create_relational_proposition, citcpp::relational_operator,
     case citcpp::relational_operator::GE: {
       MDD prop_ldd = lddmc_false;
       for (int i = variable_domain_size - 1; i >= 0; --i) {
-        if (i >= value) {
+        if (i >= value_as_int) {
           prop_ldd = lddmc_makenode(i, lddmc_true, prop_ldd);
         }
       }
@@ -127,7 +129,7 @@ TASK_3(MDD, sylvan_create_relational_proposition, citcpp::relational_operator,
     case citcpp::relational_operator::GT: {
       MDD prop_ldd = lddmc_false;
       for (int i = variable_domain_size - 1; i >= 0; --i) {
-        if (i > value) {
+        if (i > value_as_int) {
           prop_ldd = lddmc_makenode(i, lddmc_true, prop_ldd);
         }
       }
@@ -145,8 +147,8 @@ std::vector<uint32_t> get_common_variables(
     const std::vector<uint32_t>& lhs_vars,
     const std::vector<uint32_t>& rhs_vars) {
 
-  int lhs_idx = 0;
-  int rhs_idx = 0;
+  std::size_t lhs_idx = 0;
+  std::size_t rhs_idx = 0;
   std::vector<uint32_t> common_variables;
 
   while (lhs_idx < lhs_vars.size() || rhs_idx < rhs_vars.size()) {
@@ -187,13 +189,18 @@ uint32_t encode_interval(uint16_t lb, uint16_t ub) {
   return packed;
 }
 
+template <typename T>
+uint32_t encode_interval(T lb, T ub) {
+  return encode_interval((uint16_t)lb, (uint16_t)ub);
+}
+
 uint32_t encode_interval(interval ival) {
   return encode_interval(ival.lb, ival.ub);
 }
 
 interval decode_interval(uint32_t packed_interval) {
   uint16_t lb = packed_interval & 0xFFFF;
-  uint16_t ub = (packed_interval & 0xFFFF0000) >> 16;
+  uint16_t ub = (uint16_t)((packed_interval & 0xFFFF0000) >> 16);
   return interval{lb, ub};
 }
 
@@ -327,7 +334,7 @@ TASK_4(MDD, sylvan_idd_create_projection_cube, const uint32_t*,
 static const uint64_t CACHE_IDD_CONTAINS_PART_ASSIGN = (64LL << 40);
 static const uint64_t CACHE_IDD_MARK_VALID = (65LL << 40);
 
-TASK_5(int, sylvan_idd_sat_with_partial_assignment_recursive, MDD, ldd,
+TASK_5(uint64_t, sylvan_idd_sat_with_partial_assignment_recursive, MDD, ldd,
        uint32_t, var_idx, MDD, variables_cube, MDD, values_cube,
        std::atomic<bool>*, terminate) {
 
@@ -417,10 +424,10 @@ struct partial_assignment_ctx {
     int num_variables;
     const int* values;
     int num_values;
-    const uint32_t* variable_order;
+    const unsigned int* variable_order;
 };
 
-TASK_2(int, sylvan_idd_sat_with_partial_assignment, MDD, ldd,
+TASK_2(uint64_t, sylvan_idd_sat_with_partial_assignment, MDD, ldd,
        const partial_assignment_ctx*, ctx) {
 
   // First we create cubes that specifies which variable we have assignments
@@ -443,8 +450,8 @@ TASK_2(int, sylvan_idd_sat_with_partial_assignment, MDD, ldd,
   lddmc_refs_push(values_cube);
 
   std::atomic<bool> terminate(false);
-  const int sat = CALL(sylvan_idd_sat_with_partial_assignment_recursive, ldd, 0,
-                       variables_cube, values_cube, &terminate);
+  const uint64_t sat = CALL(sylvan_idd_sat_with_partial_assignment_recursive,
+                            ldd, 0, variables_cube, values_cube, &terminate);
 
   lddmc_refs_pop(2);
 
@@ -803,7 +810,7 @@ inline MDD sylvan_idd_one_level_set_union(MDD a, MDD b) {
 static const uint64_t CACHE_IDD_GET_VALID_ASSIGNS = (65LL << 40);
 
 TASK_7(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd, MDD,
-       variables_cube, MDD, values_cube, uint32_t, cur_var_idx, int,
+       variables_cube, MDD, values_cube, uint32_t, cur_var_idx, uint32_t,
        variable_index, std::atomic<bool>*, terminate, MDD, full_domain) {
   if (variables_cube == lddmc_true && variable_index < cur_var_idx) {
     // No more valid value for the parameter on this path.
@@ -976,7 +983,7 @@ TASK_4(MDD, sylvan_idd_get_valid_variable_assignments, MDD, ldd, uint32_t,
 
   const MDD collected_values = CALL(
       sylvan_idd_get_valid_variable_assignments_recursive, ldd, variables_cube,
-      values_cube, 0, variable_index, &terminate, full_domain);
+      values_cube, 0, (uint32_t)variable_index, &terminate, full_domain);
 
   lddmc_refs_pop(3);
 
@@ -998,7 +1005,7 @@ TASK_2(MDD, sylvan_idd_create_cube_from_assignments, const int*, assignments,
 }
 
 TASK_3(MDD, sylvan_idd_create_cube_from_assignments_with_order, const int*,
-       assignments, const uint32_t*, variable_order, int, num_levels) {
+       assignments, const unsigned int*, variable_order, int, num_levels) {
 
   MDD cube = lddmc_true;
   for (int level = num_levels - 1; level >= 0; --level) {
@@ -1425,7 +1432,7 @@ TASK_2(MDD, sylvan_idd_project, MDD, mdd, MDD, proj) {
 
 struct marking_context {
     const size_t* weights;
-    const uint32_t* domain_sizes;
+    const unsigned int* domain_sizes;
     int t;
     const uint32_t* idd_vars;
     citcpp::detail::spin_lock* lock;
@@ -2226,8 +2233,8 @@ bitset_uint64 sylvan_idd::get_valid_variable_assignments(
       mddnode_t node = LDD_GETNODE(valid_values_as_ldd);
       uint32_t n_value = mddnode_getvalue(node);
       interval ival = decode_interval(n_value);
-      for (uint16_t value = ival.lb; value <= ival.ub; ++value) {
-        valid_values_as_bitset.set(value);
+      for (uint16_t ival_value = ival.lb; ival_value <= ival.ub; ++ival_value) {
+        valid_values_as_bitset.set(ival_value);
       }
       valid_values_as_ldd = mddnode_getright(node);
     }
@@ -2249,7 +2256,8 @@ void sylvan_idd::get_sat_one_under_partial_assignment(
   while (cube != lddmc_true && cube != lddmc_false) {
     mddnode_t node = LDD_GETNODE(cube);
     uint32_t level = variables_[var_idx];
-    uint32_t target_idx = variable_order ? (*variable_order)[level] : level;
+    uint32_t target_idx =
+        variable_order ? (uint32_t)(*variable_order)[level] : level;
     if (assignment[target_idx] < 0) {
       uint32_t n_value = mddnode_getvalue(node);
       interval ival = decode_interval(n_value);
@@ -2260,19 +2268,21 @@ void sylvan_idd::get_sat_one_under_partial_assignment(
   }
 }
 
-void sylvan::init_lace(unsigned int n_workers, size_t dqsize) {
+void sylvan::init_lace(unsigned int n_workers, std::size_t dqsize) {
   citcpp::detail::lace_init(n_workers, dqsize);
 }
 
-void sylvan::init_package(size_t initialTableSize, size_t maxTableSize,
-                          size_t initialCacheSize, size_t maxCacheSize) {
+void sylvan::init_package(std::size_t initialTableSize,
+                          std::size_t maxTableSize,
+                          std::size_t initialCacheSize,
+                          std::size_t maxCacheSize) {
 
   sylvan_set_sizes(initialTableSize, maxTableSize, initialCacheSize,
                    maxCacheSize);
   sylvan_init_package();
 }
 
-void sylvan::init_package(size_t memory_cap, int table_ratio,
+void sylvan::init_package(std::size_t memory_cap, int table_ratio,
                           int initial_ratio) {
 
   sylvan_set_limits(memory_cap, table_ratio, initial_ratio);

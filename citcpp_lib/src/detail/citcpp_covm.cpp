@@ -193,7 +193,8 @@ void citcpp_covm::set_interaction_strength(int t) { strength_ = t; }
 void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  unsigned int num_threads = config_.number_of_threads();
+  unsigned int num_threads =
+      static_cast<unsigned int>(config_.number_of_threads());
   if (num_threads == 0) {
     num_threads = std::thread::hardware_concurrency();
     if (num_threads == 0) {
@@ -210,16 +211,14 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   std::shared_ptr<constraint_handler> constr_handler =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
-          static_cast<std::size_t>(
-              config_.constraint_handler_memory_limit_gb()) *
-              1024 * 1024 * 1024,
+          config_.constraint_handler_memory_limit_gb() * 1024 * 1024 * 1024,
           exec_handle.get_constraint_handler_init_progress());
 
   // Filter out invalid tests.
-  std::vector<unsigned int> invalid_test_indices;
+  std::vector<std::size_t> invalid_test_indices;
   {
     constraint_evaluator constr_eval(input_model_.get_parameters());
-    unsigned int test_idx = 0;
+    std::size_t test_idx = 0;
     auto test_it = tests_.get_list_of_tests().begin();
     while (test_it != tests_.get_list_of_tests().end()) {
       const auto& t = *test_it;
@@ -247,7 +246,7 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   const auto duration_in_milli_seconds =
       duration_cast<std::chrono::milliseconds>(t_end - t_start);
   exec_handle.set_duration_in_milli_seconds(
-      static_cast<unsigned int>(duration_in_milli_seconds.count()));
+      static_cast<std::size_t>(duration_in_milli_seconds.count()));
 
   // Set the generated result object.
   // This will also signal to the client that we are done.

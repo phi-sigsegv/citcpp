@@ -14,7 +14,7 @@ class covm_exec_result_impl : public covm_exec_result {
     }
 
     void set_invalid_test_indices(
-        std::vector<unsigned int> invalid_test_indices) {
+        std::vector<std::size_t> invalid_test_indices) {
       invalid_test_indices_ = std::move(invalid_test_indices);
     }
 

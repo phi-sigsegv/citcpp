@@ -141,7 +141,7 @@ class cagen_exec_handle {
      * is frequently updated during the execution. So for instance
      * this method can be used for showing the progress of the execution.
      */
-    virtual unsigned int get_testset_size() const = 0;
+    virtual std::size_t get_testset_size() const = 0;
 
     /**
      * Calling this method aborts the current execution.
@@ -163,7 +163,7 @@ class cagen_exec_handle {
      * If the computation has not terminated yet, then calling this method
      * returns 0.0.
      */
-    virtual unsigned int get_duration_in_milli_seconds() const = 0;
+    virtual std::size_t get_duration_in_milli_seconds() const = 0;
 };
 
 }  // namespace citcpp

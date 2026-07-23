@@ -13,7 +13,7 @@ namespace citcpp {
  */
 class coverage_measurement {
   public:
-    static constexpr int NUM_DIFFERENTIATED_COVERAGE_LEVELS = 21;
+    static constexpr unsigned int NUM_DIFFERENTIATED_COVERAGE_LEVELS = 21;
     typedef std::array<unsigned long long, NUM_DIFFERENTIATED_COVERAGE_LEVELS>
         t_coverage_level_to_num_param_combos;
 
@@ -114,8 +114,8 @@ class coverage_measurement {
       coverage_fraction = std::max(std::min(coverage_fraction, 1.0), 0.0);
 
       // Map the coverage fraction to the appropriate array index.
-      int index = std::min(
-          static_cast<int>(
+      unsigned int index = std::min(
+          static_cast<unsigned int>(
               static_cast<double>(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
               coverage_fraction),
           NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);
@@ -134,7 +134,7 @@ class coverage_measurement {
 
       // Map the coverage fraction to the appropriate array index.
       int index = std::min(
-          static_cast<int>(
+          static_cast<unsigned int>(
               static_cast<double>(NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1) *
               coverage_fraction),
           NUM_DIFFERENTIATED_COVERAGE_LEVELS - 1);

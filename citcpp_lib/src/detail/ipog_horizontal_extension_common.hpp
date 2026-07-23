@@ -9,14 +9,14 @@ namespace citcpp {
 namespace detail {
 
 inline std::vector<int> get_value_to_valid_options(
-    int num_current_param_values,
-    const std::vector<citcpp::detail::bitset_uint64>& valid_values) {
+    unsigned int num_current_param_values,
+    const std::vector<bitset_uint64>& valid_values) {
 
   std::vector<int> valid_value_options(num_current_param_values, 0);
 
   for (const auto& test_valid_values : valid_values) {
-    for (int v = 0; v < num_current_param_values; ++v) {
-      if (test_valid_values.test(v)) {
+    for (unsigned int v = 0; v < num_current_param_values; ++v) {
+      if (test_valid_values.test(static_cast<bitset_uint64::size_type>(v))) {
         valid_value_options[v] += 1;
       }
     }

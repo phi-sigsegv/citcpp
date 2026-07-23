@@ -217,7 +217,7 @@ class sylvan {
      * per worker. If <n_workers> is set to 0, automatically detects available
      * cores. If <dqsize> is est to 0, uses a reasonable default value.
      */
-    static void init_lace(unsigned int n_workers, size_t dqsize);
+    static void init_lace(unsigned int n_workers, std::size_t dqsize);
 
     /**
      * Initializes the Sylvan framework, call this only once in your
@@ -232,8 +232,10 @@ class sylvan {
      * @param maxCacheSize the maximum size of the operation cache. Must be a
      * power of two.
      */
-    static void init_package(size_t initialTableSize, size_t maxTableSize,
-                             size_t initialCacheSize, size_t maxCacheSize);
+    static void init_package(std::size_t initialTableSize,
+                             std::size_t maxTableSize,
+                             std::size_t initialCacheSize,
+                             std::size_t maxCacheSize);
 
     /**
      * Initializes the Sylvan framework, call this only once in your
@@ -257,7 +259,7 @@ class sylvan {
      * @param initial_ratio controls how much smaller the initial tables are
      * with respect to their maximum size limit
      */
-    static void init_package(size_t memory_cap, int table_ratio,
+    static void init_package(std::size_t memory_cap, int table_ratio,
                              int initial_ratio);
 
     /**

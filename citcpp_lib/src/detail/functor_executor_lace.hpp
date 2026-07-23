@@ -34,7 +34,7 @@ class functor_executor_lace {
 
     unsigned int get_num_workers() const;
 
-    unsigned int get_worker_id() const;
+    std::size_t get_worker_id() const;
 
     void suspend_workers();
 

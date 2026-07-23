@@ -110,10 +110,12 @@ void check_non_relation_params_are_dont_care(
     ++param_idx;
   }
 
-  auto not_in_relation_params = [&relation_param_names](const parameter& p) {
+  auto not_in_relation_params =
+      [&relation_param_names](const parameter& p) -> bool {
     return !relation_param_names.contains(p.get_name());
   };
-  auto to_param_index = [&param_to_index_map](const parameter& p) {
+  auto to_param_index =
+      [&param_to_index_map](const parameter& p) -> unsigned int {
     return param_to_index_map[p.get_name()];
   };
   std::vector<unsigned int> param_indices_expect_dont_care;

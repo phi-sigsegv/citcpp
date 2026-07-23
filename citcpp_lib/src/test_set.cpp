@@ -19,12 +19,11 @@ std::ostream& operator<<(std::ostream& os, const test_set& test_set) {
 
   for (const auto& test : test_set.get_list_of_tests()) {
     sep = &detail::EMPTY_VALUE_SEPARATOR;
-    for (std::vector<int>::size_type p = 0; p < test.size(); ++p) {
+    for (std::size_t p = 0; p < test.size(); ++p) {
       int pv = test.at(p);
 
       const parameter& param = test_set.get_parameters()[p];
-      if (pv >= 0 && (std::vector<parameter_value>::size_type)pv <
-                         param.get_values().size()) {
+      if (pv >= 0 && static_cast<std::size_t>(pv) < param.get_values().size()) {
         os << *sep << param.get_values()[pv];
       } else {
         os << *sep << DONT_CARE_PARAMETER_VALUE;

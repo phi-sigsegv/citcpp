@@ -12,9 +12,10 @@ constraint_handler::~constraint_handler() {}
 bitset_uint64 constraint_handler::check_validity_of_partial_tests(
     const internal_test_set& test_set) const {
 
-  bitset_uint64 result(test_set.get_list_of_tests().size());
+  bitset_uint64 result(static_cast<bitset_uint64::size_type>(
+      test_set.get_list_of_tests().size()));
 
-  unsigned int test_index = 0;
+  bitset_uint64::size_type test_index = 0;
   for (const auto& t : test_set.get_list_of_tests()) {
     if (is_valid_partial_test(t)) {
       result.set(test_index);
@@ -30,7 +31,7 @@ std::vector<bitset_uint64> constraint_handler::get_valid_parameter_assignments(
 
   std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
 
-  unsigned int test_index = 0;
+  std::size_t test_index = 0;
   for (const auto& t : test_set.get_list_of_tests()) {
     result[test_index] = get_valid_parameter_assignments(t, param_idx);
     ++test_index;
@@ -49,7 +50,7 @@ void constraint_handler::replace_dont_care_values(
 
 std::unique_ptr<constraint_handler>
 constraint_handler::create_constraint_handler(
-    const internal_model& model, int num_worker_threads,
+    const internal_model& model, unsigned int num_worker_threads,
     std::size_t memory_limit_in_bytes,
     constraint_handler_init_progress& exec_handle) {
 
@@ -59,7 +60,8 @@ constraint_handler::create_constraint_handler(
     return std::make_unique<constraint_handler_void>(model);
   } else {
     exec_handle.set_constraint_handler_init_progress_target(
-        model.get_input_model().get_constraints().size());
+        static_cast<unsigned int>(
+            model.get_input_model().get_constraints().size()));
     exec_handle.set_constraint_handler_init_progress_current(0);
 
     std::vector<unsigned int> variable_order =

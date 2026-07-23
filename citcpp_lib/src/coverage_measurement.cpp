@@ -3,7 +3,7 @@
 
 namespace citcpp {
 
-std::ostream &operator<<(std::ostream &os, const coverage_measurement &covm) {
+std::ostream& operator<<(std::ostream& os, const coverage_measurement& covm) {
   const unsigned long long num_combos_to_cover =
       covm.get_number_of_combinations_to_cover();
 
@@ -11,15 +11,16 @@ std::ostream &operator<<(std::ostream &os, const coverage_measurement &covm) {
   unsigned int percent_covered_threshold = 5;
   os << "Coverage by tests:\n";
   for (unsigned long long num_covered_combos : covm.get_covered_tuples()) {
-    const double fraction_covered =
-        (double)num_covered_combos / (double)num_combos_to_cover;
+    const double fraction_covered = static_cast<double>(num_covered_combos) /
+                                    static_cast<double>(num_combos_to_cover);
     const unsigned int percent_covered =
-        (((unsigned int)std::floor(fraction_covered * 100.0)) / 5) * 5;
+        (static_cast<unsigned int>(std::floor(fraction_covered * 100.0)) / 5) *
+        5;
 
     if (percent_covered >= percent_covered_threshold) {
       const double percent_of_tests =
-          std::ceil(1000.0 * (double)(test_index + 1) /
-                    (double)covm.get_covered_tuples().size()) /
+          std::ceil(1000.0 * static_cast<double>(test_index + 1) /
+                    static_cast<double>(covm.get_covered_tuples().size())) /
           10.0;
 
       os << "Coverage >= " << percent_covered << "% = " << num_covered_combos
@@ -38,11 +39,12 @@ std::ostream &operator<<(std::ostream &os, const coverage_measurement &covm) {
 
   os << "param combinations: " << num_param_combos_to_cover << "\n";
   os << "param combinations coverage:\n";
-  for (int i = 0; i <= 20; ++i) {
-    const double frac = (double)i * 0.05;
+  for (unsigned int i = 0; i <= 20; ++i) {
+    const double frac = static_cast<double>(i) * 0.05;
     const unsigned long long num_param_combos = covm[frac];
     const double percent_of_all_param_combos =
-        (double)num_param_combos / (double)num_param_combos_to_cover * 100.0;
+        static_cast<double>(num_param_combos) /
+        static_cast<double>(num_param_combos_to_cover) * 100.0;
     os << "Coverage >= " << frac * 100.0 << "% : " << num_param_combos << "/"
        << num_param_combos_to_cover << " = " << percent_of_all_param_combos
        << "%\n";

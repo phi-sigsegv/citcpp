@@ -7,7 +7,7 @@ namespace {
 template <typename T_SECOND_LEVEL_TYPE>
 inline unsigned long long recursively_initialize_coverage_map(
     int start_idx_for_next, int current_level,
-    unsigned long long num_value_combinations,
+    unsigned int num_value_combinations,
     citcpp::detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>& cov_map,
     const citcpp::detail::internal_model& model,
     const std::vector<unsigned int>& parameter_index_map,
@@ -18,17 +18,21 @@ inline unsigned long long recursively_initialize_coverage_map(
 
   unsigned long long partial_sum = 0;
   for (int j = start_idx_for_next; j >= current_level; --j) {
-    param_indices[current_level] = parameter_index_map[j];
+    param_indices[current_level] =
+        static_cast<std::uint16_t>(parameter_index_map[j]);
 
     if (current_level == 0) {
-      unsigned long long final_num_value_combinations =
+      const unsigned int final_num_value_combinations =
           num_value_combinations *
           model.get_parameter_num_values()[parameter_index_map[j]];
       partial_sum += final_num_value_combinations;
 
-      cov_map.get_coverage_map()[cov_map_first_level_index] =
-          typename citcpp::detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::
-              second_level_type(final_num_value_combinations, param_indices);
+      cov_map.get_coverage_map()[cov_map_first_level_index] = typename citcpp::
+          detail::coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::second_level_type(
+              static_cast<typename citcpp::detail::coverage_map_tmpl<
+                  T_SECOND_LEVEL_TYPE>::second_level_type::size_type>(
+                  final_num_value_combinations),
+              param_indices);
 
       ++cov_map_first_level_index;
     } else {
@@ -74,26 +78,28 @@ coverage_map_tmpl<T_SECOND_LEVEL_TYPE>::coverage_map_tmpl(
 
   if (fixed_last_parameter) {
     const unsigned int real_last_param_idx = parameter_index_map[n_ - 1];
-    const int num_last_param_values =
+    const unsigned int num_last_param_values =
         model.get_parameter_num_values()[real_last_param_idx];
 
-    param_indices[t - 1] = real_last_param_idx;
+    param_indices[t - 1] = static_cast<std::uint16_t>(real_last_param_idx);
 
     if (t_ >= 2) {
       total_num_tuples_ = recursively_initialize_coverage_map(
-          n_ - 2, t_ - 2, num_last_param_values, *this, model,
-          parameter_index_map, cov_map_first_level_index, param_indices);
+          static_cast<int>(n_ - 2), static_cast<int>(t_ - 2),
+          num_last_param_values, *this, model, parameter_index_map,
+          cov_map_first_level_index, param_indices);
     } else {
       // We have exactly one parameter to select, which is just the one we have
       // fixed. So we do not have to walk over combinations of parameters here.
-      get_coverage_map()[0] =
-          second_level_type(num_last_param_values, param_indices);
+      get_coverage_map()[0] = second_level_type(
+          static_cast<second_level_type::size_type>(num_last_param_values),
+          param_indices);
       total_num_tuples_ = num_last_param_values;
     }
   } else {
     total_num_tuples_ = recursively_initialize_coverage_map(
-        n_ - 1, t_ - 1, 1, *this, model, parameter_index_map,
-        cov_map_first_level_index, param_indices);
+        static_cast<int>(n_ - 1), static_cast<int>(t_ - 1), 1, *this, model,
+        parameter_index_map, cov_map_first_level_index, param_indices);
   }
 }
 

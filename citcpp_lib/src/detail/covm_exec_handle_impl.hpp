@@ -66,7 +66,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
       return covm_result_.get_future();
     }
 
-    unsigned int get_duration_in_milli_seconds() const override {
+    std::size_t get_duration_in_milli_seconds() const override {
       return duration_msec_;
     }
 
@@ -107,7 +107,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
       covm_result_.set_value(std::move(covm_result));
     }
 
-    void set_duration_in_milli_seconds(unsigned int duration_msec) {
+    void set_duration_in_milli_seconds(std::size_t duration_msec) {
       duration_msec_ = duration_msec;
     }
 
@@ -129,7 +129,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
     std::atomic_ullong processed_combinations_;
     std::atomic_flag is_aborted_;
     std::promise<citcpp::covm_exec_result> covm_result_;
-    std::atomic_uint duration_msec_;
+    std::atomic_size_t duration_msec_;
     std::thread thread_;
     std::unique_ptr<citcpp_covm> runnable_;
 };

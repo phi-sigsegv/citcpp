@@ -230,20 +230,19 @@ class constraint_flattening_visitor {
   public:
     constraint_flattening_visitor() : last_nary_expr_(nullptr) {}
 
-    citcpp::constraint_type operator()(const citcpp::boolean_literal& lit) {
+    citcpp::constraint_type operator()(const citcpp::boolean_literal&) {
       return citcpp::constraint_type::LITERAL;
     }
 
-    citcpp::constraint_type operator()(
-        const citcpp::boolean_proposition& prop) {
+    citcpp::constraint_type operator()(const citcpp::boolean_proposition&) {
       return citcpp::constraint_type::PROP_BOOLEAN;
     }
 
-    citcpp::constraint_type operator()(const citcpp::enum_proposition& prop) {
+    citcpp::constraint_type operator()(const citcpp::enum_proposition&) {
       return citcpp::constraint_type::PROP_ENUM;
     }
 
-    citcpp::constraint_type operator()(const citcpp::int_proposition& prop) {
+    citcpp::constraint_type operator()(const citcpp::int_proposition&) {
       return citcpp::constraint_type::PROP_INT;
     }
 
@@ -255,7 +254,7 @@ class constraint_flattening_visitor {
     }
 
     citcpp::constraint_type operator()(citcpp::and_expression& and_expr) {
-      for (int i = 0; i < and_expr.get_operands().size(); ++i) {
+      for (std::size_t i = 0; i < and_expr.get_operands().size(); ++i) {
         // We create a new shared_ptr pointing at the operand, so that replacing
         // the object which the shared_ptr at and_expr.get_operands()[i]
         // points to does not immediately deletes the operand.
@@ -298,7 +297,7 @@ class constraint_flattening_visitor {
     }
 
     citcpp::constraint_type operator()(citcpp::or_expression& or_expr) {
-      for (int i = 0; i < or_expr.get_operands().size(); ++i) {
+      for (std::size_t i = 0; i < or_expr.get_operands().size(); ++i) {
         // We create a new shared_ptr pointing at the operand, so that replacing
         // the object which the shared_ptr at or_expr.get_operands()[i]
         // points to does not immediately deletes the operand.
@@ -423,7 +422,6 @@ class simplification_visitor {
       param_to_valid_values_map valid_value_map;
       value_set& valid_values = valid_value_map[prop.get_parameter()];
 
-      bool required_value = false;
       switch (prop.get_operator()) {
         case citcpp::relational_operator::EQ:
           for (const auto& value : param.get_values()) {
@@ -473,7 +471,6 @@ class simplification_visitor {
       param_to_valid_values_map valid_value_map;
       value_set& valid_values = valid_value_map[prop.get_parameter()];
 
-      bool required_value = false;
       switch (prop.get_operator()) {
         case citcpp::relational_operator::EQ:
           for (const auto& value : param.get_values()) {
@@ -550,7 +547,7 @@ class simplification_visitor {
       param_to_valid_values_map valid_value_map;
       bool is_first_non_trivial = true;
       std::vector<std::shared_ptr<citcpp::constraint>> operands;
-      for (int i = 0; i < and_expr.get_operands().size(); ++i) {
+      for (std::size_t i = 0; i < and_expr.get_operands().size(); ++i) {
         const auto& operand = and_expr.get_operands()[i];
         return_type op_res(operand->accept<return_type>(*this));
         if (op_res.first->get_constraint_type() ==
@@ -640,7 +637,7 @@ class simplification_visitor {
       param_to_valid_values_map valid_value_map;
       bool is_first_non_trivial = true;
       std::vector<std::shared_ptr<citcpp::constraint>> operands;
-      for (int i = 0; i < or_expr.get_operands().size(); ++i) {
+      for (std::size_t i = 0; i < or_expr.get_operands().size(); ++i) {
         const auto& operand = or_expr.get_operands()[i];
         return_type op_res(operand->accept<return_type>(*this));
         if (op_res.first->get_constraint_type() ==
@@ -720,9 +717,7 @@ class simplification_visitor {
           std::move(valid_value_map));
     }
 
-    return_type operator()(const citcpp::implication& impl_expr) {
-      return return_type();
-    }
+    return_type operator()(const citcpp::implication&) { return return_type(); }
 
     bool did_simplify() const { return did_simplify_; }
 
@@ -764,7 +759,7 @@ model& simplify_model(model& m) {
   }
 
   constraint_flattening_visitor flattening_visitor;
-  for (int i = 0; i < m.get_constraints().size(); ++i) {
+  for (std::size_t i = 0; i < m.get_constraints().size(); ++i) {
     // We create a new shared_ptr pointing at the constraint, so that replacing
     // the object which the shared_ptr at m.get_constraints()[i]
     // points to does not immediately delete the constraint.
@@ -814,7 +809,7 @@ model& simplify_model(model& m) {
     std::vector<std::shared_ptr<constraint>> new_constraints;
     new_constraints.reserve(m.get_constraints().size());
 
-    for (int i = 0; i < m.get_constraints().size(); ++i) {
+    for (std::size_t i = 0; i < m.get_constraints().size(); ++i) {
       const std::shared_ptr<citcpp::constraint>& constr =
           m.get_constraints()[i];
 

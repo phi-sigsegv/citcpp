@@ -14,6 +14,7 @@ namespace {
 
 class test_set_data_consumer {
   public:
+    virtual ~test_set_data_consumer() = default;
     virtual void set_param_identifier(const std::string& identifier) = 0;
     virtual void end_param_declarations() = 0;
     virtual void parse_param_value(const std::string& value, size_t line,
@@ -39,7 +40,7 @@ class param_declarations_end_consumer {
     param_declarations_end_consumer(test_set_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues& vs) {
+    void operator()(const peg::SemanticValues&) {
       consumer_->end_param_declarations();
     }
 
@@ -160,6 +161,8 @@ class test_set_parser::impl : test_set_data_consumer {
           });
     }
 
+    virtual ~impl() = default;
+
     void set_test_set(test_set* t) { test_set_ = t; }
 
     void set_param_identifier(const std::string& identifier) {
@@ -174,7 +177,8 @@ class test_set_parser::impl : test_set_data_consumer {
 
         error_message_ = oss.str();
 
-        // Defensively add an empty parameter to keep test_set parameters size in sync
+        // Defensively add an empty parameter to keep test_set parameters size
+        // in sync
         parameter dummy;
         dummy.set_name(identifier);
         dummy.set_type(parameter_type::ENUM);
@@ -189,7 +193,8 @@ class test_set_parser::impl : test_set_data_consumer {
 
     void parse_param_value(const std::string& value, size_t line, size_t col) {
       if (current_param_index_ < test_set_->get_parameters().size()) {
-        const parameter& param = test_set_->get_parameters()[current_param_index_];
+        const parameter& param =
+            test_set_->get_parameters()[current_param_index_];
         if (value == "*") {
           current_test_.push_back(-1);
         } else {
@@ -310,7 +315,7 @@ class test_set_parser::impl : test_set_data_consumer {
     bool error_occurred_;
     std::string error_message_;
     std::vector<int> current_test_;
-    int current_param_index_;
+    std::size_t current_param_index_;
     test_set* test_set_;
 };
 

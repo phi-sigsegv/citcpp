@@ -23,7 +23,8 @@ class duration_wrapper {
 
       // Truncate at 3 decimal points.
       double secs_truncated =
-          ((unsigned int)(d.duration_in_sec_.count() * 1000.0)) / 1000.0;
+          static_cast<std::size_t>(d.duration_in_sec_.count() * 1000.0) /
+          1000.0;
       os << secs_truncated << "s";
 
       return os;
