@@ -1560,6 +1560,27 @@ TASK_5(int, sylvan_idd_mark_valid_recursive, MDD, ldd, MDD, cube, int,
   return aborted;
 }
 
+struct p_info {
+    uint32_t id;
+    uint32_t pos;
+};
+
+VOID_TASK_4(sylvan_idd_mark_valid, MDD, ldd, const p_info*, vars, int, num_vars,
+            const marking_context*, ctx) {
+
+  MDD cube = lddmc_true;
+  for (int i = num_vars - 1; i >= 0; --i) {
+    uint32_t val = (vars[i].id << 16) | vars[i].pos;
+    cube = lddmc_makenode(val, cube, lddmc_false);
+  }
+
+  lddmc_protect(&cube);
+
+  CALL(sylvan_idd_mark_valid_recursive, ldd, cube, 0, 0, ctx);
+
+  lddmc_unprotect(&cube);
+}
+
 /**
  * This is just the method lddmc_satcount from the sylvan library modified
  * accordingly to work on encoded intervals.
@@ -1662,10 +1683,8 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
 #define sylvan_idd_join(a, b, a_proj, b_proj) \
   RUN(sylvan_idd_join, a, b, a_proj, b_proj)
 
-#define sylvan_idd_mark_valid_recursive(ldd, cube, idd_var_idx, current_index, \
-                                        ctx)                                   \
-  RUN(sylvan_idd_mark_valid_recursive, ldd, cube, idd_var_idx, current_index,  \
-      ctx)
+#define sylvan_idd_mark_valid(ldd, vars, num_vars, ctx) \
+  RUN(sylvan_idd_mark_valid, ldd, vars, num_vars, ctx)
 
 #define sylvan_idd_satcount(mdd) RUN(sylvan_idd_satcount, mdd)
 
@@ -2130,25 +2149,14 @@ void sylvan_idd::mark_valid_value_combinations(
 
   // Prepare parameters of interest sorted by their ID (which is their level in
   // the IDD)
-  struct p_info {
-      uint32_t id;
-      int pos;
-  };
   std::vector<p_info> sorted_p;
-  for (int i = 0; i < t; ++i) {
+  for (uint32_t i = 0; i < t; ++i) {
     uint32_t p_id = parameter_to_level ? (*parameter_to_level)[param_indices[i]]
                                        : param_indices[i];
     sorted_p.push_back({p_id, i});
   }
   std::sort(sorted_p.begin(), sorted_p.end(),
             [](const p_info& a, const p_info& b) { return a.id < b.id; });
-
-  MDD cube = lddmc_true;
-  for (int i = t - 1; i >= 0; --i) {
-    uint32_t val = (sorted_p[i].id << 16) | (uint32_t)sorted_p[i].pos;
-    cube = lddmc_makenode(val, cube, lddmc_false);
-  }
-  lddmc_protect(&cube);
 
   citcpp::detail::spin_lock lock;
   marking_context ctx;
@@ -2161,9 +2169,7 @@ void sylvan_idd::mark_valid_value_combinations(
   ctx.param_indices = &param_indices;
   ctx.invocation_id = invocation_id;
 
-  sylvan_idd_mark_valid_recursive(idd_, cube, 0, 0, &ctx);
-
-  lddmc_unprotect(&cube);
+  sylvan_idd_mark_valid(idd_, sorted_p.data(), t, &ctx);
 }
 
 size_t sylvan_idd::node_count() const { return lddmc_nodecount(idd_); }
