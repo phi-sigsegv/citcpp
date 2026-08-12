@@ -37,6 +37,11 @@ class cagen_exec_result {
       COVERING_ARRAY_GENERATION_ERROR
     };
 
+    cagen_exec_result()
+        : test_set_(),
+          result_code_(cagen_result_code::COVERING_ARRAY_GENERATION_COMPLETED),
+          error_message_() {}
+
     /**
      * Returns the created test set.
      */

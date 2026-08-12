@@ -235,7 +235,7 @@ class array_fixed_size {
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
   public:
-    array_fixed_size() = default;
+    array_fixed_size() : m_array() {}
     array_fixed_size(const this_type&) = default;
     array_fixed_size(this_type&&) = default;
     ~array_fixed_size() = default;

@@ -39,7 +39,15 @@ class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task
     typedef functor_task_base<compute_partial_sum_task> base_type;
 
   public:
-    compute_partial_sum_task() = default;
+    compute_partial_sum_task()
+        : base_type(),
+          max_param_idx_(0),
+          min_param_idx_(0),
+          num_params_to_select_(0),
+          additional_factor_(0),
+          factor_levels_(nullptr),
+          parameter_index_map_(nullptr),
+          num_combinations_(nullptr) {}
 
     compute_partial_sum_task(
         unsigned int max_param_idx, unsigned int min_param_idx,

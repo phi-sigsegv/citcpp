@@ -405,7 +405,12 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     check_validity_task {
 
   public:
-    check_validity_task() = default;
+    check_validity_task()
+        : test_(nullptr),
+          test_index_(0),
+          handler_(nullptr),
+          result_(nullptr),
+          mut_(nullptr) {}
 
     check_validity_task(const citcpp::detail::test* test,
                         std::size_t test_index,
@@ -470,7 +475,12 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     get_valid_parameter_assignments_task {
 
   public:
-    get_valid_parameter_assignments_task() = default;
+    get_valid_parameter_assignments_task()
+        : test_(nullptr),
+          param_idx_(0),
+          test_index_(0),
+          handler_(nullptr),
+          results_(nullptr) {}
 
     get_valid_parameter_assignments_task(
         const citcpp::detail::test* test, unsigned int param_idx,
@@ -569,10 +579,10 @@ VOID_TASK_2(lace_replace_dont_care_values_in_testset_task,
 }
 
 struct lace_get_first_test_valid_for_assignment_ctx {
-    const citcpp::detail::param_vector* param_indices;
-    const citcpp::detail::value_vector* value_indices;
-    std::atomic_size_t min_valid_index;
-    citcpp::detail::test_list_intrusive_integ* test;
+    const citcpp::detail::param_vector* param_indices = nullptr;
+    const citcpp::detail::value_vector* value_indices = nullptr;
+    std::atomic_size_t min_valid_index = 0;
+    citcpp::detail::test_list_intrusive_integ* test = nullptr;
     citcpp::detail::spin_lock lock;
 };
 
@@ -635,6 +645,7 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
             ctx->min_valid_index.load(std::memory_order_relaxed);
         if (i < current_min) {
           std::lock_guard<citcpp::detail::spin_lock> guard(ctx->lock);
+          current_min = ctx->min_valid_index.load(std::memory_order_relaxed);
           if (i < current_min) {
             ctx->min_valid_index.store(i, std::memory_order_relaxed);
             ctx->test = &list_node;

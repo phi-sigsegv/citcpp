@@ -48,8 +48,8 @@ class function_ref<Ret(Params...)> {
     }
 
   public:
-    function_ref() = default;
-    function_ref(std::nullptr_t) {}
+    function_ref() : callback_(nullptr), callable_(0) {}
+    function_ref(std::nullptr_t) : callback_(nullptr), callable_(0) {}
 
     template <typename Callable>
     function_ref(

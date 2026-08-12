@@ -38,6 +38,12 @@ class covm_exec_result {
       COVERAGE_MEASUREMENT_ERROR
     };
 
+    covm_exec_result()
+        : result_(),
+          invalid_test_indices_(),
+          result_code_(covm_result_code::COVERAGE_MEASUREMENT_COMPLETED),
+          error_message_() {}
+
     /**
      * Returns a map from relation IDs to objects collecting the results
      * of the coverage measurement.

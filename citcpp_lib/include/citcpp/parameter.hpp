@@ -86,6 +86,8 @@ enum class parameter_type { BOOLEAN, ENUM, INTEGER };
  */
 class parameter {
   public:
+    parameter() : name_(), type_(parameter_type::BOOLEAN), values_() {}
+
     const std::string& get_name() const { return name_; }
 
     std::string& get_name() { return name_; }
@@ -182,6 +184,8 @@ struct parameter_reference_hash {
  */
 class relation {
   public:
+    relation() : name_(), parameters_(), interaction_strength_(0) {}
+
     const std::string& get_name() const { return name_; }
 
     void set_name(std::string_view name) { name_ = name; }
