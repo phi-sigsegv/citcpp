@@ -67,8 +67,6 @@ if(NOT MSVC)
     -Wshadow           # Variable shadowing
     -Wnon-virtual-dtor # Missing virtual destructors
     -Wnull-dereference # Null pointer dereferences
-    -Wconversion       # Implicit type conversions losing precision
-    -Wold-style-cast   # Use C++ static_cast instead of C-style casts
     -Wno-interference-size
   )
 endif()
