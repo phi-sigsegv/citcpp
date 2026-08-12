@@ -22,6 +22,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/idd_variable_ordering.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/lace_lifecycle.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/parameter.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/relation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp
@@ -31,6 +32,8 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/parser_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/acts_model_parser.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set_parser.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/cagen_exec_handle.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/covm_exec_handle.cpp
 )
 
 add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
@@ -55,7 +58,7 @@ if (ENABLE_CLANG_TIDY)
   find_program(CLANG_TIDY_PATH clang-tidy)
   if(CLANG_TIDY_PATH)
     set_target_properties(citcpp_lib PROPERTIES
-      CXX_CLANG_TIDY "${CLANG_TIDY_PATH};-checks=bugprone-*,clang-analyzer-*,cppcoreguidelines-*"
+      CXX_CLANG_TIDY "${CLANG_TIDY_PATH};-checks=bugprone-*,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-pro-bounds-avoid-unchecked-container-access;--config={CheckOptions: {cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true}}"
     )
   endif()
 endif()

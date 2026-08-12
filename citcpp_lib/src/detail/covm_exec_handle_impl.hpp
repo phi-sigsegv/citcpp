@@ -31,7 +31,7 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
     covm_exec_handle_impl& operator=(covm_exec_handle_impl&&) = delete;
     covm_exec_handle_impl& operator=(const covm_exec_handle_impl&) = delete;
 
-    ~covm_exec_handle_impl() {
+    ~covm_exec_handle_impl() override {
       abort();
       thread_.join();
     }

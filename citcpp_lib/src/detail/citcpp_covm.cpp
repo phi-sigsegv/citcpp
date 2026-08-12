@@ -14,7 +14,6 @@
 #include "constraint_handler.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
-#include "covm_exec_result_impl.hpp"
 #include "datatypes_config.hpp"
 #include "functor_executor_thread_pool.hpp"
 #include "model_simplifier.hpp"
@@ -211,7 +210,7 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   std::shared_ptr<constraint_handler> constr_handler =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
-          config_.constraint_handler_memory_limit_gb() * 1024 * 1024 * 1024,
+          config_.constraint_handler_memory_limit_gb() * GB_TO_BYTES_FACTOR,
           exec_handle.get_constraint_handler_init_progress());
 
   // Filter out invalid tests.
@@ -250,7 +249,7 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
 
   // Set the generated result object.
   // This will also signal to the client that we are done.
-  covm_exec_result_impl result;
+  covm_exec_result result;
   if (exec_handle.is_job_aborted()) {
     result.set_result_code(
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_ABORTED);

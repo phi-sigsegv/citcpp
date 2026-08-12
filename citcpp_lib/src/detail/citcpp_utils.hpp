@@ -32,7 +32,7 @@ bool recursively_visit_all_value_combos_of_param_combo(
     bit_pos_value_factor *= model.get_parameter_num_values()[param_indices[j]];
   }
 
-  for (int i = max_val - 1; i >= 0; --i) {
+  for (int i = static_cast<int>(max_val - 1); i >= 0; --i) {
     value_indices[current_index] = i;
 
     bool ret = true;
@@ -41,14 +41,12 @@ bool recursively_visit_all_value_combos_of_param_combo(
       bitset_uint64::size_type bit_pos =
           partial_bit_pos + i * bit_pos_value_factor;
       // Call the visitor.
-      ret = visitor(
-          value_indices, bit_pos,
-          std::forward<T_ADDITIONAL_VISITOR_ARGS>(additional_visitor_args)...);
+      ret = visitor(value_indices, bit_pos, additional_visitor_args...);
     } else {
       ret = recursively_visit_all_value_combos_of_param_combo(
           model, param_indices, value_indices, current_index - 1,
           partial_bit_pos + i * bit_pos_value_factor, visitor,
-          std::forward<T_ADDITIONAL_VISITOR_ARGS>(additional_visitor_args)...);
+          additional_visitor_args...);
     }
 
     if (!ret) {
@@ -63,6 +61,8 @@ bool recursively_visit_all_value_combos_of_param_combo(
 
 namespace citcpp {
 namespace detail {
+
+extern const std::size_t GB_TO_BYTES_FACTOR;
 
 extern const std::string EMPTY_VALUE_SEPARATOR;
 extern const std::string DEFAULT_VALUE_SEPARATOR;

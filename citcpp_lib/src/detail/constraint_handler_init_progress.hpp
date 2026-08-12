@@ -25,7 +25,7 @@ class constraint_handler_init_progress {
     constraint_handler_init_progress& operator=(
         const constraint_handler_init_progress&) = delete;
 
-    virtual ~constraint_handler_init_progress() {}
+    virtual ~constraint_handler_init_progress() = default;
 
   public:
     unsigned int get_constraint_handler_init_progress_target() const {

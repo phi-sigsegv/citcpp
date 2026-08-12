@@ -23,7 +23,7 @@ class coverage_bitset_tmpl {
           cov_num_ones_(other.cov_num_ones_.load()),
           valid_num_ones_(other.valid_num_ones_.load()) {}
 
-    coverage_bitset_tmpl(coverage_bitset_tmpl&& other)
+    coverage_bitset_tmpl(coverage_bitset_tmpl&& other) noexcept
         : bitset_(std::move(other.bitset_)),
           cov_num_ones_(other.cov_num_ones_.load()),
           valid_num_ones_(other.valid_num_ones_.load()) {}
@@ -39,7 +39,7 @@ class coverage_bitset_tmpl {
       return *this;
     }
 
-    coverage_bitset_tmpl& operator=(coverage_bitset_tmpl&& other) {
+    coverage_bitset_tmpl& operator=(coverage_bitset_tmpl&& other) noexcept {
       if (this != &other) {
         bitset_ = std::move(other.bitset_);
         cov_num_ones_ = other.cov_num_ones_.load();
@@ -51,7 +51,7 @@ class coverage_bitset_tmpl {
     /**
      * Swaps this and the given other bitset.
      */
-    void swap(coverage_bitset_tmpl& other) {
+    void swap(coverage_bitset_tmpl& other) noexcept {
       std::swap(bitset_, other.bitset_);
       size_type this_cov = cov_num_ones_.load();
       cov_num_ones_.store(other.cov_num_ones_.load());

@@ -1433,7 +1433,6 @@ TASK_2(MDD, sylvan_idd_project, MDD, mdd, MDD, proj) {
 struct marking_context {
     const size_t* weights;
     const unsigned int* domain_sizes;
-    int t;
     const uint32_t* idd_vars;
     citcpp::detail::spin_lock* lock;
     citcpp::detail::coverage_bitset* value_combinations;
@@ -1744,7 +1743,7 @@ static void sylvan_idd_fprintdot_rec(std::ofstream& out, MDD idd) {
             << " [style=solid];\n";
       }
     }
-    MDD right = mddnode_getright(n);
+    right = mddnode_getright(n);
     if (right == lddmc_false) break;
     n = LDD_GETNODE(right);
   }
@@ -1817,14 +1816,14 @@ sylvan_idd::sylvan_idd(const std::vector<int>& assignments,
       variables_() {
 
   if (variable_order) {
-    for (int level = 0; level < variable_order->size(); ++level) {
+    for (unsigned int level = 0; level < variable_order->size(); ++level) {
       const int value = assignments[(*variable_order)[level]];
       if (value >= 0) {
         variables_.push_back(level);
       }
     }
   } else {
-    for (int var = 0; var < assignments.size(); ++var) {
+    for (unsigned int var = 0; var < assignments.size(); ++var) {
       const int value = assignments[var];
       if (value >= 0) {
         variables_.push_back(var);
@@ -2138,7 +2137,7 @@ void sylvan_idd::mark_valid_value_combinations(
   uint64_t invocation_id =
       next_invocation_id.fetch_add(1, std::memory_order_relaxed);
 
-  const int t = param_indices.size();
+  const unsigned int t = param_indices.size();
 
   std::vector<size_t> weights(t);
   size_t current_weight = 1;
@@ -2162,7 +2161,6 @@ void sylvan_idd::mark_valid_value_combinations(
   marking_context ctx;
   ctx.weights = weights.data();
   ctx.domain_sizes = domain_sizes.data();
-  ctx.t = t;
   ctx.idd_vars = variables_.data();
   ctx.lock = &lock;
   ctx.value_combinations = &value_combinations;

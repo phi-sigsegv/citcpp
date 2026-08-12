@@ -405,12 +405,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     check_validity_task {
 
   public:
-    check_validity_task()
-        : test_(nullptr),
-          test_index_(0),
-          handler_(nullptr),
-          result_(nullptr),
-          mut_(nullptr) {}
+    check_validity_task() = default;
 
     check_validity_task(const citcpp::detail::test* test,
                         std::size_t test_index,
@@ -421,8 +416,6 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
           handler_(handler),
           result_(result),
           mut_(mut) {}
-
-    virtual ~check_validity_task() {}
 
     void operator()() {
       const bool is_valid = handler_->is_valid_partial_test(*test_);
@@ -440,11 +433,11 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     }
 
   private:
-    const citcpp::detail::test* test_;
-    std::size_t test_index_;
-    const citcpp::detail::constraint_handler* handler_;
-    citcpp::detail::bitset_uint64* result_;
-    std::mutex* mut_;
+    const citcpp::detail::test* test_{nullptr};
+    std::size_t test_index_{0};
+    const citcpp::detail::constraint_handler* handler_{nullptr};
+    citcpp::detail::bitset_uint64* result_{nullptr};
+    std::mutex* mut_{nullptr};
 };
 
 VOID_TASK_1(lace_check_test_validity_task, check_validity_task*, functor) {
@@ -475,12 +468,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     get_valid_parameter_assignments_task {
 
   public:
-    get_valid_parameter_assignments_task()
-        : test_(nullptr),
-          param_idx_(0),
-          test_index_(0),
-          handler_(nullptr),
-          results_(nullptr) {}
+    get_valid_parameter_assignments_task() = default;
 
     get_valid_parameter_assignments_task(
         const citcpp::detail::test* test, unsigned int param_idx,
@@ -493,19 +481,17 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
           handler_(handler),
           results_(results) {}
 
-    virtual ~get_valid_parameter_assignments_task() {}
-
     void operator()() {
       (*results_)[test_index_] =
           handler_->get_valid_parameter_assignments(*test_, param_idx_);
     }
 
   private:
-    const citcpp::detail::test* test_;
-    unsigned int param_idx_;
-    std::size_t test_index_;
-    const citcpp::detail::constraint_handler* handler_;
-    std::vector<citcpp::detail::bitset_uint64>* results_;
+    const citcpp::detail::test* test_{nullptr};
+    unsigned int param_idx_{0};
+    std::size_t test_index_{0};
+    const citcpp::detail::constraint_handler* handler_{nullptr};
+    std::vector<citcpp::detail::bitset_uint64>* results_{nullptr};
 };
 
 VOID_TASK_1(lace_get_valid_parameter_assignments_task,
@@ -545,13 +531,11 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
         const citcpp::detail::constraint_handler* handler)
         : test_(test), handler_(handler) {}
 
-    virtual ~replace_dont_care_values_task() {}
-
     void operator()() { handler_->replace_dont_care_values(*test_); }
 
   private:
-    citcpp::detail::test* test_;
-    const citcpp::detail::constraint_handler* handler_;
+    citcpp::detail::test* test_{nullptr};
+    const citcpp::detail::constraint_handler* handler_{nullptr};
 };
 
 VOID_TASK_1(lace_replace_dont_care_values_task, replace_dont_care_values_task*,

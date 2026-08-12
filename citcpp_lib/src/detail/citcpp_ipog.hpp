@@ -38,12 +38,14 @@ class citcpp_ipog : public citcpp_ipog_base {
     citcpp_ipog& operator=(citcpp_ipog&&) = delete;
     citcpp_ipog& operator=(const citcpp_ipog&) = delete;
 
+    ~citcpp_ipog() = default;
+
     void set_interaction_strength(int t);
 
     /**
      * This is the entry point to be called by a thread.
      */
-    void entry_point(cagen_exec_handle_ipog_impl& exec_handle);
+    void entry_point(cagen_exec_handle_ipog_impl& exec_handle) override;
 
   private:
     const citcpp::covering_array_computation_config config_;

@@ -32,7 +32,7 @@ void recursively_add_test_for_each_combination(
       model.get_parameter_num_values()[parameter_index_map[current_index]];
 
   for (unsigned int i = 0; i < max_val; ++i) {
-    values[current_index] = i;
+    values[current_index] = static_cast<int>(i);
     recursively_add_test_for_each_combination(model, parameter_index_map,
                                               current_index + 1, values,
                                               test_set, predicate);

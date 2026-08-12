@@ -2,46 +2,70 @@
 
 namespace citcpp {
 
-std::ostream& operator<<(std::ostream& os, const parameter_reference& param) {
-  os << param.get_name();
+model::model() = default;
 
-  return os;
+model::model(const model& other)
+    : name_(other.name_),
+      parameters_(other.parameters_),
+      relations_(other.relations_),
+      constraints_() {
+  constraints_.reserve(other.constraints_.size());
+  for (const auto& c : other.constraints_) {
+    constraints_.push_back(c->create_copy());
+  }
 }
 
-std::ostream& operator<<(std::ostream& os, const parameter& param) {
-  os << param.get_name() << " ";
-  switch (param.get_type()) {
-    case parameter_type::BOOLEAN:
-      os << "(boolean) : ";
-      break;
-    case parameter_type::ENUM:
-      os << "(enum) : ";
-      break;
-    case parameter_type::INTEGER:
-      os << "(int) : ";
-      break;
+model::model(model&& other) noexcept = default;
+
+model::~model() = default;
+
+model& model::operator=(const model& other) {
+  if (&other != this) {
+    name_ = other.name_;
+    parameters_ = other.parameters_;
+    relations_ = other.relations_;
+    constraints_.clear();
+    constraints_.reserve(other.constraints_.size());
+    for (const auto& c : other.constraints_) {
+      constraints_.push_back(c->create_copy());
+    }
   }
 
-  const std::string EMPTY_SEP = "";
-  const std::string REAL_SEP = ", ";
-  const std::string* sep = &EMPTY_SEP;
-  for (const auto& value : param.get_values()) {
-    os << *sep << value;
-    sep = &REAL_SEP;
-  }
-
-  return os;
+  return *this;
 }
 
-std::ostream& operator<<(std::ostream& os, const relation& rel) {
-  os << rel.get_name() << ": (";
-  for (const auto& param : rel.get_parameters()) {
-    os << param << ", ";
-  }
-  os << rel.get_interaction_strength();
-  os << ")";
+model& model::operator=(model&& other) noexcept = default;
 
-  return os;
+const std::string& model::get_name() const { return name_; }
+
+void model::set_name(std::string_view name) { name_ = name; }
+
+const std::vector<parameter>& model::get_parameters() const {
+  return parameters_;
+}
+
+std::vector<parameter>& model::get_parameters() { return parameters_; }
+
+void model::add_parameter(parameter param) {
+  parameters_.push_back(std::move(param));
+}
+
+const std::vector<relation>& model::get_relations() const { return relations_; }
+
+std::vector<relation>& model::get_relations() { return relations_; }
+
+void model::add_relation(relation r) { relations_.push_back(std::move(r)); }
+
+const std::vector<std::shared_ptr<constraint>>& model::get_constraints() const {
+  return constraints_;
+}
+
+std::vector<std::shared_ptr<constraint>>& model::get_constraints() {
+  return constraints_;
+}
+
+void model::add_constraint(std::shared_ptr<constraint> constraint) {
+  constraints_.push_back(std::move(constraint));
 }
 
 std::ostream& operator<<(std::ostream& os, const model& model) {

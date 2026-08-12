@@ -7,6 +7,8 @@
 namespace citcpp {
 namespace detail {
 
+const std::size_t GB_TO_BYTES_FACTOR = 1024 * 1024 * 1024;
+
 const std::string EMPTY_VALUE_SEPARATOR = "";
 const std::string DEFAULT_VALUE_SEPARATOR = ", ";
 

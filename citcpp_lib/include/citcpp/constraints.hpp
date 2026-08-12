@@ -149,23 +149,17 @@ class constraint {
  */
 class boolean_literal : public constraint {
   public:
-    boolean_literal(bool value) : value_(value) {}
+    boolean_literal(bool value) noexcept;
 
-    constraint_type get_constraint_type() const override {
-      return constraint_type::LITERAL;
-    }
+    constraint_type get_constraint_type() const override;
 
-    bool get_value() const { return value_; }
+    bool get_value() const;
 
-    operator bool() const { return get_value(); }
+    operator bool() const;
 
   protected:
-    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
-      cb(std::ref(*this));
-    }
-    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
-      cb(std::cref(*this));
-    }
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override;
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override;
 
   private:
     bool value_;
@@ -182,14 +176,13 @@ enum class relational_operator { EQ, NEQ, LT, LE, GE, GT };
  */
 class atomic_proposition : public constraint {
   public:
-    atomic_proposition(parameter_reference param, relational_operator op)
-        : param_(param), op_(op) {}
+    atomic_proposition(parameter_reference param, relational_operator op);
 
-    const parameter_reference& get_parameter() const { return param_; }
+    const parameter_reference& get_parameter() const;
 
-    relational_operator get_operator() const { return op_; }
+    relational_operator get_operator() const;
 
-  protected:
+  private:
     parameter_reference param_;
     relational_operator op_;
 };
@@ -201,22 +194,15 @@ class atomic_proposition : public constraint {
 class boolean_proposition : public atomic_proposition {
   public:
     boolean_proposition(parameter_reference param, relational_operator op,
-                        parameter_value value)
-        : atomic_proposition(param, op), value_(value) {}
+                        parameter_value value);
 
-    constraint_type get_constraint_type() const override {
-      return constraint_type::PROP_BOOLEAN;
-    }
+    constraint_type get_constraint_type() const override;
 
-    bool get_compared_value() const { return value_; }
+    bool get_compared_value() const;
 
   protected:
-    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
-      cb(std::ref(*this));
-    }
-    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
-      cb(std::cref(*this));
-    }
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override;
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override;
 
   private:
     bool value_;
@@ -229,22 +215,15 @@ class boolean_proposition : public atomic_proposition {
 class enum_proposition : public atomic_proposition {
   public:
     enum_proposition(parameter_reference param, relational_operator op,
-                     parameter_value value)
-        : atomic_proposition(param, op), value_(value) {}
+                     parameter_value value);
 
-    constraint_type get_constraint_type() const override {
-      return constraint_type::PROP_ENUM;
-    }
+    constraint_type get_constraint_type() const override;
 
-    const std::string& get_compared_value() const { return value_; }
+    const std::string& get_compared_value() const;
 
   protected:
-    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
-      cb(std::ref(*this));
-    }
-    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
-      cb(std::cref(*this));
-    }
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override;
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override;
 
   private:
     std::string value_;
@@ -257,22 +236,15 @@ class enum_proposition : public atomic_proposition {
 class int_proposition : public atomic_proposition {
   public:
     int_proposition(parameter_reference param, relational_operator op,
-                    parameter_value value)
-        : atomic_proposition(param, op), value_(value) {}
+                    parameter_value value);
 
-    constraint_type get_constraint_type() const override {
-      return constraint_type::PROP_INT;
-    }
+    constraint_type get_constraint_type() const override;
 
-    int get_compared_value() const { return value_; }
+    int get_compared_value() const;
 
   protected:
-    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
-      cb(std::ref(*this));
-    }
-    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
-      cb(std::cref(*this));
-    }
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override;
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override;
 
   private:
     int value_;
@@ -286,27 +258,19 @@ enum class binary_operator { IMPL };
 class binary_operation : public constraint {
   public:
     binary_operation(std::shared_ptr<constraint> lhs, binary_operator op,
-                     std::shared_ptr<constraint> rhs)
-        : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
+                     std::shared_ptr<constraint> rhs);
 
-    binary_operator get_operator() const { return op_; }
+    binary_operator get_operator() const;
 
-    std::shared_ptr<constraint>& get_left_operand() { return lhs_; }
-    const std::shared_ptr<constraint>& get_left_operand() const { return lhs_; }
-    std::shared_ptr<constraint>& get_right_operand() { return rhs_; }
-    const std::shared_ptr<constraint>& get_right_operand() const {
-      return rhs_;
-    }
+    std::shared_ptr<constraint>& get_left_operand();
+    const std::shared_ptr<constraint>& get_left_operand() const;
+    std::shared_ptr<constraint>& get_right_operand();
+    const std::shared_ptr<constraint>& get_right_operand() const;
 
-    void set_left_operand(std::shared_ptr<constraint> lhs) {
-      lhs_ = std::move(lhs);
-    }
+    void set_left_operand(std::shared_ptr<constraint> lhs);
+    void set_right_operand(std::shared_ptr<constraint> rhs);
 
-    void set_right_operand(std::shared_ptr<constraint> rhs) {
-      rhs_ = std::move(rhs);
-    }
-
-  protected:
+  private:
     binary_operator op_;
     std::shared_ptr<constraint> lhs_;
     std::shared_ptr<constraint> rhs_;
@@ -318,21 +282,13 @@ class binary_operation : public constraint {
 class implication : public binary_operation {
   public:
     implication(std::shared_ptr<constraint> lhs,
-                std::shared_ptr<constraint> rhs)
-        : binary_operation(std::move(lhs), binary_operator::IMPL,
-                           std::move(rhs)) {}
+                std::shared_ptr<constraint> rhs);
 
-    constraint_type get_constraint_type() const override {
-      return constraint_type::IMPLICATION;
-    }
+    constraint_type get_constraint_type() const override;
 
   protected:
-    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
-      cb(std::ref(*this));
-    }
-    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
-      cb(std::cref(*this));
-    }
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override;
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override;
 };
 
 enum class nray_operator { AND, OR };
@@ -343,20 +299,14 @@ enum class nray_operator { AND, OR };
 class nary_operation : public constraint {
   public:
     nary_operation(nray_operator op,
-                   std::vector<std::shared_ptr<constraint>> operands)
-        : op_(op), operands_(std::move(operands)) {}
+                   std::vector<std::shared_ptr<constraint>> operands);
 
-    nray_operator get_operator() const { return op_; }
+    nray_operator get_operator() const;
 
-    std::vector<std::shared_ptr<constraint>>& get_operands() {
-      return operands_;
-    }
+    std::vector<std::shared_ptr<constraint>>& get_operands();
+    const std::vector<std::shared_ptr<constraint>>& get_operands() const;
 
-    const std::vector<std::shared_ptr<constraint>>& get_operands() const {
-      return operands_;
-    }
-
-  protected:
+  private:
     nray_operator op_;
     std::vector<std::shared_ptr<constraint>> operands_;
 };
@@ -366,20 +316,13 @@ class nary_operation : public constraint {
  */
 class and_expression : public nary_operation {
   public:
-    and_expression(std::vector<std::shared_ptr<constraint>> operands)
-        : nary_operation(nray_operator::AND, std::move(operands)) {}
+    and_expression(std::vector<std::shared_ptr<constraint>> operands);
 
-    constraint_type get_constraint_type() const override {
-      return constraint_type::AND_EXPR;
-    }
+    constraint_type get_constraint_type() const override;
 
   protected:
-    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
-      cb(std::ref(*this));
-    }
-    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
-      cb(std::cref(*this));
-    }
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override;
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override;
 };
 
 /**
@@ -387,20 +330,13 @@ class and_expression : public nary_operation {
  */
 class or_expression : public nary_operation {
   public:
-    or_expression(std::vector<std::shared_ptr<constraint>> operands)
-        : nary_operation(nray_operator::OR, std::move(operands)) {}
+    or_expression(std::vector<std::shared_ptr<constraint>> operands);
 
-    constraint_type get_constraint_type() const override {
-      return constraint_type::OR_EXPR;
-    }
+    constraint_type get_constraint_type() const override;
 
   protected:
-    void dispatch(function_ref<void(mutable_constraint_view)> cb) override {
-      cb(std::ref(*this));
-    }
-    void dispatch(function_ref<void(const_constraint_view)> cb) const override {
-      cb(std::cref(*this));
-    }
+    void dispatch(function_ref<void(mutable_constraint_view)> cb) override;
+    void dispatch(function_ref<void(const_constraint_view)> cb) const override;
 };
 
 }  // namespace citcpp

@@ -30,7 +30,7 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     cagen_exec_handle_base& operator=(cagen_exec_handle_base&&) = delete;
     cagen_exec_handle_base& operator=(const cagen_exec_handle_base&) = delete;
 
-    ~cagen_exec_handle_base() {
+    ~cagen_exec_handle_base() override {
       abort();
       thread_.join();
     }

@@ -44,7 +44,7 @@ class bitset_tmpl {
                       sizeof(storage_type));
     }
 
-    bitset_tmpl(bitset_tmpl&& other)
+    bitset_tmpl(bitset_tmpl&& other) noexcept
         : bits_(other.bits_), size_(other.size_), num_ones_(other.num_ones_) {
       other.bits_ = nullptr;
       other.size_ = 0;
@@ -68,7 +68,7 @@ class bitset_tmpl {
       return *this;
     }
 
-    bitset_tmpl& operator=(bitset_tmpl&& other) {
+    bitset_tmpl& operator=(bitset_tmpl&& other) noexcept {
       if (&other != this) {
         delete[] bits_;
         bits_ = other.bits_;
@@ -85,7 +85,7 @@ class bitset_tmpl {
     /**
      * Swaps this and the given other bitset.
      */
-    void swap(bitset_tmpl& other) {
+    void swap(bitset_tmpl& other) noexcept {
       std::swap(bits_, other.bits_);
       std::swap(size_, other.size_);
       std::swap(num_ones_, other.num_ones_);

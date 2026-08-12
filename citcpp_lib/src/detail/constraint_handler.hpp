@@ -16,7 +16,7 @@ namespace detail {
  */
 class constraint_handler {
   public:
-    virtual ~constraint_handler();
+    virtual ~constraint_handler() = default;
 
     /**
      * Returns whether this constraint handler is thread safe. This

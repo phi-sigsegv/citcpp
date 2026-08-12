@@ -11,11 +11,16 @@ namespace detail {
 class functor_execution_scope_lace {
   public:
     functor_execution_scope_lace() = default;
+
     functor_execution_scope_lace(const functor_execution_scope_lace&) = delete;
-    functor_execution_scope_lace& operator=(
-        const functor_execution_scope_lace&) = delete;
+    functor_execution_scope_lace(functor_execution_scope_lace&&) = default;
 
     ~functor_execution_scope_lace();
+
+    functor_execution_scope_lace& operator=(
+        const functor_execution_scope_lace&) = delete;
+    functor_execution_scope_lace& operator=(functor_execution_scope_lace&&) =
+        default;
 
     void spawn_execution(function_ref<void()> functor_ref);
 
@@ -30,7 +35,14 @@ class functor_execution_scope_lace {
 class functor_executor_lace {
   public:
     functor_executor_lace(unsigned int n_workers);
+
+    functor_executor_lace(const functor_executor_lace&) = delete;
+    functor_executor_lace(functor_executor_lace&&) = delete;
+
     ~functor_executor_lace();
+
+    functor_executor_lace& operator=(const functor_executor_lace&) = delete;
+    functor_executor_lace& operator=(functor_executor_lace&&) = delete;
 
     unsigned int get_num_workers() const;
 

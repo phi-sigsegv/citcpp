@@ -7,8 +7,6 @@
 namespace citcpp {
 namespace detail {
 
-constraint_handler::~constraint_handler() {}
-
 bitset_uint64 constraint_handler::check_validity_of_partial_tests(
     const internal_test_set& test_set) const {
 

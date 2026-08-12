@@ -94,8 +94,8 @@ class coverage_map_base {
 
     ~coverage_map_base() = default;
 
-    coverage_map_base& operator=(const coverage_map_base& other) = default;
-    coverage_map_base& operator=(coverage_map_base&& other) = default;
+    coverage_map_base& operator=(const coverage_map_base& other) = delete;
+    coverage_map_base& operator=(coverage_map_base&& other) = delete;
 
     const internal_model& get_model() const { return model_; }
 
@@ -156,8 +156,8 @@ class coverage_map_tmpl : public coverage_map_base {
 
     ~coverage_map_tmpl() = default;
 
-    coverage_map_tmpl& operator=(const coverage_map_tmpl& other) = default;
-    coverage_map_tmpl& operator=(coverage_map_tmpl&& other) = default;
+    coverage_map_tmpl& operator=(const coverage_map_tmpl& other) = delete;
+    coverage_map_tmpl& operator=(coverage_map_tmpl&& other) = delete;
 
     std::vector<second_level_type>& get_coverage_map() { return cov_map_; }
 
@@ -165,7 +165,7 @@ class coverage_map_tmpl : public coverage_map_base {
       return cov_map_;
     }
 
-  protected:
+  private:
     std::vector<second_level_type> cov_map_;
 };
 

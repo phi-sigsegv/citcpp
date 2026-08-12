@@ -23,6 +23,8 @@ class test_list_intrusive_integ : public sl_list_node_intrusive {
     test_list_intrusive_integ(test_list_intrusive_integ&& other)
         : base_type(std::move(other)), test_(other.test_) {}
 
+    ~test_list_intrusive_integ() = default;
+
     test_list_intrusive_integ& operator=(
         const test_list_intrusive_integ& other) {
       base_type::operator=(other);
@@ -105,6 +107,8 @@ class test {
         : values_(std::move(init)),
           value_partition_il_node_(this),
           vertical_ext_il_node_(this) {}
+
+    ~test() = default;
 
     test& operator=(const test& other) {
       values_ = other.values_;

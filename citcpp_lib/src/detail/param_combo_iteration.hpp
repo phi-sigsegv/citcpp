@@ -102,7 +102,7 @@ class param_combo_functor_parallel_iterator {
         unsigned int num_params_to_select_from,
         unsigned int num_params_to_select,
         const std::vector<unsigned int>& parameter_index_map,
-        bool fixed_last_parameter, T_EXEC& exec, Args... args)
+        bool fixed_last_parameter, T_EXEC& exec, Args&&... args)
         : iterate_tasks_(), exec_(&exec) {
 
       const int int_num_params_to_select_from =
@@ -121,9 +121,9 @@ class param_combo_functor_parallel_iterator {
           iterate_tasks_.reserve(loop_ub - loop_lb + 1);
 
           for (int j = loop_ub; j >= loop_lb; --j) {
-            iterate_tasks_.emplace_back(
-                parameter_index_map, j, j, int_num_params_to_select - 1,
-                param_vector(param_indices), std::forward<Args>(args)...);
+            iterate_tasks_.emplace_back(parameter_index_map, j, j,
+                                        int_num_params_to_select - 1,
+                                        param_vector(param_indices), args...);
           }
         } else {
           // If we have fixed the last parameter and shall only select one,
@@ -131,7 +131,7 @@ class param_combo_functor_parallel_iterator {
           iterate_tasks_.emplace_back(
               parameter_index_map, int_num_params_to_select_from - 1,
               int_num_params_to_select_from - 1, int_num_params_to_select,
-              param_vector(param_indices), std::forward<Args>(args)...);
+              param_vector(param_indices), args...);
         }
       } else {
         const int loop_ub = int_num_params_to_select_from - 1;
@@ -139,9 +139,9 @@ class param_combo_functor_parallel_iterator {
         iterate_tasks_.reserve(loop_ub - loop_lb + 1);
 
         for (int j = loop_ub; j >= loop_lb; --j) {
-          iterate_tasks_.emplace_back(
-              parameter_index_map, j, j, int_num_params_to_select,
-              param_vector(param_indices), std::forward<Args>(args)...);
+          iterate_tasks_.emplace_back(parameter_index_map, j, j,
+                                      int_num_params_to_select,
+                                      param_vector(param_indices), args...);
         }
       }
     }
@@ -192,8 +192,6 @@ class param_combo_functor_parallel_iterator {
               start_idx_(start_idx),
               end_idx_(end_idx),
               num_params_to_select_(num_params_to_select) {}
-
-        virtual ~iterate_task() {}
 
         void operator()() {
           const int current_level = num_params_to_select_ - 1;

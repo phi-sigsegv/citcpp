@@ -19,7 +19,7 @@ class cagen_exec_handle_ipog_impl;
  */
 class citcpp_ipog_base {
   public:
-    virtual ~citcpp_ipog_base() {}
+    virtual ~citcpp_ipog_base() = default;
 
     /**
      * This is the entry point to be called by a thread.

@@ -16,7 +16,7 @@ class constraint_handler_sylvan_base : public constraint_handler {
   public:
     constraint_handler_sylvan_base(unsigned int num_workers,
                                    std::size_t memory_limit_in_bytes);
-    virtual ~constraint_handler_sylvan_base();
+    ~constraint_handler_sylvan_base() override;
 };
 
 /**

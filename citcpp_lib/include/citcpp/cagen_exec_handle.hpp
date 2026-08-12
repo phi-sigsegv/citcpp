@@ -37,32 +37,50 @@ class cagen_exec_result {
       COVERING_ARRAY_GENERATION_ERROR
     };
 
-    cagen_exec_result()
-        : test_set_(),
-          result_code_(cagen_result_code::COVERING_ARRAY_GENERATION_COMPLETED),
-          error_message_() {}
-
     /**
      * Returns the created test set.
      */
-    const test_set& get_result() const { return test_set_; }
+    const test_set& get_result() const;
+
+    /**
+     * Sets the test set.
+     */
+    void set_result(const test_set& tests);
+
+    /**
+     * Sets the test set.
+     */
+    void set_result(test_set&& tests);
 
     /**
      * Returns the status code defining the result of the covering array
      * generation.
      */
-    cagen_result_code get_result_code() const { return result_code_; }
+    cagen_result_code get_result_code() const;
+
+    /**
+     * Sets the status code defining the result of a covering array
+     * generation.
+     */
+    void set_result_code(cagen_result_code result_code);
 
     /**
      * Returns the error message if an error occurred, or otherwise an empty
      * string.
      */
-    std::string_view get_error_message() const { return error_message_; }
+    std::string_view get_error_message() const;
 
-  protected:
-    test_set test_set_;
-    cagen_result_code result_code_;
-    std::string error_message_;
+    /**
+     * Sets the error message if an error occured. Shall be set to an empty
+     * string otherwise.
+     */
+    void set_error_message(std::string_view error_message);
+
+  private:
+    test_set test_set_{};
+    cagen_result_code result_code_{
+        cagen_result_code::COVERING_ARRAY_GENERATION_COMPLETED};
+    std::string error_message_{};
 };
 
 /**
@@ -95,7 +113,7 @@ class cagen_exec_handle {
      * if this handle is destroyed without the client explicitly waiting
      * for the execution.
      */
-    virtual ~cagen_exec_handle() {}
+    virtual ~cagen_exec_handle() = default;
 
     /**
      * Returns which phase is active.

@@ -3,7 +3,6 @@
 
 #include <unordered_map>
 
-#include "cagen_exec_handle_base.hpp"
 #include "coverage_map.hpp"
 #include "functor_executor.hpp"
 #include "internal_model.hpp"

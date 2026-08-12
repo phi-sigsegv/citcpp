@@ -15,10 +15,15 @@ class functor_execution_scope_thread_pool {
 
     functor_execution_scope_thread_pool(
         const functor_execution_scope_thread_pool&) = delete;
+    functor_execution_scope_thread_pool(functor_execution_scope_thread_pool&&) =
+        default;
+
+    ~functor_execution_scope_thread_pool() = default;
+
     functor_execution_scope_thread_pool& operator=(
         const functor_execution_scope_thread_pool&) = delete;
-
-    ~functor_execution_scope_thread_pool() {}
+    functor_execution_scope_thread_pool& operator=(
+        functor_execution_scope_thread_pool&&) = default;
 
     template <class T_CALLABLE>
       requires std::derived_from<T_CALLABLE, functor_task_base<T_CALLABLE>>
@@ -64,7 +69,16 @@ class functor_execution_scope_thread_pool {
 class functor_executor_thread_pool {
   public:
     functor_executor_thread_pool(thread_pool& tp) : tp_(tp) {}
+
+    functor_executor_thread_pool(const functor_executor_thread_pool&) = delete;
+    functor_executor_thread_pool(functor_executor_thread_pool&&) = delete;
+
     ~functor_executor_thread_pool() = default;
+
+    functor_executor_thread_pool& operator=(
+        const functor_executor_thread_pool&) = delete;
+    functor_executor_thread_pool& operator=(functor_executor_thread_pool&&) =
+        delete;
 
     std::size_t get_num_workers() const { return tp_.get_num_workers(); }
 

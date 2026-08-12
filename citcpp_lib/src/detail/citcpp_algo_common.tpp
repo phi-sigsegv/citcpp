@@ -39,15 +39,7 @@ class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task
     typedef functor_task_base<compute_partial_sum_task> base_type;
 
   public:
-    compute_partial_sum_task()
-        : base_type(),
-          max_param_idx_(0),
-          min_param_idx_(0),
-          num_params_to_select_(0),
-          additional_factor_(0),
-          factor_levels_(nullptr),
-          parameter_index_map_(nullptr),
-          num_combinations_(nullptr) {}
+    compute_partial_sum_task() = default;
 
     compute_partial_sum_task(
         unsigned int max_param_idx, unsigned int min_param_idx,
@@ -63,8 +55,6 @@ class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task
           factor_levels_(factor_levels),
           parameter_index_map_(parameter_index_map),
           num_combinations_(num_combinations) {}
-
-    virtual ~compute_partial_sum_task() {}
 
     void operator()() {
       const unsigned int current_level = num_params_to_select_ - 1;
@@ -86,13 +76,13 @@ class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task
     }
 
   private:
-    unsigned int max_param_idx_;
-    unsigned int min_param_idx_;
-    unsigned int num_params_to_select_;
-    unsigned long long additional_factor_;
-    const std::vector<unsigned int>* factor_levels_;
-    const std::vector<unsigned int>* parameter_index_map_;
-    std::atomic_ullong* num_combinations_;
+    unsigned int max_param_idx_{0};
+    unsigned int min_param_idx_{0};
+    unsigned int num_params_to_select_{0};
+    unsigned long long additional_factor_{0};
+    const std::vector<unsigned int>* factor_levels_{nullptr};
+    const std::vector<unsigned int>* parameter_index_map_{nullptr};
+    std::atomic_ullong* num_combinations_{nullptr};
 };
 
 class num_combos_per_param_combo_functor {

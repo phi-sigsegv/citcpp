@@ -9,7 +9,6 @@
 
 #include "binom_coeff_table.hpp"
 #include "cagen_exec_handle_ipog_impl.hpp"
-#include "cagen_exec_result_impl.hpp"
 #include "citcpp_algo_common.hpp"
 #include "citcpp_utils.hpp"
 #include "constraint_evaluator.hpp"
@@ -493,7 +492,7 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   std::shared_ptr<constraint_handler> constr_handler =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
-          config_.constraint_handler_memory_limit_gb() * 1024 * 1024 * 1024,
+          config_.constraint_handler_memory_limit_gb() * GB_TO_BYTES_FACTOR,
           exec_handle.get_constraint_handler_init_progress());
 
   exec_handle.set_execution_phase(
@@ -538,7 +537,7 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
 
   // Set the generated test set.
   // This will also signal to the client that we are done.
-  cagen_exec_result_impl result;
+  cagen_exec_result result;
   if (exec_handle.is_job_aborted()) {
     result.set_result_code(cagen_exec_result::cagen_result_code::
                                COVERING_ARRAY_GENERATION_ABORTED);
