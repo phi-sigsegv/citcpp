@@ -200,7 +200,7 @@ ipog_measure_testset_result ipog_measure_testset(
   }
 
   thread_local_vector<ipog_measure_per_param_combo_functor_parallel<T_EXEC>>
-      thread_local_functors(exec.get_num_workers() * 8,
+      thread_local_functors(exec.get_num_workers(),
                             {model, test_set, num_seeded_tests, max_strength});
 
   for (auto& rel_and_cov_map : relations) {

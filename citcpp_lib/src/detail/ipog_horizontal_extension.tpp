@@ -188,7 +188,7 @@ class ipog_horizontal_select_best_value_functor_parallel {
             std::pair<const internal_relation*, ipog_coverage_map>>& relations,
         int& last_picked_value, std::vector<int>& value_to_valid_options,
         T_EXEC& exec)
-        : thread_local_functors_(exec.get_num_workers() * 8,
+        : thread_local_functors_(exec.get_num_workers(),
                                  {model, num_current_param_values}),
           real_current_param_idx_(real_current_param_idx),
           num_current_param_values_(num_current_param_values),
@@ -460,7 +460,7 @@ class ipog_horizontal_update_coverage_map_functor_parallel {
         std::unordered_map<const internal_relation*, unsigned long long>&
             num_covered_tuples,
         T_EXEC& exec)
-        : thread_local_functors_(exec.get_num_workers() * 8, {model}),
+        : thread_local_functors_(exec.get_num_workers(), {model}),
           real_current_param_idx_(real_current_param_idx),
           relations_(relations),
           num_covered_tuples_(num_covered_tuples),
@@ -719,7 +719,7 @@ class
         std::unordered_map<const internal_relation*, unsigned long long>&
             num_covered_tuples,
         T_EXEC& exec)
-        : thread_local_functors_(exec.get_num_workers() * 8,
+        : thread_local_functors_(exec.get_num_workers(),
                                  {model, num_current_param_values}),
           real_current_param_idx_(real_current_param_idx),
           num_current_param_values_(num_current_param_values),
