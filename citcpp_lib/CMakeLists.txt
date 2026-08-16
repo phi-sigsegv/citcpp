@@ -67,7 +67,6 @@ if(NOT MSVC)
   target_compile_options(citcpp_lib PRIVATE
     -Wall
     -Wextra
-    -Wshadow           # Variable shadowing
     -Wnon-virtual-dtor # Missing virtual destructors
     -Wnull-dereference # Null pointer dereferences
     -Wno-interference-size
