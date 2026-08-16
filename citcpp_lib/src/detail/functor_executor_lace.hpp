@@ -24,6 +24,13 @@ class functor_execution_scope_lace {
 
     void spawn_execution(function_ref<void()> functor_ref);
 
+    template <class T_CALLABLE, typename T_ALLOC>
+    void spawn_execution(std::vector<T_CALLABLE, T_ALLOC>& callables) {
+      for (std::size_t i = 0; i < callables.size(); ++i) {
+        spawn_execution(callables[i]);
+      }
+    }
+
   private:
     std::vector<function_ref<void()>> functor_refs_;
 };
