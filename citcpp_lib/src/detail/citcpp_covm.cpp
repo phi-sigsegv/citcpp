@@ -15,7 +15,7 @@
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
 #include "datatypes_config.hpp"
-#include "functor_executor_thread_pool.hpp"
+#include "functor_executor_lace.hpp"
 #include "model_simplifier.hpp"
 
 namespace {
@@ -201,8 +201,7 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
     }
   }
 
-  thread_pool tp(num_threads);
-  functor_executor_thread_pool exec(tp);
+  functor_executor_lace exec(num_threads);
 
   exec_handle.set_execution_phase(
       covm_exec_handle_impl::phase::CONSTRAINT_HANDLER_INIT);
