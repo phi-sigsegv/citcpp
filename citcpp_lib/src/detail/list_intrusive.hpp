@@ -37,10 +37,10 @@ class list_intrusive {
         // Give the intrusive list access to the node of this iterator.
         friend class list_intrusive<T_VALUE>;
 
-        typedef list_intrusive<T_VALUE> list_intrusive_type;
         typedef typename std::conditional<
             is_const, const typename list_intrusive::node_type,
             typename list_intrusive::node_type>::type node_base_type;
+        typedef list_intrusive_iterator<is_const> this_type;
 
         node_base_type* node_;
 
@@ -61,6 +61,16 @@ class list_intrusive {
 
         list_intrusive_iterator(const list_intrusive_iterator<false>& other)
             : node_(other.node_) {}
+
+        list_intrusive_iterator(const list_intrusive_iterator<true>& other)
+            : node_(other.node_) {}
+
+        list_intrusive_iterator(this_type&&) = default;
+
+        ~list_intrusive_iterator() = default;
+
+        this_type& operator=(const this_type&) = default;
+        this_type& operator=(this_type&&) = default;
 
         bool valid() const { return (!!node_); }
 
@@ -142,7 +152,7 @@ class list_intrusive {
     typedef std::ptrdiff_t difference_type;
     typedef list_intrusive_iterator<false> iterator;
     typedef list_intrusive_iterator<true> const_iterator;
-    typedef unsigned int size_type;
+    typedef std::size_t size_type;
 
     list_intrusive() : dummy_(), p_tail_(&dummy_), size_(0) {
       dummy_.prev_node_ = nullptr;

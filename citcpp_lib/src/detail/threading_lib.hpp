@@ -235,7 +235,7 @@ class array_fixed_size {
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
   public:
-    array_fixed_size() = default;
+    array_fixed_size() : m_array() {}
     array_fixed_size(const this_type&) = default;
     array_fixed_size(this_type&&) = default;
     ~array_fixed_size() = default;
@@ -1068,7 +1068,7 @@ class TaskListTmpl {
     };
 
     typedef T_TASK value_type;
-    typedef unsigned int size_type;
+    typedef std::size_t size_type;
     typedef std::ptrdiff_t difference_type;
     typedef T_TASK& reference;
     typedef const T_TASK& const_reference;
@@ -1282,7 +1282,8 @@ class StructuredTask : public concurrent_queue_intrusive_node {
 
   public:
     StructuredTask()
-        : m_pool_ptr(nullptr),
+        : concurrent_queue_intrusive_node(),
+          m_pool_ptr(nullptr),
           m_task_status(0),
           m_refcount(0),
           m_successor_task(nullptr),
@@ -1290,7 +1291,8 @@ class StructuredTask : public concurrent_queue_intrusive_node {
           m_func_ref() {}
 
     StructuredTask(const this_type& other)
-        : m_pool_ptr(other.m_pool_ptr),
+        : concurrent_queue_intrusive_node(other),
+          m_pool_ptr(other.m_pool_ptr),
           m_task_status(other.m_task_status),
           m_refcount(other.m_refcount.load(std::memory_order_relaxed)),
           m_successor_task(other.m_successor_task),
@@ -1298,7 +1300,8 @@ class StructuredTask : public concurrent_queue_intrusive_node {
           m_func_ref(other.m_func_ref) {}
 
     StructuredTask(this_type&& other)
-        : m_pool_ptr(other.m_pool_ptr),
+        : concurrent_queue_intrusive_node(std::move(other)),
+          m_pool_ptr(other.m_pool_ptr),
           m_task_status(other.m_task_status),
           m_refcount(other.m_refcount.load(std::memory_order_relaxed)),
           m_successor_task(other.m_successor_task),
@@ -1309,6 +1312,7 @@ class StructuredTask : public concurrent_queue_intrusive_node {
 
     this_type& operator=(const this_type& other) {
       if (this != &other) {
+        concurrent_queue_intrusive_node::operator=(other);
         m_pool_ptr = other.m_pool_ptr;
         m_task_status = other.m_task_status;
         m_refcount.store(other.m_refcount.load(std::memory_order_relaxed),
@@ -1323,6 +1327,7 @@ class StructuredTask : public concurrent_queue_intrusive_node {
 
     this_type& operator=(this_type&& other) {
       if (this != &other) {
+        concurrent_queue_intrusive_node::operator=(std::move(other));
         m_pool_ptr = other.m_pool_ptr;
         m_task_status = other.m_task_status;
         m_refcount.store(other.m_refcount.load(std::memory_order_relaxed),
@@ -1412,7 +1417,7 @@ class AutoDeletedTask : public StructuredTask {
 
     AutoDeletedTask(const this_type&) = delete;
 
-    AutoDeletedTask(this_type&& other) : base_type() {
+    AutoDeletedTask(this_type&&) : base_type() {
       m_task_status |= detail::StructuredTask::DELETE_AFTER_TERMINATION;
     }
 
@@ -1680,9 +1685,9 @@ class StructuredWorkStealingThreadPool
       return false;
     }
 
-    unsigned int get_num_workers() const { return m_num_threads; }
+    std::size_t get_num_workers() const { return m_num_threads; }
 
-    unsigned int get_worker_id() const { return ThreadContext::getThreadId(); }
+    std::size_t get_worker_id() const { return ThreadContext::getThreadId(); }
 
     void stop_workers() {
       if (m_workers_started.test(std::memory_order_acquire)) {
@@ -1962,7 +1967,7 @@ class ThreadContext {
  * their local values without any synchronization. Later on the
  * values can be aggregated by iterating over them.
  */
-template <typename T_VALUE, unsigned int T_MAX_NUM_THREADS>
+template <typename T_VALUE, std::size_t T_MAX_NUM_THREADS>
 class ThreadSpecificValueArray {
   private:
     typedef detail::array_fixed_size<T_VALUE, T_MAX_NUM_THREADS> array_type;
@@ -3054,7 +3059,7 @@ class WorkStealingThreadPool {
      *
      * @return the number of workers of this thread pool
      */
-    unsigned int get_num_workers() const {
+    std::size_t get_num_workers() const {
       return m_pool_impl.get_num_workers();
     }
 
@@ -3066,7 +3071,7 @@ class WorkStealingThreadPool {
      *
      * @return the ID of the calling worker thread
      */
-    unsigned int get_worker_id() const { return m_pool_impl.get_worker_id(); }
+    std::size_t get_worker_id() const { return m_pool_impl.get_worker_id(); }
 
     /**
      * Calling this method causes the worker threads to stop

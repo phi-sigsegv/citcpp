@@ -14,6 +14,7 @@ namespace {
 
 class test_set_data_consumer {
   public:
+    virtual ~test_set_data_consumer() = default;
     virtual void set_param_identifier(const std::string& identifier) = 0;
     virtual void end_param_declarations() = 0;
     virtual void parse_param_value(const std::string& value, size_t line,
@@ -39,7 +40,7 @@ class param_declarations_end_consumer {
     param_declarations_end_consumer(test_set_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues& vs) {
+    void operator()(const peg::SemanticValues&) {
       consumer_->end_param_declarations();
     }
 
@@ -160,9 +161,11 @@ class test_set_parser::impl : test_set_data_consumer {
           });
     }
 
+    ~impl() override = default;
+
     void set_test_set(test_set* t) { test_set_ = t; }
 
-    void set_param_identifier(const std::string& identifier) {
+    void set_param_identifier(const std::string& identifier) override {
       auto it = name_to_param_map_.find(identifier);
       if (it != name_to_param_map_.end()) {
         test_set_->add_parameter(*(it->second));
@@ -174,7 +177,8 @@ class test_set_parser::impl : test_set_data_consumer {
 
         error_message_ = oss.str();
 
-        // Defensively add an empty parameter to keep test_set parameters size in sync
+        // Defensively add an empty parameter to keep test_set parameters size
+        // in sync
         parameter dummy;
         dummy.set_name(identifier);
         dummy.set_type(parameter_type::ENUM);
@@ -182,14 +186,17 @@ class test_set_parser::impl : test_set_data_consumer {
       }
     }
 
-    void end_param_declarations() {
+    void end_param_declarations() override {
       current_test_.clear();
       current_param_index_ = 0;
     }
 
-    void parse_param_value(const std::string& value, size_t line, size_t col) {
+    void parse_param_value(const std::string& value, size_t line,
+                           size_t col) override {
+
       if (current_param_index_ < test_set_->get_parameters().size()) {
-        const parameter& param = test_set_->get_parameters()[current_param_index_];
+        const parameter& param =
+            test_set_->get_parameters()[current_param_index_];
         if (value == "*") {
           current_test_.push_back(-1);
         } else {
@@ -228,7 +235,7 @@ class test_set_parser::impl : test_set_data_consumer {
                   break;
                 }
               }
-            } catch (const std::exception& ex) {
+            } catch (const std::exception&) {
               // std::stoi failed or type mismatch
             }
           } else if (param.get_type() == parameter_type::ENUM) {
@@ -268,7 +275,7 @@ class test_set_parser::impl : test_set_data_consumer {
       ++current_param_index_;
     }
 
-    void end_test(size_t line, size_t col) {
+    void end_test(size_t line, size_t col) override {
       if (current_param_index_ == test_set_->get_parameters().size()) {
         test_set_->get_list_of_tests().push_back(current_test_);
       } else if (current_param_index_ > 0) {
@@ -310,7 +317,7 @@ class test_set_parser::impl : test_set_data_consumer {
     bool error_occurred_;
     std::string error_message_;
     std::vector<int> current_test_;
-    int current_param_index_;
+    std::size_t current_param_index_;
     test_set* test_set_;
 };
 

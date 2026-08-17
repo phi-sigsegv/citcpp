@@ -3,7 +3,6 @@
 
 #include <unordered_map>
 
-#include "cagen_exec_handle_base.hpp"
 #include "coverage_map.hpp"
 #include "functor_executor.hpp"
 #include "internal_model.hpp"
@@ -19,14 +18,14 @@ struct ipog_measure_testset_result {
 
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    const unsigned int num_seeded_tests,
+    std::size_t num_seeded_tests,
     std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations);
 
 template <conc_is_void_functor_executor T_EXEC>
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    const unsigned int num_seeded_tests,
+    std::size_t num_seeded_tests,
     std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations,
     T_EXEC& exec);

@@ -38,8 +38,8 @@ class function_ref;
 template <typename Ret, typename... Params>
 class function_ref<Ret(Params...)> {
   private:
-    Ret (*callback)(intptr_t callable, Params... params) = nullptr;
-    intptr_t callable;
+    Ret (*callback_)(intptr_t callable, Params... params) = nullptr;
+    intptr_t callable_;
 
     template <typename Callable>
     static Ret callback_fn(intptr_t callable, Params... params) {
@@ -48,8 +48,8 @@ class function_ref<Ret(Params...)> {
     }
 
   public:
-    function_ref() = default;
-    function_ref(std::nullptr_t) {}
+    function_ref() : callback_(nullptr), callable_(0) {}
+    function_ref(std::nullptr_t) : callback_(nullptr), callable_(0) {}
 
     template <typename Callable>
     function_ref(
@@ -57,14 +57,15 @@ class function_ref<Ret(Params...)> {
         typename std::enable_if<
             !std::is_same<typename std::remove_reference<Callable>::type,
                           function_ref>::value>::type* = nullptr)
-        : callback(callback_fn<typename std::remove_reference<Callable>::type>),
-          callable(reinterpret_cast<intptr_t>(&callable)) {}
+        : callback_(
+              callback_fn<typename std::remove_reference<Callable>::type>),
+          callable_(reinterpret_cast<intptr_t>(&callable)) {}
 
     Ret operator()(Params... params) const {
-      return callback(callable, std::forward<Params>(params)...);
+      return callback_(callable_, std::forward<Params>(params)...);
     }
 
-    operator bool() const { return callback; }
+    operator bool() const { return callback_; }
 };
 
 }  // namespace citcpp

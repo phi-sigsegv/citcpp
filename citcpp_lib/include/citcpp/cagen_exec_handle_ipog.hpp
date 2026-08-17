@@ -20,7 +20,7 @@ class cagen_exec_handle_ipog : public virtual cagen_exec_handle {
      * if this handle is destroyed without the client explicitly waiting
      * for the execution.
      */
-    virtual ~cagen_exec_handle_ipog() {}
+    ~cagen_exec_handle_ipog() override = default;
 
     /**
      * Returns the total number of parameters to process.

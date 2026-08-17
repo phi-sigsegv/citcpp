@@ -14,7 +14,6 @@
 #include "constraint_handler.hpp"
 #include "covm_algorithm_uniform_strength.hpp"
 #include "covm_exec_handle_impl.hpp"
-#include "covm_exec_result_impl.hpp"
 #include "datatypes_config.hpp"
 #include "functor_executor_thread_pool.hpp"
 #include "model_simplifier.hpp"
@@ -75,8 +74,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     const citcpp::model& input_model,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::internal_test_set& test_set,
-    const citcpp::detail::constraint_handler& constr_handler,
-    const citcpp::coverage_measurement_config& config, T_EXEC& exec,
+    const citcpp::detail::constraint_handler& constr_handler, T_EXEC& exec,
     int strength, citcpp::detail::covm_exec_handle_impl& exec_handle) {
   using namespace citcpp;
   using namespace citcpp::detail;
@@ -87,49 +85,48 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
       create_relations(input_model, model, strength));
 
   const binom_coeff_table binomial_coeffs(
-      model.get_parameter_num_values().size());
+      static_cast<unsigned int>(model.get_parameter_num_values().size()));
 
   std::unordered_map<std::string, coverage_measurement> covm_per_relation;
 
   if (strength >= 1) {
     const auto& int_relation = relations[0];
+    const unsigned int n = static_cast<unsigned int>(
+        int_relation.get_parameter_index_map().size());
 
     unsigned long long number_combos_to_cover =
-        with_mt
-            ? number_of_combinations_to_cover(
-                  int_relation.get_parameter_index_map().size(), model,
-                  int_relation.get_parameter_index_map(), strength, false, exec)
-            : number_of_combinations_to_cover(
-                  int_relation.get_parameter_index_map().size(), model,
-                  int_relation.get_parameter_index_map(), strength, false);
+        with_mt ? number_of_combinations_to_cover(
+                      n, model, int_relation.get_parameter_index_map(),
+                      strength, false, exec)
+                : number_of_combinations_to_cover(
+                      n, model, int_relation.get_parameter_index_map(),
+                      strength, false);
 
     covm_per_relation[""].set_number_of_param_combos_to_cover(
-        binomial_coeffs.get_coefficient(model.get_parameter_num_values().size(),
-                                        strength));
+        binomial_coeffs.get_coefficient(n, strength));
     covm_per_relation[""].set_number_of_combinations_to_cover(
         number_combos_to_cover);
     exec_handle.set_number_of_combinations_to_process(number_combos_to_cover);
   } else {
-    for (int i = 0; i < relations.size(); ++i) {
+    for (decltype(relations.size()) i = 0; i < relations.size(); ++i) {
       const auto& relation = input_model.get_relations()[i];
       const auto& int_relation = relations[i];
+      const unsigned int n = static_cast<unsigned int>(
+          int_relation.get_parameter_index_map().size());
 
       unsigned long long number_combos_to_cover =
           with_mt
               ? number_of_combinations_to_cover(
-                    int_relation.get_parameter_index_map().size(), model,
-                    int_relation.get_parameter_index_map(),
+                    n, model, int_relation.get_parameter_index_map(),
                     int_relation.get_specified_interaction_strength(), false,
                     exec)
               : number_of_combinations_to_cover(
-                    int_relation.get_parameter_index_map().size(), model,
-                    int_relation.get_parameter_index_map(),
+                    n, model, int_relation.get_parameter_index_map(),
                     int_relation.get_specified_interaction_strength(), false);
 
       covm_per_relation[relation.get_name()]
           .set_number_of_param_combos_to_cover(binomial_coeffs.get_coefficient(
-              int_relation.get_parameter_index_map().size(),
-              int_relation.get_specified_interaction_strength()));
+              n, int_relation.get_specified_interaction_strength()));
       covm_per_relation[relation.get_name()]
           .set_number_of_combinations_to_cover(number_combos_to_cover);
       exec_handle.add_number_of_combinations_to_process(number_combos_to_cover);
@@ -154,7 +151,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
                        constr_handler, exec_handle, covm_per_relation[""]);
     }
   } else {
-    for (int i = 0; i < relations.size(); ++i) {
+    for (decltype(relations.size()) i = 0; i < relations.size(); ++i) {
       const auto& relation = input_model.get_relations()[i];
       const auto& int_relation = relations[i];
 
@@ -195,7 +192,8 @@ void citcpp_covm::set_interaction_strength(int t) { strength_ = t; }
 void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  unsigned int num_threads = config_.number_of_threads();
+  unsigned int num_threads =
+      static_cast<unsigned int>(config_.number_of_threads());
   if (num_threads == 0) {
     num_threads = std::thread::hardware_concurrency();
     if (num_threads == 0) {
@@ -212,15 +210,14 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   std::shared_ptr<constraint_handler> constr_handler =
       constraint_handler::create_constraint_handler(
           model_, num_threads,
-          (std::size_t)config_.constraint_handler_memory_limit_gb() * 1024 *
-              1024 * 1024,
+          config_.constraint_handler_memory_limit_gb() * GB_TO_BYTES_FACTOR,
           exec_handle.get_constraint_handler_init_progress());
 
   // Filter out invalid tests.
-  std::vector<unsigned int> invalid_test_indices;
+  std::vector<std::size_t> invalid_test_indices;
   {
     constraint_evaluator constr_eval(input_model_.get_parameters());
-    unsigned int test_idx = 0;
+    std::size_t test_idx = 0;
     auto test_it = tests_.get_list_of_tests().begin();
     while (test_it != tests_.get_list_of_tests().end()) {
       const auto& t = *test_it;
@@ -241,17 +238,18 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
       covm_exec_handle_impl::phase::COVERAGE_MEASUREMENT);
 
   std::unordered_map<std::string, coverage_measurement> covm_per_relation(
-      main_covm_loop(input_model_, model_, tests_, *constr_handler, config_,
-                     exec, strength_, exec_handle));
+      main_covm_loop(input_model_, model_, tests_, *constr_handler, exec,
+                     strength_, exec_handle));
 
   const auto t_end = std::chrono::high_resolution_clock::now();
   const auto duration_in_milli_seconds =
       duration_cast<std::chrono::milliseconds>(t_end - t_start);
-  exec_handle.set_duration_in_milli_seconds(duration_in_milli_seconds.count());
+  exec_handle.set_duration_in_milli_seconds(
+      static_cast<std::size_t>(duration_in_milli_seconds.count()));
 
   // Set the generated result object.
   // This will also signal to the client that we are done.
-  covm_exec_result_impl result;
+  covm_exec_result result;
   if (exec_handle.is_job_aborted()) {
     result.set_result_code(
         covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_ABORTED);

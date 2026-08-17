@@ -19,7 +19,7 @@ class cagen_exec_handle_ipog_impl;
  */
 class citcpp_ipog_base {
   public:
-    virtual ~citcpp_ipog_base() {}
+    virtual ~citcpp_ipog_base() = default;
 
     /**
      * This is the entry point to be called by a thread.
@@ -72,7 +72,7 @@ class citcpp_ipog_base {
      * relation.
      */
     static unsigned int length_of_common_param_prefix(
-        const citcpp::detail::internal_relation& rel,
+        const internal_relation& rel,
         const std::vector<unsigned int>& parameter_index_map);
 };
 

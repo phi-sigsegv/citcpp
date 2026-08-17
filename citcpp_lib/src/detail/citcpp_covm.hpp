@@ -35,6 +35,8 @@ class citcpp_covm {
     citcpp_covm& operator=(citcpp_covm&&) = delete;
     citcpp_covm& operator=(const citcpp_covm&) = delete;
 
+    ~citcpp_covm() = default;
+
     void set_interaction_strength(int t);
 
     /**
@@ -47,7 +49,7 @@ class citcpp_covm {
     const model input_model_;
     const internal_model model_;
     internal_test_set tests_;
-    int strength_;
+    int strength_{0};
 };
 
 }  // namespace detail

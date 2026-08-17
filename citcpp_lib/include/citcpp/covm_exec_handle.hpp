@@ -43,37 +43,60 @@ class covm_exec_result {
      * of the coverage measurement.
      */
     const std::unordered_map<std::string, coverage_measurement>& get_result()
-        const {
+        const;
 
-      return result_;
-    }
+    /**
+     * Sets the map from relation IDs to objects collecting the results
+     * of the coverage measurement.
+     */
+    void set_result(
+        std::unordered_map<std::string, coverage_measurement> result);
 
     /**
      * Returns a list of indices of tests which are invalid, i.e. violate
      * at least one constraint. Invalid tests are ignored during
      * the coverage measurement.
      */
-    const std::vector<unsigned int>& get_invalid_test_indices() const {
-      return invalid_test_indices_;
-    }
+    const std::vector<std::size_t>& get_invalid_test_indices() const;
+
+    /**
+     * Sets the list of indices of tests which are invalid, i.e. violate
+     * at least one constraint. Invalid tests are ignored during
+     * the coverage measurement.
+     */
+    void set_invalid_test_indices(
+        std::vector<std::size_t> invalid_test_indices);
 
     /**
      * Returns the status code defining the result of the coverage measurement
      * execution.
      */
-    covm_result_code get_result_code() const { return result_code_; }
+    covm_result_code get_result_code() const;
+
+    /**
+     * Sets the status code defining the result of the coverage measurement
+     * execution.
+     */
+    void set_result_code(covm_result_code result_code);
 
     /**
      * Returns the error message if an error occurred, or otherwise an empty
      * string.
      */
-    std::string_view get_error_message() const { return error_message_; }
+    std::string_view get_error_message() const;
 
-  protected:
-    std::unordered_map<std::string, coverage_measurement> result_;
-    std::vector<unsigned int> invalid_test_indices_;
-    covm_result_code result_code_;
-    std::string error_message_;
+    /**
+     * Sets the error message if an error occurred, or otherwise an empty
+     * string.
+     */
+    void set_error_message(std::string_view error_message);
+
+  private:
+    std::unordered_map<std::string, coverage_measurement> result_{};
+    std::vector<std::size_t> invalid_test_indices_{};
+    covm_result_code result_code_{
+        covm_result_code::COVERAGE_MEASUREMENT_COMPLETED};
+    std::string error_message_{};
 };
 
 /**
@@ -105,7 +128,7 @@ class covm_exec_handle {
      * if this handle is destroyed without the client explicitly waiting
      * for the execution.
      */
-    virtual ~covm_exec_handle() {}
+    virtual ~covm_exec_handle() = default;
 
     /**
      * Returns which phase is active.
@@ -166,7 +189,7 @@ class covm_exec_handle {
      * If the execution has not terminated yet, then calling this method
      * returns 0.0.
      */
-    virtual unsigned int get_duration_in_milli_seconds() const = 0;
+    virtual std::size_t get_duration_in_milli_seconds() const = 0;
 };
 
 }  // namespace citcpp

@@ -15,7 +15,15 @@ class acts_model_parser {
      */
     acts_model_parser();
 
+    acts_model_parser(const acts_model_parser& other) = delete;
+
+    acts_model_parser(acts_model_parser&& other) noexcept;
+
     ~acts_model_parser();
+
+    acts_model_parser& operator=(const acts_model_parser& other) = delete;
+
+    acts_model_parser& operator=(acts_model_parser&& other) noexcept;
 
     /**
      * Parses the input_model from a given string_view.

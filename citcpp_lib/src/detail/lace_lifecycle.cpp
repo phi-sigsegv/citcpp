@@ -21,7 +21,7 @@ int& get_lobal_lace_init_counter() {
 namespace citcpp {
 namespace detail {
 
-void lace_init(unsigned int n_workers, size_t dqsize) {
+void lace_init(unsigned int n_workers, std::size_t dqsize) {
   std::lock_guard<std::mutex> lock(get_global_lace_init_mutex());
 
   int& instance_cnt = get_lobal_lace_init_counter();

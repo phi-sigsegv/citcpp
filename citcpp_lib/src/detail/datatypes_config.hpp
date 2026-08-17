@@ -12,14 +12,12 @@
 namespace citcpp {
 namespace detail {
 
-typedef std::uint16_t param_index;
-
-// using param_vector = std::vector<param_index>;
+// using param_vector = std::vector<std::uint16_t>;
 // using value_vector = std::vector<int>;
 template <typename T>
 using small_vector = SmallVector<T, 8>;
 
-using param_vector = small_vector<param_index>;
+using param_vector = small_vector<std::uint16_t>;
 using value_vector = small_vector<int>;
 
 template <typename T>

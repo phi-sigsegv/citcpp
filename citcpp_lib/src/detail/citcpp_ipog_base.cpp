@@ -22,7 +22,7 @@ bool is_covered_by(const citcpp::detail::internal_relation& rel,
   std::unordered_set<unsigned int> param_indices(parameter_index_map.begin(),
                                                  parameter_index_map.end());
 
-  for (auto param_idx : rel.get_parameter_index_map()) {
+  for (const unsigned int param_idx : rel.get_parameter_index_map()) {
     if (param_indices.find(param_idx) == param_indices.end()) {
       return false;
     }
@@ -43,7 +43,7 @@ bool is_covered_by(const std::vector<unsigned int>& parameter_index_map,
       rel.get_parameter_index_map().begin(),
       rel.get_parameter_index_map().end());
 
-  for (auto param_idx : parameter_index_map) {
+  for (const unsigned int param_idx : parameter_index_map) {
     if (param_indices.find(param_idx) == param_indices.end()) {
       return false;
     }
@@ -60,8 +60,7 @@ namespace detail {
 std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
     const internal_model& internal_model) {
 
-  const std::vector<unsigned int>& param_num_values =
-      internal_model.get_parameter_num_values();
+  const auto& param_num_values = internal_model.get_parameter_num_values();
 
   std::vector<unsigned int> parameter_index_map(param_num_values.size());
   std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
@@ -91,7 +90,7 @@ std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
   // parameter orders.
   std::unordered_set<unsigned int> param_indices;
   for (const auto& relation : relations) {
-    for (unsigned int param_idx : relation.get_parameter_index_map()) {
+    for (const unsigned int param_idx : relation.get_parameter_index_map()) {
       param_indices.insert(param_idx);
     }
   }
@@ -113,8 +112,7 @@ std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
 std::vector<internal_relation> citcpp_ipog_base::create_relations(
     const model& model, const internal_model& internal_model, int strength) {
 
-  const std::vector<unsigned int>& param_num_values =
-      internal_model.get_parameter_num_values();
+  const auto& param_num_values = internal_model.get_parameter_num_values();
 
   std::vector<internal_relation> relations;
 
@@ -192,21 +190,22 @@ std::vector<internal_relation> citcpp_ipog_base::create_relations(
 }
 
 unsigned int citcpp_ipog_base::length_of_common_param_prefix(
-    const citcpp::detail::internal_relation& rel,
+    const internal_relation& rel,
     const std::vector<unsigned int>& parameter_index_map) {
 
-  unsigned int param_idx = 0;
+  std::size_t param_idx = 0;
   for (; param_idx < parameter_index_map.size() &&
          param_idx < rel.get_parameter_index_map().size();
        ++param_idx) {
 
     if (parameter_index_map[param_idx] !=
         rel.get_parameter_index_map()[param_idx]) {
-      return param_idx;
+
+      return static_cast<unsigned int>(param_idx);
     }
   }
 
-  return param_idx;
+  return static_cast<unsigned int>(param_idx);
 }
 
 }  // namespace detail

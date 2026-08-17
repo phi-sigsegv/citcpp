@@ -22,6 +22,7 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/idd_variable_ordering.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/lace_lifecycle.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/parameter.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/relation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/citcpp_config.cpp
@@ -31,6 +32,8 @@ set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/parser_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/acts_model_parser.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/test_set_parser.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/cagen_exec_handle.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/covm_exec_handle.cpp
 )
 
 add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
@@ -42,8 +45,32 @@ target_include_directories(citcpp_lib PUBLIC
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
 target_link_libraries(citcpp_lib PUBLIC Threads::Threads PRIVATE sylvan::sylvan)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  target_compile_options(citcpp_lib PRIVATE -Wno-interference-size)
+if (ENABLE_CPPCHECK)
+  find_program(CPPCHECK_PATH cppcheck)
+  if(CPPCHECK_PATH)
+    set_target_properties(citcpp_lib PROPERTIES
+      CXX_CPPCHECK "${CPPCHECK_PATH};--enable=warning,style,performance;--inconclusive;--inline-suppr;--suppress=missingIncludeSystem"
+    )
+  endif()
+endif()
+
+if (ENABLE_CLANG_TIDY)
+  find_program(CLANG_TIDY_PATH clang-tidy)
+  if(CLANG_TIDY_PATH)
+    set_target_properties(citcpp_lib PROPERTIES
+      CXX_CLANG_TIDY "${CLANG_TIDY_PATH};-checks=bugprone-*,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-pro-bounds-avoid-unchecked-container-access;--config={CheckOptions: {cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true}}"
+    )
+  endif()
+endif()
+
+if(NOT MSVC)
+  target_compile_options(citcpp_lib PRIVATE
+    -Wall
+    -Wextra
+    -Wnon-virtual-dtor # Missing virtual destructors
+    -Wnull-dereference # Null pointer dereferences
+    -Wno-interference-size
+  )
 endif()
 
 install(TARGETS citcpp_lib

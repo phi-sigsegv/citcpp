@@ -31,10 +31,17 @@ void sort_int_parameter_values(citcpp::model& input_model) {
   }
 }
 
-void check_parameter_domains(citcpp::model& input_model) {
+void check_parameters_and_domains(citcpp::model& input_model) {
   using namespace citcpp;
 
-  constexpr int max_num_values = std::numeric_limits<uint16_t>::max() + 1;
+  constexpr int max_num_params = std::numeric_limits<std::uint16_t>::max();
+  if (input_model.get_parameters().size() > max_num_params) {
+    std::stringstream s_stream;
+    s_stream << "model has more than " << max_num_params << " parameters";
+    throw std::invalid_argument(s_stream.str());
+  }
+
+  constexpr int max_num_values = std::numeric_limits<std::uint16_t>::max();
   for (auto& param : input_model.get_parameters()) {
     if (param.get_values().size() > max_num_values) {
       std::stringstream s_stream;
@@ -52,7 +59,7 @@ namespace citcpp {
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     model input_model, int t, const covering_array_computation_config& config) {
 
-  check_parameter_domains(input_model);
+  check_parameters_and_domains(input_model);
   sort_int_parameter_values(input_model);
 
   detail::cagen_exec_handle_ipog_impl* handle =
@@ -81,7 +88,7 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     model input_model, test_set tests, int t,
     const covering_array_computation_config& config) {
 
-  check_parameter_domains(input_model);
+  check_parameters_and_domains(input_model);
   sort_int_parameter_values(input_model);
 
   detail::cagen_exec_handle_ipog_impl* handle =
@@ -107,10 +114,10 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
 }
 
 std::unique_ptr<covm_exec_handle> measure_coverage(
-    model input_model, test_set tests, unsigned int t,
+    model input_model, test_set tests, int t,
     const coverage_measurement_config& config) {
 
-  check_parameter_domains(input_model);
+  check_parameters_and_domains(input_model);
   sort_int_parameter_values(input_model);
 
   auto covm_algo = std::make_unique<detail::citcpp_covm>(
@@ -124,8 +131,7 @@ std::unique_ptr<covm_exec_handle> measure_coverage(
 }
 
 std::unique_ptr<covm_exec_handle> measure_coverage(model input_model,
-                                                   test_set tests,
-                                                   unsigned int t) {
+                                                   test_set tests, int t) {
   return measure_coverage(std::move(input_model), std::move(tests), t,
                           coverage_measurement_config());
 }

@@ -10,7 +10,7 @@ namespace detail {
 internal_model::internal_model(const model& input_model)
     : input_model_(input_model), parameters_() {
   for (const parameter& p : input_model.get_parameters()) {
-    parameters_.push_back(p.get_values().size());
+    parameters_.push_back(static_cast<unsigned int>(p.get_values().size()));
   }
 }
 
@@ -66,8 +66,8 @@ internal_relation::internal_relation(
 void internal_relation::sort_parameters(
     const std::vector<unsigned int>& parameter_index_map) {
 
-  std::unordered_map<unsigned int, unsigned int> param_to_order_map;
-  for (unsigned int i = 0; i < parameter_index_map.size(); ++i) {
+  std::unordered_map<unsigned int, std::size_t> param_to_order_map;
+  for (std::size_t i = 0; i < parameter_index_map.size(); ++i) {
     param_to_order_map[parameter_index_map[i]] = i;
   }
 

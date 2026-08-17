@@ -15,9 +15,9 @@ class parameter_collector_visitor {
   public:
     parameter_collector_visitor(
         const std::unordered_map<std::string, unsigned int>& name_to_idx)
-        : name_to_idx_(name_to_idx) {}
+        : name_to_idx_(name_to_idx), collected_params_() {}
 
-    void operator()(const citcpp::boolean_literal& lit) {}
+    void operator()(const citcpp::boolean_literal&) {}
 
     void operator()(const citcpp::boolean_proposition& prop) {
       add_param(prop.get_parameter());
@@ -74,7 +74,7 @@ std::vector<unsigned int> compute_mcmf_variable_order(
 
   const auto& input_model = model.get_input_model();
   const auto& parameters = input_model.get_parameters();
-  const unsigned int num_params = parameters.size();
+  const unsigned int num_params = static_cast<unsigned int>(parameters.size());
 
   if (num_params == 0) {
     return {};
@@ -114,8 +114,8 @@ std::vector<unsigned int> compute_mcmf_variable_order(
 
   for (unsigned int i = 0; i < num_params; ++i) {
     if (adj[i].size() > max_connectivity) {
-      max_connectivity = adj[i].size();
-      first_param = i;
+      max_connectivity = static_cast<unsigned int>(adj[i].size());
+      first_param = static_cast<int>(i);
     }
   }
 
@@ -159,9 +159,9 @@ std::vector<unsigned int> compute_mcmf_variable_order(
       }
 
       if (better) {
-        best_p = i;
+        best_p = static_cast<int>(i);
         max_proximity = ordered_neighbors_count[i];
-        max_total_connectivity = adj[i].size();
+        max_total_connectivity = static_cast<unsigned int>(adj[i].size());
       }
     }
 

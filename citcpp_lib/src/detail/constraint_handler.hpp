@@ -16,7 +16,7 @@ namespace detail {
  */
 class constraint_handler {
   public:
-    virtual ~constraint_handler();
+    virtual ~constraint_handler() = default;
 
     /**
      * Returns whether this constraint handler is thread safe. This
@@ -158,7 +158,7 @@ class constraint_handler {
      * Creates a constraint handler for the given model.
      */
     static std::unique_ptr<constraint_handler> create_constraint_handler(
-        const internal_model& model, int num_worker_threads,
+        const internal_model& model, unsigned int num_worker_threads,
         std::size_t memory_limit_in_bytes,
         constraint_handler_init_progress& exec_handle);
 };

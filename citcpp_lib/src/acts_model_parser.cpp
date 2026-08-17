@@ -11,6 +11,7 @@ namespace {
 
 class input_model_data_consumer {
   public:
+    virtual ~input_model_data_consumer() = default;
     virtual void set_system_name(std::string_view name) = 0;
     virtual void set_param_identifier(std::string_view identifier) = 0;
     virtual void set_param_type(citcpp::parameter_type type) = 0;
@@ -55,7 +56,7 @@ class param_boolean_type_consumer {
     param_boolean_type_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues& vs) {
+    void operator()(const peg::SemanticValues&) {
       consumer_->set_param_type(citcpp::parameter_type::BOOLEAN);
     }
 
@@ -68,7 +69,7 @@ class param_enum_type_consumer {
     param_enum_type_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues& vs) {
+    void operator()(const peg::SemanticValues&) {
       consumer_->set_param_type(citcpp::parameter_type::ENUM);
     }
 
@@ -81,7 +82,7 @@ class param_integer_type_consumer {
     param_integer_type_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues& vs) {
+    void operator()(const peg::SemanticValues&) {
       consumer_->set_param_type(citcpp::parameter_type::INTEGER);
     }
 
@@ -142,7 +143,7 @@ class param_declaration_end_consumer {
     param_declaration_end_consumer(input_model_data_consumer* consumer)
         : consumer_(consumer) {}
 
-    void operator()(const peg::SemanticValues& vs) {
+    void operator()(const peg::SemanticValues&) {
       consumer_->end_param_declaration();
     }
 
@@ -374,13 +375,17 @@ class acts_model_parser::impl : input_model_data_consumer {
               case relational_operator::GE:
               case relational_operator::GT:
               case relational_operator::LE:
-              case relational_operator::LT:
+              case relational_operator::LT: {
                 error_occurred_ = true;
                 std::ostringstream oss;
                 oss << "Error in constraint at " << line << ":" << col
                     << " -> Cannot have operator for a non-integer parameter "
                        "that needs ordered values";
                 error_message_ = oss.str();
+                break;
+              }
+              default:
+                // EQ and NEQ are fine for boolean values.
                 break;
             }
             std::shared_ptr<constraint> prop =
@@ -393,13 +398,17 @@ class acts_model_parser::impl : input_model_data_consumer {
               case relational_operator::GE:
               case relational_operator::GT:
               case relational_operator::LE:
-              case relational_operator::LT:
+              case relational_operator::LT: {
                 error_occurred_ = true;
                 std::ostringstream oss;
                 oss << "Error in constraint at " << line << ":" << col
                     << " -> Cannot have operator for a non-integer parameter "
                        "that needs ordered values";
                 error_message_ = oss.str();
+                break;
+              }
+              default:
+                // EQ and NEQ are fine for boolean values.
                 break;
             }
             std::shared_ptr<constraint> prop =
@@ -419,10 +428,10 @@ class acts_model_parser::impl : input_model_data_consumer {
           return any_cast<std::shared_ptr<constraint>>(vs[0]);
         }
 
-        std::shared_ptr<constraint> impl = std::make_shared<implication>(
+        std::shared_ptr<constraint> impl_expr = std::make_shared<implication>(
             any_cast<std::shared_ptr<constraint>>(vs[0]),
             any_cast<std::shared_ptr<constraint>>(vs[1]));
-        return impl;
+        return impl_expr;
       };
       parser_["OrExpr"] = [](const peg::SemanticValues& vs) {
         if (vs.size() == 1) {
@@ -463,38 +472,47 @@ class acts_model_parser::impl : input_model_data_consumer {
       });
     }
 
+    ~impl() override = default;
+
     void set_input_model(model* model) { model_ = model; }
 
-    void set_system_name(std::string_view name) { model_->set_name(name); }
+    void set_system_name(std::string_view name) override {
+      model_->set_name(name);
+    }
 
-    void set_param_identifier(std::string_view identifier) {
+    void set_param_identifier(std::string_view identifier) override {
       current_param_.set_name(identifier);
     }
 
-    void set_param_type(citcpp::parameter_type type) {
+    void set_param_type(citcpp::parameter_type type) override {
       current_param_.set_type(type);
     }
 
-    void add_param_value(bool value) { current_param_.add_value(value); }
-
-    void add_param_value(const std::string& value) {
+    void add_param_value(bool value) override {
       current_param_.add_value(value);
     }
 
-    void add_param_value(int value) { current_param_.add_value(value); }
+    void add_param_value(const std::string& value) override {
+      current_param_.add_value(value);
+    }
 
-    void end_param_declaration() {
+    void add_param_value(int value) override {
+      current_param_.add_value(value);
+    }
+
+    void end_param_declaration() override {
       model_->add_parameter(current_param_);
       // Reset our parameter.
       current_param_.get_values().clear();
     }
 
-    void set_relation_identifier(std::string_view identifier) {
+    void set_relation_identifier(std::string_view identifier) override {
       current_relation_.set_name(identifier);
     }
 
     void add_param_to_relation(std::string_view identifier, size_t line,
-                               size_t col) {
+                               size_t col) override {
+
       // Search for the parameter in the model
       for (const parameter& param : model_->get_parameters()) {
         if (identifier == param.get_name()) {
@@ -512,7 +530,7 @@ class acts_model_parser::impl : input_model_data_consumer {
       error_message_ = oss.str();
     }
 
-    void set_relation_strength(int strength) {
+    void set_relation_strength(int strength) override {
       current_relation_.set_interaction_strength(strength);
 
       model_->add_relation(current_relation_);
@@ -534,8 +552,8 @@ class acts_model_parser::impl : input_model_data_consumer {
   private:
     system_name_consumer system_name_consumer_;
     param_identifier_consumer param_identifier_consumer_;
-    param_enum_type_consumer param_enum_type_consumer_;
     param_boolean_type_consumer param_boolean_type_consumer_;
+    param_enum_type_consumer param_enum_type_consumer_;
     param_integer_type_consumer param_integer_type_consumer_;
     boolean_value_consumer boolean_value_consumer_;
     enum_value_consumer enum_value_consumer_;
@@ -556,7 +574,13 @@ class acts_model_parser::impl : input_model_data_consumer {
 
 acts_model_parser::acts_model_parser() : impl_{std::make_unique<impl>()} {}
 
+acts_model_parser::acts_model_parser(acts_model_parser&& other) noexcept =
+    default;
+
 acts_model_parser::~acts_model_parser() {}
+
+acts_model_parser& acts_model_parser::operator=(
+    acts_model_parser&& other) noexcept = default;
 
 bool acts_model_parser::parse_input_model(std::string_view sv, model& model) {
 

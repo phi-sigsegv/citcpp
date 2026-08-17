@@ -9,14 +9,13 @@ namespace detail {
 inline void measure_coverage(
     ipog_coverage_map::second_level_type& value_combinations,
     const std::vector<ipog_coverage_map::second_level_type::size_type>& weights,
-    const internal_model& model, const internal_test_set& test_set,
-    const unsigned int num_seeded_tests,
+    const internal_test_set& test_set, std::size_t num_seeded_tests,
     unsigned long long& num_covered_tuples) {
 
   const param_vector& param_indices =
       value_combinations.get_parameter_indices();
 
-  unsigned int test_index = 0;
+  std::size_t test_index = 0;
   for (const test& test : test_set.get_list_of_tests()) {
     if (test_index >= num_seeded_tests) {
       break;
@@ -29,10 +28,8 @@ inline void measure_coverage(
     // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
     ipog_coverage_map::second_level_type::size_type index = 0;
     bool found_dont_care = false;
-    for (std::vector<unsigned int>::size_type i = 0; i < param_indices.size();
-         ++i) {
-      const unsigned int param_idx = param_indices[i];
-      const int param_value = test.get_values()[param_idx];
+    for (std::size_t i = 0; i < param_indices.size(); ++i) {
+      const int param_value = test.get_values()[param_indices[i]];
 
       if (param_value < 0) {
         // We have found a don't care value for that combination in
@@ -43,7 +40,8 @@ inline void measure_coverage(
         break;
       }
 
-      index += (ipog_coverage_map::second_level_type::size_type)param_value *
+      index += static_cast<ipog_coverage_map::second_level_type::size_type>(
+                   param_value) *
                weights[i];
     }
 
@@ -62,8 +60,8 @@ class ipog_measure_per_param_combo_functor {
   public:
     ipog_measure_per_param_combo_functor(const internal_model& model,
                                          const internal_test_set& test_set,
-                                         const unsigned int num_seeded_tests,
-                                         const unsigned int max_strength)
+                                         std::size_t num_seeded_tests,
+                                         unsigned int max_strength)
         : model_(model),
           test_set_(test_set),
           num_seeded_tests_(num_seeded_tests),
@@ -76,12 +74,13 @@ class ipog_measure_per_param_combo_functor {
 
       // Pre-calculate weights for index computation
       ipog_coverage_map::second_level_type::size_type weight = 1;
-      for (int i = (int)param_indices.size() - 1; i >= 0; --i) {
+      for (int i = static_cast<int>(param_indices.size() - 1); i >= 0; --i) {
         weights_[i] = weight;
-        weight *= model_.get_parameter_num_values()[param_indices[i]];
+        weight *= static_cast<ipog_coverage_map::second_level_type::size_type>(
+            model_.get_parameter_num_values()[param_indices[i]]);
       }
 
-      measure_coverage(value_combinations, weights_, model_, test_set_,
+      measure_coverage(value_combinations, weights_, test_set_,
                        num_seeded_tests_, num_covered_tuples_);
     }
 
@@ -94,7 +93,7 @@ class ipog_measure_per_param_combo_functor {
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
-    const unsigned int num_seeded_tests_;
+    const std::size_t num_seeded_tests_;
     unsigned long long num_covered_tuples_;
     std::vector<ipog_coverage_map::second_level_type::size_type> weights_;
 };
@@ -113,7 +112,7 @@ class alignas(false_sharing_avoidance_alignment)
   public:
     ipog_measure_per_param_combo_functor_parallel(
         const internal_model& model, const internal_test_set& test_set,
-        const unsigned int num_seeded_tests, const unsigned int max_strength)
+        std::size_t num_seeded_tests, unsigned int max_strength)
         : per_param_combo_functor_(model, test_set, num_seeded_tests,
                                    max_strength),
           cov_map_(nullptr),
@@ -152,7 +151,7 @@ class alignas(false_sharing_avoidance_alignment)
 
 inline ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    const unsigned int num_seeded_tests,
+    std::size_t num_seeded_tests,
     std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations) {
 
@@ -185,7 +184,7 @@ inline ipog_measure_testset_result ipog_measure_testset(
 template <conc_is_void_functor_executor T_EXEC>
 ipog_measure_testset_result ipog_measure_testset(
     const internal_model& model, const internal_test_set& test_set,
-    const unsigned int num_seeded_tests,
+    std::size_t num_seeded_tests,
     std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations,
     T_EXEC& exec) {
@@ -201,15 +200,16 @@ ipog_measure_testset_result ipog_measure_testset(
   }
 
   thread_local_vector<ipog_measure_per_param_combo_functor_parallel<T_EXEC>>
-      thread_local_functors(exec.get_num_workers() * 8,
+      thread_local_functors(exec.get_num_workers(),
                             {model, test_set, num_seeded_tests, max_strength});
 
   for (auto& rel_and_cov_map : relations) {
     ipog_coverage_map* cov_map = &rel_and_cov_map.second;
     const unsigned long long total_param_combos =
         cov_map->get_coverage_map().size();
-    const unsigned long long num_tasks = std::min(
-        (unsigned long long)thread_local_functors.size(), total_param_combos);
+    const unsigned long long num_tasks =
+        std::min(static_cast<unsigned long long>(thread_local_functors.size()),
+                 total_param_combos);
     const unsigned long long per_task_combos = total_param_combos / num_tasks;
 
     {

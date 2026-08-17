@@ -7,6 +7,8 @@
 namespace citcpp {
 namespace detail {
 
+const std::size_t GB_TO_BYTES_FACTOR = 1024 * 1024 * 1024;
+
 const std::string EMPTY_VALUE_SEPARATOR = "";
 const std::string DEFAULT_VALUE_SEPARATOR = ", ";
 
@@ -26,81 +28,82 @@ internal_test_set create_internal_test_set(const model& input_model,
           input_model.get_parameters().size(),
           std::unordered_map<parameter_value, int, ParamValueHash>());
 
-  {
-    int model_param_index = 0;
-    for (const parameter& param : input_model.get_parameters()) {
-      auto& param_value_mappings = all_param_value_mappings[model_param_index];
+  for (std::size_t param_index = 0;
+       param_index < input_model.get_parameters().size(); ++param_index) {
 
-      int param_value_index = 0;
-      for (const parameter_value& param_value : param.get_values()) {
-        param_value_mappings[param_value] = param_value_index;
+    const auto& param = input_model.get_parameters()[param_index];
+    auto& param_value_mappings = all_param_value_mappings[param_index];
 
-        ++param_value_index;
-      }
+    for (std::size_t param_value_index = 0;
+         param_value_index < param.get_values().size(); ++param_value_index) {
 
-      ++model_param_index;
+      const auto& param_value = param.get_values()[param_value_index];
+      param_value_mappings[param_value] = static_cast<int>(param_value_index);
     }
   }
 
-  std::vector<int> param_mapping(tests.get_parameters().size(), -1);
+  std::vector<int> test_param_index_to_model_param_index(
+      tests.get_parameters().size(), -1);
 
-  {
-    int test_param_index = 0;
-    for (const parameter& param_in_test : tests.get_parameters()) {
-      int model_param_index = 0;
-      for (const parameter& param_in_model : input_model.get_parameters()) {
-        if (param_in_model.get_name() == param_in_test.get_name() &&
-            param_in_model.get_type() == param_in_test.get_type()) {
+  for (std::size_t test_param_index = 0;
+       test_param_index < tests.get_parameters().size(); ++test_param_index) {
 
-          param_mapping[test_param_index] = model_param_index;
-          break;
-        }
+    const auto& param_in_test = tests.get_parameters()[test_param_index];
 
-        ++model_param_index;
+    for (std::size_t model_param_index = 0;
+         model_param_index < input_model.get_parameters().size();
+         ++model_param_index) {
+
+      const auto& param_in_model =
+          input_model.get_parameters()[model_param_index];
+
+      if (param_in_model.get_name() == param_in_test.get_name() &&
+          param_in_model.get_type() == param_in_test.get_type()) {
+
+        test_param_index_to_model_param_index[test_param_index] =
+            static_cast<int>(model_param_index);
+        break;
       }
-
-      ++test_param_index;
     }
   }
 
   internal_test_set internal_test_set;
 
-  {
-    for (const std::vector<int>& values : tests.get_list_of_tests()) {
-      test internal_test(all_param_value_mappings.size(), -2);
-      int test_param_index = 0;
-      for (const int test_param_value_idx : values) {
-        if (param_mapping[test_param_index] >= 0) {
-          int model_param_index = param_mapping[test_param_index];
-          if (test_param_value_idx < 0) {
-            internal_test.get_values()[model_param_index] = -1;
-          } else {
-            const auto& param_value_mappings =
-                all_param_value_mappings[model_param_index];
+  for (const auto& test_values : tests.get_list_of_tests()) {
+    test internal_test(all_param_value_mappings.size(), -2);
 
-            auto param_value_idx_it = param_value_mappings.find(
-                tests.get_parameters()[test_param_index]
-                    .get_values()[test_param_value_idx]);
-            if (param_value_idx_it != param_value_mappings.end()) {
-              internal_test.get_values()[model_param_index] =
-                  param_value_idx_it->second;
-            }
+    for (std::size_t test_param_index = 0;
+         test_param_index < test_values.size(); ++test_param_index) {
+
+      const int test_param_value_idx = test_values[test_param_index];
+      const int model_param_index =
+          test_param_index_to_model_param_index[test_param_index];
+      if (model_param_index >= 0) {
+        if (test_param_value_idx < 0) {
+          internal_test.get_values()[model_param_index] = -1;
+        } else {
+          const auto& param_value_mappings =
+              all_param_value_mappings[model_param_index];
+
+          auto param_value_idx_it = param_value_mappings.find(
+              tests.get_parameters()[test_param_index]
+                  .get_values()[test_param_value_idx]);
+          if (param_value_idx_it != param_value_mappings.end()) {
+            internal_test.get_values()[model_param_index] =
+                param_value_idx_it->second;
           }
         }
-
-        ++test_param_index;
       }
-
-      internal_test_set.get_list_of_tests().push_back(std::move(internal_test));
     }
+
+    internal_test_set.get_list_of_tests().push_back(std::move(internal_test));
   }
 
   return internal_test_set;
 }
 
 unsigned int get_product_of_max_n_parameter_sizes(
-    const unsigned int num_parameters, const unsigned int n,
-    const citcpp::detail::internal_model& model,
+    unsigned int num_parameters, unsigned int n, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map) {
 
   // Define a min-heap.

@@ -5,7 +5,7 @@ namespace detail {
 
 coverage_measurement_json::coverage_measurement_json(
     const std::unordered_map<std::string, coverage_measurement>& covm,
-    const std::vector<unsigned int>& invalid_test_indices)
+    const std::vector<std::size_t>& invalid_test_indices)
     : covm_(covm), invalid_test_indices_(invalid_test_indices) {}
 
 std::ostream& operator<<(std::ostream& os,
@@ -13,12 +13,12 @@ std::ostream& operator<<(std::ostream& os,
 
   const std::unordered_map<std::string, coverage_measurement>& covm =
       covm_json.covm_;
-  const std::vector<unsigned int>& invalid_test_indices =
+  const std::vector<std::size_t>& invalid_test_indices =
       covm_json.invalid_test_indices_;
 
   os << "{\n";
   os << "  \"invalid_tests\": [\n";
-  for (unsigned int i = 0; i < invalid_test_indices.size(); ++i) {
+  for (std::size_t i = 0; i < invalid_test_indices.size(); ++i) {
     os << "    " << invalid_test_indices[i];
     if (i < invalid_test_indices.size() - 1) {
       os << ",";
@@ -34,7 +34,7 @@ std::ostream& operator<<(std::ostream& os,
     os << "    \"num_tuples_to_cover\": "
        << relation_covm.get_number_of_combinations_to_cover() << ",\n";
     os << "    \"tuples_covered_by_tests\": [\n";
-    for (unsigned int test_idx = 0;
+    for (std::size_t test_idx = 0;
          test_idx < relation_covm.get_covered_tuples().size(); ++test_idx) {
 
       const unsigned long long covered_tuples =

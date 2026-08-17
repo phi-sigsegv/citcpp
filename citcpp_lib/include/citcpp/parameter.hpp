@@ -4,7 +4,6 @@
 #include <ostream>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -15,61 +14,64 @@ namespace citcpp {
  */
 class parameter_value {
   public:
-    parameter_value() : value_("") {}
+    /**
+     * Creates a parameter value of type string with the empty
+     * string with a default-constructed string.
+     */
+    parameter_value();
 
+    /**
+     * Created a parameter value according to the type of the given
+     * value (bool, std::string, or int).
+     */
     template <typename T>
     parameter_value(const T& value) : value_(value) {}
 
-    operator bool() const { return std::get<bool>(value_); }
-    operator const std::string&() const {
-      return std::get<std::string>(value_);
-    }
-    operator int() const { return std::get<int>(value_); }
+    operator bool() const;
+    operator const std::string&() const;
+    operator int() const;
 
+    /**
+     * Sets the parameter value according to the type of the given
+     * value (bool, std::string, or int).
+     */
     template <typename T>
     void set_value(const T& value) {
       value_ = value;
     }
 
+    /**
+     * Sets the parameter value according to the type of the given
+     * value (bool, std::string, or int), and returns this parameter
+     * value object.
+     */
     template <typename T>
     parameter_value& value(const T& value) {
       value_ = value;
       return *this;
     }
 
-    const std::variant<bool, std::string, int>& get_variant_value() const {
-      return value_;
-    }
+    /**
+     * Returns a reference to the underlying std::variant of this parameter
+     * value.
+     */
+    const std::variant<bool, std::string, int>& get_variant_value() const;
 
-    bool operator==(const parameter_value& other) const {
-      return value_ == other.value_;
-    }
+    /**
+     * Compares this parameter value against a given other one for equility.
+     */
+    bool operator==(const parameter_value& other) const;
 
     friend std::ostream& operator<<(std::ostream& os,
-                                    const parameter_value& param_value) {
-
-      std::visit(
-          [&os](auto arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, bool>) {
-              if (arg) {
-                os << "true";
-              } else {
-                os << "false";
-              }
-            } else {
-              os << arg;
-            }
-          },
-          param_value.value_);
-
-      return os;
-    }
+                                    const parameter_value& param_value);
 
   private:
     std::variant<bool, std::string, int> value_;
 };
 
+/**
+ * Implements a hash functor for parameter_value.
+ */
 struct parameter_value_hash {
     std::size_t operator()(const parameter_value& value) const noexcept {
       return std::hash<std::variant<bool, std::string, int>>{}(
@@ -86,57 +88,40 @@ enum class parameter_type { BOOLEAN, ENUM, INTEGER };
  */
 class parameter {
   public:
-    const std::string& get_name() const { return name_; }
+    const std::string& get_name() const;
 
-    std::string& get_name() { return name_; }
+    std::string& get_name();
 
-    void set_name(std::string_view name) { name_ = name; }
+    void set_name(std::string_view name);
 
-    parameter& name(std::string_view name) {
-      name_ = name;
-      return *this;
-    }
+    parameter& name(std::string_view name);
 
-    const parameter_type& get_type() const { return type_; }
+    const parameter_type& get_type() const;
 
-    parameter_type& get_type() { return type_; }
+    parameter_type& get_type();
 
-    void set_type(parameter_type type) { type_ = type; }
+    void set_type(parameter_type type);
 
-    parameter& type(parameter_type type) {
-      type_ = type;
-      return *this;
-    }
+    parameter& type(parameter_type type);
 
-    const std::vector<parameter_value>& get_values() const { return values_; }
+    const std::vector<parameter_value>& get_values() const;
 
-    std::vector<parameter_value>& get_values() { return values_; }
+    std::vector<parameter_value>& get_values();
 
-    void set_values(const std::vector<parameter_value>& values) {
-      values_ = values;
-    }
+    void set_values(const std::vector<parameter_value>& values);
 
-    parameter& values(const std::vector<parameter_value>& values) {
-      values_ = values;
-      return *this;
-    }
+    parameter& values(const std::vector<parameter_value>& values);
 
-    void add_value(const parameter_value& value) { values_.push_back(value); }
+    void add_value(parameter_value value);
 
-    void add_value(parameter_value&& value) {
-      values_.push_back(std::move(value));
-    }
-
-    bool operator==(const parameter& other) const {
-      return name_ == other.name_;
-    }
+    bool operator==(const parameter& other) const;
 
     friend std::ostream& operator<<(std::ostream& os, const parameter& param);
 
   private:
-    std::string name_;
-    parameter_type type_;
-    std::vector<parameter_value> values_;
+    std::string name_{};
+    parameter_type type_{parameter_type::BOOLEAN};
+    std::vector<parameter_value> values_{};
 };
 
 /**
@@ -144,24 +129,15 @@ class parameter {
  */
 class parameter_reference {
   public:
-    parameter_reference() = default;
-    parameter_reference(const std::string& param_name)
-        : param_name_(param_name) {}
-    parameter_reference(const parameter& param)
-        : param_name_(param.get_name()) {}
-    parameter_reference(const parameter_reference& other) = default;
-    parameter_reference(parameter_reference&& other) = default;
+    parameter_reference();
 
-    ~parameter_reference() = default;
+    parameter_reference(const std::string& param_name);
 
-    parameter_reference& operator=(const parameter_reference& other) = default;
-    parameter_reference& operator=(parameter_reference&& other) = default;
+    parameter_reference(const parameter& param);
 
-    const std::string& get_name() const { return param_name_; }
+    const std::string& get_name() const;
 
-    bool operator==(const parameter_reference& other) const {
-      return get_name() == other.get_name();
-    }
+    bool operator==(const parameter_reference& other) const;
 
     friend std::ostream& operator<<(std::ostream& os,
                                     const parameter_reference& param);
@@ -170,59 +146,13 @@ class parameter_reference {
     std::string param_name_;
 };
 
+/**
+ * Implements a hash functor for parameter_reference.
+ */
 struct parameter_reference_hash {
     std::size_t operator()(const parameter_reference& param) const noexcept {
       return std::hash<std::string>{}(param.get_name());
     }
-};
-
-/**
- * Represents a relation, which is a set of parameters and an interaction
- * strength.
- */
-class relation {
-  public:
-    const std::string& get_name() const { return name_; }
-
-    void set_name(std::string_view name) { name_ = name; }
-
-    const std::vector<parameter_reference>& get_parameters() const {
-      return parameters_;
-    }
-
-    std::vector<parameter_reference>& get_parameters() { return parameters_; }
-
-    void add_parameter(const parameter& parameter) {
-      parameters_.push_back(parameter);
-    }
-
-    void add_parameter(const parameter_reference& parameter) {
-      parameters_.push_back(parameter);
-    }
-
-    void add_parameter(parameter_reference&& parameter) {
-      parameters_.push_back(std::move(parameter));
-    }
-
-    unsigned int get_interaction_strength() const {
-      return interaction_strength_;
-    }
-
-    void set_interaction_strength(unsigned int interaction_strength) {
-      interaction_strength_ = interaction_strength;
-    }
-
-    bool operator==(const relation& other) const {
-      return name_ == other.name_ && parameters_ == other.parameters_ &&
-             interaction_strength_ == other.interaction_strength_;
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, const relation& rel);
-
-  private:
-    std::string name_;
-    std::vector<parameter_reference> parameters_;
-    unsigned int interaction_strength_;
 };
 
 }  // namespace citcpp

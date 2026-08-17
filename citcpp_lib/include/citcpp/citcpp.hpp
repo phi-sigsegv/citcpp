@@ -79,7 +79,7 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
  * 2^16 values.
  */
 std::unique_ptr<covm_exec_handle> measure_coverage(
-    model input_model, test_set tests, unsigned int t,
+    model input_model, test_set tests, int t,
     const coverage_measurement_config& config);
 
 /**
@@ -93,8 +93,7 @@ std::unique_ptr<covm_exec_handle> measure_coverage(
  * 2^16 values.
  */
 std::unique_ptr<covm_exec_handle> measure_coverage(model input_model,
-                                                   test_set tests,
-                                                   unsigned int t);
+                                                   test_set tests, int t);
 
 }  // namespace citcpp
 

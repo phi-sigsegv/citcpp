@@ -12,7 +12,7 @@
 namespace citcpp {
 namespace detail {
 
-void measure_coverage(const unsigned int strength, const internal_model& model,
+void measure_coverage(unsigned int strength, const internal_model& model,
                       const std::vector<unsigned int>& parameter_index_map,
                       const internal_test_set& test_set,
                       const constraint_handler& constr_handler,
@@ -20,7 +20,7 @@ void measure_coverage(const unsigned int strength, const internal_model& model,
                       citcpp::coverage_measurement& covm);
 
 template <conc_is_void_functor_executor T_EXEC>
-void measure_coverage(const unsigned int strength, const internal_model& model,
+void measure_coverage(unsigned int strength, const internal_model& model,
                       const std::vector<unsigned int>& parameter_index_map,
                       const internal_test_set& test_set,
                       const constraint_handler& constr_handler,

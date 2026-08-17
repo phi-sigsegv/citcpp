@@ -34,7 +34,7 @@ class constraint_to_xdd_visitor {
           reordered_domain_sizes_(reordered_domain_sizes),
           negate_(false) {
 
-      int idx = 0;
+      unsigned int idx = 0;
       for (const auto& param : model_.get_input_model().get_parameters()) {
         parameter_name_map_[param.get_name()] = &param;
         param_to_level_.emplace(param.get_name(), parameter_to_level[idx]);
@@ -43,7 +43,6 @@ class constraint_to_xdd_visitor {
     }
 
     T_DD operator()(const citcpp::boolean_literal& lit) {
-
       using namespace citcpp::detail;
       using namespace citcpp;
 
@@ -54,16 +53,16 @@ class constraint_to_xdd_visitor {
     }
 
     T_DD operator()(const citcpp::boolean_proposition& prop) {
-
       using namespace citcpp::detail;
       using namespace citcpp;
 
       const parameter& param =
           *parameter_name_map_.at(prop.get_parameter().get_name());
-      const int param_level = param_to_level_.at(param.get_name());
-      const int domain_size = param.get_values().size();
+      const uint32_t param_level = param_to_level_.at(param.get_name());
+      const uint32_t domain_size =
+          static_cast<uint32_t>(param.get_values().size());
 
-      int value_index = 0;
+      uint32_t value_index = 0;
       for (const auto& value : param.get_values()) {
         bool value_as_bool = value;
         if (value_as_bool == prop.get_compared_value()) {
@@ -103,10 +102,11 @@ class constraint_to_xdd_visitor {
 
       const parameter& param =
           *parameter_name_map_.at(prop.get_parameter().get_name());
-      const int param_level = param_to_level_.at(param.get_name());
-      const int domain_size = param.get_values().size();
+      const uint32_t param_level = param_to_level_.at(param.get_name());
+      const uint32_t domain_size =
+          static_cast<uint32_t>(param.get_values().size());
 
-      int value_index = 0;
+      uint32_t value_index = 0;
       for (const auto& value : param.get_values()) {
         const std::string& value_as_string = value;
         if (value_as_string == prop.get_compared_value()) {
@@ -146,32 +146,38 @@ class constraint_to_xdd_visitor {
 
       const parameter& param =
           *parameter_name_map_.at(prop.get_parameter().get_name());
-      const int param_level = param_to_level_.at(param.get_name());
-      const int domain_size = param.get_values().size();
+      const uint32_t param_level = param_to_level_.at(param.get_name());
+      const uint32_t domain_size =
+          static_cast<uint32_t>(param.get_values().size());
 
       switch (prop.get_operator()) {
         case relational_operator::EQ: {
-          for (int v = 0; v < param.get_values().size(); ++v) {
-            int value_as_int = param.get_values()[v];
+          uint32_t v = 0;
+          for (const auto& param_value : param.get_values()) {
+            int value_as_int = param_value;
             if (value_as_int == prop.get_compared_value()) {
               return T_DD(
                   param_level,
                   negate_ ? relational_operator::NEQ : relational_operator::EQ,
                   v, domain_size);
             }
+
+            ++v;
           }
 
           return negate_ ? true_false_dd_trait<T_DD>::true_dd()
                          : true_false_dd_trait<T_DD>::false_dd();
         }
         case relational_operator::LE: {
-          if ((int)param.get_values()[param.get_values().size() - 1] <=
-              prop.get_compared_value()) {
+          int greatest_value =
+              param.get_values()[param.get_values().size() - 1];
+          if (greatest_value <= prop.get_compared_value()) {
             return negate_ ? true_false_dd_trait<T_DD>::false_dd()
                            : true_false_dd_trait<T_DD>::true_dd();
           }
 
-          for (int v = param.get_values().size() - 1; v >= 0; --v) {
+          for (int v = static_cast<int>(param.get_values().size() - 1); v >= 0;
+               --v) {
             int value_as_int = param.get_values()[v];
             if (value_as_int <= prop.get_compared_value()) {
               return T_DD(
@@ -185,13 +191,15 @@ class constraint_to_xdd_visitor {
                          : true_false_dd_trait<T_DD>::false_dd();
         }
         case relational_operator::LT: {
-          if ((int)param.get_values()[param.get_values().size() - 1] <
-              prop.get_compared_value()) {
+          int greatest_value =
+              param.get_values()[param.get_values().size() - 1];
+          if (greatest_value < prop.get_compared_value()) {
             return negate_ ? true_false_dd_trait<T_DD>::false_dd()
                            : true_false_dd_trait<T_DD>::true_dd();
           }
 
-          for (int v = param.get_values().size() - 1; v >= 0; --v) {
+          for (int v = static_cast<int>(param.get_values().size() - 1); v >= 0;
+               --v) {
             int value_as_int = param.get_values()[v];
             if (value_as_int < prop.get_compared_value()) {
               // We create and LDD, which represents that X <= value_as_int,
@@ -208,32 +216,38 @@ class constraint_to_xdd_visitor {
                          : true_false_dd_trait<T_DD>::false_dd();
         }
         case relational_operator::GE: {
-          if ((int)param.get_values()[0] >= prop.get_compared_value()) {
+          int smallest_value = param.get_values()[0];
+          if (smallest_value >= prop.get_compared_value()) {
             return negate_ ? true_false_dd_trait<T_DD>::false_dd()
                            : true_false_dd_trait<T_DD>::true_dd();
           }
 
-          for (int v = 0; v < param.get_values().size(); ++v) {
-            int value_as_int = param.get_values()[v];
+          uint32_t v = 0;
+          for (const auto& param_value : param.get_values()) {
+            int value_as_int = param_value;
             if (value_as_int >= prop.get_compared_value()) {
               return T_DD(
                   param_level,
                   negate_ ? relational_operator::LT : relational_operator::GE,
                   v, domain_size);
             }
+
+            ++v;
           }
 
           return negate_ ? true_false_dd_trait<T_DD>::true_dd()
                          : true_false_dd_trait<T_DD>::false_dd();
         }
         case relational_operator::GT: {
-          if ((int)param.get_values()[0] > prop.get_compared_value()) {
+          int smallest_value = param.get_values()[0];
+          if (smallest_value > prop.get_compared_value()) {
             return negate_ ? true_false_dd_trait<T_DD>::false_dd()
                            : true_false_dd_trait<T_DD>::true_dd();
           }
 
-          for (int v = 0; v < param.get_values().size(); ++v) {
-            int value_as_int = param.get_values()[v];
+          uint32_t v = 0;
+          for (const auto& param_value : param.get_values()) {
+            int value_as_int = param_value;
             if (value_as_int > prop.get_compared_value()) {
               // We create and LDD, which represents that X >= value_as_int,
               // which means that X >= value_as_int > a,
@@ -243,20 +257,25 @@ class constraint_to_xdd_visitor {
                   negate_ ? relational_operator::LT : relational_operator::GE,
                   v, domain_size);
             }
+
+            ++v;
           }
 
           return negate_ ? true_false_dd_trait<T_DD>::true_dd()
                          : true_false_dd_trait<T_DD>::false_dd();
         }
         default: {
-          for (int v = 0; v < param.get_values().size(); ++v) {
-            int value_as_int = param.get_values()[v];
+          uint32_t v = 0;
+          for (const auto& param_value : param.get_values()) {
+            int value_as_int = param_value;
             if (value_as_int == prop.get_compared_value()) {
               return T_DD(
                   param_level,
                   negate_ ? relational_operator::EQ : relational_operator::NEQ,
                   v, domain_size);
             }
+
+            ++v;
           }
 
           return negate_ ? true_false_dd_trait<T_DD>::false_dd()
@@ -334,7 +353,7 @@ class constraint_to_xdd_visitor {
     const citcpp::detail::internal_model& model_;
     std::unordered_map<std::string, const citcpp::parameter*>
         parameter_name_map_;
-    std::unordered_map<citcpp::parameter_reference, int,
+    std::unordered_map<citcpp::parameter_reference, uint32_t,
                        citcpp::parameter_reference_hash>
         param_to_level_;
     const std::vector<unsigned int>& reordered_domain_sizes_;
@@ -351,7 +370,7 @@ int& get_lobal_sylan_init_counter() {
   return count;
 }
 
-void maybe_initialize_sylvan(int num_workers,
+void maybe_initialize_sylvan(unsigned int num_workers,
                              std::size_t memory_limit_in_bytes) {
   using namespace citcpp::detail;
   using namespace citcpp;
@@ -389,7 +408,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
     check_validity_task() = default;
 
     check_validity_task(const citcpp::detail::test* test,
-                        unsigned int test_index,
+                        std::size_t test_index,
                         const citcpp::detail::constraint_handler* handler,
                         citcpp::detail::bitset_uint64* result, std::mutex* mut)
         : test_(test),
@@ -397,8 +416,6 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
           handler_(handler),
           result_(result),
           mut_(mut) {}
-
-    virtual ~check_validity_task() {}
 
     void operator()() {
       const bool is_valid = handler_->is_valid_partial_test(*test_);
@@ -411,15 +428,16 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
   private:
     void mark_test_as_valid() {
       std::lock_guard<std::mutex> guard(*mut_);
-      result_->set(test_index_);
+      result_->set(
+          static_cast<citcpp::detail::bitset_uint64::size_type>(test_index_));
     }
 
   private:
-    const citcpp::detail::test* test_;
-    unsigned int test_index_;
-    const citcpp::detail::constraint_handler* handler_;
-    citcpp::detail::bitset_uint64* result_;
-    std::mutex* mut_;
+    const citcpp::detail::test* test_{nullptr};
+    std::size_t test_index_{0};
+    const citcpp::detail::constraint_handler* handler_{nullptr};
+    citcpp::detail::bitset_uint64* result_{nullptr};
+    std::mutex* mut_{nullptr};
 };
 
 VOID_TASK_1(lace_check_test_validity_task, check_validity_task*, functor) {
@@ -433,7 +451,7 @@ VOID_TASK_3(lace_check_validity_of_partial_test, citcpp::detail::bitset_uint64*,
   std::mutex mut;
 
   std::vector<check_validity_task> tasks(test_set->get_list_of_tests().size());
-  unsigned int test_index = 0;
+  std::size_t test_index = 0;
   for (const auto& t : test_set->get_list_of_tests()) {
     tasks[test_index] =
         check_validity_task(&t, test_index, c_handler, result, &mut);
@@ -441,7 +459,7 @@ VOID_TASK_3(lace_check_validity_of_partial_test, citcpp::detail::bitset_uint64*,
     ++test_index;
   }
 
-  for (int i = 0; i < tasks.size(); ++i) {
+  for (std::size_t i = 0; i < tasks.size(); ++i) {
     SYNC(lace_check_test_validity_task);
   }
 }
@@ -454,7 +472,7 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
 
     get_valid_parameter_assignments_task(
         const citcpp::detail::test* test, unsigned int param_idx,
-        unsigned int test_index,
+        std::size_t test_index,
         const citcpp::detail::constraint_handler* handler,
         std::vector<citcpp::detail::bitset_uint64>* results)
         : test_(test),
@@ -463,19 +481,17 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
           handler_(handler),
           results_(results) {}
 
-    virtual ~get_valid_parameter_assignments_task() {}
-
     void operator()() {
       (*results_)[test_index_] =
           handler_->get_valid_parameter_assignments(*test_, param_idx_);
     }
 
   private:
-    const citcpp::detail::test* test_;
-    unsigned int param_idx_;
-    unsigned int test_index_;
-    const citcpp::detail::constraint_handler* handler_;
-    std::vector<citcpp::detail::bitset_uint64>* results_;
+    const citcpp::detail::test* test_{nullptr};
+    unsigned int param_idx_{0};
+    std::size_t test_index_{0};
+    const citcpp::detail::constraint_handler* handler_{nullptr};
+    std::vector<citcpp::detail::bitset_uint64>* results_{nullptr};
 };
 
 VOID_TASK_1(lace_get_valid_parameter_assignments_task,
@@ -491,7 +507,7 @@ VOID_TASK_4(lace_get_valid_parameter_assignments_for_testset_task,
 
   std::vector<get_valid_parameter_assignments_task> tasks(
       test_set->get_list_of_tests().size());
-  unsigned int test_index = 0;
+  std::size_t test_index = 0;
   for (const auto& t : test_set->get_list_of_tests()) {
     tasks[test_index] = get_valid_parameter_assignments_task(
         &t, param_idx, test_index, c_handler, result);
@@ -499,7 +515,7 @@ VOID_TASK_4(lace_get_valid_parameter_assignments_for_testset_task,
     ++test_index;
   }
 
-  for (int i = 0; i < tasks.size(); ++i) {
+  for (std::size_t i = 0; i < tasks.size(); ++i) {
     SYNC(lace_get_valid_parameter_assignments_task);
   }
 }
@@ -515,13 +531,11 @@ class alignas(citcpp::detail::false_sharing_avoidance_alignment)
         const citcpp::detail::constraint_handler* handler)
         : test_(test), handler_(handler) {}
 
-    virtual ~replace_dont_care_values_task() {}
-
     void operator()() { handler_->replace_dont_care_values(*test_); }
 
   private:
-    citcpp::detail::test* test_;
-    const citcpp::detail::constraint_handler* handler_;
+    citcpp::detail::test* test_{nullptr};
+    const citcpp::detail::constraint_handler* handler_{nullptr};
 };
 
 VOID_TASK_1(lace_replace_dont_care_values_task, replace_dont_care_values_task*,
@@ -536,23 +550,23 @@ VOID_TASK_2(lace_replace_dont_care_values_in_testset_task,
 
   std::vector<replace_dont_care_values_task> tasks(
       test_set->get_list_of_tests().size());
-  unsigned int test_index = 0;
+  std::size_t test_index = 0;
   for (auto& t : test_set->get_list_of_tests()) {
     tasks[test_index] = replace_dont_care_values_task(&t, c_handler);
     SPAWN(lace_replace_dont_care_values_task, &tasks[test_index]);
     ++test_index;
   }
 
-  for (int i = 0; i < tasks.size(); ++i) {
+  for (std::size_t i = 0; i < tasks.size(); ++i) {
     SYNC(lace_replace_dont_care_values_task);
   }
 }
 
 struct lace_get_first_test_valid_for_assignment_ctx {
-    const citcpp::detail::param_vector* param_indices;
-    const citcpp::detail::value_vector* value_indices;
-    std::atomic<size_t> min_valid_index;
-    citcpp::detail::test_list_intrusive_integ* test;
+    const citcpp::detail::param_vector* param_indices = nullptr;
+    const citcpp::detail::value_vector* value_indices = nullptr;
+    std::atomic_size_t min_valid_index = 0;
+    citcpp::detail::test_list_intrusive_integ* test = nullptr;
     citcpp::detail::spin_lock lock;
 };
 
@@ -588,8 +602,8 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
 
       bool covers_combo = true;
 
-      for (unsigned int j = 0; j < param_indices.size(); ++j) {
-        const unsigned int param_idx = param_indices[j];
+      for (std::size_t j = 0; j < param_indices.size(); ++j) {
+        const std::size_t param_idx = param_indices[j];
         const int param_value_to_assign = value_indices[j];
         const int param_value_in_test = t.get_values()[param_idx];
 
@@ -605,8 +619,8 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
       covers_combo = covers_combo && handler->is_valid_partial_test(t);
 
       // Rollback the changes we did to the test.
-      for (unsigned int j = 0; j < param_indices.size(); ++j) {
-        const unsigned int param_idx = param_indices[j];
+      for (std::size_t j = 0; j < param_indices.size(); ++j) {
+        const std::size_t param_idx = param_indices[j];
         t.get_values()[param_idx] = old_values[j];
       }
 
@@ -615,6 +629,7 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
             ctx->min_valid_index.load(std::memory_order_relaxed);
         if (i < current_min) {
           std::lock_guard<citcpp::detail::spin_lock> guard(ctx->lock);
+          current_min = ctx->min_valid_index.load(std::memory_order_relaxed);
           if (i < current_min) {
             ctx->min_valid_index.store(i, std::memory_order_relaxed);
             ctx->test = &list_node;
@@ -643,7 +658,7 @@ namespace citcpp {
 namespace detail {
 
 constraint_handler_sylvan_base::constraint_handler_sylvan_base(
-    int num_workers, std::size_t memory_limit_in_bytes)
+    unsigned int num_workers, std::size_t memory_limit_in_bytes)
     : base_type() {
 
   maybe_initialize_sylvan(num_workers, memory_limit_in_bytes);
@@ -654,13 +669,13 @@ constraint_handler_sylvan_base::~constraint_handler_sylvan_base() {
 }
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
-    const internal_model& model, int num_workers,
+    const internal_model& model, unsigned int num_workers,
     std::size_t memory_limit_in_bytes)
     : constraint_handler_sylvan_idd(model, {}, num_workers,
                                     memory_limit_in_bytes) {}
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
-    const internal_model& model, int num_workers,
+    const internal_model& model, unsigned int num_workers,
     std::size_t memory_limit_in_bytes,
     constraint_handler_init_progress& exec_handle)
     : constraint_handler_sylvan_idd(model, {}, num_workers,
@@ -668,7 +683,7 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     const internal_model& model,
-    const std::vector<unsigned int>& variable_order, int num_workers,
+    const std::vector<unsigned int>& variable_order, unsigned int num_workers,
     std::size_t memory_limit_in_bytes)
     : base_type(num_workers, memory_limit_in_bytes),
       model_(model),
@@ -698,7 +713,7 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     const internal_model& model,
-    const std::vector<unsigned int>& variable_order, int num_workers,
+    const std::vector<unsigned int>& variable_order, unsigned int num_workers,
     std::size_t memory_limit_in_bytes,
     constraint_handler_init_progress& exec_handle)
     : base_type(num_workers, memory_limit_in_bytes),
@@ -731,8 +746,7 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
 void constraint_handler_sylvan_idd::initialize_variable_order(
     const std::vector<unsigned int>& variable_order) {
 
-  const std::vector<unsigned int>& domain_sizes =
-      model_.get_parameter_num_values();
+  const auto& domain_sizes = model_.get_parameter_num_values();
 
   if (variable_order.empty()) {
     variable_order_.resize(domain_sizes.size());
@@ -745,7 +759,7 @@ void constraint_handler_sylvan_idd::initialize_variable_order(
   reordered_domain_sizes_.resize(variable_order_.size());
 
   for (unsigned int level = 0; level < variable_order_.size(); ++level) {
-    const unsigned int param_idx = variable_order_[level];
+    const std::size_t param_idx = variable_order_[level];
     parameter_to_level_[param_idx] = level;
     reordered_domain_sizes_[level] = domain_sizes[param_idx];
   }
@@ -775,7 +789,8 @@ void constraint_handler_sylvan_idd::mark_valid_tuples(
 bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
     const internal_test_set& test_set) const {
 
-  bitset_uint64 result(test_set.get_list_of_tests().size());
+  bitset_uint64 result(static_cast<bitset_uint64::size_type>(
+      test_set.get_list_of_tests().size()));
 
   RUN(lace_check_validity_of_partial_test, &result, &test_set, this);
 
@@ -788,15 +803,15 @@ bitset_uint64 constraint_handler_sylvan_idd::get_valid_parameter_assignments(
   auto it = test_to_idd_.find(&t);
   if (it != test_to_idd_.end()) {
     return it->second.get_valid_variable_assignments(
-        parameter_to_level_[param_idx],
-        model_.get_parameter_num_values()[param_idx], t.get_values(),
-        &variable_order_);
+        static_cast<uint32_t>(parameter_to_level_[param_idx]),
+        static_cast<uint32_t>(model_.get_parameter_num_values()[param_idx]),
+        t.get_values(), &variable_order_);
   }
 
   return idd_.get_valid_variable_assignments(
-      parameter_to_level_[param_idx],
-      model_.get_parameter_num_values()[param_idx], t.get_values(),
-      &variable_order_);
+      static_cast<uint32_t>(parameter_to_level_[param_idx]),
+      static_cast<uint32_t>(model_.get_parameter_num_values()[param_idx]),
+      t.get_values(), &variable_order_);
 }
 
 std::vector<bitset_uint64>
@@ -824,7 +839,7 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
   // So the test may still contain  don't care values for unconstrained
   // variables, which we also need to replace. This is easy however, since we
   // can simply replace all of them by the first value of the respective domain.
-  for (unsigned int i = 0; i < t.get_values().size(); ++i) {
+  for (std::size_t i = 0; i < t.get_values().size(); ++i) {
     int& value = t.get_values()[i];
     if (value < 0) {
       value = 0;
@@ -864,8 +879,8 @@ constraint_handler_sylvan_idd::get_first_test_valid_for_assignment(
       test& t = list_node.get_test();
 
       bool covers_combo = true;
-      for (unsigned int i = 0; i < param_indices.size(); ++i) {
-        const unsigned int param_idx = param_indices[i];
+      for (std::size_t i = 0; i < param_indices.size(); ++i) {
+        const std::size_t param_idx = param_indices[i];
         const int param_value_to_assign = value_indices[i];
         const int param_value_in_test = t.get_values()[param_idx];
 
@@ -881,8 +896,8 @@ constraint_handler_sylvan_idd::get_first_test_valid_for_assignment(
       covers_combo = covers_combo && is_valid_partial_test(t);
 
       // Rollback the changes we did to the test.
-      for (unsigned int i = 0; i < param_indices.size(); ++i) {
-        const unsigned int param_idx = param_indices[i];
+      for (std::size_t i = 0; i < param_indices.size(); ++i) {
+        const std::size_t param_idx = param_indices[i];
         t.get_values()[param_idx] = old_values[i];
       }
 
@@ -932,13 +947,15 @@ void constraint_handler_sylvan_idd::update_cached_partial_test(
     auto it = test_to_idd_.find(t);
     if (it != test_to_idd_.end()) {
       it->second.project_intersect(
-          sylvan_idd(parameter_to_level_[param_idx], value));
+          sylvan_idd(static_cast<uint32_t>(parameter_to_level_[param_idx]),
+                     static_cast<uint32_t>(value)));
     } else {
       auto emplace_result = test_to_idd_.emplace(
           t, sylvan_idd::project_intersect(
                  idd_, sylvan_idd(t->get_values(), &variable_order_)));
       emplace_result.first->second.project_intersect(
-          sylvan_idd(parameter_to_level_[param_idx], value));
+          sylvan_idd(static_cast<uint32_t>(parameter_to_level_[param_idx]),
+                     static_cast<uint32_t>(value)));
     }
   }
 }

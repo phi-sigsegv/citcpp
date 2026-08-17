@@ -13,27 +13,10 @@ namespace detail {
 class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
                                     public cagen_exec_handle_base {
   public:
-    cagen_exec_handle_ipog_impl()
-        : cagen_exec_handle_ipog(),
-          cagen_exec_handle_base(),
-          num_parameters_to_process_(0),
-          num_processed_parameters_(0),
-          runnable_() {}
-
-    cagen_exec_handle_ipog_impl(cagen_exec_handle_ipog_impl&&) = default;
-
-    cagen_exec_handle_ipog_impl(const cagen_exec_handle_ipog_impl&) = delete;
-
-    cagen_exec_handle_ipog_impl& operator=(cagen_exec_handle_ipog_impl&&) =
-        default;
-
-    cagen_exec_handle_ipog_impl& operator=(const cagen_exec_handle_ipog_impl&) =
-        delete;
-
-    ~cagen_exec_handle_ipog_impl() {}
+    ~cagen_exec_handle_ipog_impl() override = default;
 
   public:
-    unsigned int get_number_of_parameters_to_process() const {
+    unsigned int get_number_of_parameters_to_process() const override {
       return num_parameters_to_process_;
     }
 
@@ -42,7 +25,7 @@ class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
       num_parameters_to_process_ = num_parameters_to_process;
     }
 
-    unsigned int get_number_of_processed_parameters() const {
+    unsigned int get_number_of_processed_parameters() const override {
       return num_processed_parameters_;
     }
 
@@ -63,9 +46,9 @@ class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
     }
 
   private:
-    std::atomic_uint num_parameters_to_process_;
-    std::atomic_uint num_processed_parameters_;
-    std::unique_ptr<citcpp_ipog_base> runnable_;
+    unsigned int num_parameters_to_process_{0};
+    unsigned int num_processed_parameters_{0};
+    std::unique_ptr<citcpp_ipog_base> runnable_{};
 };
 
 }  // namespace detail

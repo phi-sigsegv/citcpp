@@ -17,7 +17,7 @@ namespace detail {
  * This method can be called concurrently, and also release_lace and
  * this method can be called concurrently.
  */
-void lace_init(unsigned int n_workers, size_t dqsize);
+void lace_init(unsigned int n_workers, std::size_t dqsize);
 
 /**
  * This method shall be called whenever a client that has called init_lace

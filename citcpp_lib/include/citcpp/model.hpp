@@ -9,6 +9,7 @@
 
 #include "constraints.hpp"
 #include "parameter.hpp"
+#include "relation.hpp"
 
 namespace citcpp {
 
@@ -17,81 +18,37 @@ namespace citcpp {
  */
 class model {
   public:
-    model() = default;
-    model(const model& other)
-        : name_(other.name_),
-          parameters_(other.parameters_),
-          relations_(other.relations_),
-          constraints_(other.constraints_) {
-      for (auto& c : constraints_) {
-        c = c->create_copy();
-      }
-    }
-    model(model&& other)
-        : name_(std::move(other.name_)),
-          parameters_(std::move(other.parameters_)),
-          relations_(std::move(other.relations_)),
-          constraints_(std::move(other.constraints_)) {}
+    model();
 
-    ~model() = default;
+    model(const model& other);
+    model(model&& other) noexcept;
 
-    model& operator=(const model& other) {
-      if (&other != this) {
-        name_ = other.name_;
-        parameters_ = other.parameters_;
-        relations_ = other.relations_;
-        constraints_ = other.constraints_;
-        for (auto& c : constraints_) {
-          c = c->create_copy();
-        }
-      }
+    ~model();
 
-      return *this;
-    }
-    model& operator=(model&& other) {
-      if (&other != this) {
-        name_ = std::move(other.name_);
-        parameters_ = std::move(other.parameters_);
-        relations_ = std::move(other.relations_);
-        constraints_ = std::move(other.constraints_);
-      }
+    model& operator=(const model& other);
+    model& operator=(model&& other) noexcept;
 
-      return *this;
-    }
+    const std::string& get_name() const;
 
-    const std::string& get_name() const { return name_; }
+    void set_name(std::string_view name);
 
-    void set_name(std::string_view name) { name_ = name; }
+    const std::vector<parameter>& get_parameters() const;
 
-    const std::vector<parameter>& get_parameters() const { return parameters_; }
+    std::vector<parameter>& get_parameters();
 
-    std::vector<parameter>& get_parameters() { return parameters_; }
+    void add_parameter(parameter param);
 
-    void add_parameter(const parameter& param) { parameters_.push_back(param); }
+    const std::vector<relation>& get_relations() const;
 
-    void add_parameter(parameter&& param) {
-      parameters_.push_back(std::move(param));
-    }
+    std::vector<relation>& get_relations();
 
-    const std::vector<relation>& get_relations() const { return relations_; }
+    void add_relation(relation r);
 
-    std::vector<relation>& get_relations() { return relations_; }
+    const std::vector<std::shared_ptr<constraint>>& get_constraints() const;
 
-    void add_relation(const relation& r) { relations_.push_back(r); }
+    std::vector<std::shared_ptr<constraint>>& get_constraints();
 
-    void add_relation(relation&& r) { relations_.push_back(std::move(r)); }
-
-    const std::vector<std::shared_ptr<constraint>>& get_constraints() const {
-      return constraints_;
-    }
-
-    std::vector<std::shared_ptr<constraint>>& get_constraints() {
-      return constraints_;
-    }
-
-    void add_constraint(std::shared_ptr<constraint> constraint) {
-      constraints_.push_back(std::move(constraint));
-    }
+    void add_constraint(std::shared_ptr<constraint> constraint);
 
     friend std::ostream& operator<<(std::ostream& os, const model& model);
 
