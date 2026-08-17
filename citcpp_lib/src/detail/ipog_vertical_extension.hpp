@@ -26,6 +26,4 @@ ipog_vertical_extension_result ipog_vertical_extension(
 }  // namespace detail
 }  // namespace citcpp
 
-#include "ipog_vertical_extension.tpp"
-
 #endif /* IPOG_VERTICAL_EXTENSION_HPP_ */

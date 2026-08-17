@@ -57,23 +57,6 @@ number_of_combinations get_number_of_combinations(
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter, const internal_test_set& test_set);
 
-/**
- * Returns the number of t-tuples to cover for n parameters
- * (indices [0, ... ,n-1]) from the given model and
- * interaction strength t.
- * Depending on the value of the parameter \a fixed_last_parameter, the last
- * parameter is fixed. Or in other words: We count tuples of length t-1
- * from the parameters [0, ... ,n-2], and extend those by always
- * appending a value from parameter n-1 to them.
- * In addition, this method analyzes the given test set and checks how many
- * of the combinations are covered by it.
- */
-template <conc_is_void_functor_executor T_EXEC>
-number_of_combinations get_number_of_combinations(
-    unsigned int n, const internal_model& model,
-    const std::vector<unsigned int>& parameter_index_map, unsigned int t,
-    bool fixed_last_parameter, const internal_test_set& test_set, T_EXEC& exec);
-
 }  // namespace detail
 }  // namespace citcpp
 

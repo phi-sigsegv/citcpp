@@ -3,6 +3,8 @@
 
 #include <unordered_map>
 
+#include "internal_model.hpp"
+
 namespace citcpp {
 namespace detail {
 
