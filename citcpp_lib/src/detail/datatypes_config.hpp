@@ -4,7 +4,7 @@
 #include "aligned_allocator.hpp"
 #include "shared_constants.hpp"
 #include "small_vector.hpp"
-#include "threading_lib.hpp"
+#include "spin_lock.hpp"
 
 #ifndef DETAIL_COMPILE_TIME_SELECTED_DATATYPES_HPP_
 #define DETAIL_COMPILE_TIME_SELECTED_DATATYPES_HPP_
@@ -37,13 +37,7 @@ struct alignas(false_sharing_avoidance_alignment) cache_aligned : public T {
 template <typename T>
 using aligned_vector = cache_aligned<std::vector<T>>;
 
-using thread_pool = threads::WorkStealingThreadPool<32>;
-using task_group = thread_pool::TaskGroup;
-
 using spin_lock = threads::SpinLock;
-
-template <class T_DERIVED>
-using functor_task_base = thread_pool::FunctorTaskBase<T_DERIVED>;
 
 }  // namespace detail
 }  // namespace citcpp
