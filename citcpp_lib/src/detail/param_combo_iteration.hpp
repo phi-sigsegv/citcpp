@@ -165,16 +165,10 @@ class param_combo_functor_parallel_iterator {
     }
 
   private:
-    class alignas(false_sharing_avoidance_alignment) iterate_task
-        : public functor_task_base<iterate_task> {
-
-      private:
-        typedef functor_task_base<iterate_task> base_type;
-
+    class alignas(false_sharing_avoidance_alignment) iterate_task {
       public:
         iterate_task()
-            : base_type(),
-              func_(),
+            : func_(),
               param_indices_(),
               parameter_index_map_(nullptr),
               start_idx_(0),
@@ -185,8 +179,7 @@ class param_combo_functor_parallel_iterator {
         iterate_task(const std::vector<unsigned int>& parameter_index_map,
                      int start_idx, int end_idx, int num_params_to_select,
                      param_vector&& param_indices, Args... args)
-            : base_type(),
-              func_(std::forward<Args>(args)...),
+            : func_(std::forward<Args>(args)...),
               param_indices_(std::move(param_indices)),
               parameter_index_map_(&parameter_index_map),
               start_idx_(start_idx),

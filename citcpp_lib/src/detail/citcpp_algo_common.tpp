@@ -32,12 +32,7 @@ inline unsigned long long recursive_combine_and_sum(
   return partial_sum;
 }
 
-class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task
-    : public functor_task_base<compute_partial_sum_task> {
-
-  private:
-    typedef functor_task_base<compute_partial_sum_task> base_type;
-
+class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task {
   public:
     compute_partial_sum_task() = default;
 
@@ -47,8 +42,7 @@ class alignas(false_sharing_avoidance_alignment) compute_partial_sum_task
         const std::vector<unsigned int>* factor_levels,
         const std::vector<unsigned int>* parameter_index_map,
         std::atomic_ullong* num_combinations)
-        : base_type(),
-          max_param_idx_(max_param_idx),
+        : max_param_idx_(max_param_idx),
           min_param_idx_(min_param_idx),
           num_params_to_select_(num_params_to_select),
           additional_factor_(additional_factor),
