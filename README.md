@@ -25,9 +25,9 @@ To compile `citcpp`, you will need:
 
 ### Compilation Steps
 
-1. Clone the repository and initialize submodules:
+1. Clone the repository:
    ```bash
-   git clone --recursive <repository_url>
+   git clone <repository_url>
    cd citcpp
    ```
 2. Create and enter a build directory:
