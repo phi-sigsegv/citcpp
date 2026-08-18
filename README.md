@@ -82,9 +82,9 @@ Generates a covering array (test set) for a given input model.
 
 #### Command-Specific Options
 * `--doi <int>`: Degree of Interaction (interaction strength). Specifies the degree of parameter combinations to cover (default: `2`). Set to `-1` for mixed-strength as specified in the model file's `[Relation]` section.
-* `--num-threads <int>`: Number of threads to use for execution. Specifying `0` (default) selects the thread count automatically based on the hardware capability.
+* `--num-threads <int>`: Number of threads to use for execution (default: `1`). Specifying `0` selects the thread count automatically based on the hardware capability.
 * `--mem-limit <int>`: Sets the memory limit used for the constraint handler in gigabytes (default: `8` GB).
-* `--progress`: Enable this flag to display a live computation progress bar.
+* `--progress`: Show real-time computation progress.
 * `--seed-testset-file <file>`: The path to an existing test set file to be used as a seed and extended to full coverage.
 * `--randstar <on|off>`: Control "don't care" (wildcard) values randomization. Set to `on` (default) to replace don't care values with randomized valid values, or `off` to preserve them as wildcard characters (`*`) in the output.
 * `--sep <string>`: Specify the delimiter used to separate parameter values in both input seed files and output test set files (default: `, `).
@@ -112,8 +112,8 @@ Measures the t-way interaction coverage of an existing test set against a given 
 
 #### Command-Specific Options
 * `--doi <int>`: Specifies the degree of interactions to measure (default: `2`). Set to `-1` for mixed-strength coverage defined in the model.
-* `--num-threads <int>`: Number of threads to use (default: `0` for auto-detect).
-* `--mem-limit <int>`: Constraint handler memory limit in gigabytes (default: `8` GB).
+* `--num-threads <int>`: Number of threads to use for execution (default: `1`). Specifying `0` selects the thread count automatically based on the hardware capability.
+* `--mem-limit <int>`: Sets the memory limit used for the constraint handler in gigabytes (default: `8` GB).
 * `--progress`: Show real-time computation progress.
 * `--sep <string>`: Value separator used in the test set file (default: `, `).
 
