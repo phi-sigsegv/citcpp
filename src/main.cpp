@@ -466,7 +466,7 @@ int main(int argc, char* argv[]) {
 
   std::string seed_test_set_file_path{""};
   command_cagen->add_option(
-      "--seed-testset_file", seed_test_set_file_path,
+      "--seed-testset-file", seed_test_set_file_path,
       "This is the path where the seed testset is located that "
       "shall be extended.");
 
@@ -486,13 +486,13 @@ int main(int argc, char* argv[]) {
   std::string model_file_path{""};
   command_cagen
       ->add_option(
-          "model_file", model_file_path,
+          "model-file", model_file_path,
           "This is the path to the model in ACTS format (TXT version).")
       ->required();
 
   std::string test_set_file_path{""};
   command_cagen
-      ->add_option("testset_file", test_set_file_path,
+      ->add_option("testset-file", test_set_file_path,
                    "This is the path where the testset shall be written to.")
       ->required();
 
@@ -530,18 +530,18 @@ int main(int argc, char* argv[]) {
 
   command_cov_measure
       ->add_option(
-          "model_file", model_file_path,
+          "model-file", model_file_path,
           "This is the path to the model in ACTS format (TXT version).")
       ->required();
 
   command_cov_measure
-      ->add_option("testset_file", test_set_file_path,
+      ->add_option("testset-file", test_set_file_path,
                    "This is the path to the testset.")
       ->required();
 
   std::string coverage_measurement_file_path{""};
   command_cov_measure
-      ->add_option("coverage_measurement_file", coverage_measurement_file_path,
+      ->add_option("coverage-measurement-file", coverage_measurement_file_path,
                    "This is the path where the coverage measurement shall be "
                    "written to.")
       ->required();
