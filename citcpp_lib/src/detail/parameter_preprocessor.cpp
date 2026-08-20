@@ -1,7 +1,8 @@
-#include "idd_variable_ordering.hpp"
+#include "parameter_preprocessor.hpp"
 
 #include <algorithm>
 #include <citcpp/constraints.hpp>
+#include <deque>
 #include <numeric>
 #include <set>
 #include <unordered_map>
@@ -64,21 +65,15 @@ class parameter_collector_visitor {
     std::set<unsigned int> collected_params_;
 };
 
-}  // namespace
+std::vector<std::set<unsigned int>> build_adjacency_list(
+    const citcpp::detail::internal_model& model) {
 
-namespace citcpp {
-namespace detail {
-
-std::vector<unsigned int> compute_mcmf_variable_order(
-    const internal_model& model) {
+  using namespace citcpp;
+  using namespace citcpp::detail;
 
   const auto& input_model = model.get_input_model();
   const auto& parameters = input_model.get_parameters();
   const unsigned int num_params = static_cast<unsigned int>(parameters.size());
-
-  if (num_params == 0) {
-    return {};
-  }
 
   // Map parameter names to indices for efficient lookups
   std::unordered_map<std::string, unsigned int> name_to_idx;
@@ -88,6 +83,11 @@ std::vector<unsigned int> compute_mcmf_variable_order(
 
   // Build adjacency list (interaction graph)
   std::vector<std::set<unsigned int>> adj(num_params);
+
+  if (num_params == 0) {
+    return adj;
+  }
+
   for (const auto& constraint : input_model.get_constraints()) {
     parameter_collector_visitor visitor(name_to_idx);
     constraint->accept(visitor);
@@ -102,6 +102,83 @@ std::vector<unsigned int> compute_mcmf_variable_order(
       }
     }
   }
+
+  return adj;
+}
+
+}  // namespace
+
+namespace citcpp {
+namespace detail {
+
+std::vector<std::vector<unsigned int>> compute_parameter_partitions(
+    const internal_model& model,
+    const std::vector<unsigned int>& parameter_order) {
+
+  // Step 1: Build adjacency list (interaction graph).
+  std::vector<std::set<unsigned int>> adj(build_adjacency_list(model));
+
+  // Step 2: Traverse Graph to Find Connected Components.
+  const unsigned int num_params = model.get_parameter_num_values().size();
+  std::set<unsigned int> visited;
+  std::vector<std::vector<unsigned int>> partitions;
+
+  for (unsigned int i = 0; i < num_params; ++i) {
+    unsigned int param = parameter_order[i];
+    if (visited.insert(param).second) {
+      // Did not process parameter yet.
+      // Start a new disjoint partition with it.
+      std::vector<unsigned int> current_component;
+      std::deque<unsigned int> queue;
+      queue.push_back(param);
+
+      // Since we process parameters in decreasing order, the initial
+      // parameter added to the current_component is always the lowest one
+      // in the order.
+      // This is because in the following while loop we only add parameters
+      // not visited yet, which can only be the ones with an order greater than
+      // the initial parameter of a component.
+
+      while (!queue.empty()) {
+        param = queue.front();
+        queue.pop_front();
+
+        // Add the parameter to the component.
+        current_component.push_back(param);
+
+        for (unsigned connected_param : adj[param]) {
+          if (visited.insert(connected_param).second) {
+            // Did not process the connected parameter yet.
+            queue.push_back(connected_param);
+          }
+        }
+      }
+
+      partitions.push_back(std::move(current_component));
+    }
+  }
+
+  // Since we process parameters in decreasing order, the initial
+  // parameter added to each_component is always the lowest one
+  // in the order. Thus, it defines how partitions must be ordered,
+  // which is again already correct by construction, due to processing
+  // parameters in decreasing order in the outer loop.
+  // So there's nothing to be sorted explicitly.
+
+  return partitions;
+}
+
+std::vector<unsigned int> compute_mcmf_variable_order(
+    const internal_model& model) {
+
+  const unsigned int num_params = model.get_parameter_num_values().size();
+
+  if (num_params == 0) {
+    return {};
+  }
+
+  // Build adjacency list (interaction graph)
+  std::vector<std::set<unsigned int>> adj(build_adjacency_list(model));
 
   std::vector<unsigned int> order;
   order.reserve(num_params);
@@ -177,6 +254,26 @@ std::vector<unsigned int> compute_mcmf_variable_order(
       }
     }
   }
+
+  return order;
+}
+
+std::vector<unsigned int> compute_deceasing_domain_size_variable_order(
+    const internal_model& model) {
+
+  const auto& param_num_values = model.get_parameter_num_values();
+
+  std::vector<unsigned int> order(param_num_values.size());
+  std::iota(order.begin(), order.end(), 0);
+
+  std::sort(order.begin(), order.end(),
+            [&param_num_values](const unsigned int& index1,
+                                const unsigned int& index2) {
+              if (param_num_values[index1] != param_num_values[index2]) {
+                return param_num_values[index1] > param_num_values[index2];
+              }
+              return index1 < index2;
+            });
 
   return order;
 }

@@ -3,8 +3,8 @@
 
 #include <citcpp/model.hpp>
 
-#include "../citcpp_lib/src/detail/idd_variable_ordering.hpp"
 #include "../citcpp_lib/src/detail/internal_model.hpp"
+#include "../citcpp_lib/src/detail/parameter_preprocessor.hpp"
 
 using namespace citcpp;
 using namespace citcpp::detail;

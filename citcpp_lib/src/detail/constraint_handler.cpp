@@ -2,7 +2,7 @@
 
 #include "constraint_handler_sylvan_ldd.hpp"
 #include "constraint_handler_void.hpp"
-#include "idd_variable_ordering.hpp"
+#include "parameter_preprocessor.hpp"
 
 namespace citcpp {
 namespace detail {
