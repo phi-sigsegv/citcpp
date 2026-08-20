@@ -1,0 +1,28 @@
+=========================================================================
+citcpp
+Copyright 2026 Philipp Reinkemeier
+=========================================================================
+
+-------------------------------------------------------------------------
+Third-Party Code and Attribution Notices
+-------------------------------------------------------------------------
+
+This product bundles the CLI11 library
+(https://github.com/cliutils/cli11)
+Copyright 2017-2026 University of Cincinnati, developed by Henry Schreiner under NSF AWARD 1414736
+
+This product bundles the cpp-peglib library
+(https://github.com/yhirose/cpp-peglib)
+Copyright 2022 yhirose. Licensed under the MIT License
+
+This product bundles the doctest library
+(https://github.com/doctest/doctest)
+Copyright 2016-2023 Viktor Kirilov. Licensed under the MIT License
+
+This product bundles the lace library
+(https://github.com/trolando/lace)
+Copyright Tom van Dijk. Licensed under the Apache 2.0 License
+
+This product bundles the sylvan library
+(https://github.com/trolando/sylvan)
+Copyright Tom van Dijk. Licensed under the Apache 2.0 License
