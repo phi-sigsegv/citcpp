@@ -26,7 +26,6 @@
     - `main.cpp`: Application entry point and CLI definition.
 - `3rd_party/`: Bundled external dependencies.
 - `tests/`: Comprehensive unit tests using `doctest`.
-- `plans/`: Design documents and optimization plans (e.g., `ipog_vertical_extension_optimization.md`).
 
 ## Building and Running
 
