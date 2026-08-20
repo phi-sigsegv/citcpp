@@ -82,8 +82,8 @@ jobs:
     - name: Create Release Archive (.tar.gz)
       run: |
         # Compress everything inside the stage folder
-        tar czf ${{github.workspace}}/build/citcpp-linux-x86_64.tar.gz \
-          -C ${{github.workspace}}/build/stage .
+        cd ${{github.workspace}}/build/stage
+        tar czf ${{github.workspace}}/build/citcpp-linux-x86_64.tar.gz *
 
     - name: Release
       uses: softprops/action-gh-release@v2
