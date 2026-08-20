@@ -15,10 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      tag_name: ${{ steps.create_release.outputs.tag_name }}
     steps:
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
           draft: false
@@ -36,7 +39,8 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -47,10 +51,42 @@ jobs:
       # Build your program with the given configuration
       run: |
         cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-        tar czf ${{github.workspace}}/build/citcpp-linux-x86_64.tar.gz -C ${{github.workspace}}/build citcpp
+
+    - name: Collect Third-Party Licenses
+      run: |
+        # 1. Create a staging directory for the release bundle
+        mkdir -p ${{github.workspace}}/build/stage
+
+        # 2. Extract licenses depending on your dependency management:
+        # FALLBACK (Generic scanner via pip-licenses / manual file search):
+        echo "Collecting licenses from submodules and vendor directories..."
+        touch ${{github.workspace}}/build/stage/THIRD_PARTY_LICENSES.txt
+
+        # Find third-party licenses in git submodules or vendor subdirectories
+        find . -maxdepth 4 -not -path "./.git/*" -not -path "./build/*" \( -name "LICENSE*" -o -name "COPYING*" -o -name "NOTICE*" \) | while read -r file; do
+          echo -e "\n========================================================================\n" >> ${{github.workspace}}/build/stage/THIRD_PARTY_LICENSES.txt
+          echo -e "License File: $file\n" >> ${{github.workspace}}/build/stage/THIRD_PARTY_LICENSES.txt
+          cat "$file" >> ${{github.workspace}}/build/stage/THIRD_PARTY_LICENSES.txt
+        done
+
+    - name: Stage Release Files
+      run: |
+        # Copy executable
+        cp ${{github.workspace}}/build/citcpp ${{github.workspace}}/build/stage/
+
+        # Copy Legal & Informational Files (with fallbacks if optional)
+        cp ${{github.workspace}}/LICENSE ${{github.workspace}}/build/stage/
+        cp ${{github.workspace}}/README.md ${{github.workspace}}/build/stage/ || true
+        cp ${{github.workspace}}/NOTICE ${{github.workspace}}/build/stage/ || true
+
+    - name: Create Release Archive (.tar.gz)
+      run: |
+        # Compress everything inside the stage folder
+        tar czf ${{github.workspace}}/build/citcpp-linux-x86_64.tar.gz \
+          -C ${{github.workspace}}/build/stage .
 
     - name: Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ needs.create_release.outputs.tag-name }}
+        tag_name: ${{ github.ref_name }}
         files: ${{github.workspace}}/build/citcpp-linux-x86_64.tar.gz
