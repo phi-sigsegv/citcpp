@@ -63,7 +63,7 @@ jobs:
         touch ${{github.workspace}}/build/stage/THIRD_PARTY_LICENSES.txt
 
         # Find third-party licenses in git submodules or vendor subdirectories
-        find . -maxdepth 4 -not -path "./.git/*" -not -path "./build/*" \( -name "LICENSE*" -o -name "COPYING*" -o -name "NOTICE*" \) | while read -r file; do
+        find ./3rd_party -maxdepth 4 \( -name "LICENSE*" -o -name "COPYING*" -o -name "NOTICE*" \) | while read -r file; do
           echo -e "\n========================================================================\n" >> ${{github.workspace}}/build/stage/THIRD_PARTY_LICENSES.txt
           echo -e "License File: $file\n" >> ${{github.workspace}}/build/stage/THIRD_PARTY_LICENSES.txt
           cat "$file" >> ${{github.workspace}}/build/stage/THIRD_PARTY_LICENSES.txt
