@@ -27,15 +27,6 @@ class citcpp_ipog_base {
     virtual void entry_point(cagen_exec_handle_ipog_impl& exec_handle) = 0;
 
     /**
-     * Creates an index mapping for the parameters of a given system model.
-     * The order of parameters indentified by the created index mapping
-     * is consistent with the order of parameters in the relations created
-     * by the other method provided by this class.
-     */
-    static std::vector<unsigned int> create_parameter_index_map(
-        const internal_model& internal_model);
-
-    /**
      * Creates an index mapping for the parameters referenced by a given set of
      * relations.
      */

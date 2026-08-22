@@ -63,7 +63,7 @@ constraint_handler::create_constraint_handler(
     exec_handle.set_constraint_handler_init_progress_current(0);
 
     std::vector<unsigned int> variable_order =
-        compute_mcmf_variable_order(model);
+        compute_decreasing_domain_size_mcmf_as_tie_variable_order(model);
 
     constraint_handler_sylvan_idd* handler = new constraint_handler_sylvan_idd(
         model, variable_order, num_worker_threads, memory_limit_in_bytes,

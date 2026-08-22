@@ -8,6 +8,7 @@
 #include "cagen_exec_handle_ipog_impl.hpp"
 #include "constraint_handler_sylvan_ldd.hpp"
 #include "constraint_handler_void.hpp"
+#include "parameter_preprocessor.hpp"
 
 namespace {
 
@@ -58,31 +59,12 @@ namespace citcpp {
 namespace detail {
 
 std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
-    const internal_model& internal_model) {
-
-  const auto& param_num_values = internal_model.get_parameter_num_values();
-
-  std::vector<unsigned int> parameter_index_map(param_num_values.size());
-  std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
-
-  std::sort(parameter_index_map.begin(), parameter_index_map.end(),
-            [&param_num_values](const unsigned int& index1,
-                                const unsigned int& index2) {
-              if (param_num_values[index1] != param_num_values[index2]) {
-                return param_num_values[index1] > param_num_values[index2];
-              }
-              return index1 < index2;
-            });
-
-  return parameter_index_map;
-}
-
-std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
     const std::vector<internal_relation>& relations,
     const internal_model& internal_model) {
 
   std::vector<unsigned int> parameter_index_map(
-      create_parameter_index_map(internal_model));
+      compute_decreasing_domain_size_mcmf_as_tie_variable_order(
+          internal_model));
 
   // We remove all parameter indices from the index mapping, which
   // do not appear in any of the parameter index mappings of the relations.
@@ -111,14 +93,12 @@ std::vector<unsigned int> citcpp_ipog_base::create_parameter_index_map(
 
 std::vector<internal_relation> citcpp_ipog_base::create_relations(
     const model& model, const internal_model& internal_model, int strength) {
-
-  const auto& param_num_values = internal_model.get_parameter_num_values();
-
   std::vector<internal_relation> relations;
 
   if (strength >= 1) {
-    std::vector<unsigned int> parameter_index_map =
-        create_parameter_index_map(internal_model);
+    std::vector<unsigned int> parameter_index_map(
+        internal_model.get_parameter_num_values().size());
+    std::iota(parameter_index_map.begin(), parameter_index_map.end(), 0);
 
     relations.emplace_back(std::move(parameter_index_map), strength);
   } else {
@@ -139,15 +119,6 @@ std::vector<internal_relation> citcpp_ipog_base::create_relations(
         unsigned int param_idx = param_name_to_index_map[param_ref.get_name()];
         parameter_index_map.push_back(param_idx);
       }
-
-      std::sort(parameter_index_map.begin(), parameter_index_map.end(),
-                [&param_num_values](const unsigned int& index1,
-                                    const unsigned int& index2) {
-                  if (param_num_values[index1] != param_num_values[index2]) {
-                    return param_num_values[index1] > param_num_values[index2];
-                  }
-                  return index1 < index2;
-                });
 
       // We walk over the relation created so far, and remove any relation,
       // which is covered by the one we are currently creating.
