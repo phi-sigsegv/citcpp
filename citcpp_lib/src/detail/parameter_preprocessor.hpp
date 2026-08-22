@@ -30,7 +30,21 @@ std::vector<unsigned int> compute_mcmf_variable_order(
  * @return A vector where each element is the index of a parameter in the model,
  *         defining the suggested variable ordering from root to leaves.
  */
-std::vector<unsigned int> compute_deceasing_domain_size_variable_order(
+std::vector<unsigned int> compute_decreasing_domain_size_variable_order(
+    const internal_model& model);
+
+/**
+ * Computes a static variable ordering for the parameters of the given model
+ * where parameters are ordered by decreasing domain size. Upon a tie, the
+ * affected parameters are ordered using the Max-Constraint Master-First
+ * (MCMF) heuristic.
+ *
+ * @param model The internal model containing parameters and constraints.
+ * @return A vector where each element is the index of a parameter in the model,
+ *         defining the suggested variable ordering from root to leaves.
+ */
+std::vector<unsigned int>
+compute_decreasing_domain_size_mcmf_as_tie_variable_order(
     const internal_model& model);
 
 /**
