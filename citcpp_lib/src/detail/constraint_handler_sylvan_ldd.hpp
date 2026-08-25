@@ -19,6 +19,18 @@ class constraint_handler_sylvan_base : public constraint_handler {
     ~constraint_handler_sylvan_base() override;
 };
 
+struct component_idd_info {
+    std::vector<unsigned int> partition;
+    sylvan_idd idd;
+    std::unordered_map<const test*, sylvan_idd> test_to_idd;
+    // Mapping from variable level in the IDD to parameter index in the model.
+    std::vector<unsigned int> variable_order;
+    // Mapping from parameter index in the model to variable level in the IDD.
+    std::vector<unsigned int> parameter_to_level;
+    // Domain sizes of the parameters, ordered according to the variable order.
+    std::vector<unsigned int> reordered_domain_sizes;
+};
+
 /**
  * This implements the constraint handler interface, using interval
  * decision diagrams (IDDs).
@@ -137,28 +149,34 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     void use_per_test_idd(bool enabled);
 
     /**
-     * Returns the IDD used by the constraint handler.
+     * Return the sum of the number of nodes in the IDDs of this
+     * constraint handler.
+     * WARNING: This is not thread-safe.
      */
-    const sylvan_idd& getIdd() const;
+    size_t node_count() const;
+
+    /**
+     * Returns the number of satisfying assignments.
+     */
+    long double sat_count() const;
 
   private:
-    void initialize_variable_order(
-        const std::vector<unsigned int>& variable_order);
+    void setup_partitioned_idds(
+        const std::vector<unsigned int>& variable_order,
+        constraint_handler_init_progress* exec_handle = nullptr);
 
-    std::vector<int> get_reordered_values(const std::vector<int>& values) const;
+    const component_idd_info* get_component_for_parameter(
+        unsigned int param_idx) const;
+
+    component_idd_info* get_component_for_parameter(unsigned int param_idx);
 
   private:
     const internal_model& model_;
-    sylvan_idd idd_;
     std::unordered_map<const test*, sylvan_idd> test_to_idd_;
     bool is_per_test_idd_enabled_;
 
-    // Mapping from variable level in the IDD to parameter index in the model.
-    std::vector<unsigned int> variable_order_;
-    // Mapping from parameter index in the model to variable level in the IDD.
-    std::vector<unsigned int> parameter_to_level_;
-    // Domain sizes of the parameters, ordered according to the variable order.
-    std::vector<unsigned int> reordered_domain_sizes_;
+    std::vector<component_idd_info> components_;
+    std::vector<int> parameter_to_component_idx_;
 };
 
 }  // namespace detail
