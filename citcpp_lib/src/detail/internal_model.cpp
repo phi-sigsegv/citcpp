@@ -1,5 +1,6 @@
 #include "internal_model.hpp"
 
+#include <algorithm>
 #include <unordered_map>
 
 #include "citcpp_utils.hpp"
