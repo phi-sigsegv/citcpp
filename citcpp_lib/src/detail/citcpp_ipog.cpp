@@ -44,31 +44,40 @@ void main_ipog_loop_body(
     }
 
     unsigned long long reported_number_combos_to_cover = 0;
+    unsigned long long covered_combos = 0;
     for (const auto& relation : relations) {
       if (relation
               .get_parameter_index_map()[relation.get_current_param_idx()] ==
           real_current_param_idx) {
-
-        const unsigned long long relation_number_combos_to_cover =
-            number_of_combinations_to_cover(
-                relation.get_current_param_idx() + 1, model,
-                relation.get_parameter_index_map(),
-                relation.get_current_interaction_strength(), true);
 
         // We only report the combinations as covered, after we have reached
         // the full interaction strength. This is because otherwise we could
         // count too many interactions.
         if (relation.get_current_interaction_strength() >=
             relation.get_specified_interaction_strength()) {
-          reported_number_combos_to_cover += relation_number_combos_to_cover;
+
+          // Important: use get_number_of_combinations() here, NOT
+          // number_of_combinations_to_cover(). The latter is purely
+          // combinatorial and does not know about constraints, so it
+          // would count tuples that are actually unsatisfiable given the
+          // model's constraints as "covered". get_number_of_combinations()
+          // instead measures actual presence in test_set (which was just
+          // updated above), so tuples that can never legally occur in any
+          // test are correctly excluded from the covered count — mirroring
+          // exactly what the "prefix parameters" loop above already does.
+          auto num_combos = get_number_of_combinations(
+              relation.get_current_param_idx() + 1, model,
+              relation.get_parameter_index_map(),
+              relation.get_current_interaction_strength(), true, test_set);
+          reported_number_combos_to_cover += num_combos.num_combos_to_cover;
+          covered_combos += num_combos.num_covered_combos;
         }
       }
     }
 
     exec_handle.add_number_of_processed_combinations(
         reported_number_combos_to_cover);
-    exec_handle.add_number_of_covered_combinations(
-        reported_number_combos_to_cover);
+    exec_handle.add_number_of_covered_combinations(covered_combos);
   } else {
     std::vector<std::pair<const internal_relation*, ipog_coverage_map>>
         relation_cov_maps;
