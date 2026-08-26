@@ -7,7 +7,62 @@
 #include <numeric>
 #include <vector>
 
+#include "parameter_preprocessor.hpp"
+
 namespace {
+
+class parameter_collector_visitor {
+  public:
+    parameter_collector_visitor(
+        const std::unordered_map<std::string, unsigned int>& name_to_idx)
+        : name_to_idx_(name_to_idx), collected_params_() {}
+
+    void operator()(const citcpp::boolean_literal&) {}
+
+    void operator()(const citcpp::boolean_proposition& prop) {
+      add_param(prop.get_parameter());
+    }
+
+    void operator()(const citcpp::enum_proposition& prop) {
+      add_param(prop.get_parameter());
+    }
+
+    void operator()(const citcpp::int_proposition& prop) {
+      add_param(prop.get_parameter());
+    }
+
+    void operator()(const citcpp::implication& impl) {
+      impl.get_left_operand()->accept(*this);
+      impl.get_right_operand()->accept(*this);
+    }
+
+    void operator()(const citcpp::and_expression& and_expr) {
+      for (const auto& operand : and_expr.get_operands()) {
+        operand->accept(*this);
+      }
+    }
+
+    void operator()(const citcpp::or_expression& or_expr) {
+      for (const auto& operand : or_expr.get_operands()) {
+        operand->accept(*this);
+      }
+    }
+
+    const std::vector<unsigned int>& get_collected_params() const {
+      return collected_params_;
+    }
+
+  private:
+    void add_param(const citcpp::parameter_reference& ref) {
+      auto it = name_to_idx_.find(ref.get_name());
+      if (it != name_to_idx_.end()) {
+        collected_params_.push_back(it->second);
+      }
+    }
+
+    const std::unordered_map<std::string, unsigned int>& name_to_idx_;
+    std::vector<unsigned int> collected_params_;
+};
 
 template <typename T_DD>
 struct true_false_dd_trait {};
@@ -652,6 +707,23 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
   SYNC(lace_get_first_test_valid_for_assignment_task);
 }
 
+std::vector<unsigned int> initialize_variable_order(
+    const citcpp::detail::internal_model& model,
+    const std::vector<unsigned int>& variable_order) {
+
+  const auto& domain_sizes = model.get_parameter_num_values();
+
+  if (variable_order.empty()) {
+    std::vector<unsigned int> default_variable_order;
+    default_variable_order.resize(domain_sizes.size());
+    std::iota(default_variable_order.begin(), default_variable_order.end(), 0);
+
+    return default_variable_order;
+  }
+
+  return variable_order;
+}
+
 }  // namespace
 
 namespace citcpp {
@@ -687,28 +759,13 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     std::size_t memory_limit_in_bytes)
     : base_type(num_workers, memory_limit_in_bytes),
       model_(model),
-      idd_(),
       test_to_idd_(),
       is_per_test_idd_enabled_(false),
-      variable_order_(),
-      parameter_to_level_(),
-      reordered_domain_sizes_() {
+      components_(),
+      parameter_to_component_idx_() {
 
-  initialize_variable_order(variable_order);
-
-  constraint_to_xdd_visitor<sylvan_idd> visitor(model, parameter_to_level_,
-                                                reordered_domain_sizes_);
-  sylvan_idd idd_true = sylvan_idd::iddTrue();
-  sylvan_idd idd = idd_true;
-  for (const auto& constr : model.get_input_model().get_constraints()) {
-    if (idd == idd_true) {
-      idd = constr->accept<sylvan_idd>(visitor);
-    } else {
-      idd.project_intersect(constr->accept<sylvan_idd>(visitor));
-    }
-  }
-
-  idd_ = idd;
+  setup_partitioned_idds(initialize_variable_order(model, variable_order),
+                         nullptr);
 }
 
 constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
@@ -718,72 +775,300 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
     constraint_handler_init_progress& exec_handle)
     : base_type(num_workers, memory_limit_in_bytes),
       model_(model),
-      idd_(),
       test_to_idd_(),
       is_per_test_idd_enabled_(false),
-      variable_order_(),
-      parameter_to_level_(),
-      reordered_domain_sizes_() {
+      components_(),
+      parameter_to_component_idx_() {
 
-  initialize_variable_order(variable_order);
-
-  constraint_to_xdd_visitor<sylvan_idd> visitor(model, parameter_to_level_,
-                                                reordered_domain_sizes_);
-  sylvan_idd idd_true = sylvan_idd::iddTrue();
-  sylvan_idd idd = idd_true;
-  for (const auto& constr : model.get_input_model().get_constraints()) {
-    if (idd == idd_true) {
-      idd = constr->accept<sylvan_idd>(visitor);
-    } else {
-      idd.project_intersect(constr->accept<sylvan_idd>(visitor));
-    }
-    exec_handle.add_constraint_handler_init_progress_current(1);
-  }
-
-  idd_ = idd;
+  setup_partitioned_idds(initialize_variable_order(model, variable_order),
+                         &exec_handle);
 }
 
-void constraint_handler_sylvan_idd::initialize_variable_order(
-    const std::vector<unsigned int>& variable_order) {
+void constraint_handler_sylvan_idd::setup_partitioned_idds(
+    const std::vector<unsigned int>& variable_order,
+    constraint_handler_init_progress* exec_handle) {
+
+  // Step 1: Find all constrained parameters
+  std::unordered_map<std::string, unsigned int> name_to_idx;
+  unsigned int p_idx = 0;
+  for (const auto& param : model_.get_input_model().get_parameters()) {
+    name_to_idx[param.get_name()] = p_idx++;
+  }
+
+  std::vector<bool> is_constrained(model_.get_parameter_num_values().size(),
+                                   false);
+  for (const auto& constr : model_.get_input_model().get_constraints()) {
+    parameter_collector_visitor visitor(name_to_idx);
+    constr->accept(visitor);
+    for (unsigned int p : visitor.get_collected_params()) {
+      is_constrained[p] = true;
+    }
+  }
+
+  // Step 2: Compute parameter partitions using variable_order_
+  std::vector<std::vector<unsigned int>> partitions =
+      compute_parameter_partitions(model_, variable_order);
+
+  // Step 3: Setup components
+  parameter_to_component_idx_.assign(model_.get_parameter_num_values().size(),
+                                     -1);
 
   const auto& domain_sizes = model_.get_parameter_num_values();
 
-  if (variable_order.empty()) {
-    variable_order_.resize(domain_sizes.size());
-    std::iota(variable_order_.begin(), variable_order_.end(), 0);
-  } else {
-    variable_order_ = variable_order;
+  for (const auto& part : partitions) {
+    bool has_constrained = false;
+    for (unsigned int p : part) {
+      if (is_constrained[p]) {
+        has_constrained = true;
+        break;
+      }
+    }
+    if (!has_constrained) {
+      continue;
+    }
+
+    // Create a new component
+    component_idd_info comp;
+    comp.partition = part;
+
+    // Filter global variable_order_ to keep only parameters in this partition
+    // AND that are constrained
+    for (unsigned int p : variable_order) {
+      if (is_constrained[p] &&
+          std::find(part.begin(), part.end(), p) != part.end()) {
+        comp.variable_order.push_back(p);
+      }
+    }
+
+    // Initialize comp.parameter_to_level and comp.reordered_domain_sizes
+    comp.parameter_to_level.resize(domain_sizes.size());
+    comp.reordered_domain_sizes.resize(comp.variable_order.size());
+    for (unsigned int level = 0; level < comp.variable_order.size(); ++level) {
+      const std::size_t param_idx = comp.variable_order[level];
+      comp.parameter_to_level[param_idx] = level;
+      comp.reordered_domain_sizes[level] = domain_sizes[param_idx];
+    }
+
+    comp.idd = sylvan_idd::iddTrue();
+
+    // Add to components
+    int comp_idx = static_cast<int>(components_.size());
+    components_.push_back(std::move(comp));
+
+    // Map each parameter in the partition to the component index
+    for (unsigned int p : part) {
+      parameter_to_component_idx_[p] = comp_idx;
+    }
   }
 
-  parameter_to_level_.resize(variable_order_.size());
-  reordered_domain_sizes_.resize(variable_order_.size());
+  // Step 4: Process constraints and associate them with their respective
+  // components
+  for (const auto& constr : model_.get_input_model().get_constraints()) {
+    parameter_collector_visitor visitor(name_to_idx);
+    constr->accept(visitor);
+    const auto& involved = visitor.get_collected_params();
 
-  for (unsigned int level = 0; level < variable_order_.size(); ++level) {
-    const std::size_t param_idx = variable_order_[level];
-    parameter_to_level_[param_idx] = level;
-    reordered_domain_sizes_[level] = domain_sizes[param_idx];
+    if (involved.empty()) {
+      // Apply to all components
+      for (auto& comp : components_) {
+        constraint_to_xdd_visitor<sylvan_idd> comp_visitor(
+            model_, comp.parameter_to_level, comp.reordered_domain_sizes);
+        sylvan_idd constr_idd = constr->accept<sylvan_idd>(comp_visitor);
+        if (comp.idd == sylvan_idd::iddTrue()) {
+          comp.idd = constr_idd;
+        } else {
+          comp.idd.project_intersect(constr_idd);
+        }
+      }
+    } else {
+      unsigned int p = involved[0];
+      int comp_idx = parameter_to_component_idx_[p];
+      if (comp_idx >= 0) {
+        auto& comp = components_[comp_idx];
+        constraint_to_xdd_visitor<sylvan_idd> comp_visitor(
+            model_, comp.parameter_to_level, comp.reordered_domain_sizes);
+        sylvan_idd constr_idd = constr->accept<sylvan_idd>(comp_visitor);
+        if (comp.idd == sylvan_idd::iddTrue()) {
+          comp.idd = constr_idd;
+        } else {
+          comp.idd.project_intersect(constr_idd);
+        }
+      }
+    }
+
+    if (exec_handle) {
+      exec_handle->add_constraint_handler_init_progress_current(1);
+    }
   }
+}
+
+const component_idd_info*
+constraint_handler_sylvan_idd::get_component_for_parameter(
+    unsigned int param_idx) const {
+
+  if (param_idx < parameter_to_component_idx_.size()) {
+    int idx = parameter_to_component_idx_[param_idx];
+    if (idx >= 0) {
+      return &components_[idx];
+    }
+  }
+  return nullptr;
+}
+
+component_idd_info* constraint_handler_sylvan_idd::get_component_for_parameter(
+    unsigned int param_idx) {
+
+  return const_cast<component_idd_info*>(
+      static_cast<const constraint_handler_sylvan_idd&>(*this)
+          .get_component_for_parameter(param_idx));
 }
 
 bool constraint_handler_sylvan_idd::is_thread_safe() const { return false; }
 
 bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
-  auto it = test_to_idd_.find(&t);
-  if (it != test_to_idd_.end()) {
-    return it->second.is_sat_with_partial_assignment(t.get_values(),
-                                                     &variable_order_);
+  for (const auto& comp : components_) {
+    auto it = comp.test_to_idd.find(&t);
+    if (it != comp.test_to_idd.end()) {
+      if (!it->second.is_sat_with_partial_assignment(t.get_values(),
+                                                     &comp.variable_order)) {
+        return false;
+      }
+    } else {
+      if (!comp.idd.is_sat_with_partial_assignment(t.get_values(),
+                                                   &comp.variable_order)) {
+        return false;
+      }
+    }
   }
-
-  return idd_.is_sat_with_partial_assignment(t.get_values(), &variable_order_);
+  return true;
 }
 
 void constraint_handler_sylvan_idd::mark_valid_tuples(
     coverage_bitset& value_combinations,
     const param_vector& param_indices) const {
 
-  idd_.mark_valid_value_combinations(value_combinations, param_indices,
-                                     model_.get_parameter_num_values(),
-                                     &parameter_to_level_);
+  if (value_combinations.all_valid()) return;
+
+  const unsigned int t = param_indices.size();
+
+  // Group parameter indices by the component they belong to
+  struct active_component_info {
+      const component_idd_info* comp = nullptr;
+      std::vector<unsigned int> positions;  // indices in param_indices
+      param_vector P_comp;                  // parameter indices in comp
+      std::shared_ptr<coverage_bitset> temp_cov;
+      std::vector<std::size_t> temp_weights;
+  };
+
+  std::vector<active_component_info> active_comps;
+
+  for (unsigned int i = 0; i < t; ++i) {
+    unsigned int param_idx = param_indices[i];
+    const auto* comp = get_component_for_parameter(param_idx);
+    if (comp) {
+      // Find or insert component info
+      auto it = std::find_if(active_comps.begin(), active_comps.end(),
+                             [comp](const active_component_info& info) {
+                               return info.comp == comp;
+                             });
+      if (it != active_comps.end()) {
+        it->positions.push_back(i);
+        it->P_comp.push_back(param_idx);
+      } else {
+        active_component_info new_info;
+        new_info.comp = comp;
+        new_info.positions.push_back(i);
+        new_info.P_comp.push_back(param_idx);
+        active_comps.push_back(std::move(new_info));
+      }
+    }
+  }
+
+  // If there are no active components, all tuples are valid
+  if (active_comps.empty()) {
+    value_combinations.set_all_valid();
+    return;
+  }
+
+  // Optimization: If there is exactly one active component and it contains all
+  // parameter indices
+  if (active_comps.size() == 1 && active_comps[0].positions.size() == t) {
+    const auto& active_comp = active_comps[0];
+    active_comp.comp->idd.mark_valid_value_combinations(
+        value_combinations, param_indices, model_.get_parameter_num_values(),
+        &active_comp.comp->parameter_to_level);
+    return;
+  }
+
+  // General case: evaluate on each active component and combine
+  const auto& domain_sizes = model_.get_parameter_num_values();
+
+  for (auto& active_comp : active_comps) {
+    // Calculate total combinations in active_comp
+    std::size_t num_combinations = 1;
+    for (unsigned int param_idx : active_comp.P_comp) {
+      num_combinations *= domain_sizes[param_idx];
+    }
+
+    active_comp.temp_cov = std::make_shared<coverage_bitset>(num_combinations);
+    active_comp.comp->idd.mark_valid_value_combinations(
+        *active_comp.temp_cov, active_comp.P_comp, domain_sizes,
+        &active_comp.comp->parameter_to_level);
+
+    // Calculate temp weights
+    active_comp.temp_weights.resize(active_comp.P_comp.size());
+    std::size_t temp_weight = 1;
+    for (int j = static_cast<int>(active_comp.P_comp.size()) - 1; j >= 0; --j) {
+      active_comp.temp_weights[j] = temp_weight;
+      temp_weight *= domain_sizes[active_comp.P_comp[j]];
+    }
+  }
+
+  // Precompute weights for the overall combinations
+  std::vector<std::size_t> weights(t);
+  std::size_t current_weight = 1;
+  for (int i = static_cast<int>(t) - 1; i >= 0; --i) {
+    weights[i] = current_weight;
+    current_weight *= domain_sizes[param_indices[i]];
+  }
+
+  // Iterate over all possible combinations
+  std::vector<unsigned int> v(t, 0);
+  while (true) {
+    bool combination_valid = true;
+    for (const auto& active_comp : active_comps) {
+      std::size_t sub_index = 0;
+      for (std::size_t j = 0; j < active_comp.positions.size(); ++j) {
+        sub_index += v[active_comp.positions[j]] * active_comp.temp_weights[j];
+      }
+      if (!active_comp.temp_cov->is_valid(sub_index)) {
+        combination_valid = false;
+        break;
+      }
+    }
+
+    if (combination_valid) {
+      std::size_t index = 0;
+      for (std::size_t i = 0; i < t; ++i) {
+        index += v[i] * weights[i];
+      }
+      value_combinations.set_valid(index);
+    }
+
+    // Advance to the next combination
+    int i = static_cast<int>(t) - 1;
+    while (i >= 0) {
+      v[i]++;
+      if (v[i] < domain_sizes[param_indices[i]]) {
+        break;
+      }
+      v[i] = 0;
+      i--;
+    }
+    if (i < 0) {
+      break;
+    }
+  }
 }
 
 bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
@@ -800,18 +1085,29 @@ bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
 bitset_uint64 constraint_handler_sylvan_idd::get_valid_parameter_assignments(
     const test& t, unsigned int param_idx) const {
 
-  auto it = test_to_idd_.find(&t);
-  if (it != test_to_idd_.end()) {
-    return it->second.get_valid_variable_assignments(
-        static_cast<uint32_t>(parameter_to_level_[param_idx]),
-        static_cast<uint32_t>(model_.get_parameter_num_values()[param_idx]),
-        t.get_values(), &variable_order_);
+  const auto* comp_ptr = get_component_for_parameter(param_idx);
+  if (!comp_ptr) {
+    const unsigned int num_param_values =
+        model_.get_parameter_num_values()[param_idx];
+    bitset_uint64 values(
+        static_cast<bitset_uint64::size_type>(num_param_values));
+    values.set();
+
+    return values;
   }
 
-  return idd_.get_valid_variable_assignments(
-      static_cast<uint32_t>(parameter_to_level_[param_idx]),
+  auto it = comp_ptr->test_to_idd.find(&t);
+  if (it != comp_ptr->test_to_idd.end()) {
+    return it->second.get_valid_variable_assignments(
+        static_cast<uint32_t>(comp_ptr->parameter_to_level[param_idx]),
+        static_cast<uint32_t>(model_.get_parameter_num_values()[param_idx]),
+        t.get_values(), &comp_ptr->variable_order);
+  }
+
+  return comp_ptr->idd.get_valid_variable_assignments(
+      static_cast<uint32_t>(comp_ptr->parameter_to_level[param_idx]),
       static_cast<uint32_t>(model_.get_parameter_num_values()[param_idx]),
-      t.get_values(), &variable_order_);
+      t.get_values(), &comp_ptr->variable_order);
 }
 
 std::vector<bitset_uint64>
@@ -827,12 +1123,15 @@ constraint_handler_sylvan_idd::get_valid_parameter_assignments(
 }
 
 void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
-  auto it = test_to_idd_.find(&t);
-  if (it != test_to_idd_.end()) {
-    it->second.get_sat_one_under_partial_assignment(t.get_values(),
-                                                    &variable_order_);
-  } else {
-    idd_.get_sat_one_under_partial_assignment(t.get_values(), &variable_order_);
+  for (const auto& comp : components_) {
+    auto it = comp.test_to_idd.find(&t);
+    if (it != comp.test_to_idd.end()) {
+      it->second.get_sat_one_under_partial_assignment(t.get_values(),
+                                                      &comp.variable_order);
+    } else {
+      comp.idd.get_sat_one_under_partial_assignment(t.get_values(),
+                                                    &comp.variable_order);
+    }
   }
 
   // The call above only replaces don't care values for constrained variables.
@@ -922,20 +1221,27 @@ constraint_handler_sylvan_idd::get_first_test_valid_for_assignment(
 
 void constraint_handler_sylvan_idd::cache_partial_test(const test* t) {
   if (is_per_test_idd_enabled_) {
-    test_to_idd_.emplace(
-        t, sylvan_idd::project_intersect(
-               idd_, sylvan_idd(t->get_values(), &variable_order_)));
+    for (auto& comp : components_) {
+      comp.test_to_idd.emplace(
+          t, sylvan_idd::project_intersect(
+                 comp.idd, sylvan_idd(t->get_values(), &comp.variable_order)));
+    }
   }
 }
 
 void constraint_handler_sylvan_idd::update_cached_partial_test(const test* t) {
   if (is_per_test_idd_enabled_) {
-    auto it = test_to_idd_.find(t);
-    if (it != test_to_idd_.end()) {
-      it->second.project_intersect(
-          sylvan_idd(t->get_values(), &variable_order_));
-    } else {
-      cache_partial_test(t);
+    for (auto& comp : components_) {
+      auto it = comp.test_to_idd.find(t);
+      if (it != comp.test_to_idd.end()) {
+        it->second.project_intersect(
+            sylvan_idd(t->get_values(), &comp.variable_order));
+      } else {
+        comp.test_to_idd.emplace(
+            t,
+            sylvan_idd::project_intersect(
+                comp.idd, sylvan_idd(t->get_values(), &comp.variable_order)));
+      }
     }
   }
 }
@@ -944,18 +1250,22 @@ void constraint_handler_sylvan_idd::update_cached_partial_test(
     const test* t, unsigned int param_idx, int value) {
 
   if (is_per_test_idd_enabled_) {
-    auto it = test_to_idd_.find(t);
-    if (it != test_to_idd_.end()) {
-      it->second.project_intersect(
-          sylvan_idd(static_cast<uint32_t>(parameter_to_level_[param_idx]),
-                     static_cast<uint32_t>(value)));
-    } else {
-      auto emplace_result = test_to_idd_.emplace(
-          t, sylvan_idd::project_intersect(
-                 idd_, sylvan_idd(t->get_values(), &variable_order_)));
-      emplace_result.first->second.project_intersect(
-          sylvan_idd(static_cast<uint32_t>(parameter_to_level_[param_idx]),
-                     static_cast<uint32_t>(value)));
+    auto* comp_ptr = get_component_for_parameter(param_idx);
+    if (comp_ptr) {
+      auto it = comp_ptr->test_to_idd.find(t);
+      if (it != comp_ptr->test_to_idd.end()) {
+        it->second.project_intersect(sylvan_idd(
+            static_cast<uint32_t>(comp_ptr->parameter_to_level[param_idx]),
+            static_cast<uint32_t>(value)));
+      } else {
+        auto emplace_result = comp_ptr->test_to_idd.emplace(
+            t, sylvan_idd::project_intersect(
+                   comp_ptr->idd,
+                   sylvan_idd(t->get_values(), &comp_ptr->variable_order)));
+        emplace_result.first->second.project_intersect(sylvan_idd(
+            static_cast<uint32_t>(comp_ptr->parameter_to_level[param_idx]),
+            static_cast<uint32_t>(value)));
+      }
     }
   }
 }
@@ -968,7 +1278,23 @@ void constraint_handler_sylvan_idd::use_per_test_idd(bool enabled) {
   is_per_test_idd_enabled_ = enabled;
 }
 
-const sylvan_idd& constraint_handler_sylvan_idd::getIdd() const { return idd_; }
+size_t constraint_handler_sylvan_idd::node_count() const {
+  size_t node_cnt = 0;
+  for (const auto& comp : components_) {
+    node_cnt += comp.idd.node_count();
+  }
+
+  return node_cnt;
+}
+
+long double constraint_handler_sylvan_idd::sat_count() const {
+  long double sat_cnt = 0.0;
+  for (const auto& comp : components_) {
+    sat_cnt += comp.idd.sat_count();
+  }
+
+  return sat_cnt;
+}
 
 }  // namespace detail
 }  // namespace citcpp

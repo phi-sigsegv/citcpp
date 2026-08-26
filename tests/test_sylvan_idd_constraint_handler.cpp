@@ -53,9 +53,8 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop") {
 
   constraint_handler_sylvan_idd c_handler(i_model, 1,
                                           (std::size_t)1 * 1024 * 1024 * 1024);
-  std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
-            << std::endl;
-  std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
+  std::cout << "Number of nodes: " << c_handler.node_count() << std::endl;
+  std::cout << "SAT count: " << c_handler.sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -93,9 +92,8 @@ TEST_CASE(
 
   constraint_handler_sylvan_idd c_handler(i_model, 1,
                                           (std::size_t)1 * 1024 * 1024 * 1024);
-  std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
-            << std::endl;
-  std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
+  std::cout << "Number of nodes: " << c_handler.node_count() << std::endl;
+  std::cout << "SAT count: " << c_handler.sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -139,9 +137,8 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop & AND") {
 
   constraint_handler_sylvan_idd c_handler(i_model, 1,
                                           (std::size_t)1 * 1024 * 1024 * 1024);
-  std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
-            << std::endl;
-  std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
+  std::cout << "Number of nodes: " << c_handler.node_count() << std::endl;
+  std::cout << "SAT count: " << c_handler.sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -185,9 +182,8 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop & OR") {
 
   constraint_handler_sylvan_idd c_handler(i_model, 1,
                                           (std::size_t)1 * 1024 * 1024 * 1024);
-  std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
-            << std::endl;
-  std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
+  std::cout << "Number of nodes: " << c_handler.node_count() << std::endl;
+  std::cout << "SAT count: " << c_handler.sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 1, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -246,9 +242,8 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop & IMPL") {
 
   constraint_handler_sylvan_idd c_handler(i_model, 1,
                                           (std::size_t)1 * 1024 * 1024 * 1024);
-  std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
-            << std::endl;
-  std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
+  std::cout << "Number of nodes: " << c_handler.node_count() << std::endl;
+  std::cout << "SAT count: " << c_handler.sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -326,9 +321,8 @@ TEST_CASE(
 
   constraint_handler_sylvan_idd c_handler(i_model, 1,
                                           (std::size_t)1 * 1024 * 1024 * 1024);
-  std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
-            << std::endl;
-  std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
+  std::cout << "Number of nodes: " << c_handler.node_count() << std::endl;
+  std::cout << "SAT count: " << c_handler.sat_count() << std::endl;
 
   test valid_test_1({-1, 2, 3, 2, 1});
   CHECK(c_handler.is_valid_partial_test(valid_test_1));
@@ -491,11 +485,10 @@ TEST_CASE("constraint handler sylvan IDD, testing more cmplex constraints") {
 
   constraint_handler_sylvan_idd c_handler(i_model, 1,
                                           (std::size_t)1 * 1024 * 1024 * 1024);
-  std::cout << "Number of nodes: " << c_handler.getIdd().node_count()
-            << std::endl;
-  std::cout << "SAT count: " << c_handler.getIdd().sat_count() << std::endl;
+  std::cout << "Number of nodes: " << c_handler.node_count() << std::endl;
+  std::cout << "SAT count: " << c_handler.sat_count() << std::endl;
 
-  CHECK(c_handler.getIdd().sat_count() == 3.0);
+  CHECK(c_handler.sat_count() == 3.0);
 }
 
 }  // namespace

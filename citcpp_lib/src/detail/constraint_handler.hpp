@@ -63,6 +63,9 @@ class constraint_handler {
      * assignments of values to the given parameter in terms of a bitset.
      * The bitset has bits enabled at indices corresponding to the indices
      * of values in the domain definition of the parameter.
+     *
+     * Note that implementations of this method can safely assume that the
+     * given partial test is valid.
      */
     virtual bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) const = 0;
@@ -73,6 +76,9 @@ class constraint_handler {
      * a list of feasible assignments of values to the given parameter in terms
      * of a bitset. The bitset has bits enabled at indices corresponding to the
      * indices of values in the domain definition of the parameter.
+     *
+     * Note that implementations of this method can safely assume that the
+     * given partial tests are all valid.
      */
     virtual std::vector<bitset_uint64> get_valid_parameter_assignments(
         const internal_test_set& test_set, unsigned int param_idx) const;
