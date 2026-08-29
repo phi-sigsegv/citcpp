@@ -85,20 +85,4 @@ TEST_CASE("constraint handler sylvan IDD, testing custom variable order") {
     CHECK(t.get_values()[2] == 1);  // P3 must be false (index 1)
     CHECK(t.get_values()[1] == 0);  // P2 replaced by 0 (default)
   }
-
-  SUBCASE("mark_valid_tuples") {
-    // Combination of P1 (idx 0) and P3 (idx 2)
-    param_vector p_indices = {0, 2};
-    coverage_bitset cov(4);
-    handler.mark_valid_tuples(cov, p_indices);
-
-    // P1=true(0), P3=true(0) -> index 0*2 + 0 = 0 -> invalid
-    CHECK(cov.is_valid(0) == false);
-    // P1=true(0), P3=false(1) -> index 0*2 + 1 = 1 -> valid
-    CHECK(cov.is_valid(1) == true);
-    // P1=false(1), P3=true(0) -> index 1*2 + 0 = 2 -> valid
-    CHECK(cov.is_valid(2) == true);
-    // P1=false(1), P3=false(1) -> index 1*2 + 1 = 3 -> valid
-    CHECK(cov.is_valid(3) == true);
-  }
 }

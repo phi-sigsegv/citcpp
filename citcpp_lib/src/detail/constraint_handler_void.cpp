@@ -8,18 +8,12 @@ constraint_handler_void::constraint_handler_void(const internal_model& model)
 
 bool constraint_handler_void::is_thread_safe() const { return true; }
 
-bool constraint_handler_void::is_valid_partial_test(const test&) const {
+bool constraint_handler_void::is_valid_partial_test(const test&) {
   return true;
 }
 
-void constraint_handler_void::mark_valid_tuples(
-    coverage_bitset& value_combinations, const param_vector&) const {
-
-  value_combinations.set_all_valid();
-}
-
 bitset_uint64 constraint_handler_void::get_valid_parameter_assignments(
-    const test&, unsigned int param_idx) const {
+    const test&, unsigned int param_idx) {
 
   const unsigned int num_param_values =
       model_.get_parameter_num_values()[param_idx];
@@ -29,7 +23,7 @@ bitset_uint64 constraint_handler_void::get_valid_parameter_assignments(
   return values;
 }
 
-void constraint_handler_void::replace_dont_care_values(test& t) const {
+void constraint_handler_void::replace_dont_care_values(test& t) {
   for (std::size_t i = 0; i < t.get_values().size(); ++i) {
     int& value = t.get_values()[i];
     if (value < 0) {
@@ -43,8 +37,7 @@ void constraint_handler_void::replace_dont_care_values(test& t) const {
 test_list_intrusive_integ*
 constraint_handler_void::get_first_test_valid_for_assignment(
     list_intrusive<test_list_intrusive_integ>& test_list,
-    const param_vector& param_indices,
-    const value_vector& value_indices) const {
+    const param_vector& param_indices, const value_vector& value_indices) {
 
   if (test_list.empty()) {
     return nullptr;

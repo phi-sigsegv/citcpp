@@ -8,7 +8,7 @@ namespace citcpp {
 namespace detail {
 
 bitset_uint64 constraint_handler::check_validity_of_partial_tests(
-    const internal_test_set& test_set) const {
+    const internal_test_set& test_set) {
 
   bitset_uint64 result(static_cast<bitset_uint64::size_type>(
       test_set.get_list_of_tests().size()));
@@ -25,7 +25,7 @@ bitset_uint64 constraint_handler::check_validity_of_partial_tests(
 }
 
 std::vector<bitset_uint64> constraint_handler::get_valid_parameter_assignments(
-    const internal_test_set& test_set, unsigned int param_idx) const {
+    const internal_test_set& test_set, unsigned int param_idx) {
 
   std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
 
@@ -38,8 +38,7 @@ std::vector<bitset_uint64> constraint_handler::get_valid_parameter_assignments(
   return result;
 }
 
-void constraint_handler::replace_dont_care_values(
-    internal_test_set& test_set) const {
+void constraint_handler::replace_dont_care_values(internal_test_set& test_set) {
 
   for (auto& t : test_set.get_list_of_tests()) {
     replace_dont_care_values(t);

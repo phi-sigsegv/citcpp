@@ -114,8 +114,6 @@ class ipog_vertical_extension_functor {
         }
       }
 
-      // constr_handler_.mark_valid_tuples(value_combinations, param_indices);
-
       visit_all_value_combos_of_param_combo(
           model_, param_indices, value_indices_, *this, value_combinations);
     }
@@ -144,9 +142,6 @@ class ipog_vertical_extension_functor {
           // Value tuple is invalid according to constraints.
           return;
         }
-        // // If the tuple is not valid, then it cannot be covered at all.
-        // // So there's nothing to do for us here.
-        // return;
       }
 
       ++num_new_covered_tuples_;

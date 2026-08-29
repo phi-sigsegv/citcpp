@@ -47,7 +47,7 @@ namespace detail {
 void create_all_value_combinations(
     unsigned int strength, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map,
-    const constraint_handler& constr_handler, internal_test_set& test_set) {
+    constraint_handler& constr_handler, internal_test_set& test_set) {
 
   std::vector<int> values(strength);
   recursively_add_test_for_each_combination(

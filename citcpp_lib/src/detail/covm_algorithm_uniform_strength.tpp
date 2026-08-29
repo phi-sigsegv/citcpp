@@ -12,7 +12,7 @@ namespace detail {
 
 class test_validity_checker_sequential {
   public:
-    test_validity_checker_sequential(const constraint_handler& constr_handler)
+    test_validity_checker_sequential(constraint_handler& constr_handler)
         : constr_handler_(constr_handler) {}
 
     bool operator()(const test& t) const {
@@ -20,12 +20,12 @@ class test_validity_checker_sequential {
     }
 
   private:
-    const constraint_handler& constr_handler_;
+    constraint_handler& constr_handler_;
 };
 
 class test_validity_checker_parallel {
   public:
-    test_validity_checker_parallel(const constraint_handler& constr_handler)
+    test_validity_checker_parallel(constraint_handler& constr_handler)
         : constr_handler_(constr_handler), mut_() {}
 
     bool operator()(const test& t) const {
@@ -48,7 +48,7 @@ class test_validity_checker_parallel {
     }
 
   private:
-    const constraint_handler& constr_handler_;
+    constraint_handler& constr_handler_;
     mutable std::mutex mut_;
 };
 
@@ -226,7 +226,7 @@ class covm_per_param_combo_functor {
 inline void measure_coverage(
     unsigned int strength, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map,
-    const internal_test_set& test_set, const constraint_handler& constr_handler,
+    const internal_test_set& test_set, constraint_handler& constr_handler,
     covm_exec_handle_impl& exec_handle, citcpp::coverage_measurement& covm) {
 
   const unsigned int product_of_max_parameter_sizes =
@@ -267,7 +267,7 @@ template <conc_is_void_functor_executor T_EXEC>
 void measure_coverage(unsigned int strength, const internal_model& model,
                       const std::vector<unsigned int>& parameter_index_map,
                       const internal_test_set& test_set,
-                      const constraint_handler& constr_handler,
+                      constraint_handler& constr_handler,
                       covm_exec_handle_impl& exec_handle,
                       citcpp::coverage_measurement& covm, T_EXEC& exec) {
 

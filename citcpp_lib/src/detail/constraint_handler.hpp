@@ -3,7 +3,6 @@
 
 #include "bitset.hpp"
 #include "constraint_handler_init_progress.hpp"
-#include "coverage_bitset.hpp"
 #include "datatypes_config.hpp"
 #include "internal_test_set.hpp"
 
@@ -33,15 +32,7 @@ class constraint_handler {
      * assignments of values to parameters, and returns whether the
      * combination of those assignments is valid.
      */
-    virtual bool is_valid_partial_test(const test& t) const = 0;
-
-    /**
-     * This method reads the given coverage map, and marks the bits representing
-     * the validity of value combinations that are feasible according to
-     * constraints.
-     */
-    virtual void mark_valid_tuples(coverage_bitset& value_combinations,
-                                   const param_vector& param_indices) const = 0;
+    virtual bool is_valid_partial_test(const test& t) = 0;
 
     /**
      * This method reads the given partial tests, in particular the
@@ -55,7 +46,7 @@ class constraint_handler {
      * is valid.
      */
     virtual bitset_uint64 check_validity_of_partial_tests(
-        const internal_test_set& test_set) const;
+        const internal_test_set& test_set);
 
     /**
      * This method reads the given partial test, in particular the
@@ -68,7 +59,7 @@ class constraint_handler {
      * given partial test is valid.
      */
     virtual bitset_uint64 get_valid_parameter_assignments(
-        const test& t, unsigned int param_idx) const = 0;
+        const test& t, unsigned int param_idx) = 0;
 
     /**
      * This method reads the given partial tests, in particular the
@@ -81,21 +72,21 @@ class constraint_handler {
      * given partial tests are all valid.
      */
     virtual std::vector<bitset_uint64> get_valid_parameter_assignments(
-        const internal_test_set& test_set, unsigned int param_idx) const;
+        const internal_test_set& test_set, unsigned int param_idx);
 
     /**
      * This method reads the given test, in particular the parameters
      * with don't care values, and replaces all of them by concrete
      * values such that the resulting test is valid.
      */
-    virtual void replace_dont_care_values(test& t) const = 0;
+    virtual void replace_dont_care_values(test& t) = 0;
 
     /**
      * This method reads the given tests, in particular the parameters
      * with don't care values, and replaces all of them by concrete
      * values such that the resulting tests are all valid.
      */
-    virtual void replace_dont_care_values(internal_test_set& test_set) const;
+    virtual void replace_dont_care_values(internal_test_set& test_set);
 
     /**
      * Returns the first test in the given list of tests, where the specified
@@ -105,7 +96,7 @@ class constraint_handler {
     virtual test_list_intrusive_integ* get_first_test_valid_for_assignment(
         list_intrusive<test_list_intrusive_integ>& test_list,
         const param_vector& param_indices,
-        const value_vector& value_indices) const = 0;
+        const value_vector& value_indices) = 0;
 
     /**
      * Calling this method causes the constraint handler to remember
