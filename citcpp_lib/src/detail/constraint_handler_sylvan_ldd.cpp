@@ -7,6 +7,7 @@
 #include <numeric>
 #include <vector>
 
+#include "datatypes_config.hpp"
 #include "parameter_preprocessor.hpp"
 
 namespace {
@@ -456,102 +457,52 @@ void maybe_shutdown_sylvan() {
   }
 }
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    check_validity_task {
+TASK_2(int, lace_check_test_validity_task, const citcpp::detail::test*, test,
+       citcpp::detail::constraint_handler*, c_handler) {
 
-  public:
-    check_validity_task() = default;
+  if (c_handler->is_valid_partial_test(*test)) {
+    return 1;
+  }
 
-    check_validity_task(const citcpp::detail::test* test,
-                        std::size_t test_index,
-                        citcpp::detail::constraint_handler* handler,
-                        citcpp::detail::bitset_uint64* result, std::mutex* mut)
-        : test_(test),
-          test_index_(test_index),
-          handler_(handler),
-          result_(result),
-          mut_(mut) {}
-
-    void operator()() {
-      const bool is_valid = handler_->is_valid_partial_test(*test_);
-
-      if (is_valid) {
-        mark_test_as_valid();
-      }
-    }
-
-  private:
-    void mark_test_as_valid() {
-      std::lock_guard<std::mutex> guard(*mut_);
-      result_->set(
-          static_cast<citcpp::detail::bitset_uint64::size_type>(test_index_));
-    }
-
-  private:
-    const citcpp::detail::test* test_{nullptr};
-    std::size_t test_index_{0};
-    citcpp::detail::constraint_handler* handler_{nullptr};
-    citcpp::detail::bitset_uint64* result_{nullptr};
-    std::mutex* mut_{nullptr};
-};
-
-VOID_TASK_1(lace_check_test_validity_task, check_validity_task*, functor) {
-  (*functor)();
+  return 0;
 }
 
 VOID_TASK_3(lace_check_validity_of_partial_test, citcpp::detail::bitset_uint64*,
             result, const citcpp::detail::internal_test_set*, test_set,
             citcpp::detail::constraint_handler*, c_handler) {
 
-  std::mutex mut;
+  using namespace citcpp::detail;
+  using namespace citcpp;
 
-  std::vector<check_validity_task> tasks(test_set->get_list_of_tests().size());
-  std::size_t test_index = 0;
   for (const auto& t : test_set->get_list_of_tests()) {
-    tasks[test_index] =
-        check_validity_task(&t, test_index, c_handler, result, &mut);
-    SPAWN(lace_check_test_validity_task, &tasks[test_index]);
-    ++test_index;
+    SPAWN(lace_check_test_validity_task, &t, c_handler);
   }
 
-  for (std::size_t i = 0; i < tasks.size(); ++i) {
-    SYNC(lace_check_test_validity_task);
+  for (int i = test_set->get_list_of_tests().size() - 1; i >= 0; --i) {
+    int is_valid = SYNC(lace_check_test_validity_task);
+
+    if (is_valid) {
+      result->set(static_cast<bitset_uint64::size_type>(i));
+    }
   }
 }
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    get_valid_parameter_assignments_task {
+VOID_TASK_6(lace_get_valid_parameter_assignments_task,
+            std::vector<citcpp::detail::bitset_uint64>*, result,
+            const citcpp::detail::test*, test, std::size_t, test_index,
+            unsigned int, param_idx, citcpp::detail::constraint_handler*,
+            c_handler, citcpp::detail::spin_lock*, mut) {
 
-  public:
-    get_valid_parameter_assignments_task() = default;
+  using namespace citcpp::detail;
+  using namespace citcpp;
 
-    get_valid_parameter_assignments_task(
-        const citcpp::detail::test* test, unsigned int param_idx,
-        std::size_t test_index, citcpp::detail::constraint_handler* handler,
-        std::vector<citcpp::detail::bitset_uint64>* results)
-        : test_(test),
-          param_idx_(param_idx),
-          test_index_(test_index),
-          handler_(handler),
-          results_(results) {}
+  bitset_uint64 valid_assignments(
+      c_handler->get_valid_parameter_assignments(*test, param_idx));
 
-    void operator()() {
-      (*results_)[test_index_] =
-          handler_->get_valid_parameter_assignments(*test_, param_idx_);
-    }
-
-  private:
-    const citcpp::detail::test* test_{nullptr};
-    unsigned int param_idx_{0};
-    std::size_t test_index_{0};
-    citcpp::detail::constraint_handler* handler_{nullptr};
-    std::vector<citcpp::detail::bitset_uint64>* results_{nullptr};
-};
-
-VOID_TASK_1(lace_get_valid_parameter_assignments_task,
-            get_valid_parameter_assignments_task*, functor) {
-
-  (*functor)();
+  {
+    std::lock_guard<citcpp::detail::spin_lock> lock(*mut);
+    (*result)[test_index] = std::move(valid_assignments);
+  }
 }
 
 VOID_TASK_4(lace_get_valid_parameter_assignments_for_testset_task,
@@ -559,58 +510,36 @@ VOID_TASK_4(lace_get_valid_parameter_assignments_for_testset_task,
             const citcpp::detail::internal_test_set*, test_set, unsigned int,
             param_idx, citcpp::detail::constraint_handler*, c_handler) {
 
-  std::vector<get_valid_parameter_assignments_task> tasks(
-      test_set->get_list_of_tests().size());
+  citcpp::detail::spin_lock mut;
+
   std::size_t test_index = 0;
   for (const auto& t : test_set->get_list_of_tests()) {
-    tasks[test_index] = get_valid_parameter_assignments_task(
-        &t, param_idx, test_index, c_handler, result);
-    SPAWN(lace_get_valid_parameter_assignments_task, &tasks[test_index]);
+    SPAWN(lace_get_valid_parameter_assignments_task, result, &t, test_index,
+          param_idx, c_handler, &mut);
+
     ++test_index;
   }
 
-  for (std::size_t i = 0; i < tasks.size(); ++i) {
+  for (std::size_t i = 0; i < test_set->get_list_of_tests().size(); ++i) {
     SYNC(lace_get_valid_parameter_assignments_task);
   }
 }
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    replace_dont_care_values_task {
+VOID_TASK_2(lace_replace_dont_care_values_task, citcpp::detail::test*, t,
+            citcpp::detail::constraint_handler*, c_handler) {
 
-  public:
-    replace_dont_care_values_task() = default;
-
-    replace_dont_care_values_task(citcpp::detail::test* test,
-                                  citcpp::detail::constraint_handler* handler)
-        : test_(test), handler_(handler) {}
-
-    void operator()() { handler_->replace_dont_care_values(*test_); }
-
-  private:
-    citcpp::detail::test* test_{nullptr};
-    citcpp::detail::constraint_handler* handler_{nullptr};
-};
-
-VOID_TASK_1(lace_replace_dont_care_values_task, replace_dont_care_values_task*,
-            functor) {
-
-  (*functor)();
+  c_handler->replace_dont_care_values(*t);
 }
 
 VOID_TASK_2(lace_replace_dont_care_values_in_testset_task,
             citcpp::detail::internal_test_set*, test_set,
             citcpp::detail::constraint_handler*, c_handler) {
 
-  std::vector<replace_dont_care_values_task> tasks(
-      test_set->get_list_of_tests().size());
-  std::size_t test_index = 0;
   for (auto& t : test_set->get_list_of_tests()) {
-    tasks[test_index] = replace_dont_care_values_task(&t, c_handler);
-    SPAWN(lace_replace_dont_care_values_task, &tasks[test_index]);
-    ++test_index;
+    SPAWN(lace_replace_dont_care_values_task, &t, c_handler);
   }
 
-  for (std::size_t i = 0; i < tasks.size(); ++i) {
+  for (std::size_t i = 0; i < test_set->get_list_of_tests().size(); ++i) {
     SYNC(lace_replace_dont_care_values_task);
   }
 }
@@ -1018,6 +947,10 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) {
 
 void constraint_handler_sylvan_idd::replace_dont_care_values(
     internal_test_set& test_set) {
+
+  if (test_set.get_list_of_tests().empty()) {
+    return;
+  }
 
   RUN(lace_replace_dont_care_values_in_testset_task, &test_set, this);
 }
