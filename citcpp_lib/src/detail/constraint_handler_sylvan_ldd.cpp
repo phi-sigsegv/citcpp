@@ -102,7 +102,8 @@ class constraint_to_xdd_visitor {
       using namespace citcpp::detail;
       using namespace citcpp;
 
-      bool as_bool = negate_ ? !lit : lit;
+      bool as_bool = lit;
+      as_bool = negate_ ? !as_bool : as_bool;
 
       T_DD dd = as_bool ? true_false_dd_trait<T_DD>::true_dd()
                         : true_false_dd_trait<T_DD>::false_dd();
