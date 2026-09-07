@@ -15,7 +15,9 @@ namespace {
 // Sorts the list of values of integer parameters in ascending order.
 // This is required, since some constraint handlers might rely on this
 // to make the respective implementation easier.
-void sort_int_parameter_values(citcpp::model& input_model) {
+// For boolean parameters we sort values such that true is the first one
+// and false is the second one.
+void sort_parameter_values(citcpp::model& input_model) {
   using namespace citcpp;
 
   for (auto& param : input_model.get_parameters()) {
@@ -26,6 +28,13 @@ void sort_int_parameter_values(citcpp::model& input_model) {
                   const int b_int = b;
 
                   return a_int < b_int;
+                });
+    } else if (param.get_type() == parameter_type::BOOLEAN) {
+      std::sort(param.get_values().begin(), param.get_values().end(),
+                [](const parameter_value& a, const parameter_value&) {
+                  const bool a_bool = a;
+
+                  return a_bool;
                 });
     }
   }
@@ -49,6 +58,26 @@ void check_parameters_and_domains(citcpp::model& input_model) {
                << max_num_values << " values";
       throw std::invalid_argument(s_stream.str());
     }
+
+    if (param.get_type() == parameter_type::BOOLEAN) {
+      // Ensure that we have two values, one of them being true, one false.
+      if (param.get_values().size() != 2) {
+        std::stringstream s_stream;
+        s_stream << "parameter " << param.get_name()
+                 << " is of boolean type and " << param.get_values().size()
+                 << " values";
+        throw std::invalid_argument(s_stream.str());
+      }
+      bool v0 = param.get_values()[0];
+      bool v1 = param.get_values()[1];
+      if (v0 == v1) {
+        std::stringstream s_stream;
+        s_stream << "parameter " << param.get_name()
+                 << " is of boolean type and has 2 values, but their truth "
+                    "values do not differ";
+        throw std::invalid_argument(s_stream.str());
+      }
+    }
   }
 }
 
@@ -60,7 +89,7 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     model input_model, int t, const covering_array_computation_config& config) {
 
   check_parameters_and_domains(input_model);
-  sort_int_parameter_values(input_model);
+  sort_parameter_values(input_model);
 
   detail::cagen_exec_handle_ipog_impl* handle =
       new detail::cagen_exec_handle_ipog_impl();
@@ -89,7 +118,7 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     const covering_array_computation_config& config) {
 
   check_parameters_and_domains(input_model);
-  sort_int_parameter_values(input_model);
+  sort_parameter_values(input_model);
 
   detail::cagen_exec_handle_ipog_impl* handle =
       new detail::cagen_exec_handle_ipog_impl();
@@ -118,7 +147,7 @@ std::unique_ptr<covm_exec_handle> measure_coverage(
     const coverage_measurement_config& config) {
 
   check_parameters_and_domains(input_model);
-  sort_int_parameter_values(input_model);
+  sort_parameter_values(input_model);
 
   auto covm_algo = std::make_unique<detail::citcpp_covm>(
       std::move(input_model), std::move(tests), config);
