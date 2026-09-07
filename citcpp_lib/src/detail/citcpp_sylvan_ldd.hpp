@@ -6,8 +6,6 @@
 #include <vector>
 
 #include "bitset.hpp"
-#include "coverage_bitset.hpp"
-#include "datatypes_config.hpp"
 
 namespace citcpp {
 namespace detail {
@@ -113,18 +111,6 @@ class sylvan_idd {
      * @return A new IDD representing the projection.
      */
     sylvan_idd project(const std::vector<uint32_t>& target_variables) const;
-
-    /**
-     * Traverses this IDD in parallel and marks all satisfying assignments
-     * in the given bitset as valid.
-     *
-     * @param value_combinations The data structure to mark valid tuples in.
-     * @param domain_sizes The domain sizes of all parameters in the model.
-     */
-    void mark_valid_value_combinations(
-        coverage_bitset& value_combinations, const param_vector& param_indices,
-        const std::vector<unsigned int>& domain_sizes,
-        const std::vector<unsigned int>* parameter_to_level = nullptr) const;
 
     /**
      * Return the number of nodes in this IDD.

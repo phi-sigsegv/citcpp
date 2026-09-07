@@ -74,7 +74,7 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     const citcpp::model& input_model,
     const citcpp::detail::internal_model& model,
     const citcpp::detail::internal_test_set& test_set,
-    const citcpp::detail::constraint_handler& constr_handler, T_EXEC& exec,
+    citcpp::detail::constraint_handler& constr_handler, T_EXEC& exec,
     int strength, citcpp::detail::covm_exec_handle_impl& exec_handle) {
   using namespace citcpp;
   using namespace citcpp::detail;

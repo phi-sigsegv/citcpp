@@ -25,24 +25,18 @@ class constraint_handler_void : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
-    bool is_valid_partial_test(const test& t) const override;
-
-    /**
-     * See constraint_handler interface.
-     */
-    void mark_valid_tuples(coverage_bitset& value_combinations,
-                           const param_vector& param_indices) const override;
+    bool is_valid_partial_test(const test& t) override;
 
     /**
      * See constraint_handler interface.
      */
     bitset_uint64 get_valid_parameter_assignments(
-        const test& t, unsigned int param_idx) const override;
+        const test& t, unsigned int param_idx) override;
 
     /**
      * See constraint_handler interface.
      */
-    void replace_dont_care_values(test& t) const override;
+    void replace_dont_care_values(test& t) override;
 
     /**
      * See constraint_handler interface.
@@ -50,7 +44,7 @@ class constraint_handler_void : public constraint_handler {
     test_list_intrusive_integ* get_first_test_valid_for_assignment(
         list_intrusive<test_list_intrusive_integ>& test_list,
         const param_vector& param_indices,
-        const value_vector& value_indices) const override;
+        const value_vector& value_indices) override;
 
     /**
      * See constraint_handler interface.

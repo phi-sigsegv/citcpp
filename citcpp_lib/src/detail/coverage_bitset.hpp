@@ -1,8 +1,6 @@
 #ifndef DETAIL_COVERAGE_BITSET_HPP_
 #define DETAIL_COVERAGE_BITSET_HPP_
 
-#include <atomic>
-
 #include "bitset.hpp"
 
 namespace citcpp {
@@ -18,47 +16,21 @@ class coverage_bitset_tmpl {
     coverage_bitset_tmpl(size_type num_bits)
         : bitset_(num_bits << 1), cov_num_ones_(0), valid_num_ones_(0) {}
 
-    coverage_bitset_tmpl(const coverage_bitset_tmpl& other)
-        : bitset_(other.bitset_),
-          cov_num_ones_(other.cov_num_ones_.load()),
-          valid_num_ones_(other.valid_num_ones_.load()) {}
-
-    coverage_bitset_tmpl(coverage_bitset_tmpl&& other) noexcept
-        : bitset_(std::move(other.bitset_)),
-          cov_num_ones_(other.cov_num_ones_.load()),
-          valid_num_ones_(other.valid_num_ones_.load()) {}
+    coverage_bitset_tmpl(const coverage_bitset_tmpl&) = default;
+    coverage_bitset_tmpl(coverage_bitset_tmpl&&) noexcept = default;
 
     ~coverage_bitset_tmpl() {}
 
-    coverage_bitset_tmpl& operator=(const coverage_bitset_tmpl& other) {
-      if (this != &other) {
-        bitset_ = other.bitset_;
-        cov_num_ones_ = other.cov_num_ones_.load();
-        valid_num_ones_ = other.valid_num_ones_.load();
-      }
-      return *this;
-    }
-
-    coverage_bitset_tmpl& operator=(coverage_bitset_tmpl&& other) noexcept {
-      if (this != &other) {
-        bitset_ = std::move(other.bitset_);
-        cov_num_ones_ = other.cov_num_ones_.load();
-        valid_num_ones_ = other.valid_num_ones_.load();
-      }
-      return *this;
-    }
+    coverage_bitset_tmpl& operator=(const coverage_bitset_tmpl&) = default;
+    coverage_bitset_tmpl& operator=(coverage_bitset_tmpl&&) noexcept = default;
 
     /**
      * Swaps this and the given other bitset.
      */
     void swap(coverage_bitset_tmpl& other) noexcept {
       std::swap(bitset_, other.bitset_);
-      size_type this_cov = cov_num_ones_.load();
-      cov_num_ones_.store(other.cov_num_ones_.load());
-      other.cov_num_ones_.store(this_cov);
-      size_type this_valid = valid_num_ones_.load();
-      valid_num_ones_.store(other.valid_num_ones_.load());
-      other.valid_num_ones_.store(this_valid);
+      std::swap(cov_num_ones_, other.cov_num_ones_);
+      std::swap(valid_num_ones_, other.valid_num_ones_);
     }
 
     /**
@@ -72,17 +44,12 @@ class coverage_bitset_tmpl {
     /**
      * Returns the number of values that are marked covered.
      */
-    size_type count_covered() const {
-      return cov_num_ones_.load(std::memory_order_relaxed);
-    }
+    size_type count_covered() const { return cov_num_ones_; }
 
     /**
      * Checks if all values are marked as covered.
      */
-    bool all_covered() const {
-      return (cov_num_ones_.load(std::memory_order_relaxed) << 1) ==
-             bitset_.size();
-    }
+    bool all_covered() const { return (cov_num_ones_ << 1) == bitset_.size(); }
 
     /**
      * Accesses the bit at the given position that represents
@@ -106,7 +73,7 @@ class coverage_bitset_tmpl {
       const size_type prev_num_ones = bitset_.count();
       const bool previous_value = bitset_.test_and_set(bit_pos << 1);
       if (bitset_.count() > prev_num_ones) {
-        cov_num_ones_.fetch_add(1, std::memory_order_relaxed);
+        ++cov_num_ones_;
       }
       return previous_value;
     }
@@ -121,24 +88,19 @@ class coverage_bitset_tmpl {
       const size_type prev_num_ones = bitset_.count();
       bitset_.set(bit_pos << 1);
       if (bitset_.count() > prev_num_ones) {
-        cov_num_ones_.fetch_add(1, std::memory_order_relaxed);
+        ++cov_num_ones_;
       }
     }
 
     /**
      * Returns the number of values that are marked valid.
      */
-    size_type count_valid() const {
-      return valid_num_ones_.load(std::memory_order_relaxed);
-    }
+    size_type count_valid() const { return valid_num_ones_; }
 
     /**
      * Checks if all values are marked as valid.
      */
-    bool all_valid() const {
-      return (valid_num_ones_.load(std::memory_order_relaxed) << 1) ==
-             bitset_.size();
-    }
+    bool all_valid() const { return (valid_num_ones_ << 1) == bitset_.size(); }
 
     /**
      * Accesses the bit at the given position that represents
@@ -160,7 +122,7 @@ class coverage_bitset_tmpl {
       const size_type prev_num_ones = bitset_.count();
       bitset_.set((bit_pos << 1) + 1);
       if (bitset_.count() > prev_num_ones) {
-        valid_num_ones_.fetch_add(1, std::memory_order_relaxed);
+        ++valid_num_ones_;
       }
     }
 
@@ -181,14 +143,14 @@ class coverage_bitset_tmpl {
      */
     void reset_with_new_size(size_type size) {
       bitset_.reset_with_new_size(size << 1);
-      cov_num_ones_.store(0, std::memory_order_relaxed);
-      valid_num_ones_.store(0, std::memory_order_relaxed);
+      cov_num_ones_ = 0;
+      valid_num_ones_ = 0;
     }
 
   private:
     T_BITSET bitset_;
-    std::atomic<size_type> cov_num_ones_;
-    std::atomic<size_type> valid_num_ones_;
+    size_type cov_num_ones_;
+    size_type valid_num_ones_;
 };
 
 using coverage_bitset = coverage_bitset_tmpl<bitset_uint64>;

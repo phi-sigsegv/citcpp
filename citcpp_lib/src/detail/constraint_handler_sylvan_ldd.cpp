@@ -7,6 +7,7 @@
 #include <numeric>
 #include <vector>
 
+#include "datatypes_config.hpp"
 #include "parameter_preprocessor.hpp"
 
 namespace {
@@ -101,8 +102,11 @@ class constraint_to_xdd_visitor {
       using namespace citcpp::detail;
       using namespace citcpp;
 
-      T_DD dd = lit ? true_false_dd_trait<T_DD>::false_dd()
-                    : true_false_dd_trait<T_DD>::true_dd();
+      bool as_bool = lit;
+      as_bool = negate_ ? !as_bool : as_bool;
+
+      T_DD dd = as_bool ? true_false_dd_trait<T_DD>::true_dd()
+                        : true_false_dd_trait<T_DD>::false_dd();
 
       return dd;
     }
@@ -456,163 +460,89 @@ void maybe_shutdown_sylvan() {
   }
 }
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    check_validity_task {
+TASK_2(int, lace_check_test_validity_task, const citcpp::detail::test*, test,
+       citcpp::detail::constraint_handler*, c_handler) {
 
-  public:
-    check_validity_task() = default;
+  if (c_handler->is_valid_partial_test(*test)) {
+    return 1;
+  }
 
-    check_validity_task(const citcpp::detail::test* test,
-                        std::size_t test_index,
-                        const citcpp::detail::constraint_handler* handler,
-                        citcpp::detail::bitset_uint64* result, std::mutex* mut)
-        : test_(test),
-          test_index_(test_index),
-          handler_(handler),
-          result_(result),
-          mut_(mut) {}
-
-    void operator()() {
-      const bool is_valid = handler_->is_valid_partial_test(*test_);
-
-      if (is_valid) {
-        mark_test_as_valid();
-      }
-    }
-
-  private:
-    void mark_test_as_valid() {
-      std::lock_guard<std::mutex> guard(*mut_);
-      result_->set(
-          static_cast<citcpp::detail::bitset_uint64::size_type>(test_index_));
-    }
-
-  private:
-    const citcpp::detail::test* test_{nullptr};
-    std::size_t test_index_{0};
-    const citcpp::detail::constraint_handler* handler_{nullptr};
-    citcpp::detail::bitset_uint64* result_{nullptr};
-    std::mutex* mut_{nullptr};
-};
-
-VOID_TASK_1(lace_check_test_validity_task, check_validity_task*, functor) {
-  (*functor)();
+  return 0;
 }
 
 VOID_TASK_3(lace_check_validity_of_partial_test, citcpp::detail::bitset_uint64*,
             result, const citcpp::detail::internal_test_set*, test_set,
-            const citcpp::detail::constraint_handler*, c_handler) {
+            citcpp::detail::constraint_handler*, c_handler) {
 
-  std::mutex mut;
+  using namespace citcpp::detail;
+  using namespace citcpp;
 
-  std::vector<check_validity_task> tasks(test_set->get_list_of_tests().size());
-  std::size_t test_index = 0;
   for (const auto& t : test_set->get_list_of_tests()) {
-    tasks[test_index] =
-        check_validity_task(&t, test_index, c_handler, result, &mut);
-    SPAWN(lace_check_test_validity_task, &tasks[test_index]);
-    ++test_index;
+    SPAWN(lace_check_test_validity_task, &t, c_handler);
   }
 
-  for (std::size_t i = 0; i < tasks.size(); ++i) {
-    SYNC(lace_check_test_validity_task);
+  for (int i = test_set->get_list_of_tests().size() - 1; i >= 0; --i) {
+    int is_valid = SYNC(lace_check_test_validity_task);
+
+    if (is_valid) {
+      result->set(static_cast<bitset_uint64::size_type>(i));
+    }
   }
 }
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    get_valid_parameter_assignments_task {
+VOID_TASK_6(lace_get_valid_parameter_assignments_task,
+            std::vector<citcpp::detail::bitset_uint64>*, result,
+            const citcpp::detail::test*, test, std::size_t, test_index,
+            unsigned int, param_idx, citcpp::detail::constraint_handler*,
+            c_handler, citcpp::detail::spin_lock*, mut) {
 
-  public:
-    get_valid_parameter_assignments_task() = default;
+  using namespace citcpp::detail;
+  using namespace citcpp;
 
-    get_valid_parameter_assignments_task(
-        const citcpp::detail::test* test, unsigned int param_idx,
-        std::size_t test_index,
-        const citcpp::detail::constraint_handler* handler,
-        std::vector<citcpp::detail::bitset_uint64>* results)
-        : test_(test),
-          param_idx_(param_idx),
-          test_index_(test_index),
-          handler_(handler),
-          results_(results) {}
+  bitset_uint64 valid_assignments(
+      c_handler->get_valid_parameter_assignments(*test, param_idx));
 
-    void operator()() {
-      (*results_)[test_index_] =
-          handler_->get_valid_parameter_assignments(*test_, param_idx_);
-    }
-
-  private:
-    const citcpp::detail::test* test_{nullptr};
-    unsigned int param_idx_{0};
-    std::size_t test_index_{0};
-    const citcpp::detail::constraint_handler* handler_{nullptr};
-    std::vector<citcpp::detail::bitset_uint64>* results_{nullptr};
-};
-
-VOID_TASK_1(lace_get_valid_parameter_assignments_task,
-            get_valid_parameter_assignments_task*, functor) {
-
-  (*functor)();
+  {
+    std::lock_guard<citcpp::detail::spin_lock> lock(*mut);
+    (*result)[test_index] = std::move(valid_assignments);
+  }
 }
 
 VOID_TASK_4(lace_get_valid_parameter_assignments_for_testset_task,
             std::vector<citcpp::detail::bitset_uint64>*, result,
             const citcpp::detail::internal_test_set*, test_set, unsigned int,
-            param_idx, const citcpp::detail::constraint_handler*, c_handler) {
+            param_idx, citcpp::detail::constraint_handler*, c_handler) {
 
-  std::vector<get_valid_parameter_assignments_task> tasks(
-      test_set->get_list_of_tests().size());
+  citcpp::detail::spin_lock mut;
+
   std::size_t test_index = 0;
   for (const auto& t : test_set->get_list_of_tests()) {
-    tasks[test_index] = get_valid_parameter_assignments_task(
-        &t, param_idx, test_index, c_handler, result);
-    SPAWN(lace_get_valid_parameter_assignments_task, &tasks[test_index]);
+    SPAWN(lace_get_valid_parameter_assignments_task, result, &t, test_index,
+          param_idx, c_handler, &mut);
+
     ++test_index;
   }
 
-  for (std::size_t i = 0; i < tasks.size(); ++i) {
+  for (std::size_t i = 0; i < test_set->get_list_of_tests().size(); ++i) {
     SYNC(lace_get_valid_parameter_assignments_task);
   }
 }
 
-class alignas(citcpp::detail::false_sharing_avoidance_alignment)
-    replace_dont_care_values_task {
+VOID_TASK_2(lace_replace_dont_care_values_task, citcpp::detail::test*, t,
+            citcpp::detail::constraint_handler*, c_handler) {
 
-  public:
-    replace_dont_care_values_task() = default;
-
-    replace_dont_care_values_task(
-        citcpp::detail::test* test,
-        const citcpp::detail::constraint_handler* handler)
-        : test_(test), handler_(handler) {}
-
-    void operator()() { handler_->replace_dont_care_values(*test_); }
-
-  private:
-    citcpp::detail::test* test_{nullptr};
-    const citcpp::detail::constraint_handler* handler_{nullptr};
-};
-
-VOID_TASK_1(lace_replace_dont_care_values_task, replace_dont_care_values_task*,
-            functor) {
-
-  (*functor)();
+  c_handler->replace_dont_care_values(*t);
 }
 
 VOID_TASK_2(lace_replace_dont_care_values_in_testset_task,
             citcpp::detail::internal_test_set*, test_set,
-            const citcpp::detail::constraint_handler*, c_handler) {
+            citcpp::detail::constraint_handler*, c_handler) {
 
-  std::vector<replace_dont_care_values_task> tasks(
-      test_set->get_list_of_tests().size());
-  std::size_t test_index = 0;
   for (auto& t : test_set->get_list_of_tests()) {
-    tasks[test_index] = replace_dont_care_values_task(&t, c_handler);
-    SPAWN(lace_replace_dont_care_values_task, &tasks[test_index]);
-    ++test_index;
+    SPAWN(lace_replace_dont_care_values_task, &t, c_handler);
   }
 
-  for (std::size_t i = 0; i < tasks.size(); ++i) {
+  for (std::size_t i = 0; i < test_set->get_list_of_tests().size(); ++i) {
     SYNC(lace_replace_dont_care_values_task);
   }
 }
@@ -629,7 +559,7 @@ VOID_TASK_5(lace_get_first_test_valid_for_assignment_task,
             citcpp::detail::list_intrusive<
                 citcpp::detail::test_list_intrusive_integ>::iterator,
             test_it, size_t, start, size_t, end,
-            const citcpp::detail::constraint_handler_sylvan_idd*, handler,
+            citcpp::detail::constraint_handler_sylvan_idd*, handler,
             lace_get_first_test_valid_for_assignment_ctx*, ctx) {
 
   if (end - start <= 64) {
@@ -925,7 +855,7 @@ component_idd_info* constraint_handler_sylvan_idd::get_component_for_parameter(
 
 bool constraint_handler_sylvan_idd::is_thread_safe() const { return false; }
 
-bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
+bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) {
   for (const auto& comp : components_) {
     auto it = comp.test_to_idd.find(&t);
     if (it != comp.test_to_idd.end()) {
@@ -943,136 +873,8 @@ bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) const {
   return true;
 }
 
-void constraint_handler_sylvan_idd::mark_valid_tuples(
-    coverage_bitset& value_combinations,
-    const param_vector& param_indices) const {
-
-  if (value_combinations.all_valid()) return;
-
-  const unsigned int t = param_indices.size();
-
-  // Group parameter indices by the component they belong to
-  struct active_component_info {
-      const component_idd_info* comp = nullptr;
-      std::vector<unsigned int> positions;  // indices in param_indices
-      param_vector P_comp;                  // parameter indices in comp
-      std::shared_ptr<coverage_bitset> temp_cov;
-      std::vector<std::size_t> temp_weights;
-  };
-
-  std::vector<active_component_info> active_comps;
-
-  for (unsigned int i = 0; i < t; ++i) {
-    unsigned int param_idx = param_indices[i];
-    const auto* comp = get_component_for_parameter(param_idx);
-    if (comp) {
-      // Find or insert component info
-      auto it = std::find_if(active_comps.begin(), active_comps.end(),
-                             [comp](const active_component_info& info) {
-                               return info.comp == comp;
-                             });
-      if (it != active_comps.end()) {
-        it->positions.push_back(i);
-        it->P_comp.push_back(param_idx);
-      } else {
-        active_component_info new_info;
-        new_info.comp = comp;
-        new_info.positions.push_back(i);
-        new_info.P_comp.push_back(param_idx);
-        active_comps.push_back(std::move(new_info));
-      }
-    }
-  }
-
-  // If there are no active components, all tuples are valid
-  if (active_comps.empty()) {
-    value_combinations.set_all_valid();
-    return;
-  }
-
-  // Optimization: If there is exactly one active component and it contains all
-  // parameter indices
-  if (active_comps.size() == 1 && active_comps[0].positions.size() == t) {
-    const auto& active_comp = active_comps[0];
-    active_comp.comp->idd.mark_valid_value_combinations(
-        value_combinations, param_indices, model_.get_parameter_num_values(),
-        &active_comp.comp->parameter_to_level);
-    return;
-  }
-
-  // General case: evaluate on each active component and combine
-  const auto& domain_sizes = model_.get_parameter_num_values();
-
-  for (auto& active_comp : active_comps) {
-    // Calculate total combinations in active_comp
-    std::size_t num_combinations = 1;
-    for (unsigned int param_idx : active_comp.P_comp) {
-      num_combinations *= domain_sizes[param_idx];
-    }
-
-    active_comp.temp_cov = std::make_shared<coverage_bitset>(num_combinations);
-    active_comp.comp->idd.mark_valid_value_combinations(
-        *active_comp.temp_cov, active_comp.P_comp, domain_sizes,
-        &active_comp.comp->parameter_to_level);
-
-    // Calculate temp weights
-    active_comp.temp_weights.resize(active_comp.P_comp.size());
-    std::size_t temp_weight = 1;
-    for (int j = static_cast<int>(active_comp.P_comp.size()) - 1; j >= 0; --j) {
-      active_comp.temp_weights[j] = temp_weight;
-      temp_weight *= domain_sizes[active_comp.P_comp[j]];
-    }
-  }
-
-  // Precompute weights for the overall combinations
-  std::vector<std::size_t> weights(t);
-  std::size_t current_weight = 1;
-  for (int i = static_cast<int>(t) - 1; i >= 0; --i) {
-    weights[i] = current_weight;
-    current_weight *= domain_sizes[param_indices[i]];
-  }
-
-  // Iterate over all possible combinations
-  std::vector<unsigned int> v(t, 0);
-  while (true) {
-    bool combination_valid = true;
-    for (const auto& active_comp : active_comps) {
-      std::size_t sub_index = 0;
-      for (std::size_t j = 0; j < active_comp.positions.size(); ++j) {
-        sub_index += v[active_comp.positions[j]] * active_comp.temp_weights[j];
-      }
-      if (!active_comp.temp_cov->is_valid(sub_index)) {
-        combination_valid = false;
-        break;
-      }
-    }
-
-    if (combination_valid) {
-      std::size_t index = 0;
-      for (std::size_t i = 0; i < t; ++i) {
-        index += v[i] * weights[i];
-      }
-      value_combinations.set_valid(index);
-    }
-
-    // Advance to the next combination
-    int i = static_cast<int>(t) - 1;
-    while (i >= 0) {
-      v[i]++;
-      if (v[i] < domain_sizes[param_indices[i]]) {
-        break;
-      }
-      v[i] = 0;
-      i--;
-    }
-    if (i < 0) {
-      break;
-    }
-  }
-}
-
 bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
-    const internal_test_set& test_set) const {
+    const internal_test_set& test_set) {
 
   bitset_uint64 result(static_cast<bitset_uint64::size_type>(
       test_set.get_list_of_tests().size()));
@@ -1083,7 +885,7 @@ bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
 }
 
 bitset_uint64 constraint_handler_sylvan_idd::get_valid_parameter_assignments(
-    const test& t, unsigned int param_idx) const {
+    const test& t, unsigned int param_idx) {
 
   const auto* comp_ptr = get_component_for_parameter(param_idx);
   if (!comp_ptr) {
@@ -1112,7 +914,7 @@ bitset_uint64 constraint_handler_sylvan_idd::get_valid_parameter_assignments(
 
 std::vector<bitset_uint64>
 constraint_handler_sylvan_idd::get_valid_parameter_assignments(
-    const internal_test_set& test_set, unsigned int param_idx) const {
+    const internal_test_set& test_set, unsigned int param_idx) {
 
   std::vector<bitset_uint64> result(test_set.get_list_of_tests().size());
 
@@ -1122,7 +924,7 @@ constraint_handler_sylvan_idd::get_valid_parameter_assignments(
   return result;
 }
 
-void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
+void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) {
   for (const auto& comp : components_) {
     auto it = comp.test_to_idd.find(&t);
     if (it != comp.test_to_idd.end()) {
@@ -1147,7 +949,11 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) const {
 }
 
 void constraint_handler_sylvan_idd::replace_dont_care_values(
-    internal_test_set& test_set) const {
+    internal_test_set& test_set) {
+
+  if (test_set.get_list_of_tests().empty()) {
+    return;
+  }
 
   RUN(lace_replace_dont_care_values_in_testset_task, &test_set, this);
 }
@@ -1155,8 +961,7 @@ void constraint_handler_sylvan_idd::replace_dont_care_values(
 test_list_intrusive_integ*
 constraint_handler_sylvan_idd::get_first_test_valid_for_assignment(
     list_intrusive<test_list_intrusive_integ>& test_list,
-    const param_vector& param_indices,
-    const value_vector& value_indices) const {
+    const param_vector& param_indices, const value_vector& value_indices) {
 
   if (test_list.empty()) {
     return nullptr;
