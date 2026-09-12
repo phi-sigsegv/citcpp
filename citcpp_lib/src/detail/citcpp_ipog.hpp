@@ -5,7 +5,7 @@
 #include <citcpp/model.hpp>
 #include <citcpp/test_set.hpp>
 
-#include "citcpp_ipog_base.hpp"
+#include "citcpp_cagen_base.hpp"
 #include "internal_model.hpp"
 #include "internal_test_set.hpp"
 
@@ -19,7 +19,7 @@ class cagen_exec_handle_ipog_impl;
 /**
  * This class provides an implementation of the IPOG algorithm.
  */
-class citcpp_ipog : public citcpp_ipog_base {
+class citcpp_ipog : public citcpp_cagen_base {
   public:
     citcpp_ipog(model input_model,
                 const covering_array_computation_config& config);
@@ -45,7 +45,7 @@ class citcpp_ipog : public citcpp_ipog_base {
     /**
      * This is the entry point to be called by a thread.
      */
-    void entry_point(cagen_exec_handle_ipog_impl& exec_handle) override;
+    void entry_point(cagen_exec_handle_ipog_impl& exec_handle);
 
   private:
     const citcpp::covering_array_computation_config config_;

@@ -57,6 +57,37 @@ number_of_combinations get_number_of_combinations(
     const std::vector<unsigned int>& parameter_index_map, unsigned int t,
     bool fixed_last_parameter, const internal_test_set& test_set);
 
+/**
+ * Creates an index mapping for the parameters referenced by a given set of
+ * relations.
+ */
+std::vector<unsigned int> create_parameter_index_map(
+    const std::vector<internal_relation>& relations,
+    const internal_model& internal_model);
+
+/**
+ * Returns a list of internal relations according to the given model
+ * and the specified interaction strength. If that interaction
+ * strength is < 1, then the relations from the given model are used
+ * to derive internal relations from. Otherwise, the relation in the
+ * given model are ignored, and a default internal relation is
+ * constructed, which refers to all parameter of the given model and
+ * the specified interaction strength.
+ *
+ * Note that superfluous relations are skipped. This is because a
+ * relation r is pointless, if its parameters are all contained in
+ * another relation r' and the interaction strength of r' is >= the
+ * interaction strength of relation r. In such a case, coverage of
+ * relation r' would always imply coverage of relation r, and
+ * therefore we just have to keep relation r' as a relation that has
+ * to be covered. Note that more possibilities exist for avoiding
+ * overlaps between relations, but these would be more complex, which
+ * is why this method only implements the optimization mentioned
+ * above.
+ */
+std::vector<internal_relation> create_relations_for_cagen(
+    const model& model, const internal_model& internal_model, int strength);
+
 }  // namespace detail
 }  // namespace citcpp
 
