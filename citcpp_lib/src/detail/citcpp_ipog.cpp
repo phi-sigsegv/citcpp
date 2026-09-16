@@ -23,6 +23,25 @@
 
 namespace {
 
+unsigned int length_of_common_param_prefix(
+    const citcpp::detail::internal_relation& rel,
+    const std::vector<unsigned int>& parameter_index_map) {
+
+  std::size_t param_idx = 0;
+  for (; param_idx < parameter_index_map.size() &&
+         param_idx < rel.get_parameter_index_map().size();
+       ++param_idx) {
+
+    if (parameter_index_map[param_idx] !=
+        rel.get_parameter_index_map()[param_idx]) {
+
+      return static_cast<unsigned int>(param_idx);
+    }
+  }
+
+  return static_cast<unsigned int>(param_idx);
+}
+
 void main_ipog_loop_body(
     const citcpp::detail::internal_model& model,
     const std::vector<citcpp::detail::internal_relation>& relations,
@@ -184,7 +203,7 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
   using namespace citcpp::detail;
 
   std::vector<unsigned int> parameter_index_map(
-      citcpp_ipog_base::create_parameter_index_map(relations, model));
+      create_parameter_index_map(relations, model));
 
   for (auto& relation : relations) {
     relation.sort_parameters(parameter_index_map);
@@ -209,9 +228,9 @@ void main_ipog_loop(const citcpp::detail::internal_model& model,
     maximum_required_strength =
         std::max(maximum_required_strength,
                  relation.get_specified_interaction_strength());
-    maximum_prefix_length = std::max(
-        maximum_prefix_length, citcpp_ipog_base::length_of_common_param_prefix(
-                                   relation, parameter_index_map));
+    maximum_prefix_length =
+        std::max(maximum_prefix_length,
+                 length_of_common_param_prefix(relation, parameter_index_map));
   }
 
   exec_handle.set_number_of_combinations_to_process(number_combos_to_process);
@@ -344,7 +363,7 @@ void main_ipog_loop_extend_test_set(
   }
 
   std::vector<unsigned int> parameter_index_map(
-      citcpp_ipog_base::create_parameter_index_map(relations, model));
+      create_parameter_index_map(relations, model));
 
   for (auto& relation : relations) {
     relation.sort_parameters(parameter_index_map);
@@ -411,7 +430,7 @@ namespace detail {
 
 citcpp_ipog::citcpp_ipog(model input_model,
                          const covering_array_computation_config& config)
-    : citcpp_ipog_base(),
+    : citcpp_cagen_base(),
       config_(config),
       input_model_(std::move(simplify_model(input_model))),
       model_(input_model_),
@@ -420,7 +439,7 @@ citcpp_ipog::citcpp_ipog(model input_model,
 
 citcpp_ipog::citcpp_ipog(model input_model, test_set tests,
                          const covering_array_computation_config& config)
-    : citcpp_ipog_base(),
+    : citcpp_cagen_base(),
       config_(config),
       input_model_(std::move(simplify_model(input_model))),
       model_(input_model_),
@@ -442,7 +461,7 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
   }
 
   std::vector<internal_relation> relations(
-      create_relations(input_model_, model_, strength_));
+      create_relations_for_cagen(input_model_, model_, strength_));
 
   exec_handle.set_execution_phase(
       cagen_exec_handle::phase::CONSTRAINT_HANDLER_INIT);

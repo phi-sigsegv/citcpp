@@ -17,25 +17,17 @@ namespace citcpp {
  * which can then be used to monitor the progress of the execution
  * or to terminate it, as well as to obtain the final results.
  *
- * This method may throw an invalid_argument exception, if the given
- * input is not valid. Note that all parameters must have at most
- * 2^16 values.
- */
-std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    model input_model, int t, const covering_array_computation_config& config);
-
-/**
- * Triggers execution of the calculation of a covering test set.
- * This returns immediately to the caller with a handle object,
- * which can then be used to monitor the progress of the execution
- * or to terminate it, as well as to obtain the final results.
+ * The implementation uses an in-parameter-order-general (IPOG) algorithm
+ * similar to the one implemented by the popular tool ACTS.
  *
  * This method may throw an invalid_argument exception, if the given
  * input is not valid. Note that all parameters must have at most
  * 2^16 values.
  */
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    model input_model, int t);
+    model input_model, int t,
+    const covering_array_computation_config& config =
+        covering_array_computation_config());
 
 /**
  * Triggers execution of the calculation of a covering test set.
@@ -44,6 +36,9 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
  * This returns immediately to the caller with a handle object,
  * which can then be used to monitor the progress of the execution
  * or to terminate it, as well as to obtain the final results.
+ *
+ * The implementation uses an in-parameter-order-general (IPOG) algorithm
+ * similar to the one implemented by the popular tool ACTS.
  *
  * This method may throw an invalid_argument exception, if the given
  * input is not valid. Note that all parameters must have at most
@@ -51,22 +46,8 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
  */
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
     model input_model, test_set tests, int t,
-    const covering_array_computation_config& config);
-
-/**
- * Triggers execution of the calculation of a covering test set.
- * The given test set shall be used as a starting point and extended
- * as needed to achieve the desired coverage.
- * This returns immediately to the caller with a handle object,
- * which can then be used to monitor the progress of the execution
- * or to terminate it, as well as to obtain the final results.
- *
- * This method may throw an invalid_argument exception, if the given
- * input is not valid. Note that all parameters must have at most
- * 2^16 values.
- */
-std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    model input_model, test_set tests, int t);
+    const covering_array_computation_config& config =
+        covering_array_computation_config());
 
 /**
  * Triggers execution of the coverage measurement of a given test set.
@@ -80,20 +61,7 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
  */
 std::unique_ptr<covm_exec_handle> measure_coverage(
     model input_model, test_set tests, int t,
-    const coverage_measurement_config& config);
-
-/**
- * Triggers execution of the coverage measurement of a given test set.
- * This returns immediately to the caller with a handle object,
- * which can then be used to monitor the progress of the execution
- * or to terminate it, as well as to obtain the final results.
- *
- * This method may throw an invalid_argument exception, if the given
- * input is not valid. Note that all parameters must have at most
- * 2^16 values.
- */
-std::unique_ptr<covm_exec_handle> measure_coverage(model input_model,
-                                                   test_set tests, int t);
+    const coverage_measurement_config& config = coverage_measurement_config());
 
 }  // namespace citcpp
 
