@@ -94,23 +94,12 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
   detail::cagen_exec_handle_ipog_impl* handle =
       new detail::cagen_exec_handle_ipog_impl();
 
-  switch (config.algorithm()) {
-    case covering_array_computation_algorithm::IPOG: {
-      auto ipog_algo =
-          std::make_unique<detail::citcpp_ipog>(std::move(input_model), config);
-      ipog_algo->set_interaction_strength(t);
-      handle->set_runnable(std::move(ipog_algo));
-      break;
-    }
-  }
+  auto ipog_algo =
+      std::make_unique<detail::citcpp_ipog>(std::move(input_model), config);
+  ipog_algo->set_interaction_strength(t);
+  handle->set_runnable(std::move(ipog_algo));
 
   return std::unique_ptr<cagen_exec_handle_ipog>(handle);
-}
-
-std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    model input_model, int t) {
-  return compute_covering_array_ipog(std::move(input_model), t,
-                                     covering_array_computation_config());
 }
 
 std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
@@ -123,23 +112,12 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
   detail::cagen_exec_handle_ipog_impl* handle =
       new detail::cagen_exec_handle_ipog_impl();
 
-  switch (config.algorithm()) {
-    case covering_array_computation_algorithm::IPOG: {
-      auto ipog_algo = std::make_unique<detail::citcpp_ipog>(
-          std::move(input_model), std::move(tests), config);
-      ipog_algo->set_interaction_strength(t);
-      handle->set_runnable(std::move(ipog_algo));
-      break;
-    }
-  }
+  auto ipog_algo = std::make_unique<detail::citcpp_ipog>(
+      std::move(input_model), std::move(tests), config);
+  ipog_algo->set_interaction_strength(t);
+  handle->set_runnable(std::move(ipog_algo));
 
   return std::unique_ptr<cagen_exec_handle_ipog>(handle);
-}
-
-std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
-    model input_model, test_set tests, int t) {
-  return compute_covering_array_ipog(std::move(input_model), std::move(tests),
-                                     t, covering_array_computation_config());
 }
 
 std::unique_ptr<covm_exec_handle> measure_coverage(
@@ -157,12 +135,6 @@ std::unique_ptr<covm_exec_handle> measure_coverage(
   detail::covm_exec_handle_impl* handle = new detail::covm_exec_handle_impl();
   handle->set_runnable(std::move(covm_algo));
   return std::unique_ptr<covm_exec_handle>(handle);
-}
-
-std::unique_ptr<covm_exec_handle> measure_coverage(model input_model,
-                                                   test_set tests, int t) {
-  return measure_coverage(std::move(input_model), std::move(tests), t,
-                          coverage_measurement_config());
 }
 
 }  // namespace citcpp
