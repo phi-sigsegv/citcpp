@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 
 #include "parser_utils.hpp"
 
@@ -307,19 +308,17 @@ class acts_model_parser::impl : input_model_data_consumer {
       parser_["RelParamName"] = relation_param_identifier_consumer_;
       parser_["RelStrength"] = relation_strength_consumer_;
       parser_["ConstrParamName"] = [this](const peg::SemanticValues& vs) {
-        auto line_info = vs.line_info();
-        const size_t line = line_info.first;
-        const size_t col = line_info.second;
         const std::string param_name(vs.token_to_string());
 
         // Search for the parameter in the model
-        for (const parameter& param : model_->get_parameters()) {
-          if (param_name == param.get_name()) {
-            return parameter_reference(param_name);
-          }
+        if (parameter_names_.count(param_name) != 0) {
+          return parameter_reference(param_name);
         }
 
         // If we reach this point, then we did not find the reference parameter.
+        auto line_info = vs.line_info();
+        const size_t line = line_info.first;
+        const size_t col = line_info.second;
         error_occurred_ = true;
         std::ostringstream oss;
         oss << "Error in constraint at " << line << ":" << col
@@ -361,9 +360,13 @@ class acts_model_parser::impl : input_model_data_consumer {
         return parameter_value(vs.token_to_string());
       };
       parser_["AtomicProp"] = [this](const peg::SemanticValues& vs) {
-        auto line_info = vs.line_info();
-        const size_t line = line_info.first;
-        const size_t col = line_info.second;
+        // The position is only needed for error messages; computing it
+        // requires a search in the line index of the input.
+        auto error_position = [&vs]() {
+          auto line_info = vs.line_info();
+          return std::to_string(line_info.first) + ":" +
+                 std::to_string(line_info.second);
+        };
         parameter_reference param(any_cast<parameter_reference>(vs[0]));
         relational_operator op(any_cast<relational_operator>(vs[1]));
         parameter_value value(any_cast<parameter_value>(vs[2]));
@@ -378,7 +381,7 @@ class acts_model_parser::impl : input_model_data_consumer {
               case relational_operator::LT: {
                 error_occurred_ = true;
                 std::ostringstream oss;
-                oss << "Error in constraint at " << line << ":" << col
+                oss << "Error in constraint at " << error_position()
                     << " -> Cannot have operator for a non-integer parameter "
                        "that needs ordered values";
                 error_message_ = oss.str();
@@ -401,7 +404,7 @@ class acts_model_parser::impl : input_model_data_consumer {
               case relational_operator::LT: {
                 error_occurred_ = true;
                 std::ostringstream oss;
-                oss << "Error in constraint at " << line << ":" << col
+                oss << "Error in constraint at " << error_position()
                     << " -> Cannot have operator for a non-integer parameter "
                        "that needs ordered values";
                 error_message_ = oss.str();
@@ -502,6 +505,7 @@ class acts_model_parser::impl : input_model_data_consumer {
 
     void end_param_declaration() override {
       model_->add_parameter(current_param_);
+      parameter_names_.insert(current_param_.get_name());
       // Reset our parameter.
       current_param_.get_values().clear();
     }
@@ -542,6 +546,10 @@ class acts_model_parser::impl : input_model_data_consumer {
       error_occurred_ = false;
       error_message_.clear();
       current_param_.get_values().clear();
+      parameter_names_.clear();
+      for (const parameter& param : model_->get_parameters()) {
+        parameter_names_.insert(param.get_name());
+      }
       bool ret = parser_.parse(sv);
 
       return ret && !error_occurred_;
@@ -570,6 +578,9 @@ class acts_model_parser::impl : input_model_data_consumer {
     bool error_occurred_;
     std::string error_message_;
     model* model_;
+    // Names of the parameters declared so far, for resolving references in
+    // constraints.
+    std::unordered_set<std::string> parameter_names_;
 };
 
 acts_model_parser::acts_model_parser() : impl_{std::make_unique<impl>()} {}
