@@ -227,12 +227,15 @@ void ipog_coverage_map::add_gains(
   }
 
   load_test(t);
+  gain_values_.clear();
+  for (unsigned int v = 0; v < last_domain_size_; ++v) {
+    if (valid_values.test(v)) {
+      gain_values_.push_back(v);
+    }
+  }
   for_each_row<false>([&](std::uint64_t base, std::uint64_t length,
                           long long) {
-    for (unsigned int v = 0; v < last_domain_size_; ++v) {
-      if (!valid_values.test(v)) {
-        continue;
-      }
+    for (const unsigned int v : gain_values_) {
       const std::uint64_t row = base + v * tuples_per_value;
       unsigned long long gain = 0;
       for (std::uint64_t w = 0, off = 0; off < length; ++w, off += 64) {
@@ -269,6 +272,14 @@ unsigned long long ipog_coverage_map::cover(const test& t, int last_value,
   }
 
   load_test(t);
+  // Validity is only queried for uncovered tuples, so the tuples with the
+  // covered value need no valid bits.
+  valid_row_offsets_.clear();
+  for (unsigned int v = 0; v < last_domain_size_; ++v) {
+    if (v != c && valid_values.test(v)) {
+      valid_row_offsets_.push_back(v * tuples_per_value);
+    }
+  }
   std::uint32_t* const num_covered = storage_->num_covered.data();
   unsigned long long newly = 0;
   for_each_row<true>([&](std::uint64_t base, std::uint64_t length,
@@ -291,10 +302,8 @@ unsigned long long ipog_coverage_map::cover(const test& t, int last_value,
               rank_base - static_cast<long long>(slot_position_[slot]))];
         }
       }
-      for (unsigned int v = 0; v < last_domain_size_; ++v) {
-        if (valid_values.test(v)) {
-          or_bits(valid, base + v * tuples_per_value + off, bits);
-        }
+      for (const std::uint64_t valid_row_offset : valid_row_offsets_) {
+        or_bits(valid, base + valid_row_offset + off, bits);
       }
     }
   });

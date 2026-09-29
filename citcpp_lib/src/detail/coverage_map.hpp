@@ -213,8 +213,9 @@ class ipog_coverage_map {
     /**
      * Marks the tuples with the given value of the last parameter whose earlier
      * values are all assigned in the given test as covered, and the tuples
-     * with any value set in valid_values as valid. Returns the number of
-     * tuples that were not covered before.
+     * with any other value set in valid_values as valid. (The valid bits are
+     * only meaningful for uncovered tuples.) Returns the number of tuples
+     * that were not covered before.
      */
     unsigned long long cover(const test& t, int last_value,
                              const bitset_uint64& valid_values);
@@ -254,6 +255,11 @@ class ipog_coverage_map {
     mutable std::vector<std::uint64_t> test_slots_;
     mutable std::vector<int> test_values_;
     mutable std::vector<unsigned int> assigned_positions_;
+    // Scratch data of add_gains(): the values to compute the gain for.
+    mutable std::vector<unsigned int> gain_values_;
+    // Scratch data of cover(): offsets of the rows of the values whose valid
+    // bits are to be set.
+    std::vector<std::uint64_t> valid_row_offsets_;
 };
 
 }  // namespace detail
