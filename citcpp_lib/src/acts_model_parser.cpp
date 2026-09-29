@@ -252,9 +252,8 @@ ConstrEnumValue   <- '"' < (!(',' / ';' / '"' / SpaceChar / Eol) .) (!(',' / ';'
 
 Identifier        <- [a-zA-Z_] [a-zA-Z0-9_]*
 
-~__               <- (WhiteSpace / Eol)*
-~_                <- SpaceChar*
-WhiteSpace        <- SpaceChar / LineComment
+~__               <- ([ \t\r\n] / LineComment)*
+~_                <- [ \t]*
 SpaceChar         <- ' ' / '\t'
 Eol               <- '\r\n' / '\n' / '\r'
 LineComment       <- '--' (!Eol .)* &Eol
