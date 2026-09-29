@@ -4,6 +4,43 @@
 
 namespace {
 
+// Computes the index into the bitset of a parameter combination of the value
+// combination of the given test, except for the value of the last parameter
+// (the current one processed by IPOG). We treat the number of values of each
+// parameter as a kind of radix. Consider three parameters p_0, p_1, p_2, where
+// p_2 is the current one. Now say that v_i is the number of values for p_i. If
+// we now have values x_0, x_1, x_2, then the index is x_0 * v_1 * v_2 + x_1 *
+// v_2 + x_2. The base index is x_0 * v_1 * v_2 + x_1 * v_2, which is constant
+// throughout all different values of p_2. The weights are accumulated from the
+// back, so that this takes O(t) steps.
+// Returns false if the test has a don't care value for one of the parameters
+// (other than the last one).
+inline bool compute_base_index(
+    const citcpp::detail::test& test,
+    const citcpp::detail::param_vector& param_indices,
+    const citcpp::detail::internal_model& model,
+    citcpp::detail::ipog_coverage_map::second_level_type::size_type&
+        base_index) {
+
+  using size_type = citcpp::detail::ipog_coverage_map::second_level_type::size_type;
+  const auto& num_values = model.get_parameter_num_values();
+  const std::size_t last = param_indices.size() - 1;
+
+  size_type index = 0;
+  size_type weight = static_cast<size_type>(num_values[param_indices[last]]);
+  for (std::size_t i = last; i-- > 0;) {
+    const int param_value = test.get_values()[param_indices[i]];
+    if (param_value < 0) {
+      return false;
+    }
+    index += static_cast<size_type>(param_value) * weight;
+    weight *= static_cast<size_type>(num_values[param_indices[i]]);
+  }
+
+  base_index = index;
+  return true;
+}
+
 class ipog_horizontal_select_best_value_per_param_combo_functor {
   public:
     ipog_horizontal_select_best_value_per_param_combo_functor(
@@ -24,32 +61,12 @@ class ipog_horizontal_select_best_value_per_param_combo_functor {
       if (!value_combinations.all_covered()) {
         // We have a bitset and we have uncovered value combinations left in it.
         // Thus we have to walk through it concerning all possible value
-        // combinations.
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider three
-        // parameters p_0, p_1, p_2. The last parameter is always the current
-        // one processed by IPOG. Now say that v_i is the number of values for
-        // p_i. If we now have values x_0, x_1, x_2, then the index is x_0 * v_1
-        // * v_2 + x_1 * v_2 + x_2. In the base index we just compute x_0 * v_1
-        // * v_2 + x_1 * v_2, since that expression is constant throughout all
-        // different values of p_2 whose different coverage gains we want to
-        // assess.
+        // combinations of the current parameter.
         ipog_coverage_map::second_level_type::size_type base_index = 0;
-        for (std::size_t i = 0; i < param_indices.size() - 1; ++i) {
-          const int param_value = test.get_values()[param_indices[i]];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test.
-            return;
-          }
-
-          ipog_coverage_map::second_level_type::size_type addend = param_value;
-          for (std::size_t j = i + 1; j < param_indices.size(); ++j) {
-            addend *= static_cast<decltype(addend)>(
-                model_.get_parameter_num_values()[param_indices[j]]);
-          }
-          base_index += addend;
+        if (!compute_base_index(test, param_indices, model_, base_index)) {
+          // We have found a don't care value for that combination in
+          // the considered test.
+          return;
         }
 
         // If we have found a don't care value in one of the [0, ...
@@ -199,32 +216,14 @@ class ipog_horizontal_update_coverage_map_per_param_combo_functor {
           value_combinations.get_parameter_indices();
 
       if (!value_combinations.all_covered()) {
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider
-        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
-        // values for p_i. If we now have values x_0, x_1, x_2, then the
-        // index is x_0 * v_1 * v_2 + x_1 * v_2 + x_2. In the base index we just
-        // compute x_0 * v_1 * v_2 + x_1 * v_2, since that expression is
-        // constant throughout all different values of p_2.
         ipog_coverage_map::second_level_type::size_type base_index = 0;
-        for (std::size_t i = 0; i < param_indices.size() - 1; ++i) {
-          const int param_value = test.get_values()[param_indices[i]];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test in one of the [0, ... ,current_param_idx - 1]
-            // parameters. There is nothing to be updated concerning the
-            // coverage. This combination will be taken care of during the
-            // vertical extension step.
-            return;
-          }
-
-          ipog_coverage_map::second_level_type::size_type addend = param_value;
-          for (std::size_t j = i + 1; j < param_indices.size(); ++j) {
-            addend *= static_cast<decltype(addend)>(
-                model_.get_parameter_num_values()[param_indices[j]]);
-          }
-          base_index += addend;
+        if (!compute_base_index(test, param_indices, model_, base_index)) {
+          // We have found a don't care value for that combination in
+          // the considered test in one of the [0, ... ,current_param_idx - 1]
+          // parameters. There is nothing to be updated concerning the
+          // coverage. This combination will be taken care of during the
+          // vertical extension step.
+          return;
         }
 
         const unsigned int real_current_param_idx =
