@@ -1,3 +1,5 @@
+#include <bit>
+#include <cstdint>
 #include <functional>
 #include <mutex>
 
@@ -71,7 +73,9 @@ class covm_per_param_combo_functor {
           num_invalid_tuples_(0),
           covered_tuples_(test_set.get_list_of_tests().size(), 0),
           cov_level_to_num_param_combos_{0},
-          exec_handle_(exec_handle) {}
+          exec_handle_(exec_handle) {
+      build_test_columns();
+    }
 
     bool operator()(const param_vector& param_indices) {
       bitset_uint64::size_type bitset_size = 1;
@@ -89,38 +93,10 @@ class covm_per_param_combo_functor {
             model_.get_parameter_num_values()[param_indices[i]]);
       }
 
-      int test_index = 0;
-      for (const test& test : test_set_.get_list_of_tests()) {
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider
-        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
-        // values for p_i. If we now have values x_0, x_1, x_2, then the index
-        // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
-        bitset_uint64::size_type index = 0;
-        bool found_dont_care = false;
-        for (std::size_t i = 0; i < param_indices.size(); ++i) {
-          const int param_value = test.get_values()[param_indices[i]];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test in one of the parameters.
-            // There is nothing to be updated concerning the
-            // coverage.
-            found_dont_care = true;
-            break;
-          }
-
-          index +=
-              static_cast<bitset_uint64::size_type>(param_value) * weights_[i];
-        }
-
-        if (!found_dont_care) {
-          if (!values_combo_bitset_.test_and_set(index)) {
-            covered_tuples_[test_index]++;
-          }
-        }
-
-        ++test_index;
+      if (use_test_columns(param_indices)) {
+        mark_covered_tuples_by_test_columns(param_indices, 0, nullptr, 0);
+      } else {
+        mark_covered_tuples_by_test_scan(param_indices);
       }
 
       if (!values_combo_bitset_.all()) {
@@ -189,6 +165,129 @@ class covm_per_param_combo_functor {
     }
 
   private:
+    void mark_covered_tuples_by_test_scan(const param_vector& param_indices) {
+      int test_index = 0;
+      for (const test& test : test_set_.get_list_of_tests()) {
+        // Here we compute an index into the bitset. To do so, we treat the
+        // number of values of each parameter as a kind of radix. Consider
+        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
+        // values for p_i. If we now have values x_0, x_1, x_2, then the index
+        // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+        bitset_uint64::size_type index = 0;
+        bool found_dont_care = false;
+        for (std::size_t i = 0; i < param_indices.size(); ++i) {
+          const int param_value = test.get_values()[param_indices[i]];
+
+          if (param_value < 0) {
+            // We have found a don't care value for that combination in
+            // the considered test in one of the parameters.
+            // There is nothing to be updated concerning the
+            // coverage.
+            found_dont_care = true;
+            break;
+          }
+
+          index +=
+              static_cast<bitset_uint64::size_type>(param_value) * weights_[i];
+        }
+
+        if (!found_dont_care) {
+          if (!values_combo_bitset_.test_and_set(index)) {
+            covered_tuples_[test_index]++;
+          }
+        }
+
+        ++test_index;
+      }
+    }
+
+    // The test set in transposed form: per parameter value, the bitset of the
+    // tests having that value (tests_per_column_words_ words per value).
+    void build_test_columns() {
+      const std::vector<unsigned int>& num_values =
+          model_.get_parameter_num_values();
+      column_offsets_.resize(num_values.size());
+      std::size_t num_columns = 0;
+      for (std::size_t p = 0; p < num_values.size(); ++p) {
+        column_offsets_[p] = num_columns;
+        num_columns += num_values[p];
+      }
+      const std::size_t num_tests = test_set_.get_list_of_tests().size();
+      num_column_words_ = (num_tests + 63) / 64;
+      test_columns_.assign(num_columns * num_column_words_, 0);
+      std::size_t test_index = 0;
+      for (const test& test : test_set_.get_list_of_tests()) {
+        for (std::size_t p = 0; p < num_values.size(); ++p) {
+          const int value = test.get_values()[p];
+          if (value >= 0) {
+            test_columns_[(column_offsets_[p] + static_cast<std::size_t>(value)) *
+                              num_column_words_ +
+                          test_index / 64] |= std::uint64_t(1)
+                                              << (test_index % 64);
+          }
+        }
+        ++test_index;
+      }
+      and_buffers_.assign(value_indices_.size() * num_column_words_, 0);
+    }
+
+    // Decides whether the covered tuples of the parameter combination are
+    // determined from the test columns (cost bounded by the number of value
+    // prefixes times the column length) or by scanning the tests.
+    bool use_test_columns(const param_vector& param_indices) const {
+      const std::size_t num_tests = test_set_.get_list_of_tests().size();
+      unsigned long long prefixes = 1;
+      unsigned long long column_cost = 0;
+      for (auto p : param_indices) {
+        prefixes *= model_.get_parameter_num_values()[p];
+        column_cost += prefixes * num_column_words_;
+      }
+      return column_cost <= param_indices.size() * num_tests;
+    }
+
+    // Marks the tuples covered by the tests, level by level: and_buffers_
+    // holds, per level, the tests having the values chosen so far. The first
+    // covering test of a tuple is the lowest test in the conjunction.
+    void mark_covered_tuples_by_test_columns(const param_vector& param_indices,
+                                             std::size_t level,
+                                             const std::uint64_t* prefix,
+                                             bitset_uint64::size_type index) {
+      const std::size_t words = num_column_words_;
+      const unsigned int num_values =
+          model_.get_parameter_num_values()[param_indices[level]];
+      const std::uint64_t* columns =
+          test_columns_.data() + column_offsets_[param_indices[level]] * words;
+      const bool last_level = level + 1 == param_indices.size();
+      std::uint64_t* conjunction = and_buffers_.data() + level * words;
+      for (unsigned int x = 0; x < num_values; ++x) {
+        const std::uint64_t* column = columns + x * words;
+        const bitset_uint64::size_type value_index =
+            index + static_cast<bitset_uint64::size_type>(x) * weights_[level];
+        if (last_level) {
+          for (std::size_t w = 0; w < words; ++w) {
+            const std::uint64_t bits = prefix ? (prefix[w] & column[w])
+                                              : column[w];
+            if (bits) {
+              values_combo_bitset_.set(value_index);
+              covered_tuples_[w * 64 + static_cast<std::size_t>(
+                                           std::countr_zero(bits))]++;
+              break;
+            }
+          }
+        } else {
+          std::uint64_t any = 0;
+          for (std::size_t w = 0; w < words; ++w) {
+            conjunction[w] = prefix ? (prefix[w] & column[w]) : column[w];
+            any |= conjunction[w];
+          }
+          if (any) {
+            mark_covered_tuples_by_test_columns(param_indices, level + 1,
+                                                conjunction, value_index);
+          }
+        }
+      }
+    }
+
     bool is_valid_tuple(const param_vector& param_indices,
                         const value_vector& value_indices) {
 
@@ -221,6 +320,10 @@ class covm_per_param_combo_functor {
     citcpp::coverage_measurement::t_coverage_level_to_num_param_combos
         cov_level_to_num_param_combos_;
     covm_exec_handle_impl& exec_handle_;
+    std::vector<std::size_t> column_offsets_;
+    std::size_t num_column_words_ = 0;
+    std::vector<std::uint64_t> test_columns_;
+    std::vector<std::uint64_t> and_buffers_;
 };
 
 inline void measure_coverage(
