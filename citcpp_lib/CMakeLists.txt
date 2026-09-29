@@ -67,6 +67,19 @@ if (ENABLE_CLANG_TIDY)
   endif()
 endif()
 
+# The coverage computations count bits (std::popcount) on their hot paths;
+# use the hardware instruction where the compiler supports it. The resulting
+# binaries require a CPU with the POPCNT instruction (on x86-64: every CPU
+# since about 2008); disable this option to build for older CPUs.
+option(CITCPP_USE_POPCNT "Use the hardware POPCNT instruction" ON)
+if(CITCPP_USE_POPCNT)
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag(-mpopcnt CITCPP_COMPILER_HAS_MPOPCNT)
+  if(CITCPP_COMPILER_HAS_MPOPCNT)
+    target_compile_options(citcpp_lib PRIVATE -mpopcnt)
+  endif()
+endif()
+
 if(NOT MSVC)
   target_compile_options(citcpp_lib PRIVATE
     -Wall
