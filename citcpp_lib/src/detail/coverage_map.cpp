@@ -74,6 +74,15 @@ ipog_coverage_map::ipog_coverage_map(
   storage_->covered.assign(num_words, 0);
   storage_->valid.assign(num_words, 0);
 
+  if (s >= 2) {
+    rank_terms_.assign(s, std::vector<long long>(m + 1, 0));
+    for (unsigned int l = 0; l < s; ++l) {
+      for (unsigned int x = 0; x <= m; ++x) {
+        rank_terms_[l][x] = binomial_coeffs.get_coefficient(x, l + 1);
+      }
+    }
+  }
+
   if (s >= 1) {
     slot_position_.resize(E_[1][m]);
     for (unsigned int q = 0; q < m; ++q) {
@@ -98,6 +107,7 @@ ipog_coverage_map::ipog_coverage_map(
     combo.storage_ = storage_.get();
     combo.param_indices_ = param_vector(s + 1);
     combo.first_element_ = storage_->combo_domain_sizes.size();
+    combo.index_ = static_cast<second_level_type::size_type>(combos_.size());
     combo.last_domain_size_ = last_domain_size_;
     std::uint64_t size = last_domain_size_;
     long long rank = 0;
@@ -124,6 +134,7 @@ ipog_coverage_map::ipog_coverage_map(
     }
     combos_.push_back(std::move(combo));
   };
+  storage_->num_covered.assign(num_combos, 0);
 
   if (s == 0) {
     emit();
@@ -159,7 +170,7 @@ void ipog_coverage_map::load_test(const test& t) const {
   }
 }
 
-template <typename F>
+template <bool with_rank, typename F>
 void ipog_coverage_map::for_each_row(F&& f) const {
   const unsigned int s = t_ - 1;
   const unsigned int m = n_ - 1;
@@ -173,7 +184,6 @@ void ipog_coverage_map::for_each_row(F&& f) const {
   // sum_l [ C(top_l + 1, l + 1) - C(p[l] + 1, l + 1) ] with top_{s-1} = m - 1
   // and top_l = p[l + 1] - 1. The levels >= 1 are fixed per row, the level 0
   // term is (p[1] - 1) - p[0].
-  const binom_coeff_table& binom = *binomial_coeffs_;
   auto walk = [&](auto& self, unsigned int level, std::size_t candidates,
                   unsigned int top, std::uint64_t base,
                   long long rank) -> void {
@@ -185,9 +195,11 @@ void ipog_coverage_map::for_each_row(F&& f) const {
       const std::uint64_t value = static_cast<std::uint64_t>(test_values_[q]);
       const std::uint64_t level_base =
           base + E_[level + 1][q] + value * E_[level][q];
-      const long long level_rank =
-          rank + binom.get_coefficient(top + 1, level + 1) -
-          binom.get_coefficient(q + 1, level + 1);
+      long long level_rank = 0;
+      if constexpr (with_rank) {
+        const std::vector<long long>& terms = rank_terms_[level];
+        level_rank = rank + terms[top + 1] - terms[q + 1];
+      }
       if (level == 1) {
         f(level_base, E_[1][q], level_rank + static_cast<long long>(q) - 1);
       } else {
@@ -215,7 +227,8 @@ void ipog_coverage_map::add_gains(
   }
 
   load_test(t);
-  for_each_row([&](std::uint64_t base, std::uint64_t length, long long) {
+  for_each_row<false>([&](std::uint64_t base, std::uint64_t length,
+                          long long) {
     for (unsigned int v = 0; v < last_domain_size_; ++v) {
       if (!valid_values.test(v)) {
         continue;
@@ -244,7 +257,7 @@ unsigned long long ipog_coverage_map::cover(const test& t, int last_value,
     unsigned long long newly = 0;
     if (!((covered[c >> 6] >> (c & 63)) & 1)) {
       covered[c >> 6] |= std::uint64_t(1) << (c & 63);
-      ++combos_[0].num_covered_;
+      ++storage_->num_covered[0];
       newly = 1;
     }
     for (unsigned int v = 0; v < last_domain_size_; ++v) {
@@ -256,9 +269,10 @@ unsigned long long ipog_coverage_map::cover(const test& t, int last_value,
   }
 
   load_test(t);
+  std::uint32_t* const num_covered = storage_->num_covered.data();
   unsigned long long newly = 0;
-  for_each_row([&](std::uint64_t base, std::uint64_t length,
-                   long long rank_base) {
+  for_each_row<true>([&](std::uint64_t base, std::uint64_t length,
+                         long long rank_base) {
     const std::uint64_t row = base + c * tuples_per_value;
     for (std::uint64_t w = 0, off = 0; off < length; ++w, off += 64) {
       const std::uint64_t bits = test_slots_[w] & row_word_mask(length, off);
@@ -273,10 +287,8 @@ unsigned long long ipog_coverage_map::cover(const test& t, int last_value,
         for (; new_bits; new_bits &= new_bits - 1) {
           const std::uint64_t slot =
               off + static_cast<std::uint64_t>(std::countr_zero(new_bits));
-          ++combos_[static_cast<std::size_t>(
-                        rank_base - static_cast<long long>(
-                                        slot_position_[slot]))]
-                .num_covered_;
+          ++num_covered[static_cast<std::size_t>(
+              rank_base - static_cast<long long>(slot_position_[slot]))];
         }
       }
       for (unsigned int v = 0; v < last_domain_size_; ++v) {

@@ -33,6 +33,9 @@ struct ipog_coverage_map_storage {
     // position): the domain size and the physical index weight of its value.
     std::vector<std::uint32_t> combo_domain_sizes;
     std::vector<std::uint64_t> combo_value_weights;
+    // Per parameter combination: the number of tuples marked covered. (Kept
+    // apart from the combinations, so that the kernels touch few cache lines.)
+    std::vector<std::uint32_t> num_covered;
 };
 
 /**
@@ -57,12 +60,14 @@ class ipog_coverage_map_param_combo {
     /**
      * Returns the number of tuples that are marked covered.
      */
-    size_type count_covered() const { return num_covered_; }
+    size_type count_covered() const { return storage_->num_covered[index_]; }
 
     /**
      * Checks if all tuples are marked as covered.
      */
-    bool all_covered() const { return num_covered_ == size_; }
+    bool all_covered() const {
+      return storage_->num_covered[index_] == size_;
+    }
 
     bool is_marked_covered(size_type logical_index) const {
       const std::uint64_t i = physical_index(logical_index);
@@ -80,7 +85,7 @@ class ipog_coverage_map_param_combo {
         return true;
       }
       word |= mask;
-      ++num_covered_;
+      ++storage_->num_covered[index_];
       return false;
     }
 
@@ -122,7 +127,8 @@ class ipog_coverage_map_param_combo {
     std::uint64_t first_element_ = 0;
     std::uint32_t last_domain_size_ = 1;
     size_type size_ = 0;
-    size_type num_covered_ = 0;
+    // Index of this combination in its coverage map.
+    size_type index_ = 0;
 };
 
 /**
@@ -222,8 +228,9 @@ class ipog_coverage_map {
     // Calls f(row_base, row_length, rank_base) for every row of the loaded
     // test, where row_base is the physical index of the row's first slot for
     // value 0 of the last parameter, and a tuple of the row in a slot of
-    // position i belongs to the combination with index rank_base - i.
-    template <typename F>
+    // position i belongs to the combination with index rank_base - i (only
+    // computed if with_rank is set).
+    template <bool with_rank, typename F>
     void for_each_row(F&& f) const;
 
     const internal_model* model_;
@@ -237,6 +244,8 @@ class ipog_coverage_map {
 
     // E_[k][j]: number of k-tuples over the earlier positions [0, j).
     std::vector<std::vector<std::uint64_t>> E_;
+    // rank_terms_[l][x] = C(x, l + 1), for the combination ranks (t >= 3).
+    std::vector<std::vector<long long>> rank_terms_;
     // Value slot -> earlier position.
     std::vector<std::uint32_t> slot_position_;
     unsigned int last_domain_size_ = 1;
