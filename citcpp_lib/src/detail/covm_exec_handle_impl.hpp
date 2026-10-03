@@ -33,7 +33,9 @@ class covm_exec_handle_impl : public virtual covm_exec_handle {
 
     ~covm_exec_handle_impl() override {
       abort();
-      thread_.join();
+      if (thread_.joinable()) {
+        thread_.join();
+      }
     }
 
   public:

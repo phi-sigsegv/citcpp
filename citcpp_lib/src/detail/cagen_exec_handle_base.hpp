@@ -30,9 +30,19 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     cagen_exec_handle_base& operator=(cagen_exec_handle_base&&) = delete;
     cagen_exec_handle_base& operator=(const cagen_exec_handle_base&) = delete;
 
-    ~cagen_exec_handle_base() override {
+    ~cagen_exec_handle_base() override { abort_and_join(); }
+
+    /**
+     * Aborts the computation and waits for the thread to finish. The
+     * destructors of derived classes that own the runnable of the thread
+     * must call it, since their members are destroyed before this class's
+     * destructor runs.
+     */
+    void abort_and_join() {
       abort();
-      thread_.join();
+      if (thread_.joinable()) {
+        thread_.join();
+      }
     }
 
   public:

@@ -13,7 +13,8 @@ namespace detail {
 class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
                                     public cagen_exec_handle_base {
   public:
-    ~cagen_exec_handle_ipog_impl() override = default;
+    // Joins before runnable_ is destroyed (see abort_and_join()).
+    ~cagen_exec_handle_ipog_impl() override { abort_and_join(); }
 
   public:
     unsigned int get_number_of_parameters_to_process() const override {
