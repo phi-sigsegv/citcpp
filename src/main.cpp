@@ -225,6 +225,14 @@ int execute_cagen(const std::string& model_file_path,
     }
   }
 
+  cagen_exec_result result(f.get());
+
+  if (result.get_result_code() ==
+      cagen_exec_result::cagen_result_code::COVERING_ARRAY_GENERATION_ERROR) {
+    std::cerr << "ERROR: " << result.get_error_message() << std::endl;
+    return 1;
+  }
+
   unsigned int constr_init_progress_tgt =
       handle->get_constraint_handler_init_progress_target();
   unsigned int constr_init_progress_cur =
@@ -255,8 +263,6 @@ int execute_cagen(const std::string& model_file_path,
   // restore defaults in formatting.
   std::cout << std::setprecision(default_precision);
   std::cout << std::defaultfloat;
-
-  cagen_exec_result result(f.get());
 
   if (aborted) {
     std::cout << "WARNING: Covering array computation has been aborted. The "
