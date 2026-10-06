@@ -54,17 +54,55 @@ class test_validity_checker_parallel {
     mutable std::mutex mut_;
 };
 
+// The test set in transposed form: per parameter value, the bitset of the
+// tests having that value (num_words words per value, starting at word
+// offsets[p] * num_words for the values of parameter p). Built once per
+// measurement and shared (read only) by all functors.
+struct covm_test_columns {
+    covm_test_columns(const internal_model& model,
+                      const internal_test_set& test_set) {
+      const std::vector<unsigned int>& num_values =
+          model.get_parameter_num_values();
+      offsets.resize(num_values.size());
+      std::size_t num_columns = 0;
+      for (std::size_t p = 0; p < num_values.size(); ++p) {
+        offsets[p] = num_columns;
+        num_columns += num_values[p];
+      }
+      const std::size_t num_tests = test_set.get_list_of_tests().size();
+      num_words = (num_tests + 63) / 64;
+      bits.assign(num_columns * num_words, 0);
+      std::size_t test_index = 0;
+      for (const test& test : test_set.get_list_of_tests()) {
+        for (std::size_t p = 0; p < num_values.size(); ++p) {
+          const int value = test.get_values()[p];
+          if (value >= 0) {
+            bits[(offsets[p] + static_cast<std::size_t>(value)) * num_words +
+                 test_index / 64] |= std::uint64_t(1) << (test_index % 64);
+          }
+        }
+        ++test_index;
+      }
+    }
+
+    std::vector<std::size_t> offsets;
+    std::size_t num_words = 0;
+    std::vector<std::uint64_t> bits;
+};
+
 template <typename T_PARTIAL_TEST_VALIDITY_PRED>
 class covm_per_param_combo_functor {
   public:
     covm_per_param_combo_functor(
         unsigned int strength, const internal_model& model,
         const internal_test_set& test_set,
+        const covm_test_columns& test_columns,
         const T_PARTIAL_TEST_VALIDITY_PRED& validity_pred,
         bitset_uint64::size_type bitset_backing_array_size,
         covm_exec_handle_impl& exec_handle)
         : model_(model),
           test_set_(test_set),
+          test_columns_(test_columns),
           validity_pred_(validity_pred),
           value_indices_(strength),
           weights_(strength),
@@ -73,9 +111,8 @@ class covm_per_param_combo_functor {
           num_invalid_tuples_(0),
           covered_tuples_(test_set.get_list_of_tests().size(), 0),
           cov_level_to_num_param_combos_{0},
-          exec_handle_(exec_handle) {
-      build_test_columns();
-    }
+          exec_handle_(exec_handle),
+          and_buffers_(strength * test_columns.num_words, 0) {}
 
     bool operator()(const param_vector& param_indices) {
       bitset_uint64::size_type bitset_size = 1;
@@ -201,36 +238,6 @@ class covm_per_param_combo_functor {
       }
     }
 
-    // The test set in transposed form: per parameter value, the bitset of the
-    // tests having that value (tests_per_column_words_ words per value).
-    void build_test_columns() {
-      const std::vector<unsigned int>& num_values =
-          model_.get_parameter_num_values();
-      column_offsets_.resize(num_values.size());
-      std::size_t num_columns = 0;
-      for (std::size_t p = 0; p < num_values.size(); ++p) {
-        column_offsets_[p] = num_columns;
-        num_columns += num_values[p];
-      }
-      const std::size_t num_tests = test_set_.get_list_of_tests().size();
-      num_column_words_ = (num_tests + 63) / 64;
-      test_columns_.assign(num_columns * num_column_words_, 0);
-      std::size_t test_index = 0;
-      for (const test& test : test_set_.get_list_of_tests()) {
-        for (std::size_t p = 0; p < num_values.size(); ++p) {
-          const int value = test.get_values()[p];
-          if (value >= 0) {
-            test_columns_[(column_offsets_[p] + static_cast<std::size_t>(value)) *
-                              num_column_words_ +
-                          test_index / 64] |= std::uint64_t(1)
-                                              << (test_index % 64);
-          }
-        }
-        ++test_index;
-      }
-      and_buffers_.assign(value_indices_.size() * num_column_words_, 0);
-    }
-
     // Decides whether the covered tuples of the parameter combination are
     // determined from the test columns (cost bounded by the number of value
     // prefixes times the column length) or by scanning the tests.
@@ -240,7 +247,7 @@ class covm_per_param_combo_functor {
       unsigned long long column_cost = 0;
       for (auto p : param_indices) {
         prefixes *= model_.get_parameter_num_values()[p];
-        column_cost += prefixes * num_column_words_;
+        column_cost += prefixes * test_columns_.num_words;
       }
       return column_cost <= param_indices.size() * num_tests;
     }
@@ -252,11 +259,12 @@ class covm_per_param_combo_functor {
                                              std::size_t level,
                                              const std::uint64_t* prefix,
                                              bitset_uint64::size_type index) {
-      const std::size_t words = num_column_words_;
+      const std::size_t words = test_columns_.num_words;
       const unsigned int num_values =
           model_.get_parameter_num_values()[param_indices[level]];
       const std::uint64_t* columns =
-          test_columns_.data() + column_offsets_[param_indices[level]] * words;
+          test_columns_.bits.data() +
+          test_columns_.offsets[param_indices[level]] * words;
       const bool last_level = level + 1 == param_indices.size();
       std::uint64_t* conjunction = and_buffers_.data() + level * words;
       for (unsigned int x = 0; x < num_values; ++x) {
@@ -310,6 +318,7 @@ class covm_per_param_combo_functor {
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
+    const covm_test_columns& test_columns_;
     const T_PARTIAL_TEST_VALIDITY_PRED& validity_pred_;
     value_vector value_indices_;
     std::vector<bitset_uint64::size_type> weights_;
@@ -320,9 +329,6 @@ class covm_per_param_combo_functor {
     citcpp::coverage_measurement::t_coverage_level_to_num_param_combos
         cov_level_to_num_param_combos_;
     covm_exec_handle_impl& exec_handle_;
-    std::vector<std::size_t> column_offsets_;
-    std::size_t num_column_words_ = 0;
-    std::vector<std::uint64_t> test_columns_;
     std::vector<std::uint64_t> and_buffers_;
 };
 
@@ -338,9 +344,11 @@ inline void measure_coverage(
           model, parameter_index_map);
 
   test_validity_checker_sequential validity_pred(constr_handler);
+  const covm_test_columns test_columns(model, test_set);
   covm_per_param_combo_functor<test_validity_checker_sequential>
-      per_param_combo_functor(strength, model, test_set, validity_pred,
-                              product_of_max_parameter_sizes, exec_handle);
+      per_param_combo_functor(strength, model, test_set, test_columns,
+                              validity_pred, product_of_max_parameter_sizes,
+                              exec_handle);
 
   param_combo_iterator param_combo_it(
       static_cast<unsigned int>(parameter_index_map.size()), strength,
@@ -380,12 +388,15 @@ void measure_coverage(unsigned int strength, const internal_model& model,
           model, parameter_index_map);
 
   test_validity_checker_parallel validity_pred(constr_handler);
+  // One functor per task (many), all sharing the transposed test set.
+  const covm_test_columns test_columns(model, test_set);
   param_combo_functor_parallel_iterator<
       covm_per_param_combo_functor<test_validity_checker_parallel>, T_EXEC>
       per_param_combo_functor_parallel(
           static_cast<unsigned int>(parameter_index_map.size()), strength,
           parameter_index_map, false, exec, strength, std::cref(model),
-          std::cref(test_set), std::cref(validity_pred),
+          std::cref(test_set), std::cref(test_columns),
+          std::cref(validity_pred),
           product_of_max_parameter_sizes, std::ref(exec_handle));
 
   per_param_combo_functor_parallel.visit_all_parameter_combinations();
