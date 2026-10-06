@@ -1,6 +1,7 @@
 #include <bit>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <mutex>
 
 #include "bitset.hpp"
@@ -90,6 +91,40 @@ struct covm_test_columns {
     std::vector<std::uint64_t> bits;
 };
 
+// The scratch tests (one value per parameter, all don't care while unused)
+// for the validity checks of the functors. One per functor would need memory
+// quadratic in the number of parameters (there is one functor per task, i.e.
+// per parameter for t = 2); instead, a functor takes one from here for a
+// parameter combination that needs validity checks, and returns it
+// afterwards.
+class covm_scratch_tests {
+  public:
+    explicit covm_scratch_tests(std::size_t num_params)
+        : num_params_(num_params) {}
+
+    test* acquire() {
+      std::lock_guard<std::mutex> guard(mut_);
+      if (free_.empty()) {
+        all_.push_back(std::make_unique<test>(num_params_, -1));
+        return all_.back().get();
+      }
+      test* t = free_.back();
+      free_.pop_back();
+      return t;
+    }
+
+    void release(test* t) {
+      std::lock_guard<std::mutex> guard(mut_);
+      free_.push_back(t);
+    }
+
+  private:
+    std::size_t num_params_;
+    std::mutex mut_;
+    std::vector<std::unique_ptr<test>> all_;
+    std::vector<test*> free_;
+};
+
 template <typename T_PARTIAL_TEST_VALIDITY_PRED>
 class covm_per_param_combo_functor {
   public:
@@ -97,16 +132,17 @@ class covm_per_param_combo_functor {
         unsigned int strength, const internal_model& model,
         const internal_test_set& test_set,
         const covm_test_columns& test_columns,
+        covm_scratch_tests& scratch_tests,
         const T_PARTIAL_TEST_VALIDITY_PRED& validity_pred,
         bitset_uint64::size_type bitset_backing_array_size,
         covm_exec_handle_impl& exec_handle)
         : model_(model),
           test_set_(test_set),
           test_columns_(test_columns),
+          scratch_tests_(&scratch_tests),
           validity_pred_(validity_pred),
           value_indices_(strength),
           weights_(strength),
-          scratch_test_(model.get_parameter_num_values().size(), -1),
           values_combo_bitset_(bitset_backing_array_size),
           num_invalid_tuples_(0),
           covered_tuples_(test_set.get_list_of_tests().size(), 0),
@@ -298,31 +334,41 @@ class covm_per_param_combo_functor {
 
     bool is_valid_tuple(const param_vector& param_indices,
                         const value_vector& value_indices) {
-
+      if (!scratch_test_) {
+        scratch_test_ = scratch_tests_->acquire();
+      }
       for (std::size_t i = 0; i < param_indices.size(); ++i) {
         const int param_value_to_cover = value_indices[i];
-        scratch_test_.get_values()[param_indices[i]] = param_value_to_cover;
+        scratch_test_->get_values()[param_indices[i]] = param_value_to_cover;
       }
 
-      bool res = validity_pred_(scratch_test_);
+      bool res = validity_pred_(*scratch_test_);
 
       return res;
     }
 
+    // Returns the scratch test (if one was taken), with its values reset.
     void reset_scratch_test(const param_vector& param_indices) {
-      for (std::size_t i = 0; i < param_indices.size(); ++i) {
-        scratch_test_.get_values()[param_indices[i]] = -1;
+      if (!scratch_test_) {
+        return;
       }
+      for (std::size_t i = 0; i < param_indices.size(); ++i) {
+        scratch_test_->get_values()[param_indices[i]] = -1;
+      }
+      scratch_tests_->release(scratch_test_);
+      scratch_test_ = nullptr;
     }
 
   private:
     const internal_model& model_;
     const internal_test_set& test_set_;
     const covm_test_columns& test_columns_;
+    covm_scratch_tests* scratch_tests_;
+    // Taken from scratch_tests_ for the current parameter combination.
+    test* scratch_test_ = nullptr;
     const T_PARTIAL_TEST_VALIDITY_PRED& validity_pred_;
     value_vector value_indices_;
     std::vector<bitset_uint64::size_type> weights_;
-    test scratch_test_;
     bitset_uint64 values_combo_bitset_;
     unsigned long long num_invalid_tuples_;
     std::vector<unsigned long long> covered_tuples_;
@@ -345,10 +391,11 @@ inline void measure_coverage(
 
   test_validity_checker_sequential validity_pred(constr_handler);
   const covm_test_columns test_columns(model, test_set);
+  covm_scratch_tests scratch_tests(model.get_parameter_num_values().size());
   covm_per_param_combo_functor<test_validity_checker_sequential>
       per_param_combo_functor(strength, model, test_set, test_columns,
-                              validity_pred, product_of_max_parameter_sizes,
-                              exec_handle);
+                              scratch_tests, validity_pred,
+                              product_of_max_parameter_sizes, exec_handle);
 
   param_combo_iterator param_combo_it(
       static_cast<unsigned int>(parameter_index_map.size()), strength,
@@ -388,15 +435,17 @@ void measure_coverage(unsigned int strength, const internal_model& model,
           model, parameter_index_map);
 
   test_validity_checker_parallel validity_pred(constr_handler);
-  // One functor per task (many), all sharing the transposed test set.
+  // One functor per task (many), all sharing the transposed test set and
+  // the scratch tests.
   const covm_test_columns test_columns(model, test_set);
+  covm_scratch_tests scratch_tests(model.get_parameter_num_values().size());
   param_combo_functor_parallel_iterator<
       covm_per_param_combo_functor<test_validity_checker_parallel>, T_EXEC>
       per_param_combo_functor_parallel(
           static_cast<unsigned int>(parameter_index_map.size()), strength,
           parameter_index_map, false, exec, strength, std::cref(model),
           std::cref(test_set), std::cref(test_columns),
-          std::cref(validity_pred),
+          std::ref(scratch_tests), std::cref(validity_pred),
           product_of_max_parameter_sizes, std::ref(exec_handle));
 
   per_param_combo_functor_parallel.visit_all_parameter_combinations();
