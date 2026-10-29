@@ -356,3 +356,51 @@ TEST_CASE("covm, testing PICT example model, strength 7") {
         covm.get_number_of_combinations_to_cover());
   CHECK(covm[1.0] == covm.get_number_of_param_combos_to_cover());
 }
+
+TEST_CASE("covm, testing a parameter with the most values allowed") {
+  using namespace citcpp;
+
+  // The value indices of P go up to 65534, next to the marker of don't care
+  // values in the columns of values; the pairs of P are counted by a scan of
+  // the tests, those of Q and R from the bitsets of the values.
+  {
+    const int num_values = 65535;
+    model model;
+    std::vector<parameter_value> values;
+    for (int v = 0; v < num_values; ++v) {
+      values.emplace_back(v);
+    }
+    model.add_parameter(
+        parameter().type(parameter_type::INTEGER).name("P").values(values));
+    model.add_parameter(parameter()
+                            .type(parameter_type::ENUM)
+                            .name("Q")
+                            .values({{"a"}, {"b"}}));
+    model.add_parameter(parameter()
+                            .type(parameter_type::ENUM)
+                            .name("R")
+                            .values({{"x"}, {"y"}}));
+
+    test_set t;
+    for (const parameter& p : model.get_parameters()) {
+      t.add_parameter(p);
+    }
+    t.get_list_of_tests().push_back({0, 0, 0});
+    t.get_list_of_tests().push_back({num_values - 1, 1, 0});
+    t.get_list_of_tests().push_back({0, 1, -1});
+    t.get_list_of_tests().push_back({num_values - 1, 1, 1});
+
+    std::unique_ptr<covm_exec_handle> covm_handle =
+        measure_coverage(model, t, 2, coverage_measurement_config());
+    auto covm_f = covm_handle->get_coverage_measurement();
+    covm_exec_result covm_result(covm_f.get());
+    const coverage_measurement& covm = covm_result.get_result().at("");
+
+    CHECK(covm_result.get_result_code() ==
+          covm_exec_result::covm_result_code::COVERAGE_MEASUREMENT_COMPLETED);
+    CHECK(covm.get_number_of_combinations_to_cover() ==
+          4 * static_cast<unsigned long long>(num_values) + 4);
+    CHECK(covm.get_covered_tuples() ==
+          std::vector<unsigned long long>{3, 6, 7, 9});
+  }
+}

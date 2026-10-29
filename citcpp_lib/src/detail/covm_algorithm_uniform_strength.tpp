@@ -46,7 +46,9 @@ class test_validity_checker_parallel {
 
 // The test set in transposed form: per parameter value, the bitset of the
 // tests having that value (num_words words per value, starting at word
-// offsets[p] * num_words for the values of parameter p). Built once per
+// offsets[p] * num_words for the values of parameter p), and per parameter,
+// its values in the tests (contiguous over the tests, so that a scan of the
+// tests reads only the columns of the parameter combination). Built once per
 // measurement and shared (read only) by all functors.
 struct covm_test_columns {
     covm_test_columns(const internal_model& model,
@@ -59,9 +61,10 @@ struct covm_test_columns {
         offsets[p] = num_columns;
         num_columns += num_values[p];
       }
-      const std::size_t num_tests = test_set.get_list_of_tests().size();
+      num_tests = test_set.get_list_of_tests().size();
       num_words = (num_tests + 63) / 64;
       bits.assign(num_columns * num_words, 0);
+      values.assign(num_values.size() * num_tests, DONT_CARE);
       std::size_t test_index = 0;
       for (const test& test : test_set.get_list_of_tests()) {
         for (std::size_t p = 0; p < num_values.size(); ++p) {
@@ -69,15 +72,29 @@ struct covm_test_columns {
           if (value >= 0) {
             bits[(offsets[p] + static_cast<std::size_t>(value)) * num_words +
                  test_index / 64] |= std::uint64_t(1) << (test_index % 64);
+            values[p * num_tests + test_index] =
+                static_cast<std::uint16_t>(value);
           }
         }
         ++test_index;
       }
     }
 
+    // The values of parameter p in the tests (DONT_CARE for a don't care
+    // value).
+    const std::uint16_t* column(std::size_t p) const {
+      return values.data() + p * num_tests;
+    }
+
+    // A parameter has at most 65535 values (see check_parameters_and_domains
+    // in citcpp.cpp), so its values are 0 to DONT_CARE - 1.
+    static constexpr std::uint16_t DONT_CARE = 0xFFFF;
+
     std::vector<std::size_t> offsets;
     std::size_t num_words = 0;
     std::vector<std::uint64_t> bits;
+    std::size_t num_tests = 0;
+    std::vector<std::uint16_t> values;
 };
 
 // The scratch tests (one value per parameter, all don't care while unused)
@@ -227,39 +244,39 @@ class covm_per_param_combo_functor {
     }
 
   private:
+    // Here we compute an index into the bitset. To do so, we treat the
+    // number of values of each parameter as a kind of radix. Consider three
+    // parameters p_0, p_1, p_2. Now say that v_i is the number of values for
+    // p_i. If we now have values x_0, x_1, x_2, then the index is
+    // x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
     void mark_covered_tuples_by_test_scan(const param_vector& param_indices) {
-      int test_index = 0;
-      for (const test& test : test_set_.get_list_of_tests()) {
-        // Here we compute an index into the bitset. To do so, we treat the
-        // number of values of each parameter as a kind of radix. Consider
-        // three parameters p_0, p_1, p_2. Now say that v_i is the number of
-        // values for p_i. If we now have values x_0, x_1, x_2, then the index
-        // is x_0 * v_1 * v_2 + x_1 * v_2 + x_2.
+      // The values are read from the columns of the parameters (contiguous
+      // over the tests).
+      const std::size_t strength = param_indices.size();
+      small_vector<const std::uint16_t*> columns(strength);
+      for (std::size_t i = 0; i < strength; ++i) {
+        columns[i] = test_columns_.column(param_indices[i]);
+      }
+      for (std::size_t test_index = 0; test_index < test_columns_.num_tests;
+           ++test_index) {
         bitset_uint64::size_type index = 0;
         bool found_dont_care = false;
-        for (std::size_t i = 0; i < param_indices.size(); ++i) {
-          const int param_value = test.get_values()[param_indices[i]];
-
-          if (param_value < 0) {
-            // We have found a don't care value for that combination in
-            // the considered test in one of the parameters.
-            // There is nothing to be updated concerning the
-            // coverage.
+        for (std::size_t i = 0; i < strength; ++i) {
+          const std::uint16_t param_value = columns[i][test_index];
+          if (param_value == covm_test_columns::DONT_CARE) {
+            // A don't care value: the test covers no tuple of the
+            // combination.
             found_dont_care = true;
             break;
           }
-
           index +=
               static_cast<bitset_uint64::size_type>(param_value) * weights_[i];
         }
-
         if (!found_dont_care) {
           if (!values_combo_bitset_.test_and_set(index)) {
             covered_tuples_[test_index]++;
           }
         }
-
-        ++test_index;
       }
     }
 
