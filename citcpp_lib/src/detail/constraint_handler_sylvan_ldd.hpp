@@ -80,6 +80,14 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     bool is_valid_partial_test(const test& t) override;
 
     /**
+     * See constraint_handler interface. Without a lock: the check only reads
+     * the handler's state, and its Sylvan operations run as Lace tasks, which
+     * may run concurrently on the workers.
+     */
+    bool is_valid_partial_test(const test& t,
+                               const param_vector& assigned) override;
+
+    /**
      * See constraint_handler interface.
      */
     bitset_uint64 check_validity_of_partial_tests(

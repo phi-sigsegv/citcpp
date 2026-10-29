@@ -873,6 +873,12 @@ bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) {
   return true;
 }
 
+bool constraint_handler_sylvan_idd::is_valid_partial_test(
+    const test& t, const param_vector& assigned) {
+  (void)assigned;
+  return is_valid_partial_test(t);
+}
+
 bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
     const internal_test_set& test_set) {
 

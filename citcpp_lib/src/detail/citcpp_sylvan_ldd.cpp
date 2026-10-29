@@ -431,9 +431,12 @@ TASK_2(uint64_t, sylvan_idd_sat_with_partial_assignment, MDD, ldd,
        const partial_assignment_ctx*, ctx) {
 
   // First we create cubes that specifies which variable we have assignments
-  // for, and what are the assigned values.
+  // for, and what are the assigned values. (Protected while they are built:
+  // creating a node may trigger a garbage collection.)
   MDD variables_cube = lddmc_true;
   MDD values_cube = lddmc_true;
+  lddmc_refs_pushptr(&variables_cube);
+  lddmc_refs_pushptr(&values_cube);
   for (int v = ctx->num_variables - 1; v >= 0; --v) {
     const uint32_t var = ctx->variables[v];
     const int value = ctx->variable_order
@@ -446,14 +449,11 @@ TASK_2(uint64_t, sylvan_idd_sat_with_partial_assignment, MDD, ldd,
     }
   }
 
-  lddmc_refs_push(variables_cube);
-  lddmc_refs_push(values_cube);
-
   std::atomic<bool> terminate(false);
   const uint64_t sat = CALL(sylvan_idd_sat_with_partial_assignment_recursive,
                             ldd, 0, variables_cube, values_cube, &terminate);
 
-  lddmc_refs_pop(2);
+  lddmc_refs_popptr(2);
 
   return sat;
 }

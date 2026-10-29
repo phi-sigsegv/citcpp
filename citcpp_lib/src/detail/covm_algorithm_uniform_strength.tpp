@@ -31,33 +31,17 @@ class test_validity_checker_sequential {
 class test_validity_checker_parallel {
   public:
     test_validity_checker_parallel(constraint_handler& constr_handler)
-        : constr_handler_(constr_handler), mut_() {}
+        : constr_handler_(constr_handler) {}
 
-    // assigned: the parameters assigned in t (see
-    // constraint_handler::is_valid_partial_test).
+    // assigned: the parameters assigned in t. Called by concurrent workers
+    // of the Lace executor, which constraint_handler::is_valid_partial_test
+    // allows.
     bool operator()(const test& t, const param_vector& assigned) const {
-      if (constr_handler_.is_thread_safe()) {
-        return check_concurrently(t, assigned);
-      } else {
-        return check_mutally_excluded(t, assigned);
-      }
-    }
-
-  private:
-    bool check_mutally_excluded(const test& t,
-                                const param_vector& assigned) const {
-      std::lock_guard<std::mutex> guard(mut_);
-      const bool is_valid = constr_handler_.is_valid_partial_test(t, assigned);
-      return is_valid;
-    }
-
-    bool check_concurrently(const test& t, const param_vector& assigned) const {
       return constr_handler_.is_valid_partial_test(t, assigned);
     }
 
   private:
     constraint_handler& constr_handler_;
-    mutable std::mutex mut_;
 };
 
 // The test set in transposed form: per parameter value, the bitset of the

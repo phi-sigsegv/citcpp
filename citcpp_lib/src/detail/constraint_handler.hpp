@@ -1,6 +1,8 @@
 #ifndef DETAIL_CONSTRAINT_HANDLER_HPP_
 #define DETAIL_CONSTRAINT_HANDLER_HPP_
 
+#include <mutex>
+
 #include "bitset.hpp"
 #include "constraint_handler_init_progress.hpp"
 #include "datatypes_config.hpp"
@@ -37,12 +39,21 @@ class constraint_handler {
     /**
      * As #is_valid_partial_test, for a partial test whose assigned parameters
      * are exactly the given ones. They are a hint: implementations may use
-     * them to avoid looking at all parameters of the test. The default
-     * implementation ignores them.
+     * them to avoid looking at all parameters of the test. May be called
+     * concurrently by different workers of the Lace executor (while no other
+     * method is called). The default implementation ignores the hint, and
+     * serializes the calls unless the handler is thread safe; this is only
+     * correct for handlers whose checks do not run Lace tasks (a worker that
+     * waits for its tasks may run another check, and a blocked worker cannot
+     * take part in the operations of the other ones).
      */
     virtual bool is_valid_partial_test(const test& t,
                                        const param_vector& assigned) {
       (void)assigned;
+      if (is_thread_safe()) {
+        return is_valid_partial_test(t);
+      }
+      std::lock_guard<std::mutex> guard(partial_test_check_mutex_);
       return is_valid_partial_test(t);
     }
 
@@ -170,6 +181,9 @@ class constraint_handler {
         const internal_model& model, unsigned int num_worker_threads,
         std::size_t memory_limit_in_bytes,
         constraint_handler_init_progress& exec_handle);
+
+  private:
+    std::mutex partial_test_check_mutex_;
 };
 
 }  // namespace detail
