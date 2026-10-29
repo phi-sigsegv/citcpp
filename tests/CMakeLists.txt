@@ -21,6 +21,7 @@ list(APPEND CITCPP_UNITTESTS
   test_cov_measure
   test_cov_measure_relations
   test_bugfix_in_covered_combos_reported_by_ipog
+  test_test_set_parser
 )
 
 foreach(unittest IN LISTS CITCPP_UNITTESTS)
