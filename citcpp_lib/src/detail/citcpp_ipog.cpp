@@ -479,13 +479,13 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
 
   // Filter out invalid tests.
   {
-    constraint_evaluator constr_eval(input_model_.get_parameters());
+    constraint_evaluator constr_eval(input_model_);
     auto test_it = tests.get_list_of_tests().begin();
     while (test_it != tests.get_list_of_tests().end()) {
       const auto& t = *test_it;
       const bool is_valid = t.has_dont_care_value()
                                 ? constr_handler->is_valid_partial_test(t)
-                                : constr_eval(t, input_model_);
+                                : constr_eval(t);
       if (!is_valid) {
         test_it = tests.get_list_of_tests().erase(test_it);
       } else {
