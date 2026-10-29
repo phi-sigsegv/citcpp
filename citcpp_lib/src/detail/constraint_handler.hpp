@@ -35,6 +35,18 @@ class constraint_handler {
     virtual bool is_valid_partial_test(const test& t) = 0;
 
     /**
+     * As #is_valid_partial_test, for a partial test whose assigned parameters
+     * are exactly the given ones. They are a hint: implementations may use
+     * them to avoid looking at all parameters of the test. The default
+     * implementation ignores them.
+     */
+    virtual bool is_valid_partial_test(const test& t,
+                                       const param_vector& assigned) {
+      (void)assigned;
+      return is_valid_partial_test(t);
+    }
+
+    /**
      * This method reads the given partial tests, in particular the
      * assignments of values to parameters, and returns for each such test,
      * whether the respective combination of those assignments is valid.

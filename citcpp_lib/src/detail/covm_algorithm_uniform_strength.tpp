@@ -18,8 +18,10 @@ class test_validity_checker_sequential {
     test_validity_checker_sequential(constraint_handler& constr_handler)
         : constr_handler_(constr_handler) {}
 
-    bool operator()(const test& t) const {
-      return constr_handler_.is_valid_partial_test(t);
+    // assigned: the parameters assigned in t (see
+    // constraint_handler::is_valid_partial_test).
+    bool operator()(const test& t, const param_vector& assigned) const {
+      return constr_handler_.is_valid_partial_test(t, assigned);
     }
 
   private:
@@ -31,23 +33,26 @@ class test_validity_checker_parallel {
     test_validity_checker_parallel(constraint_handler& constr_handler)
         : constr_handler_(constr_handler), mut_() {}
 
-    bool operator()(const test& t) const {
+    // assigned: the parameters assigned in t (see
+    // constraint_handler::is_valid_partial_test).
+    bool operator()(const test& t, const param_vector& assigned) const {
       if (constr_handler_.is_thread_safe()) {
-        return check_concurrently(t);
+        return check_concurrently(t, assigned);
       } else {
-        return check_mutally_excluded(t);
+        return check_mutally_excluded(t, assigned);
       }
     }
 
   private:
-    bool check_mutally_excluded(const test& t) const {
+    bool check_mutally_excluded(const test& t,
+                                const param_vector& assigned) const {
       std::lock_guard<std::mutex> guard(mut_);
-      const bool is_valid = constr_handler_.is_valid_partial_test(t);
+      const bool is_valid = constr_handler_.is_valid_partial_test(t, assigned);
       return is_valid;
     }
 
-    bool check_concurrently(const test& t) const {
-      return constr_handler_.is_valid_partial_test(t);
+    bool check_concurrently(const test& t, const param_vector& assigned) const {
+      return constr_handler_.is_valid_partial_test(t, assigned);
     }
 
   private:
@@ -342,7 +347,8 @@ class covm_per_param_combo_functor {
         scratch_test_->get_values()[param_indices[i]] = param_value_to_cover;
       }
 
-      bool res = validity_pred_(*scratch_test_);
+      // The scratch test has exactly the values of the tuple.
+      bool res = validity_pred_(*scratch_test_, param_indices);
 
       return res;
     }
