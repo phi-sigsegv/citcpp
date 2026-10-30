@@ -22,6 +22,7 @@ list(APPEND CITCPP_UNITTESTS
   test_cov_measure_relations
   test_bugfix_in_covered_combos_reported_by_ipog
   test_test_set_parser
+  test_acts_model_parser
   test_constraint_evaluator
 )
 
