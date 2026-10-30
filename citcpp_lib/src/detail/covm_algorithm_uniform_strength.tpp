@@ -55,7 +55,7 @@ struct covm_test_columns {
                       const internal_test_set& test_set) {
       const std::vector<unsigned int>& num_values =
           model.get_parameter_num_values();
-      offsets.resize(num_values.size());
+      offsets.assign(num_values.size(), 0);
       std::size_t num_columns = 0;
       for (std::size_t p = 0; p < num_values.size(); ++p) {
         offsets[p] = num_columns;
