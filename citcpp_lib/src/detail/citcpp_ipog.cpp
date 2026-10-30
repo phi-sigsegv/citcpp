@@ -111,7 +111,7 @@ void main_ipog_loop_body(
             ipog_coverage_map(relation.get_current_param_idx() + 1,
                               relation.get_current_interaction_strength(),
                               model, relation.get_parameter_index_map(),
-                              binomial_coeffs, true)));
+                              binomial_coeffs)));
         number_combos_to_process +=
             relation_cov_maps.back().second.get_total_number_of_tuples();
       }

@@ -29,10 +29,14 @@ struct ipog_coverage_map_storage {
     std::vector<std::uint64_t> valid;
     // Number of tuples per value of the fixed last parameter.
     std::uint64_t tuples_per_value = 0;
-    // Per parameter combination and per earlier parameter of it (in ascending
-    // position): the domain size and the physical index weight of its value.
-    std::vector<std::uint32_t> combo_domain_sizes;
-    std::vector<std::uint64_t> combo_value_weights;
+    // E[k][j]: number of k-tuples over the earlier positions [0, j) (see
+    // ipog_coverage_map). The domain size of the parameter at position q is
+    // E[1][q + 1] - E[1][q], and E[k][q] is the physical index weight of its
+    // value as the (k+1)-th earlier parameter of a combination.
+    std::vector<std::vector<std::uint64_t>> E;
+    // Model parameter index -> its position in the parameter index map (only
+    // meaningful for the parameters of the map).
+    std::vector<std::uint32_t> position_of_parameter;
     // Per parameter combination: the number of tuples marked covered. (Kept
     // apart from the combinations, so that the kernels touch few cache lines.)
     std::vector<std::uint32_t> num_covered;
@@ -58,20 +62,10 @@ class ipog_coverage_map_param_combo {
     size_type size() const { return size_; }
 
     /**
-     * Returns the number of tuples that are marked covered.
-     */
-    size_type count_covered() const { return storage_->num_covered[index_]; }
-
-    /**
      * Checks if all tuples are marked as covered.
      */
     bool all_covered() const {
       return storage_->num_covered[index_] == size_;
-    }
-
-    bool is_marked_covered(size_type logical_index) const {
-      const std::uint64_t i = physical_index(logical_index);
-      return (storage_->covered[i >> 6] >> (i & 63)) & 1;
     }
 
     /**
@@ -104,17 +98,17 @@ class ipog_coverage_map_param_combo {
 
     std::uint64_t physical_index(size_type logical_index) const {
       const std::size_t s = param_indices_.size() - 1;
-      const std::uint32_t* domain_sizes =
-          storage_->combo_domain_sizes.data() + first_element_;
-      const std::uint64_t* weights =
-          storage_->combo_value_weights.data() + first_element_;
+      const std::vector<std::vector<std::uint64_t>>& E = storage_->E;
       std::uint64_t rest = logical_index;
       const std::uint64_t last_value = rest % last_domain_size_;
       rest /= last_domain_size_;
       std::uint64_t index = base_ + last_value * storage_->tuples_per_value;
       for (std::size_t k = s; k-- > 0;) {
-        index += (rest % domain_sizes[k]) * weights[k];
-        rest /= domain_sizes[k];
+        const std::uint32_t q =
+            storage_->position_of_parameter[param_indices_[k]];
+        const std::uint64_t domain_size = E[1][q + 1] - E[1][q];
+        index += (rest % domain_size) * E[k][q];
+        rest /= domain_size;
       }
       return index;
     }
@@ -123,8 +117,6 @@ class ipog_coverage_map_param_combo {
     param_vector param_indices_;
     // Physical index of the tuple with all values 0.
     std::uint64_t base_ = 0;
-    // Offset of this combination's entries in the storage's combo arrays.
-    std::uint64_t first_element_ = 0;
     std::uint32_t last_domain_size_ = 1;
     size_type size_ = 0;
     // Index of this combination in its coverage map.
@@ -166,15 +158,14 @@ class ipog_coverage_map {
 
     /**
      * Creates the coverage map for the parameters at positions [0, n-1] of
-     * the given parameter index map and strength t. The last parameter must be
-     * fixed (fixed_last_parameter = true). The combinations are ordered as the
-     * original IPOG implementation enumerated them.
+     * the given parameter index map and strength t, with 1 <= t <= n. The
+     * combinations are ordered as the original IPOG implementation enumerated
+     * them.
      */
     ipog_coverage_map(unsigned int n, unsigned int t,
                       const internal_model& model,
                       const std::vector<unsigned int>& parameter_index_map,
-                      const binom_coeff_table& binomial_coeffs,
-                      bool fixed_last_parameter);
+                      const binom_coeff_table& binomial_coeffs);
 
     ipog_coverage_map(const ipog_coverage_map& other) = delete;
     ipog_coverage_map(ipog_coverage_map&& other) noexcept = default;
@@ -187,8 +178,6 @@ class ipog_coverage_map {
     const std::vector<unsigned int>& get_parameter_index_map() const {
       return *parameter_index_map_;
     }
-
-    unsigned int get_number_of_parameters_to_select_from() const { return n_; }
 
     unsigned int get_number_of_parameters_to_select() const { return t_; }
 
@@ -236,15 +225,12 @@ class ipog_coverage_map {
 
     const internal_model* model_;
     const std::vector<unsigned int>* parameter_index_map_;
-    const binom_coeff_table* binomial_coeffs_;
     unsigned int n_;
     unsigned int t_;
     unsigned long long total_num_tuples_ = 0;
     std::unique_ptr<ipog_coverage_map_storage> storage_;
     std::vector<second_level_type> combos_;
 
-    // E_[k][j]: number of k-tuples over the earlier positions [0, j).
-    std::vector<std::vector<std::uint64_t>> E_;
     // rank_terms_[l][x] = C(x, l + 1), for the combination ranks (t >= 3).
     std::vector<std::vector<long long>> rank_terms_;
     // Value slot -> earlier position.

@@ -38,17 +38,15 @@ namespace detail {
 ipog_coverage_map::ipog_coverage_map(
     unsigned int n, unsigned int t, const internal_model& model,
     const std::vector<unsigned int>& parameter_index_map,
-    const binom_coeff_table& binomial_coeffs, bool fixed_last_parameter)
+    const binom_coeff_table& binomial_coeffs)
     : model_(&model),
       parameter_index_map_(&parameter_index_map),
-      binomial_coeffs_(&binomial_coeffs),
       n_(n),
       t_(t),
       storage_(std::make_unique<ipog_coverage_map_storage>()) {
 
-  if (!fixed_last_parameter || t == 0 || n < t) {
-    throw std::logic_error(
-        "ipog_coverage_map: requires a fixed last parameter and 1 <= t <= n");
+  if (t == 0 || n < t) {
+    throw std::logic_error("ipog_coverage_map: requires 1 <= t <= n");
   }
 
   const auto& num_values = model.get_parameter_num_values();
@@ -56,18 +54,19 @@ ipog_coverage_map::ipog_coverage_map(
   const unsigned int m = n - 1;  // number of earlier positions
   last_domain_size_ = num_values[parameter_index_map[m]];
 
-  E_.assign(s + 1, std::vector<std::uint64_t>(m + 1, 0));
+  std::vector<std::vector<std::uint64_t>>& E = storage_->E;
+  E.assign(s + 1, std::vector<std::uint64_t>(m + 1, 0));
   for (unsigned int j = 0; j <= m; ++j) {
-    E_[0][j] = 1;
+    E[0][j] = 1;
   }
   for (unsigned int k = 1; k <= s; ++k) {
     for (unsigned int j = 0; j < m; ++j) {
-      E_[k][j + 1] =
-          E_[k][j] + num_values[parameter_index_map[j]] * E_[k - 1][j];
+      E[k][j + 1] =
+          E[k][j] + num_values[parameter_index_map[j]] * E[k - 1][j];
     }
   }
 
-  storage_->tuples_per_value = E_[s][m];
+  storage_->tuples_per_value = E[s][m];
   total_num_tuples_ = last_domain_size_ * storage_->tuples_per_value;
   const std::size_t num_words =
       static_cast<std::size_t>((total_num_tuples_ + 63) / 64) + 1;
@@ -84,9 +83,9 @@ ipog_coverage_map::ipog_coverage_map(
   }
 
   if (s >= 1) {
-    slot_position_.resize(E_[1][m]);
+    slot_position_.resize(E[1][m]);
     for (unsigned int q = 0; q < m; ++q) {
-      for (std::uint64_t slot = E_[1][q]; slot < E_[1][q + 1]; ++slot) {
+      for (std::uint64_t slot = E[1][q]; slot < E[1][q + 1]; ++slot) {
         slot_position_[slot] = q;
       }
     }
@@ -98,15 +97,16 @@ ipog_coverage_map::ipog_coverage_map(
   const std::size_t num_combos = static_cast<std::size_t>(
       s == 0 ? 1 : binomial_coeffs.get_coefficient(m, s));
   combos_.reserve(num_combos);
-  storage_->combo_domain_sizes.reserve(num_combos * s);
-  storage_->combo_value_weights.reserve(num_combos * s);
+  storage_->position_of_parameter.assign(num_values.size(), 0);
+  for (unsigned int q = 0; q < m; ++q) {
+    storage_->position_of_parameter[parameter_index_map[q]] = q;
+  }
 
   std::vector<unsigned int> p(s);
   auto emit = [&]() {
     second_level_type combo;
     combo.storage_ = storage_.get();
     combo.param_indices_ = param_vector(s + 1);
-    combo.first_element_ = storage_->combo_domain_sizes.size();
     combo.index_ = static_cast<second_level_type::size_type>(combos_.size());
     combo.last_domain_size_ = last_domain_size_;
     std::uint64_t size = last_domain_size_;
@@ -116,9 +116,7 @@ ipog_coverage_map::ipog_coverage_map(
       const unsigned int d = num_values[parameter_index_map[q]];
       combo.param_indices_[l] =
           static_cast<std::uint16_t>(parameter_index_map[q]);
-      combo.base_ += E_[l + 1][q];
-      storage_->combo_domain_sizes.push_back(d);
-      storage_->combo_value_weights.push_back(E_[l][q]);
+      combo.base_ += E[l + 1][q];
       size *= d;
       const unsigned int top = (l + 1 == s) ? m - 1 : p[l + 1] - 1;
       rank += binomial_coeffs.get_coefficient(top + 1, l + 1) -
@@ -154,17 +152,18 @@ ipog_coverage_map::ipog_coverage_map(
 }
 
 void ipog_coverage_map::load_test(const test& t) const {
+  const std::vector<std::vector<std::uint64_t>>& E = storage_->E;
   const unsigned int m = n_ - 1;
   const std::vector<unsigned int>& pim = *parameter_index_map_;
   test_values_.resize(m);
   assigned_positions_.clear();
-  test_slots_.assign(static_cast<std::size_t>((E_[1][m] + 63) / 64), 0);
+  test_slots_.assign(static_cast<std::size_t>((E[1][m] + 63) / 64), 0);
   for (unsigned int q = 0; q < m; ++q) {
     const int value = t.get_values()[pim[q]];
     test_values_[q] = value;
     if (value >= 0) {
       assigned_positions_.push_back(q);
-      const std::uint64_t slot = E_[1][q] + static_cast<std::uint64_t>(value);
+      const std::uint64_t slot = E[1][q] + static_cast<std::uint64_t>(value);
       test_slots_[slot >> 6] |= std::uint64_t(1) << (slot & 63);
     }
   }
@@ -172,12 +171,13 @@ void ipog_coverage_map::load_test(const test& t) const {
 
 template <bool with_rank, typename F>
 void ipog_coverage_map::for_each_row(F&& f) const {
+  const std::vector<std::vector<std::uint64_t>>& E = storage_->E;
   const unsigned int s = t_ - 1;
   const unsigned int m = n_ - 1;
   if (s == 1) {
     // A single row over all earlier slots; the combination of the slot of
     // position i is the one with index (m - 1) - i.
-    f(std::uint64_t(0), E_[1][m], static_cast<long long>(m) - 1);
+    f(std::uint64_t(0), E[1][m], static_cast<long long>(m) - 1);
     return;
   }
   // s >= 2: the rank of a combination with positions p[0] < ... < p[s-1] is
@@ -194,14 +194,14 @@ void ipog_coverage_map::for_each_row(F&& f) const {
       }
       const std::uint64_t value = static_cast<std::uint64_t>(test_values_[q]);
       const std::uint64_t level_base =
-          base + E_[level + 1][q] + value * E_[level][q];
+          base + E[level + 1][q] + value * E[level][q];
       long long level_rank = 0;
       if constexpr (with_rank) {
         const std::vector<long long>& terms = rank_terms_[level];
         level_rank = rank + terms[top + 1] - terms[q + 1];
       }
       if (level == 1) {
-        f(level_base, E_[1][q], level_rank + static_cast<long long>(q) - 1);
+        f(level_base, E[1][q], level_rank + static_cast<long long>(q) - 1);
       } else {
         self(self, level - 1, c, q - 1, level_base, level_rank);
       }
