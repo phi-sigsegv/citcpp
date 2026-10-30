@@ -2,19 +2,9 @@
 
 #include <lace.h>
 
-#include <atomic>
-
 #include "lace_lifecycle.hpp"
 
 namespace {
-
-static std::size_t get_thread_id() {
-  static std::atomic_size_t counter{0};
-  // This initialization happens once per thread
-  thread_local std::size_t id = counter.fetch_add(1);
-
-  return id;
-}
 
 VOID_TASK_1(lace_execute_functor, citcpp::function_ref<void()>*, functor) {
   (*functor)();
@@ -47,20 +37,24 @@ void functor_execution_scope_lace::spawn_execution(
   functor_refs_.push_back(std::move(functor_ref));
 }
 
-functor_executor_lace::functor_executor_lace(unsigned int n_workers)
-    : n_workers_(n_workers) {
-
+functor_executor_lace::functor_executor_lace(unsigned int n_workers) {
   lace_init(n_workers, 0);
 }
 
 functor_executor_lace::~functor_executor_lace() { lace_quit(); }
 
+// The workers of the running Lace instance, which another user of Lace may
+// have started with a different number of workers.
 unsigned int functor_executor_lace::get_num_workers() const {
-  return n_workers_;
+  return lace_workers();
 }
 
 std::size_t functor_executor_lace::get_worker_id() const {
-  return get_thread_id();
+  if (!lace_is_worker()) {
+    return 0;
+  }
+  LACE_VARS;
+  return static_cast<std::size_t>(LACE_WORKER_ID);
 }
 
 void functor_executor_lace::suspend_workers() {}
