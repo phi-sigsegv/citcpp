@@ -161,6 +161,23 @@ TEST_CASE("acts model parser: semantic errors") {
               "non-integer parameter that needs ordered values");
 }
 
+TEST_CASE("acts model parser: integers") {
+  const parse_result r =
+      parse(HEADER + "A (int) : +5, -3, 2147483647, -2147483648\n"
+                     "[Constraint]\nA = +5\n");
+  REQUIRE(r.ok);
+  CHECK(printed_parameters(r.model) ==
+        std::vector<std::string>{"A (int) : 5, -3, 2147483647, -2147483648"});
+  CHECK(printed_constraints(r.model) == std::vector<std::string>{"A = 5"});
+
+  check_error(HEADER + "A (int) : 0, 2147483648\n",
+              "Error in model file at 5:14 -> Integer value out of range");
+  check_error(HEADER + PARAMETERS + "[Constraint]\nA = -99999999999\n",
+              "Error in model file at 8:5 -> Integer value out of range");
+  check_error(HEADER + PARAMETERS + "[Relation]\nR : (A, D, 99999999999)\n",
+              "Error in model file at 8:12 -> Integer value out of range");
+}
+
 TEST_CASE("acts model parser: the first error is reported") {
   check_error(HEADER + PARAMETERS + "[Constraint]\nB = 1\nC = 1\n",
               "Error in constraint at 8:1 -> Cannot find declaration of "

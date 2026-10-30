@@ -1,6 +1,7 @@
 #include <charconv>
 #include <citcpp/acts_model_parser.hpp>
 #include <cstdint>
+#include <system_error>
 #include <functional>
 #include <memory>
 #include <sstream>
@@ -135,12 +136,13 @@ namespace citcpp {
  *   LineComment       <- '--' (!Eol .)* &Eol
  *
  * The whole input has to match. '.' is a UTF-8 code point. Enum values of
- * parameters are trimmed. As in a PEG, a failed alternative, repetition or
- * option resets the position. A syntax error is reported at the farthest
- * position the parsing reached, with what was expected there. A semantic
- * error (a reference to an undeclared parameter, an ordering operator with a
- * value that is not an integer) stops the parsing. Positions are
- * line:column, counting columns in code points.
+ * parameters are trimmed. Integers have to fit into an int. As in a PEG, a
+ * failed alternative, repetition or option resets the position. A syntax
+ * error is reported at the farthest position the parsing reached, with what
+ * was expected there. A semantic error (an integer out of range, a
+ * reference to an undeclared parameter, an ordering operator with a value
+ * that is not an integer) stops the parsing. Positions are line:column,
+ * counting columns in code points.
  */
 class acts_model_parser::impl {
   public:
@@ -409,9 +411,7 @@ class acts_model_parser::impl {
       if (pos_ == start) {
         return expected("an interaction strength");
       }
-      int strength = 0;
-      std::from_chars(input_.data() + start, input_.data() + pos_, strength);
-      rel.set_interaction_strength(strength);
+      rel.set_interaction_strength(to_int(start));
       skip_spacing();
       if (!literal(")")) {
         return false;
@@ -683,8 +683,7 @@ class acts_model_parser::impl {
       return true;
     }
 
-    // [+-]? [0-9]+ (IntegerValue, ConstrIntValue); the value as
-    // std::from_chars reads it.
+    // [+-]? [0-9]+ (IntegerValue, ConstrIntValue)
     bool parse_integer(int& value) {
       const std::size_t start = pos_;
       if (pos_ < input_.size() && (input_[pos_] == '+' || input_[pos_] == '-')) {
@@ -698,9 +697,24 @@ class acts_model_parser::impl {
       while (pos_ < input_.size() && is_digit(input_[pos_])) {
         ++pos_;
       }
-      value = 0;
-      std::from_chars(input_.data() + start, input_.data() + pos_, value);
+      value = to_int(start);
       return true;
+    }
+
+    // The value of the integer from start to the current position.
+    int to_int(std::size_t start) {
+      // std::from_chars does not accept a '+' sign.
+      const char* first = input_.data() + start;
+      if (*first == '+') {
+        ++first;
+      }
+      int value = 0;
+      const auto [ptr, ec] =
+          std::from_chars(first, input_.data() + pos_, value);
+      if (ec != std::errc()) {
+        semantic_error_at(start, "model file", "Integer value out of range");
+      }
+      return value;
     }
 
     // __          <- ([ \t\r\n] / LineComment)*
