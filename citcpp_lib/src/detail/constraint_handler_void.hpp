@@ -30,6 +30,12 @@ class constraint_handler_void : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
+    bool is_valid_partial_test(const test& t,
+                               const param_vector& assigned) override;
+
+    /**
+     * See constraint_handler interface.
+     */
     bitset_uint64 get_valid_parameter_assignments(
         const test& t, unsigned int param_idx) override;
 

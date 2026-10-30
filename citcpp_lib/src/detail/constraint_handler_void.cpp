@@ -12,6 +12,11 @@ bool constraint_handler_void::is_valid_partial_test(const test&) {
   return true;
 }
 
+bool constraint_handler_void::is_valid_partial_test(const test&,
+                                                    const param_vector&) {
+  return true;
+}
+
 bitset_uint64 constraint_handler_void::get_valid_parameter_assignments(
     const test&, unsigned int param_idx) {
 
