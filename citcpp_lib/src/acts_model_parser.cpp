@@ -914,7 +914,10 @@ class acts_model_parser::impl {
       std::size_t line = 1;
       std::size_t line_start = 0;
       for (std::size_t i = 0; i < pos; ++i) {
-        if (input_[i] == '\n') {
+        // A line ends with '\r\n', '\n' or '\r' (see eol()).
+        if (input_[i] == '\n' ||
+            (input_[i] == '\r' &&
+             (i + 1 == input_.size() || input_[i + 1] != '\n'))) {
           ++line;
           line_start = i + 1;
         }
