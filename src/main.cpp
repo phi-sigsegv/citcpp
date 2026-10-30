@@ -229,6 +229,10 @@ int execute_cagen(const std::string& model_file_path,
 
   if (result.get_result_code() ==
       cagen_exec_result::cagen_result_code::COVERING_ARRAY_GENERATION_ERROR) {
+    if (show_progress) {
+      // End the progress line, so that the error message starts on its own.
+      std::cout << std::endl;
+    }
     std::cerr << "ERROR: " << result.get_error_message() << std::endl;
     return 1;
   }
