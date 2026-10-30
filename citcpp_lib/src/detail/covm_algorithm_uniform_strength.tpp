@@ -154,7 +154,7 @@ class covm_per_param_combo_functor {
           covered_tuples_(test_set.get_list_of_tests().size(), 0),
           cov_level_to_num_param_combos_{0},
           exec_handle_(exec_handle),
-          and_buffers_(strength * test_columns.num_words, 0) {}
+          and_buffers_((strength - 1) * test_columns.num_words, 0) {}
 
     bool operator()(const param_vector& param_indices) {
       bitset_uint64::size_type bitset_size = 1;
@@ -295,8 +295,9 @@ class covm_per_param_combo_functor {
     }
 
     // Marks the tuples covered by the tests, level by level: and_buffers_
-    // holds, per level, the tests having the values chosen so far. The first
-    // covering test of a tuple is the lowest test in the conjunction.
+    // holds, per level but the last (which only looks for the lowest test),
+    // the tests having the values chosen so far. The first covering test of a
+    // tuple is the lowest test in the conjunction.
     void mark_covered_tuples_by_test_columns(const param_vector& param_indices,
                                              std::size_t level,
                                              const std::uint64_t* prefix,
