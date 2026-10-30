@@ -110,9 +110,11 @@ TEST_CASE("test set parser: values") {
   CHECK(tests_of(parse(H + "\n2,3,green,True,only,1,x,true,10,p,1\n"
                            "2,3,green,FALSE,only,1,x,False,10,p,1\n")) ==
         std::vector<std::vector<int>>{V1, {2, 2, 1, 1, 0, 3, 0, 1, 0, 0, 0}});
-  // Integers as std::stoi reads them.
-  CHECK(tests_of(parse(H + "\n+2,3abc,green,true,only, 1,x,TRUE,10,p,1\n")) ==
+  // Integers with a sign, and spaces around them.
+  CHECK(tests_of(parse(H + "\n+2,3 ,green,true,only, +1,x,TRUE,10,p,1\n")) ==
         std::vector<std::vector<int>>{V1});
+  CHECK(tests_of(parse(H + "\n0,1,red,true,only,-2,z,TRUE,+20,q,3\n")) ==
+        std::vector<std::vector<int>>{V3});
 }
 
 TEST_CASE("test set parser: parameter declarations") {
@@ -142,8 +144,8 @@ TEST_CASE("test set parser: separators") {
                            replace(r2, ";; ") + "\n",
                        " ;; ")) == std::vector<std::vector<int>>{V1, V2});
   // A single ';' is part of a value.
-  CHECK(tests_of(parse(replace(h, ";;") + "\n" + replace(r2, ";;") + ";\n",
-                       ";;")) == std::vector<std::vector<int>>{V2});
+  check_error(replace(h, ";;") + "\n" + replace(r2, ";;") + ";\n",
+              "2:46 -> Value '6;' is not in the domain of parameter 'K'", ";;");
 }
 
 TEST_CASE("test set parser: syntax errors") {
@@ -172,6 +174,18 @@ TEST_CASE("test set parser: invalid content") {
               "2:5 -> Value 'gre en' is not in the domain of parameter 'C'");
   check_error(H + "\nx2,3,green,true,only,1,x,TRUE,10,p,1\n",
               "2:1 -> Value 'x2' is not in the domain of parameter 'A'");
+  // An integer is the whole value.
+  check_error(H + "\n2,3abc,green,true,only,1,x,TRUE,10,p,1\n",
+              "2:3 -> Value '3abc' is not in the domain of parameter 'B'");
+  check_error(H + "\n2,1.5,green,true,only,1,x,TRUE,10,p,1\n",
+              "2:3 -> Value '1.5' is not in the domain of parameter 'B'");
+  check_error(H + "\n2,3,green,true,only,+-1,x,TRUE,10,p,1\n",
+              "2:21 -> Value '+-1' is not in the domain of parameter 'F'");
+  check_error(H + "\n2,3,green,true,only,+,x,TRUE,10,p,1\n",
+              "2:21 -> Value '+' is not in the domain of parameter 'F'");
+  check_error(H + "\n2,3,green,true,only,1,x,TRUE,10,p,4294967297\n",
+              "2:35 -> Value '4294967297' is not in the domain of parameter "
+              "'K'");
   check_error(H + "\n2,3,green,yes,only,1,x,TRUE,10,p,1\n",
               "2:11 -> Value 'yes' is not in the domain of parameter 'D'");
   check_error(H + "\n" + R1 + ",5\n",

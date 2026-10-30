@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <charconv>
 #include <citcpp/test_set_parser.hpp>
 #include <sstream>
 #include <string>
@@ -195,35 +197,28 @@ class test_set_parser::impl {
       const parameter& param = test_set_->get_parameters()[index];
       int found_idx = -1;
       if (param.get_type() == parameter_type::BOOLEAN) {
-        bool bool_val = false;
-        bool valid_bool = false;
         if (i_string_equals(value, "true")) {
-          bool_val = true;
-          valid_bool = true;
+          found_idx = bool_value_indices_[index][1];
         } else if (i_string_equals(value, "false")) {
-          bool_val = false;
-          valid_bool = true;
-        }
-        if (valid_bool) {
-          const auto& param_values = param.get_values();
-          for (std::size_t i = 0; i < param_values.size(); ++i) {
-            const auto& var_val = param_values[i].get_variant_value();
-            if (std::holds_alternative<bool>(var_val) &&
-                std::get<bool>(var_val) == bool_val) {
-              found_idx = static_cast<int>(i);
-              break;
-            }
-          }
+          found_idx = bool_value_indices_[index][0];
         }
       } else if (param.get_type() == parameter_type::INTEGER) {
-        try {
+        // The whole value must be an integer (with an optional sign); one out
+        // of range is not in the domain. std::from_chars does not accept a
+        // '+' sign.
+        std::string_view digits(value);
+        if (digits.size() > 1 && digits[0] == '+' && digits[1] != '-') {
+          digits.remove_prefix(1);
+        }
+        int int_val = 0;
+        const char* end = digits.data() + digits.size();
+        const auto [ptr, ec] = std::from_chars(digits.data(), end, int_val);
+        if (ec == std::errc() && ptr == end) {
           const auto& indices = int_value_indices_[index];
-          auto it = indices.find(std::stoi(value));
+          auto it = indices.find(int_val);
           if (it != indices.end()) {
             found_idx = it->second;
           }
-        } catch (const std::exception&) {
-          // std::stoi failed: not in the domain
         }
       } else if (param.get_type() == parameter_type::ENUM) {
         const auto& indices = enum_value_indices_[index];
@@ -245,9 +240,11 @@ class test_set_parser::impl {
     void init_value_indices() {
       enum_value_indices_.clear();
       int_value_indices_.clear();
+      bool_value_indices_.clear();
       for (const parameter& param : test_set_->get_parameters()) {
         enum_value_indices_.emplace_back();
         int_value_indices_.emplace_back();
+        bool_value_indices_.push_back({-1, -1});
         const auto& param_values = param.get_values();
         for (std::size_t i = 0; i < param_values.size(); ++i) {
           const auto& var_val = param_values[i].get_variant_value();
@@ -257,6 +254,12 @@ class test_set_parser::impl {
           } else if (std::holds_alternative<int>(var_val)) {
             int_value_indices_.back().emplace(std::get<int>(var_val),
                                               static_cast<int>(i));
+          } else if (std::holds_alternative<bool>(var_val)) {
+            int& bool_index =
+                bool_value_indices_.back()[std::get<bool>(var_val) ? 1 : 0];
+            if (bool_index == -1) {
+              bool_index = static_cast<int>(i);
+            }
           }
         }
       }
@@ -321,6 +324,8 @@ class test_set_parser::impl {
     std::unordered_map<std::string, const parameter*> name_to_param_map_;
     std::vector<std::unordered_map<std::string, int>> enum_value_indices_;
     std::vector<std::unordered_map<int, int>> int_value_indices_;
+    // Per parameter: the indices of false and true (-1 if not a value).
+    std::vector<std::array<int, 2>> bool_value_indices_;
     std::string_view input_;
     std::size_t pos_ = 0;
     std::size_t line_ = 1;
