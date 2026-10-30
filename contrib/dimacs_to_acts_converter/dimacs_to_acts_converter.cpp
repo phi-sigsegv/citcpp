@@ -47,7 +47,11 @@ bool parse_var_comment(const std::string& comment, int& var_idx, VarComment& inf
     if (!std::regex_match(comment, match, pattern)) {
         return false;
     }
-    var_idx = std::stoi(match[1].str());
+    try {
+        var_idx = std::stoi(match[1].str());
+    } catch (const std::out_of_range&) {
+        return false;
+    }
     info.has_dollar = match[2].length() > 0;
     info.name = match[3].str();
     return var_idx > 0;
