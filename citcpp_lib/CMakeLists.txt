@@ -44,8 +44,7 @@ add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
 
 target_include_directories(citcpp_lib PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-  PRIVATE "${CITCPP_3RD_PARTY_DIR}/cpp-peglib")
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
 target_link_libraries(citcpp_lib PUBLIC Threads::Threads PRIVATE sylvan::sylvan)
 

@@ -12,7 +12,6 @@
     - **Build System:** CMake
     - **Decision Diagrams:** Sylvan & Lace (work-stealing framework)
     - **CLI:** CLI11
-    - **Parsing:** cpp-peglib (for ACTS model files)
     - **Testing:** doctest
 
 ## Directory Structure
