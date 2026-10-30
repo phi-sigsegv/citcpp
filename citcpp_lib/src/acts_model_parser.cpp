@@ -70,50 +70,54 @@ namespace citcpp {
  *   Root              <- __ SystemSection ParameterSection RelationSection?
  *                        ConstraintSection?
  *
- *   SystemSection     <- '[' __ 'System'i __ ']' __ SystemNameRule
- *   SystemNameRule    <- 'name'i __ ':' __ SystemName __
+ *   SystemSection     <- '[' ___ 'System'i ___ ']' _ LineEnd __
+ *                        SystemNameRule
+ *   SystemNameRule    <- 'name'i ___ ':' _ SystemName __
  *   SystemName        <- (!Eol .)*
  *
- *   ParameterSection  <- '[' __ 'Parameter'i __ ']' __ ParameterRule+ __
+ *   ParameterSection  <- '[' ___ 'Parameter'i ___ ']' _ LineEnd __
+ *                        (ParameterRule __)+
  *   ParameterRule     <- (BooleanParam / EnumParam / IntParam)
  *
- *   BooleanParam      <- ParamName __ BooleanType __ ':' __ BooleanValueList
- *                        SpaceChar* ParamDelcEnd
- *   EnumParam         <- ParamName __ EnumType __ ':' __ EnumValueList
+ *   BooleanParam      <- ParamName ___ BooleanType ___ ':' ___
+ *                        BooleanValueList SpaceChar* ParamDelcEnd
+ *   EnumParam         <- ParamName ___ EnumType ___ ':' ___ EnumValueList
  *                        ParamDelcEnd
- *   IntParam          <- ParamName __ IntType __ ':' __ IntegerValueList
+ *   IntParam          <- ParamName ___ IntType ___ ':' ___ IntegerValueList
  *                        SpaceChar* ParamDelcEnd
  *
  *   ParamName         <- Identifier
  *
- *   BooleanType       <- '(' __ ('boolean'i / 'bool'i) __ ')'
- *   EnumType          <- '(' __ 'enum'i __ ')'
- *   IntType           <- '(' __ ('integer'i / 'int'i) __ ')'
+ *   BooleanType       <- '(' ___ ('boolean'i / 'bool'i) ___ ')'
+ *   EnumType          <- '(' ___ 'enum'i ___ ')'
+ *   IntType           <- '(' ___ ('integer'i / 'int'i) ___ ')'
  *
- *   ParamDelcEnd      <- Eol
+ *   ParamDelcEnd      <- LineEnd
  *
- *   BooleanValueList  <- BooleanValue (__ ',' __ BooleanValue)*
+ *   BooleanValueList  <- BooleanValue (___ ',' ___ BooleanValue)*
  *   BooleanValue      <- 'true'i / 'false'i
  *
- *   EnumValueList     <- EnumValue (__ ',' __ EnumValue)*
+ *   EnumValueList     <- EnumValue (___ ',' ___ EnumValue)*
  *   EnumValue         <- (!(',' / ';' / SpaceChar / Eol) .)
  *                        (!(',' / ';' / Eol) .)*
  *
- *   IntegerValueList  <- IntegerValue (__ ',' __ IntegerValue)*
+ *   IntegerValueList  <- IntegerValue (___ ',' ___ IntegerValue)*
  *   IntegerValue      <- [+-]? [0-9]+
  *
- *   RelationSection   <- '[' __ 'Relation'i __ ']' __ RelationRule*
- *   RelationRule      <- RelationName __ ':' __ '(' __ RelParamNameList __
- *                        ',' __ RelStrength __ ')' __
+ *   RelationSection   <- '[' ___ 'Relation'i ___ ']' _ LineEnd __
+ *                        RelationRule*
+ *   RelationRule      <- RelationName ___ ':' ___ '(' ___ RelParamNameList
+ *                        ___ ',' ___ RelStrength ___ ')' _ LineEnd __
  *
  *   RelationName      <- Identifier
- *   RelParamNameList  <- RelParamName (__ ',' __ RelParamName)*
+ *   RelParamNameList  <- RelParamName (___ ',' ___ RelParamName)*
  *   RelParamName      <- Identifier
  *   RelStrength       <- [0-9]+
  *
- *   ConstraintSection <- '[' __ 'Constraint'i __ ']' __ ConstraintRule*
- *   ConstraintRule    <- Implication ConstraintEnd __
- *   ConstraintEnd     <- Eol
+ *   ConstraintSection <- '[' ___ 'Constraint'i ___ ']' _ LineEnd __
+ *                        ConstraintRule*
+ *   ConstraintRule    <- Implication _ ConstraintEnd __
+ *   ConstraintEnd     <- LineEnd
  *   Implication       <- OrExpr (_ '=>' _ OrExpr)?
  *   OrExpr            <- AndExpr (_ '||' _ AndExpr)*
  *   AndExpr           <- Operand (_ '&&' _ Operand)*
@@ -130,19 +134,25 @@ namespace citcpp {
  *   Identifier        <- [a-zA-Z_] [a-zA-Z0-9_]*
  *
  *   __                <- ([ \t\r\n] / LineComment)*
+ *   ___               <- [ \t\r\n]*
  *   _                 <- [ \t]*
  *   SpaceChar         <- ' ' / '\t'
  *   Eol               <- '\r\n' / '\n' / '\r'
- *   LineComment       <- '--' (!Eol .)* &Eol
+ *   LineEnd           <- Eol / !.
+ *   LineComment       <- '--' (!Eol .)* &LineEnd
  *
- * The whole input has to match. '.' is a UTF-8 code point. Enum values of
- * parameters are trimmed. Integers have to fit into an int. As in a PEG, a
- * failed alternative, repetition or option resets the position. A syntax
- * error is reported at the farthest position the parsing reached, with what
- * was expected there. A semantic error (an integer out of range, a
- * reference to an undeclared parameter, an ordering operator with a value
- * that is not an integer) stops the parsing. Positions are line:column,
- * counting columns in code points.
+ * So section headers, declarations, relations and constraints end with
+ * their lines, and comments are lines of their own ('--' in a system name or
+ * an enum value belongs to it). The whole input has to match. '.' is a UTF-8
+ * code point. The system name and the enum values of parameters are
+ * trimmed. Integers have to fit into an int.
+ *
+ * As in a PEG, a failed alternative, repetition or option resets the
+ * position. A syntax error is reported at the farthest position the parsing
+ * reached, with what was expected there. A semantic error (an integer out of
+ * range, a reference to an undeclared parameter, an ordering operator with a
+ * value that is not an integer) stops the parsing. Positions are
+ * line:column, counting columns in code points.
  */
 class acts_model_parser::impl {
   public:
@@ -187,34 +197,38 @@ class acts_model_parser::impl {
       return true;
     }
 
-    // SystemSection  <- '[' __ 'System'i __ ']' __ SystemNameRule
-    // SystemNameRule <- 'name'i __ ':' __ SystemName __
+    // SystemSection  <- '[' ___ 'System'i ___ ']' _ LineEnd __ SystemNameRule
+    // SystemNameRule <- 'name'i ___ ':' _ SystemName __
     // SystemName     <- (!Eol .)*
     bool parse_system_section() {
       if (!parse_section_header("System") || !literal_i("name")) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       if (!literal(":")) {
         return false;
       }
-      skip_spacing();
+      skip_spaces();
       const std::size_t start = pos_;
       while (any_char_except("\n\r")) {
       }
-      model_->set_name(input_.substr(start, pos_ - start));
+      std::string name(input_.substr(start, pos_ - start));
+      detail::trim(name);
+      model_->set_name(name);
       skip_spacing();
       return true;
     }
 
-    // ParameterSection <- '[' __ 'Parameter'i __ ']' __ ParameterRule+ __
+    // ParameterSection <- '[' ___ 'Parameter'i ___ ']' _ LineEnd __
+    //                     (ParameterRule __)+
     bool parse_parameter_section() {
       if (!parse_section_header("Parameter") || !parse_parameter_rule()) {
         return false;
       }
-      while (attempt([this] { return parse_parameter_rule(); })) {
-      }
       skip_spacing();
+      while (attempt([this] { return parse_parameter_rule(); })) {
+        skip_spacing();
+      }
       return true;
     }
 
@@ -227,28 +241,28 @@ class acts_model_parser::impl {
              parse_parameter(parameter_type::INTEGER);
     }
 
-    // BooleanParam <- ParamName __ BooleanType __ ':' __ BooleanValueList
+    // BooleanParam <- ParamName ___ BooleanType ___ ':' ___ BooleanValueList
     //                 SpaceChar* ParamDelcEnd
-    // EnumParam    <- ParamName __ EnumType __ ':' __ EnumValueList
+    // EnumParam    <- ParamName ___ EnumType ___ ':' ___ EnumValueList
     //                 ParamDelcEnd
-    // IntParam     <- ParamName __ IntType __ ':' __ IntegerValueList
+    // IntParam     <- ParamName ___ IntType ___ ':' ___ IntegerValueList
     //                 SpaceChar* ParamDelcEnd
     // ParamName    <- Identifier
-    // ParamDelcEnd <- Eol
+    // ParamDelcEnd <- LineEnd
     bool parse_parameter(parameter_type type) {
       std::string_view name;
       if (!parse_identifier(name)) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       if (!parse_parameter_type(type)) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       if (!literal(":")) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
 
       parameter param;
       param.set_name(name);
@@ -272,8 +286,8 @@ class acts_model_parser::impl {
           skip_spaces();
           break;
       }
-      if (!eol()) {
-        return expected("the end of the line");
+      if (!line_end()) {
+        return false;
       }
 
       param_indices_.emplace(param.get_name(), model_->get_parameters().size());
@@ -281,14 +295,14 @@ class acts_model_parser::impl {
       return true;
     }
 
-    // BooleanType <- '(' __ ('boolean'i / 'bool'i) __ ')'
-    // EnumType    <- '(' __ 'enum'i __ ')'
-    // IntType     <- '(' __ ('integer'i / 'int'i) __ ')'
+    // BooleanType <- '(' ___ ('boolean'i / 'bool'i) ___ ')'
+    // EnumType    <- '(' ___ 'enum'i ___ ')'
+    // IntType     <- '(' ___ ('integer'i / 'int'i) ___ ')'
     bool parse_parameter_type(parameter_type type) {
       if (!literal("(")) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       bool matched = false;
       switch (type) {
         case parameter_type::BOOLEAN:
@@ -304,25 +318,25 @@ class acts_model_parser::impl {
       if (!matched) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       return literal(")");
     }
 
-    // BooleanValueList <- BooleanValue (__ ',' __ BooleanValue)*
-    // EnumValueList    <- EnumValue (__ ',' __ EnumValue)*
-    // IntegerValueList <- IntegerValue (__ ',' __ IntegerValue)*
-    // RelParamNameList <- RelParamName (__ ',' __ RelParamName)*
+    // BooleanValueList <- BooleanValue (___ ',' ___ BooleanValue)*
+    // EnumValueList    <- EnumValue (___ ',' ___ EnumValue)*
+    // IntegerValueList <- IntegerValue (___ ',' ___ IntegerValue)*
+    // RelParamNameList <- RelParamName (___ ',' ___ RelParamName)*
     template <typename F>
     bool parse_list(F parse_element) {
       if (!parse_element()) {
         return false;
       }
       while (attempt([&] {
-        skip_spacing();
+        skip_whitespace();
         if (!literal(",")) {
           return false;
         }
-        skip_spacing();
+        skip_whitespace();
         return parse_element();
       })) {
       }
@@ -365,7 +379,8 @@ class acts_model_parser::impl {
       return true;
     }
 
-    // RelationSection <- '[' __ 'Relation'i __ ']' __ RelationRule*
+    // RelationSection <- '[' ___ 'Relation'i ___ ']' _ LineEnd __
+    //                    RelationRule*
     bool parse_relation_section() {
       if (!parse_section_header("Relation")) {
         return false;
@@ -375,8 +390,8 @@ class acts_model_parser::impl {
       return true;
     }
 
-    // RelationRule <- RelationName __ ':' __ '(' __ RelParamNameList __
-    //                 ',' __ RelStrength __ ')' __
+    // RelationRule <- RelationName ___ ':' ___ '(' ___ RelParamNameList ___
+    //                 ',' ___ RelStrength ___ ')' _ LineEnd __
     // RelationName <- Identifier
     // RelStrength  <- [0-9]+
     bool parse_relation_rule() {
@@ -384,26 +399,26 @@ class acts_model_parser::impl {
       if (!parse_identifier(name)) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       if (!literal(":")) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       if (!literal("(")) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
 
       relation rel;
       rel.set_name(name);
       if (!parse_list([&] { return parse_relation_parameter(rel); })) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       if (!literal(",")) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       const std::size_t start = pos_;
       while (pos_ < input_.size() && is_digit(input_[pos_])) {
         ++pos_;
@@ -412,8 +427,12 @@ class acts_model_parser::impl {
         return expected("an interaction strength");
       }
       rel.set_interaction_strength(to_int(start));
-      skip_spacing();
+      skip_whitespace();
       if (!literal(")")) {
+        return false;
+      }
+      skip_spaces();
+      if (!line_end()) {
         return false;
       }
       skip_spacing();
@@ -439,7 +458,8 @@ class acts_model_parser::impl {
       return true;
     }
 
-    // ConstraintSection <- '[' __ 'Constraint'i __ ']' __ ConstraintRule*
+    // ConstraintSection <- '[' ___ 'Constraint'i ___ ']' _ LineEnd __
+    //                      ConstraintRule*
     bool parse_constraint_section() {
       if (!parse_section_header("Constraint")) {
         return false;
@@ -449,15 +469,16 @@ class acts_model_parser::impl {
       return true;
     }
 
-    // ConstraintRule <- Implication ConstraintEnd __
-    // ConstraintEnd  <- Eol
+    // ConstraintRule <- Implication _ ConstraintEnd __
+    // ConstraintEnd  <- LineEnd
     bool parse_constraint_rule() {
       std::shared_ptr<constraint> constr;
       if (!parse_implication(constr)) {
         return false;
       }
-      if (!eol()) {
-        return expected("the end of the line");
+      skip_spaces();
+      if (!line_end()) {
+        return false;
       }
       skip_spacing();
       model_->add_constraint(std::move(constr));
@@ -652,17 +673,21 @@ class acts_model_parser::impl {
       }
     }
 
-    // '[' __ name'i __ ']' __ (the start of every section)
+    // '[' ___ name'i ___ ']' _ LineEnd __ (the header of every section)
     bool parse_section_header(std::string_view name) {
       if (!literal("[")) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       if (!literal_i(name)) {
         return false;
       }
-      skip_spacing();
+      skip_whitespace();
       if (!literal("]")) {
+        return false;
+      }
+      skip_spaces();
+      if (!line_end()) {
         return false;
       }
       skip_spacing();
@@ -717,28 +742,42 @@ class acts_model_parser::impl {
       return value;
     }
 
-    // __          <- ([ \t\r\n] / LineComment)*
-    // LineComment <- '--' (!Eol .)* &Eol
+    // __ <- ([ \t\r\n] / LineComment)*
     void skip_spacing() {
       while (pos_ < input_.size()) {
         const char c = input_[pos_];
         if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
           ++pos_;
-        } else if (input_.substr(pos_, 2) == "--") {
-          const std::size_t start = pos_;
-          pos_ += 2;
-          while (any_char_except("\n\r")) {
-          }
-          if (pos_ == input_.size() ||
-              (input_[pos_] != '\n' && input_[pos_] != '\r')) {
-            // Not followed by an end of line, so not a comment.
-            pos_ = start;
-            return;
-          }
-          // The end of line is skipped next.
-        } else {
+        } else if (!skip_line_comment()) {
           return;
         }
+      }
+    }
+
+    // LineComment <- '--' (!Eol .)* &LineEnd
+    bool skip_line_comment() {
+      if (input_.substr(pos_, 2) != "--") {
+        return false;
+      }
+      const std::size_t start = pos_;
+      pos_ += 2;
+      while (any_char_except("\n\r")) {
+      }
+      if (pos_ < input_.size() && input_[pos_] != '\n' &&
+          input_[pos_] != '\r') {
+        // Not followed by an end of line (but by an invalid code point).
+        pos_ = start;
+        return false;
+      }
+      return true;
+    }
+
+    // ___ <- [ \t\r\n]*
+    void skip_whitespace() {
+      while (pos_ < input_.size() &&
+             (input_[pos_] == ' ' || input_[pos_] == '\t' ||
+              input_[pos_] == '\r' || input_[pos_] == '\n')) {
+        ++pos_;
       }
     }
 
@@ -764,6 +803,14 @@ class acts_model_parser::impl {
         return true;
       }
       return false;
+    }
+
+    // LineEnd <- Eol / !.
+    bool line_end() {
+      if (eol() || pos_ == input_.size()) {
+        return true;
+      }
+      return expected("the end of the line");
     }
 
     // (!(stop) .): skips one code point unless it is one of the (ASCII)

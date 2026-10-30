@@ -144,9 +144,61 @@ TEST_CASE("acts model parser: syntax errors") {
   check_error(HEADER + "D (enum) : \xc3\xa9, \xc3\xbc;\n",
               "Error in model file at 5:16 -> Expected ',' or the end of the "
               "line");
-  // A constraint ends with its line.
-  check_error(HEADER + PARAMETERS + "[Constraint]\nA = 1 \n",
-              "Error in model file at 8:7 -> Expected '&&', '||' or '=>'");
+  check_error(HEADER + PARAMETERS + "[Constraint]\nA = 1 x\n",
+              "Error in model file at 8:7 -> Expected '&&', '||', '=>' or the "
+              "end of the line");
+}
+
+TEST_CASE("acts model parser: layout") {
+  const parse_result r = parse(
+      "[System]\nName: A -- name  \n\n[Parameter]\n  A (int) : 0, 1\n\n"
+      "-- A comment.\n\tD (enum) : red -- note, green\n"
+      "[Constraint]\nA = 1 => D = \"red -- note\"  \n-- A comment.\nA = 0\n"
+      "A = 1");
+  REQUIRE(r.ok);
+  CHECK(r.model.get_name() == "A -- name");
+  CHECK(printed_parameters(r.model) ==
+        std::vector<std::string>{"A (int) : 0, 1",
+                                 "D (enum) : red -- note, green"});
+  CHECK(printed_constraints(r.model) ==
+        std::vector<std::string>{"(A = 1 => D = \"red -- note\")", "A = 0",
+                                 "A = 1"});
+
+  // The last line needs no end of line.
+  CHECK(parse(HEADER + "A (int) : 0, 1").ok);
+  CHECK(parse(HEADER + "A (int) : 0, 1\n-- A comment.").ok);
+  // An empty name.
+  const parse_result empty = parse("[System]\nName:\n[Parameter]\nA (int) : 0\n");
+  REQUIRE(empty.ok);
+  CHECK(empty.model.get_name().empty());
+
+  CHECK(parse(HEADER + PARAMETERS + "[Constraint]").ok);
+  // A relation can span lines.
+  const parse_result rel =
+      parse(HEADER + PARAMETERS + "[Relation]\nR : (A,\n  D, 2)\n");
+  REQUIRE(rel.ok);
+  CHECK(rel.model.get_relations().size() == 1);
+
+  // Comments are lines of their own.
+  check_error(HEADER + "A (int) : 0, 1 -- A comment.\nB (int) : 0, 1\n",
+              "Error in model file at 5:16 -> Expected ',' or the end of the "
+              "line");
+  CHECK_FALSE(parse(HEADER + "B (bool) : true, false -- A comment.\n").ok);
+  CHECK_FALSE(parse(HEADER + "A (int) : -- A comment.\n0, 1\n").ok);
+  CHECK_FALSE(parse("[System]\nName: M\n[Parameter] -- A comment.\n"
+                    "A (int) : 0\n")
+                  .ok);
+  CHECK_FALSE(parse(HEADER + PARAMETERS +
+                    "[Relation]\nR : (A, D, 2) -- A comment.\n")
+                  .ok);
+  CHECK_FALSE(
+      parse(HEADER + PARAMETERS + "[Constraint]\nA = 0 -- A comment.\n").ok);
+
+  // Relations are one per line, and so are section headers.
+  CHECK_FALSE(parse(HEADER + PARAMETERS +
+                    "[Relation]\nR1 : (A, D, 2) R2 : (A, D, 1)\n")
+                  .ok);
+  CHECK_FALSE(parse("[System] Name: M\n[Parameter]\nA (int) : 0\n").ok);
 }
 
 TEST_CASE("acts model parser: semantic errors") {
