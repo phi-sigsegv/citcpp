@@ -931,6 +931,11 @@ constraint_handler_sylvan_idd::get_valid_parameter_assignments(
 }
 
 void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) {
+  // A complete test has nothing to replace.
+  if (!t.has_dont_care_value()) {
+    return;
+  }
+
   for (const auto& comp : components_) {
     auto it = comp.test_to_idd.find(&t);
     if (it != comp.test_to_idd.end()) {
