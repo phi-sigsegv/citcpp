@@ -3,15 +3,24 @@
 
 #include <atomic>
 #include <citcpp/cagen_exec_handle.hpp>
+#include <memory>
 #include <thread>
 
+#include "citcpp_cagen_base.hpp"
 #include "constraint_handler_init_progress.hpp"
 
 namespace citcpp {
 namespace detail {
 
+/**
+ * The common part of the execution handles of the covering array generation
+ * algorithms. The thread of a handle runs the entry point of its algorithm (the
+ * runnable) on the concrete handle, so it has to be joined before any part of
+ * the handle is destroyed: concrete handles are only created as
+ * joining_cagen_exec_handle (see there).
+ */
 class cagen_exec_handle_base : public virtual cagen_exec_handle {
-  public:
+  protected:
     cagen_exec_handle_base()
         : cagen_exec_handle(),
           exec_phase_(0),
@@ -23,20 +32,19 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
           is_aborted_(),
           test_set_(),
           duration_msec_(0),
+          runnable_(),
           thread_() {}
 
+  public:
     cagen_exec_handle_base(cagen_exec_handle_base&&) = delete;
     cagen_exec_handle_base(const cagen_exec_handle_base&) = delete;
     cagen_exec_handle_base& operator=(cagen_exec_handle_base&&) = delete;
     cagen_exec_handle_base& operator=(const cagen_exec_handle_base&) = delete;
 
-    ~cagen_exec_handle_base() override { abort_and_join(); }
+    ~cagen_exec_handle_base() override = default;
 
     /**
-     * Aborts the computation and waits for the thread to finish. The
-     * destructors of derived classes that own the runnable of the thread
-     * must call it, since their members are destroyed before this class's
-     * destructor runs.
+     * Aborts the computation and waits for the thread to finish.
      */
     void abort_and_join() {
       abort();
@@ -143,6 +151,19 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
       duration_msec_ = duration_msec;
     }
 
+  protected:
+    /**
+     * Takes the runnable and starts the thread of this handle, which calls
+     * runnable->entry_point(handle) right away. The handle is the concrete
+     * handle (this object).
+     */
+    template <typename T_RUNNABLE, typename T_HANDLE>
+    void start(std::unique_ptr<T_RUNNABLE>&& runnable, T_HANDLE& handle) {
+      T_RUNNABLE* r = runnable.get();
+      runnable_ = std::move(runnable);
+      thread_ = std::thread(&T_RUNNABLE::entry_point, r, std::ref(handle));
+    }
+
   public:
     std::atomic_size_t exec_phase_;
     constraint_handler_init_progress c_handler_init_progress_;
@@ -153,7 +174,22 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
     std::atomic_bool is_aborted_;
     std::promise<citcpp::cagen_exec_result> test_set_;
     std::atomic_size_t duration_msec_;
+    std::unique_ptr<citcpp_cagen_base> runnable_;
     std::thread thread_;
+};
+
+/**
+ * A concrete execution handle H as it is created: it aborts and joins the
+ * thread in its destructor, which runs before any part of H is destroyed.
+ * The concrete handles have protected constructors, so that they cannot be
+ * created otherwise.
+ */
+template <typename H>
+class joining_cagen_exec_handle final : public H {
+  public:
+    joining_cagen_exec_handle() = default;
+
+    ~joining_cagen_exec_handle() override { this->abort_and_join(); }
 };
 
 }  // namespace detail

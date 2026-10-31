@@ -92,7 +92,8 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
   sort_parameter_values(input_model);
 
   detail::cagen_exec_handle_ipog_impl* handle =
-      new detail::cagen_exec_handle_ipog_impl();
+      new detail::joining_cagen_exec_handle<
+          detail::cagen_exec_handle_ipog_impl>();
 
   auto ipog_algo =
       std::make_unique<detail::citcpp_ipog>(std::move(input_model), config);
@@ -110,7 +111,8 @@ std::unique_ptr<cagen_exec_handle_ipog> compute_covering_array_ipog(
   sort_parameter_values(input_model);
 
   detail::cagen_exec_handle_ipog_impl* handle =
-      new detail::cagen_exec_handle_ipog_impl();
+      new detail::joining_cagen_exec_handle<
+          detail::cagen_exec_handle_ipog_impl>();
 
   auto ipog_algo = std::make_unique<detail::citcpp_ipog>(
       std::move(input_model), std::move(tests), config);
