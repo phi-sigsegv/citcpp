@@ -30,8 +30,8 @@ class constraint_handler_void : public constraint_handler {
     /**
      * See constraint_handler interface.
      */
-    bool is_valid_partial_test(const test& t,
-                               const param_vector& assigned) override;
+    bool is_valid_tuple(const param_vector& params,
+                        const value_vector& values) override;
 
     /**
      * See constraint_handler interface.

@@ -1,8 +1,6 @@
 #include <bit>
 #include <cstdint>
 #include <functional>
-#include <memory>
-#include <mutex>
 
 #include "bitset.hpp"
 #include "citcpp_utils.hpp"
@@ -66,51 +64,16 @@ struct covm_test_columns {
     std::vector<std::uint16_t> values;
 };
 
-// The scratch tests (one value per parameter, all don't care while unused)
-// for the validity checks of the functors. One per functor would need memory
-// quadratic in the number of parameters (there is one functor per task, i.e.
-// per parameter for t = 2); instead, a functor takes one from here for a
-// parameter combination that needs validity checks, and returns it
-// afterwards.
-class covm_scratch_tests {
-  public:
-    explicit covm_scratch_tests(std::size_t num_params)
-        : num_params_(num_params) {}
-
-    test* acquire() {
-      std::lock_guard<std::mutex> guard(mut_);
-      if (free_.empty()) {
-        all_.push_back(std::make_unique<test>(num_params_, -1));
-        return all_.back().get();
-      }
-      test* t = free_.back();
-      free_.pop_back();
-      return t;
-    }
-
-    void release(test* t) {
-      std::lock_guard<std::mutex> guard(mut_);
-      free_.push_back(t);
-    }
-
-  private:
-    std::size_t num_params_;
-    std::mutex mut_;
-    std::vector<std::unique_ptr<test>> all_;
-    std::vector<test*> free_;
-};
-
 class covm_per_param_combo_functor {
   public:
     covm_per_param_combo_functor(
         unsigned int strength, const internal_model& model,
         const covm_test_columns& test_columns,
-        covm_scratch_tests& scratch_tests, constraint_handler& constr_handler,
+        constraint_handler& constr_handler,
         bitset_uint64::size_type bitset_backing_array_size,
         covm_exec_handle_impl& exec_handle)
         : model_(model),
           test_columns_(test_columns),
-          scratch_tests_(&scratch_tests),
           constr_handler_(constr_handler),
           value_indices_(strength),
           weights_(strength),
@@ -146,7 +109,6 @@ class covm_per_param_combo_functor {
       if (!values_combo_bitset_.all()) {
         visit_all_value_combos_of_param_combo(
             model_, param_indices, value_indices_, *this, param_indices);
-        reset_scratch_test(param_indices);
       }
 
       double param_coverage_fraction =
@@ -184,7 +146,10 @@ class covm_per_param_combo_functor {
                     const param_vector& param_indices) {
 
       if (!values_combo_bitset_.test(bitpos)) {
-        const bool valid_tuple = is_valid_tuple(param_indices, value_indices);
+        // The parallel measurement calls this from concurrent Lace workers,
+        // which is_valid_tuple allows.
+        const bool valid_tuple =
+            constr_handler_.is_valid_tuple(param_indices, value_indices);
         if (!valid_tuple) {
           values_combo_bitset_.set(bitpos);
           ++num_invalid_tuples_;
@@ -304,43 +269,9 @@ class covm_per_param_combo_functor {
       }
     }
 
-    bool is_valid_tuple(const param_vector& param_indices,
-                        const value_vector& value_indices) {
-      if (!scratch_test_) {
-        scratch_test_ = scratch_tests_->acquire();
-      }
-      for (std::size_t i = 0; i < param_indices.size(); ++i) {
-        const int param_value_to_cover = value_indices[i];
-        scratch_test_->get_values()[param_indices[i]] = param_value_to_cover;
-      }
-
-      // The scratch test has exactly the values of the tuple. The parallel
-      // measurement calls this from concurrent Lace workers, which the
-      // hinted is_valid_partial_test allows.
-      bool res = constr_handler_.is_valid_partial_test(*scratch_test_,
-                                                       param_indices);
-
-      return res;
-    }
-
-    // Returns the scratch test (if one was taken), with its values reset.
-    void reset_scratch_test(const param_vector& param_indices) {
-      if (!scratch_test_) {
-        return;
-      }
-      for (std::size_t i = 0; i < param_indices.size(); ++i) {
-        scratch_test_->get_values()[param_indices[i]] = -1;
-      }
-      scratch_tests_->release(scratch_test_);
-      scratch_test_ = nullptr;
-    }
-
   private:
     const internal_model& model_;
     const covm_test_columns& test_columns_;
-    covm_scratch_tests* scratch_tests_;
-    // Taken from scratch_tests_ for the current parameter combination.
-    test* scratch_test_ = nullptr;
     constraint_handler& constr_handler_;
     value_vector value_indices_;
     std::vector<bitset_uint64::size_type> weights_;
@@ -365,9 +296,8 @@ inline void measure_coverage(
           model, parameter_index_map);
 
   const covm_test_columns test_columns(model, test_set);
-  covm_scratch_tests scratch_tests(model.get_parameter_num_values().size());
   covm_per_param_combo_functor per_param_combo_functor(
-      strength, model, test_columns, scratch_tests, constr_handler,
+      strength, model, test_columns, constr_handler,
       product_of_max_parameter_sizes, exec_handle);
 
   param_combo_iterator param_combo_it(
@@ -407,16 +337,13 @@ void measure_coverage(unsigned int strength, const internal_model& model,
           static_cast<unsigned int>(parameter_index_map.size()), strength,
           model, parameter_index_map);
 
-  // One functor per task (many), all sharing the transposed test set and
-  // the scratch tests.
+  // One functor per task (many), all sharing the transposed test set.
   const covm_test_columns test_columns(model, test_set);
-  covm_scratch_tests scratch_tests(model.get_parameter_num_values().size());
   param_combo_functor_parallel_iterator<covm_per_param_combo_functor, T_EXEC>
       per_param_combo_functor_parallel(
           static_cast<unsigned int>(parameter_index_map.size()), strength,
           parameter_index_map, false, exec, strength, std::cref(model),
-          std::cref(test_columns), std::ref(scratch_tests),
-          std::ref(constr_handler), product_of_max_parameter_sizes,
+          std::cref(test_columns), std::ref(constr_handler), product_of_max_parameter_sizes,
           std::ref(exec_handle));
 
   per_param_combo_functor_parallel.visit_all_parameter_combinations();

@@ -12,8 +12,8 @@ bool constraint_handler_void::is_valid_partial_test(const test&) {
   return true;
 }
 
-bool constraint_handler_void::is_valid_partial_test(const test&,
-                                                    const param_vector&) {
+bool constraint_handler_void::is_valid_tuple(const param_vector&,
+                                             const value_vector&) {
   return true;
 }
 

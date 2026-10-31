@@ -35,9 +35,8 @@ class constraint_handler {
     virtual bool is_valid_partial_test(const test& t) = 0;
 
     /**
-     * As #is_valid_partial_test, for a partial test whose assigned parameters
-     * are exactly the given ones. They are a hint: implementations may use
-     * them to avoid looking at all parameters of the test. Must allow
+     * Returns whether the tuple that assigns values[i] to the parameter
+     * params[i] (and no value to the other parameters) is valid. Must allow
      * concurrent calls by different workers of the Lace executor (while no
      * other method is called), also for a handler that is not thread safe.
      * An implementation must not serialize the calls with a lock if its
@@ -45,8 +44,8 @@ class constraint_handler {
      * another check, and a blocked worker cannot take part in the operations
      * of the other ones.
      */
-    virtual bool is_valid_partial_test(const test& t,
-                                       const param_vector& assigned) = 0;
+    virtual bool is_valid_tuple(const param_vector& params,
+                                const value_vector& values) = 0;
 
     /**
      * This method reads the given partial tests, in particular the

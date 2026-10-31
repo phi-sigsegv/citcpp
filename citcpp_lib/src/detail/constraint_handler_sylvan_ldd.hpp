@@ -1,6 +1,8 @@
 #ifndef DETAIL_CONSTRAINT_HANDLER_SYLVAN_LDD_HPP_
 #define DETAIL_CONSTRAINT_HANDLER_SYLVAN_LDD_HPP_
 
+#include <cstddef>
+#include <deque>
 #include <unordered_map>
 
 #include "citcpp_sylvan_ldd.hpp"
@@ -71,8 +73,8 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
 
     /**
      * See constraint_handler interface. False, as most methods change the
-     * handler's state; the hinted is_valid_partial_test may nevertheless be
-     * called concurrently (see there).
+     * handler's state; is_valid_tuple may nevertheless be called concurrently
+     * (see there).
      */
     bool is_thread_safe() const override;
 
@@ -83,11 +85,12 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
 
     /**
      * See constraint_handler interface. Without a lock: the check only reads
-     * the handler's state, and its Sylvan operations run as Lace tasks, which
-     * may run concurrently on the workers.
+     * the handler's state (apart from the caller's tuple assignments, see
+     * there), and its Sylvan operations run as Lace tasks, which may run
+     * concurrently on the workers.
      */
-    bool is_valid_partial_test(const test& t,
-                               const param_vector& assigned) override;
+    bool is_valid_tuple(const param_vector& params,
+                        const value_vector& values) override;
 
     /**
      * See constraint_handler interface.
@@ -180,6 +183,22 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
 
     std::vector<component_idd_info> components_;
     std::vector<int> parameter_to_component_idx_;
+
+    // The IDD check needs an assignment of all parameters (-1 for no value),
+    // so is_valid_tuple writes the tuple into one. A worker that waits for
+    // the Lace tasks of its check may run another task that calls
+    // is_valid_tuple again, before the first call returns; the calls of a
+    // worker are nested, so each worker has a stack of assignments, one per
+    // nesting depth (all values -1 while unused). Index 0 is for a caller
+    // outside of Lace (which only waits for its check), index w + 1 for the
+    // Lace worker w. Aligned, so that the workers do not share cache lines.
+    struct alignas(64) tuple_assignments {
+        // A deque, so that a nested call adding an assignment does not move
+        // the ones in use.
+        std::deque<std::vector<int>> stack;
+        std::size_t depth = 0;
+    };
+    std::vector<tuple_assignments> tuple_assignments_;
 };
 
 }  // namespace detail
