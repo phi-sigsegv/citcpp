@@ -58,7 +58,7 @@ Generates a covering array for a given model.
 - `--doi <int>`: Degree of interaction (default: 2). Use `-1` for mixed strength.
 - `--num-threads <int>`: Number of threads to use (0 for auto).
 - `--progress`: Show computation progress.
-- `--seed-testset_file <file>`: Extend an existing test set.
+- `--seed-testset-file <file>`: Extend an existing test set.
 - `--randstar <on|off>`: Randomize "don't care" values (default: on).
 
 #### Coverage Measurement (`covm`)
