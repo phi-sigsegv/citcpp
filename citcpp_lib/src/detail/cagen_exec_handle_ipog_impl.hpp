@@ -12,9 +12,10 @@ namespace detail {
 
 class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
                                     public cagen_exec_handle_base {
-  protected:
+  public:
     // Only created as joining_cagen_exec_handle (see there).
-    cagen_exec_handle_ipog_impl() = default;
+    explicit cagen_exec_handle_ipog_impl(cagen_exec_handle_passkey passkey)
+        : cagen_exec_handle_base(passkey) {}
 
   public:
     unsigned int get_number_of_parameters_to_process() const override {

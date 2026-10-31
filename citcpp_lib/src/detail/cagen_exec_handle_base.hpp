@@ -12,16 +12,32 @@
 namespace citcpp {
 namespace detail {
 
+template <typename H>
+class joining_cagen_exec_handle;
+
+/**
+ * A passkey that only joining_cagen_exec_handle can create. The constructor of
+ * cagen_exec_handle_base requires one, so that a concrete handle (which has
+ * to pass one on) can only be created as joining_cagen_exec_handle.
+ */
+class cagen_exec_handle_passkey {
+  private:
+    cagen_exec_handle_passkey() = default;
+
+    template <typename H>
+    friend class joining_cagen_exec_handle;
+};
+
 /**
  * The common part of the execution handles of the covering array generation
  * algorithms. The thread of a handle runs the entry point of its algorithm (the
  * runnable) on the concrete handle, so it has to be joined before any part of
  * the handle is destroyed: concrete handles are only created as
- * joining_cagen_exec_handle (see there).
+ * joining_cagen_exec_handle (see there), which the passkey enforces.
  */
 class cagen_exec_handle_base : public virtual cagen_exec_handle {
   protected:
-    cagen_exec_handle_base()
+    explicit cagen_exec_handle_base(cagen_exec_handle_passkey)
         : cagen_exec_handle(),
           exec_phase_(0),
           c_handler_init_progress_(),
@@ -181,13 +197,13 @@ class cagen_exec_handle_base : public virtual cagen_exec_handle {
 /**
  * A concrete execution handle H as it is created: it aborts and joins the
  * thread in its destructor, which runs before any part of H is destroyed.
- * The concrete handles have protected constructors, so that they cannot be
- * created otherwise.
+ * H is constructed with a cagen_exec_handle_passkey, which only this class can
+ * create, so that H cannot be created otherwise.
  */
 template <typename H>
 class joining_cagen_exec_handle final : public H {
   public:
-    joining_cagen_exec_handle() = default;
+    joining_cagen_exec_handle() : H(cagen_exec_handle_passkey()) {}
 
     ~joining_cagen_exec_handle() override { this->abort_and_join(); }
 };
