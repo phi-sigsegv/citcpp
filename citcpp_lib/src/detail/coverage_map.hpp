@@ -44,11 +44,10 @@ struct ipog_coverage_map_storage {
 
 /**
  * One parameter combination of an ipog_coverage_map: t-1 earlier parameters
- * plus the fixed last parameter. Its tuples are addressed by a logical index:
- * the parameters' values in radix notation, with the first parameter most
- * significant and the last parameter least significant. (This is the order in
- * which the combinations and their tuples are visited, e.g. by the vertical
- * extension.) The logical index is mapped to the physical layout internally.
+ * plus the fixed last parameter. Its tuples are addressed by their values,
+ * one per parameter in the order of get_parameter_indices(), or by a test
+ * that assigns all parameters of the combination; they are mapped to the
+ * physical layout internally.
  */
 class ipog_coverage_map_param_combo {
   public:
@@ -69,10 +68,42 @@ class ipog_coverage_map_param_combo {
     }
 
     /**
-     * Marks the tuple as covered and returns whether it was covered before.
+     * Marks the tuple with the given values as covered and returns whether it
+     * was covered before.
      */
-    bool test_and_set_covered(size_type logical_index) {
-      const std::uint64_t i = physical_index(logical_index);
+    bool test_and_set_covered(const value_vector& values) {
+      return test_and_set_covered_at(
+          physical_index([&](std::size_t k) { return values[k]; }));
+    }
+
+    bool is_valid(const value_vector& values) const {
+      const std::uint64_t i =
+          physical_index([&](std::size_t k) { return values[k]; });
+      return (storage_->valid[i >> 6] >> (i & 63)) & 1;
+    }
+
+    /**
+     * If the given test assigns all parameters of this combination, marks the
+     * tuple of its values as covered and valid. Returns whether that tuple
+     * was not covered before.
+     */
+    bool cover_tuple_of(const test& t) {
+      const std::vector<int>& test_values = t.get_values();
+      for (const auto p : param_indices_) {
+        if (test_values[p] < 0) {
+          return false;
+        }
+      }
+      const std::uint64_t i = physical_index(
+          [&](std::size_t k) { return test_values[param_indices_[k]]; });
+      storage_->valid[i >> 6] |= std::uint64_t(1) << (i & 63);
+      return !test_and_set_covered_at(i);
+    }
+
+  private:
+    friend class ipog_coverage_map;
+
+    bool test_and_set_covered_at(std::uint64_t i) {
       const std::uint64_t mask = std::uint64_t(1) << (i & 63);
       std::uint64_t& word = storage_->covered[i >> 6];
       if (word & mask) {
@@ -83,32 +114,20 @@ class ipog_coverage_map_param_combo {
       return false;
     }
 
-    bool is_valid(size_type logical_index) const {
-      const std::uint64_t i = physical_index(logical_index);
-      return (storage_->valid[i >> 6] >> (i & 63)) & 1;
-    }
-
-    void set_valid(size_type logical_index) {
-      const std::uint64_t i = physical_index(logical_index);
-      storage_->valid[i >> 6] |= std::uint64_t(1) << (i & 63);
-    }
-
-  private:
-    friend class ipog_coverage_map;
-
-    std::uint64_t physical_index(size_type logical_index) const {
+    // The physical index of the tuple whose k-th parameter has the value
+    // value_of(k) (the last one being the fixed last parameter): see the
+    // layout at ipog_coverage_map.
+    template <typename F>
+    std::uint64_t physical_index(F&& value_of) const {
       const std::size_t s = param_indices_.size() - 1;
       const std::vector<std::vector<std::uint64_t>>& E = storage_->E;
-      std::uint64_t rest = logical_index;
-      const std::uint64_t last_value = rest % last_domain_size_;
-      rest /= last_domain_size_;
-      std::uint64_t index = base_ + last_value * storage_->tuples_per_value;
-      for (std::size_t k = s; k-- > 0;) {
+      std::uint64_t index =
+          base_ + static_cast<std::uint64_t>(value_of(s)) *
+                      storage_->tuples_per_value;
+      for (std::size_t k = 0; k < s; ++k) {
         const std::uint32_t q =
             storage_->position_of_parameter[param_indices_[k]];
-        const std::uint64_t domain_size = E[1][q + 1] - E[1][q];
-        index += (rest % domain_size) * E[k][q];
-        rest /= domain_size;
+        index += static_cast<std::uint64_t>(value_of(k)) * E[k][q];
       }
       return index;
     }
@@ -117,7 +136,6 @@ class ipog_coverage_map_param_combo {
     param_vector param_indices_;
     // Physical index of the tuple with all values 0.
     std::uint64_t base_ = 0;
-    std::uint32_t last_domain_size_ = 1;
     size_type size_ = 0;
     // Index of this combination in its coverage map.
     size_type index_ = 0;

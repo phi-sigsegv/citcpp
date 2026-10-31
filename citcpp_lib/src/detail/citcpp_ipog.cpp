@@ -119,7 +119,7 @@ void main_ipog_loop_body(
 
     if (num_seeded_tests > 0) {
       auto measure_coverage_res = ipog_measure_testset(
-          model, test_set, num_seeded_tests, relation_cov_maps);
+          test_set, num_seeded_tests, relation_cov_maps);
 
       for (const auto& relation_cov_result :
            measure_coverage_res.num_covered_tuples) {

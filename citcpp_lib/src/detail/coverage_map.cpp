@@ -108,7 +108,6 @@ ipog_coverage_map::ipog_coverage_map(
     combo.storage_ = storage_.get();
     combo.param_indices_ = param_vector(s + 1);
     combo.index_ = static_cast<second_level_type::size_type>(combos_.size());
-    combo.last_domain_size_ = last_domain_size_;
     std::uint64_t size = last_domain_size_;
     long long rank = 0;
     for (unsigned int l = 0; l < s; ++l) {
