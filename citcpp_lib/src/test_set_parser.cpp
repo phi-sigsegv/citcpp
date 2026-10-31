@@ -1,8 +1,6 @@
-#include <algorithm>
 #include <array>
-#include <cctype>
-#include <charconv>
 #include <citcpp/test_set_parser.hpp>
+#include <functional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -11,20 +9,6 @@
 #include <vector>
 
 #include "parser_utils.hpp"
-
-namespace {
-
-bool i_char_equals(char a, char b) {
-  return std::tolower(static_cast<unsigned char>(a)) ==
-         std::tolower(static_cast<unsigned char>(b));
-}
-
-bool i_string_equals(const std::string& a, const std::string& b) {
-  return a.size() == b.size() &&
-         std::equal(a.begin(), a.end(), b.begin(), i_char_equals);
-}
-
-}  // namespace
 
 namespace citcpp {
 
@@ -45,13 +29,13 @@ namespace citcpp {
  *   Eol           <- '\r\n' / '\n' / '\r'
  *
  * The values are trimmed. The input is scanned directly in one pass, and the
- * parsing stops at the first error.
+ * parsing stops at the first error. Positions are line:column, counting
+ * columns in UTF-8 code points.
  */
 class test_set_parser::impl {
   public:
     impl(const model& model, std::string_view separator)
-        : model_(model), separator_(separator) {
-      detail::trim(separator_);
+        : model_(model), separator_(detail::trimmed(separator)) {
       for (const parameter& param : model_.get_parameters()) {
         name_to_param_map_[param.get_name()] = &param;
       }
@@ -121,22 +105,18 @@ class test_set_parser::impl {
     // set. Returns false without a message if there is no name at the
     // position, and with a message if the parameter is not in the model.
     bool parse_parameter() {
-      auto is_first = [](char c) {
-        return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
-      };
-      if (pos_ >= input_.size() || !is_first(input_[pos_])) {
+      if (pos_ >= input_.size() || !detail::is_identifier_start(input_[pos_])) {
         return false;
       }
       const std::size_t start = pos_;
-      while (pos_ < input_.size() &&
-             (is_first(input_[pos_]) ||
-              std::isdigit(static_cast<unsigned char>(input_[pos_])))) {
+      while (pos_ < input_.size() && detail::is_identifier_char(input_[pos_])) {
         ++pos_;
       }
-      const std::string name(input_.substr(start, pos_ - start));
+      const std::string_view name = input_.substr(start, pos_ - start);
       auto it = name_to_param_map_.find(name);
       if (it == name_to_param_map_.end()) {
-        return error_at(start, "Parameter '" + name + "' not found in the model");
+        return error_at(start, "Parameter '" + std::string(name) +
+                                   "' not found in the model");
       }
       test_set_->add_parameter(*(it->second));
       return true;
@@ -180,12 +160,11 @@ class test_set_parser::impl {
       while (pos_ < input_.size() && !at_separator() && !at_eol()) {
         ++pos_;
       }
-      value_buffer_.assign(input_.substr(start, pos_ - start));
-      detail::trim(value_buffer_);
-      return add_value(value_buffer_, start);
+      return add_value(detail::trimmed(input_.substr(start, pos_ - start)),
+                       start);
     }
 
-    bool add_value(const std::string& value, std::size_t pos) {
+    bool add_value(std::string_view value, std::size_t pos) {
       const std::size_t index = current_test_.size();
       if (index >= test_set_->get_parameters().size()) {
         return error_at(pos, "Test has more values than parameter declarations");
@@ -197,23 +176,16 @@ class test_set_parser::impl {
       const parameter& param = test_set_->get_parameters()[index];
       int found_idx = -1;
       if (param.get_type() == parameter_type::BOOLEAN) {
-        if (i_string_equals(value, "true")) {
+        if (detail::iequals(value, "true")) {
           found_idx = bool_value_indices_[index][1];
-        } else if (i_string_equals(value, "false")) {
+        } else if (detail::iequals(value, "false")) {
           found_idx = bool_value_indices_[index][0];
         }
       } else if (param.get_type() == parameter_type::INTEGER) {
         // The whole value must be an integer (with an optional sign); one out
-        // of range is not in the domain. std::from_chars does not accept a
-        // '+' sign.
-        std::string_view digits(value);
-        if (digits.size() > 1 && digits[0] == '+' && digits[1] != '-') {
-          digits.remove_prefix(1);
-        }
+        // of range is not in the domain.
         int int_val = 0;
-        const char* end = digits.data() + digits.size();
-        const auto [ptr, ec] = std::from_chars(digits.data(), end, int_val);
-        if (ec == std::errc() && ptr == end) {
+        if (detail::parse_int(value, int_val)) {
           const auto& indices = int_value_indices_[index];
           auto it = indices.find(int_val);
           if (it != indices.end()) {
@@ -228,7 +200,7 @@ class test_set_parser::impl {
         }
       }
       if (found_idx == -1) {
-        return error_at(pos, "Value '" + value +
+        return error_at(pos, "Value '" + std::string(value) +
                                  "' is not in the domain of parameter '" +
                                  param.get_name() + "'");
       }
@@ -314,15 +286,21 @@ class test_set_parser::impl {
     bool error_at(std::size_t pos, const std::string& msg) {
       std::ostringstream oss;
       oss << "Error in test set file at " << line_ << ":"
-          << pos - line_start_ + 1 << " -> " << msg;
+          << 1 + detail::count_codepoints(
+                     input_.substr(line_start_, pos - line_start_))
+          << " -> " << msg;
       error_message_ = oss.str();
       return false;
     }
 
     const model model_;
     std::string separator_;
-    std::unordered_map<std::string, const parameter*> name_to_param_map_;
-    std::vector<std::unordered_map<std::string, int>> enum_value_indices_;
+    std::unordered_map<std::string, const parameter*, detail::string_hash,
+                       std::equal_to<>>
+        name_to_param_map_;
+    std::vector<std::unordered_map<std::string, int, detail::string_hash,
+                                   std::equal_to<>>>
+        enum_value_indices_;
     std::vector<std::unordered_map<int, int>> int_value_indices_;
     // Per parameter: the indices of false and true (-1 if not a value).
     std::vector<std::array<int, 2>> bool_value_indices_;
@@ -333,7 +311,6 @@ class test_set_parser::impl {
     test_set* test_set_ = nullptr;
     std::string error_message_;
     std::vector<int> current_test_;
-    std::string value_buffer_;
 };
 
 test_set_parser::test_set_parser(const model& model, std::string_view separator)

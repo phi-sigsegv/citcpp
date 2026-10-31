@@ -1,7 +1,4 @@
-#include <charconv>
 #include <citcpp/acts_model_parser.hpp>
-#include <cstdint>
-#include <system_error>
 #include <functional>
 #include <memory>
 #include <sstream>
@@ -14,47 +11,6 @@
 #include "parser_utils.hpp"
 
 namespace {
-
-// Hashes std::string and std::string_view alike, for lookups by a
-// std::string_view in a map with std::string keys.
-struct string_hash {
-    using is_transparent = void;
-
-    std::size_t operator()(std::string_view sv) const noexcept {
-      return std::hash<std::string_view>{}(sv);
-    }
-};
-
-bool is_identifier_start(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
-}
-
-bool is_digit(char c) { return c >= '0' && c <= '9'; }
-
-bool is_identifier_char(char c) { return is_identifier_start(c) || is_digit(c); }
-
-char to_lower(char c) {
-  return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
-}
-
-// The number of bytes of the UTF-8 code point at the start of s, or 0 if s
-// does not start with a complete one (the PEG's '.' fails then).
-std::size_t codepoint_length(std::string_view s) {
-  if (s.empty()) {
-    return 0;
-  }
-  const auto b = static_cast<std::uint8_t>(s[0]);
-  if ((b & 0x80) == 0) {
-    return 1;
-  } else if ((b & 0xE0) == 0xC0 && s.size() >= 2) {
-    return 2;
-  } else if ((b & 0xF0) == 0xE0 && s.size() >= 3) {
-    return 3;
-  } else if ((b & 0xF8) == 0xF0 && s.size() >= 4) {
-    return 4;
-  }
-  return 0;
-}
 
 // Thrown by a semantic error, which stops the parsing.
 struct semantic_error {};
@@ -212,9 +168,8 @@ class acts_model_parser::impl {
       const std::size_t start = pos_;
       while (any_char_except("\n\r")) {
       }
-      std::string name(input_.substr(start, pos_ - start));
-      detail::trim(name);
-      model_->set_name(name);
+      model_->set_name(
+          std::string(detail::trimmed(input_.substr(start, pos_ - start))));
       skip_spacing();
       return true;
     }
@@ -363,9 +318,8 @@ class acts_model_parser::impl {
       }
       while (any_char_except(",;\n\r")) {
       }
-      std::string value(input_.substr(start, pos_ - start));
-      detail::trim(value);
-      param.add_value(value);
+      param.add_value(
+          std::string(detail::trimmed(input_.substr(start, pos_ - start))));
       return true;
     }
 
@@ -420,7 +374,7 @@ class acts_model_parser::impl {
       }
       skip_whitespace();
       const std::size_t start = pos_;
-      while (pos_ < input_.size() && is_digit(input_[pos_])) {
+      while (pos_ < input_.size() && detail::is_digit(input_[pos_])) {
         ++pos_;
       }
       if (pos_ == start) {
@@ -696,12 +650,12 @@ class acts_model_parser::impl {
 
     // Identifier <- [a-zA-Z_] [a-zA-Z0-9_]*
     bool parse_identifier(std::string_view& identifier) {
-      if (pos_ == input_.size() || !is_identifier_start(input_[pos_])) {
+      if (pos_ == input_.size() || !detail::is_identifier_start(input_[pos_])) {
         return expected("an identifier");
       }
       const std::size_t start = pos_;
       ++pos_;
-      while (pos_ < input_.size() && is_identifier_char(input_[pos_])) {
+      while (pos_ < input_.size() && detail::is_identifier_char(input_[pos_])) {
         ++pos_;
       }
       identifier = input_.substr(start, pos_ - start);
@@ -714,12 +668,12 @@ class acts_model_parser::impl {
       if (pos_ < input_.size() && (input_[pos_] == '+' || input_[pos_] == '-')) {
         ++pos_;
       }
-      if (pos_ == input_.size() || !is_digit(input_[pos_])) {
+      if (pos_ == input_.size() || !detail::is_digit(input_[pos_])) {
         expected("an integer");
         pos_ = start;
         return false;
       }
-      while (pos_ < input_.size() && is_digit(input_[pos_])) {
+      while (pos_ < input_.size() && detail::is_digit(input_[pos_])) {
         ++pos_;
       }
       value = to_int(start);
@@ -728,15 +682,8 @@ class acts_model_parser::impl {
 
     // The value of the integer from start to the current position.
     int to_int(std::size_t start) {
-      // std::from_chars does not accept a '+' sign.
-      const char* first = input_.data() + start;
-      if (*first == '+') {
-        ++first;
-      }
       int value = 0;
-      const auto [ptr, ec] =
-          std::from_chars(first, input_.data() + pos_, value);
-      if (ec != std::errc()) {
+      if (!detail::parse_int(input_.substr(start, pos_ - start), value)) {
         semantic_error_at(start, "model file", "Integer value out of range");
       }
       return value;
@@ -819,7 +766,7 @@ class acts_model_parser::impl {
       if (pos_ == input_.size() || stop.find(input_[pos_]) != stop.npos) {
         return false;
       }
-      const std::size_t len = codepoint_length(input_.substr(pos_));
+      const std::size_t len = detail::codepoint_length(input_.substr(pos_));
       if (len == 0) {
         return false;
       }
@@ -837,13 +784,8 @@ class acts_model_parser::impl {
 
     // A literal matched ignoring the case.
     bool literal_i(std::string_view s) {
-      if (input_.size() - pos_ < s.size()) {
+      if (!detail::iequals(input_.substr(pos_, s.size()), s)) {
         return expected_at(pos_, s, true);
-      }
-      for (std::size_t i = 0; i < s.size(); ++i) {
-        if (to_lower(input_[pos_ + i]) != to_lower(s[i])) {
-          return expected_at(pos_, s, true);
-        }
       }
       pos_ += s.size();
       return true;
@@ -922,12 +864,9 @@ class acts_model_parser::impl {
           line_start = i + 1;
         }
       }
-      std::size_t column = 1;
-      for (std::size_t i = line_start; i < pos;) {
-        const std::size_t len = codepoint_length(input_.substr(i, pos - i));
-        i += len == 0 ? 1 : len;
-        ++column;
-      }
+      const std::size_t column =
+          1 + detail::count_codepoints(
+                  input_.substr(line_start, pos - line_start));
       return std::to_string(line) + ":" + std::to_string(column);
     }
 
@@ -941,7 +880,8 @@ class acts_model_parser::impl {
     std::vector<std::pair<std::string_view, bool>> expected_;
     // The index in the model of each declared parameter (the first one of a
     // name).
-    std::unordered_map<std::string, std::size_t, string_hash, std::equal_to<>>
+    std::unordered_map<std::string, std::size_t, detail::string_hash,
+                       std::equal_to<>>
         param_indices_;
 };
 

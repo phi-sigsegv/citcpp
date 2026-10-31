@@ -16,7 +16,7 @@ Name: TestSetParser
 [Parameter]
 A (int) : 0, 1, 2, 3, 4
 B (int) : 1, 2, 3
-C (enum) : red, green, blue, black
+C (enum) : red, green, blue, black, grün
 D (boolean) : true, false
 E (enum) : only
 F (int) : -2, -1, 0, 1, 2, 3, 4, 5, 6, 7
@@ -186,6 +186,9 @@ TEST_CASE("test set parser: invalid content") {
   check_error(H + "\n2,3,green,true,only,1,x,TRUE,10,p,4294967297\n",
               "2:35 -> Value '4294967297' is not in the domain of parameter "
               "'K'");
+  // Columns count code points, not bytes.
+  check_error(H + "\n2,3,grün,true,only,1,x,TRUE,10,p,99\n",
+              "2:34 -> Value '99' is not in the domain of parameter 'K'");
   check_error(H + "\n2,3,green,yes,only,1,x,TRUE,10,p,1\n",
               "2:11 -> Value 'yes' is not in the domain of parameter 'D'");
   check_error(H + "\n" + R1 + ",5\n",
