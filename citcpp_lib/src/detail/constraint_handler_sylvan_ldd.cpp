@@ -692,8 +692,7 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
       test_to_idd_(),
       is_per_test_idd_enabled_(false),
       components_(),
-      parameter_to_component_idx_(),
-      tuple_assignments_(lace_workers() + 1) {
+      parameter_to_component_idx_() {
 
   setup_partitioned_idds(initialize_variable_order(model, variable_order),
                          nullptr);
@@ -709,8 +708,7 @@ constraint_handler_sylvan_idd::constraint_handler_sylvan_idd(
       test_to_idd_(),
       is_per_test_idd_enabled_(false),
       components_(),
-      parameter_to_component_idx_(),
-      tuple_assignments_(lace_workers() + 1) {
+      parameter_to_component_idx_() {
 
   setup_partitioned_idds(initialize_variable_order(model, variable_order),
                          &exec_handle);
@@ -875,36 +873,20 @@ bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) {
 
 bool constraint_handler_sylvan_idd::is_valid_tuple(const param_vector& params,
                                                    const value_vector& values) {
-  std::size_t caller = 0;
-  if (lace_is_worker()) {
-    LACE_VARS;
-    caller = static_cast<std::size_t>(LACE_WORKER_ID) + 1;
-  }
-  tuple_assignments& assignments = tuple_assignments_[caller];
-  if (assignments.depth == assignments.stack.size()) {
-    assignments.stack.emplace_back(model_.get_parameter_num_values().size(),
-                                   -1);
-  }
-  std::vector<int>& assignment = assignments.stack[assignments.depth];
-  ++assignments.depth;
-
+  // The IDD check needs an assignment of all parameters (-1 for no value).
+  // Local to the call: a worker that waits for the Lace tasks of its check
+  // may run another task that calls is_valid_tuple again.
+  std::vector<int> assignment(model_.get_parameter_num_values().size(), -1);
   for (std::size_t i = 0; i < params.size(); ++i) {
     assignment[params[i]] = values[i];
   }
-  bool is_valid = true;
   for (const auto& comp : components_) {
     if (!comp.idd.is_sat_with_partial_assignment(assignment,
                                                  &comp.variable_order)) {
-      is_valid = false;
-      break;
+      return false;
     }
   }
-  for (const auto param_idx : params) {
-    assignment[param_idx] = -1;
-  }
-
-  --assignments.depth;
-  return is_valid;
+  return true;
 }
 
 bitset_uint64 constraint_handler_sylvan_idd::check_validity_of_partial_tests(
