@@ -855,8 +855,6 @@ component_idd_info* constraint_handler_sylvan_idd::get_component_for_parameter(
           .get_component_for_parameter(param_idx));
 }
 
-bool constraint_handler_sylvan_idd::is_thread_safe() const { return false; }
-
 bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) {
   for (const auto& comp : components_) {
     auto it = comp.test_to_idd.find(&t);

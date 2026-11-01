@@ -72,13 +72,6 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
         constraint_handler_init_progress& exec_handle);
 
     /**
-     * See constraint_handler interface. False, as most methods change the
-     * handler's state; is_valid_tuple may nevertheless be called concurrently
-     * (see there).
-     */
-    bool is_thread_safe() const override;
-
-    /**
      * See constraint_handler interface.
      */
     bool is_valid_partial_test(const test& t) override;
