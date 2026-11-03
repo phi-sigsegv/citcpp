@@ -138,35 +138,33 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     return covm_per_relation;
   }
 
-  if (strength >= 1) {
-    const auto& int_relation = relations[0];
+  const auto measure = [&](const internal_relation& int_relation,
+                           coverage_measurement& covm) {
+    const unsigned int t = int_relation.get_specified_interaction_strength();
+    const auto& parameter_index_map = int_relation.get_parameter_index_map();
 
     if (with_mt) {
-      measure_coverage(int_relation.get_specified_interaction_strength(), model,
-                       int_relation.get_parameter_index_map(), test_set,
-                       constr_handler, exec_handle, covm_per_relation[""],
-                       exec);
-    } else {
-      measure_coverage(int_relation.get_specified_interaction_strength(), model,
-                       int_relation.get_parameter_index_map(), test_set,
-                       constr_handler, exec_handle, covm_per_relation[""]);
+      measure_coverage(t, model, parameter_index_map, test_set, constr_handler,
+                       exec_handle, covm, exec);
+      return;
     }
+
+    // One Lace task for the whole measurement: outside of Lace, each check of
+    // a constraint handler that uses Lace is handed over to the worker.
+    auto measure_serially = [&] {
+      measure_coverage(t, model, parameter_index_map, test_set, constr_handler,
+                       exec_handle, covm);
+    };
+    auto scope = exec.create_execution_scope();
+    scope.spawn_execution(measure_serially);
+  };
+
+  if (strength >= 1) {
+    measure(relations[0], covm_per_relation[""]);
   } else {
     for (decltype(relations.size()) i = 0; i < relations.size(); ++i) {
-      const auto& relation = input_model.get_relations()[i];
-      const auto& int_relation = relations[i];
-
-      if (with_mt) {
-        measure_coverage(int_relation.get_specified_interaction_strength(),
-                         model, int_relation.get_parameter_index_map(),
-                         test_set, constr_handler, exec_handle,
-                         covm_per_relation[relation.get_name()], exec);
-      } else {
-        measure_coverage(int_relation.get_specified_interaction_strength(),
-                         model, int_relation.get_parameter_index_map(),
-                         test_set, constr_handler, exec_handle,
-                         covm_per_relation[relation.get_name()]);
-      }
+      measure(relations[i],
+              covm_per_relation[input_model.get_relations()[i].get_name()]);
     }
   }
 
