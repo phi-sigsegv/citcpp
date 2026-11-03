@@ -284,46 +284,6 @@ class covm_per_param_combo_functor {
     std::vector<std::uint64_t> and_buffers_;
 };
 
-inline void measure_coverage(
-    unsigned int strength, const internal_model& model,
-    const std::vector<unsigned int>& parameter_index_map,
-    const internal_test_set& test_set, constraint_handler& constr_handler,
-    covm_exec_handle_impl& exec_handle, citcpp::coverage_measurement& covm) {
-
-  const unsigned int product_of_max_parameter_sizes =
-      get_product_of_max_n_parameter_sizes(
-          static_cast<unsigned int>(parameter_index_map.size()), strength,
-          model, parameter_index_map);
-
-  const covm_test_columns test_columns(model, test_set);
-  covm_per_param_combo_functor per_param_combo_functor(
-      strength, model, test_columns, constr_handler,
-      product_of_max_parameter_sizes, exec_handle);
-
-  param_combo_iterator param_combo_it(
-      static_cast<unsigned int>(parameter_index_map.size()), strength,
-      parameter_index_map, false);
-  param_combo_it.visit_all_parameter_combinations(per_param_combo_functor);
-
-  std::vector<unsigned long long> covered_tuples(
-      per_param_combo_functor.get_coverered_tuples());
-  for (std::size_t test_index = 0; test_index < covered_tuples.size();
-       ++test_index) {
-
-    if (test_index > 0) {
-      covered_tuples[test_index] =
-          covered_tuples[test_index] + covered_tuples[test_index - 1];
-    }
-  }
-
-  covm.set_number_of_combinations_to_cover(
-      covm.get_number_of_combinations_to_cover() -
-      per_param_combo_functor.get_num_invalid_tuples());
-  covm.set_coverered_tuples(std::move(covered_tuples));
-  covm.set_coverage_level_to_num_param_combos(
-      per_param_combo_functor.get_coverage_level_to_num_param_combos());
-}
-
 template <conc_is_void_functor_executor T_EXEC>
 void measure_coverage(unsigned int strength, const internal_model& model,
                       const std::vector<unsigned int>& parameter_index_map,

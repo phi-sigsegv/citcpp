@@ -80,8 +80,6 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
   using namespace citcpp;
   using namespace citcpp::detail;
 
-  const bool with_mt = exec.get_num_workers() > 1;
-
   std::vector<internal_relation> relations(
       create_relations(input_model, model, strength));
 
@@ -96,12 +94,9 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
         int_relation.get_parameter_index_map().size());
 
     unsigned long long number_combos_to_cover =
-        with_mt ? number_of_combinations_to_cover(
-                      n, model, int_relation.get_parameter_index_map(),
-                      strength, false, exec)
-                : number_of_combinations_to_cover(
-                      n, model, int_relation.get_parameter_index_map(),
-                      strength, false);
+        number_of_combinations_to_cover(
+            n, model, int_relation.get_parameter_index_map(), strength, false,
+            exec);
 
     covm_per_relation[""].set_number_of_param_combos_to_cover(
         binomial_coeffs.get_coefficient(n, strength));
@@ -116,14 +111,9 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
           int_relation.get_parameter_index_map().size());
 
       unsigned long long number_combos_to_cover =
-          with_mt
-              ? number_of_combinations_to_cover(
-                    n, model, int_relation.get_parameter_index_map(),
-                    int_relation.get_specified_interaction_strength(), false,
-                    exec)
-              : number_of_combinations_to_cover(
-                    n, model, int_relation.get_parameter_index_map(),
-                    int_relation.get_specified_interaction_strength(), false);
+          number_of_combinations_to_cover(
+              n, model, int_relation.get_parameter_index_map(),
+              int_relation.get_specified_interaction_strength(), false, exec);
 
       covm_per_relation[relation.get_name()]
           .set_number_of_param_combos_to_cover(binomial_coeffs.get_coefficient(
@@ -138,33 +128,21 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
     return covm_per_relation;
   }
 
-  const auto measure = [&](const internal_relation& int_relation,
-                           coverage_measurement& covm) {
-    const unsigned int t = int_relation.get_specified_interaction_strength();
-    const auto& parameter_index_map = int_relation.get_parameter_index_map();
-
-    if (with_mt) {
-      measure_coverage(t, model, parameter_index_map, test_set, constr_handler,
-                       exec_handle, covm, exec);
-      return;
-    }
-
-    // One Lace task for the whole measurement: outside of Lace, each check of
-    // a constraint handler that uses Lace is handed over to the worker.
-    auto measure_serially = [&] {
-      measure_coverage(t, model, parameter_index_map, test_set, constr_handler,
-                       exec_handle, covm);
-    };
-    auto scope = exec.create_execution_scope();
-    scope.spawn_execution(measure_serially);
-  };
-
   if (strength >= 1) {
-    measure(relations[0], covm_per_relation[""]);
+    const auto& int_relation = relations[0];
+
+    measure_coverage(int_relation.get_specified_interaction_strength(), model,
+                     int_relation.get_parameter_index_map(), test_set,
+                     constr_handler, exec_handle, covm_per_relation[""], exec);
   } else {
     for (decltype(relations.size()) i = 0; i < relations.size(); ++i) {
-      measure(relations[i],
-              covm_per_relation[input_model.get_relations()[i].get_name()]);
+      const auto& relation = input_model.get_relations()[i];
+      const auto& int_relation = relations[i];
+
+      measure_coverage(int_relation.get_specified_interaction_strength(), model,
+                       int_relation.get_parameter_index_map(), test_set,
+                       constr_handler, exec_handle,
+                       covm_per_relation[relation.get_name()], exec);
     }
   }
 
