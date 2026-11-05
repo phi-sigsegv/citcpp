@@ -4,10 +4,26 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Commit to build (full SHA, branch or tag)'
+        required: true
+      tag_name:
+        description: 'Tag/release name to create, e.g. v5.0.1-test'
+        required: true
+      draft:
+        description: 'Create as draft (the tag is only created when the release is published)'
+        type: boolean
+        default: false
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
+  # The tag, commit and draft state of the release, for both triggers
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+  RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit || github.sha }}
+  RELEASE_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft }}
 
 jobs:
   create_release:
@@ -23,8 +39,10 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
-          draft: false
+          name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ env.RELEASE_SHA }}
+          draft: ${{ env.RELEASE_DRAFT }}
           prerelease: false
           generate_release_notes: false
 
@@ -38,6 +56,8 @@ jobs:
     steps:
     - name: Checkout Source Code
       uses: actions/checkout@v4
+      with:
+        ref: ${{ env.RELEASE_SHA }}
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -85,5 +105,7 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.ref_name }}
+        tag_name: ${{ env.RELEASE_TAG }}
+        target_commitish: ${{ env.RELEASE_SHA }}
+        draft: ${{ env.RELEASE_DRAFT }}
         files: ${{github.workspace}}/build/citcpp-linux-x86_64.tar.gz
