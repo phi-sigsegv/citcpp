@@ -1,10 +1,6 @@
 #ifndef DETAIL_CITCPP_CAGEN_BASE_HPP_
 #define DETAIL_CITCPP_CAGEN_BASE_HPP_
 
-#include <vector>
-
-#include "internal_model.hpp"
-
 namespace citcpp {
 namespace detail {
 
@@ -19,4 +15,4 @@ class citcpp_cagen_base {
 }  // namespace detail
 }  // namespace citcpp
 
-#endif /* DETAIL_CITCPP_IPOG_BASE_HPP_ */
+#endif /* DETAIL_CITCPP_CAGEN_BASE_HPP_ */

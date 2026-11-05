@@ -7,6 +7,7 @@ find_package(Threads REQUIRED)
 set(CITCPP_LIB_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/binom_coeff_table.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/citcpp_ipog.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/coverage_map.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/functor_executor_lace.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/internal_model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/detail/ipog_all_value_combinations.cpp
@@ -43,8 +44,7 @@ add_library(citcpp_lib ${CITCPP_LIB_SOURCES})
 
 target_include_directories(citcpp_lib PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-  PRIVATE "${CITCPP_3RD_PARTY_DIR}/cpp-peglib")
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 set_property(TARGET citcpp_lib PROPERTY OUTPUT_NAME citcpp)
 target_link_libraries(citcpp_lib PUBLIC Threads::Threads PRIVATE sylvan::sylvan)
 
@@ -63,6 +63,19 @@ if (ENABLE_CLANG_TIDY)
     set_target_properties(citcpp_lib PROPERTIES
       CXX_CLANG_TIDY "${CLANG_TIDY_PATH};-checks=bugprone-*,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-pro-bounds-avoid-unchecked-container-access;--config={CheckOptions: {cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true}}"
     )
+  endif()
+endif()
+
+# The coverage computations count bits (std::popcount) on their hot paths;
+# use the hardware instruction where the compiler supports it. The resulting
+# binaries require a CPU with the POPCNT instruction (on x86-64: every CPU
+# since about 2008); disable this option to build for older CPUs.
+option(CITCPP_USE_POPCNT "Use the hardware POPCNT instruction" ON)
+if(CITCPP_USE_POPCNT)
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag(-mpopcnt CITCPP_COMPILER_HAS_MPOPCNT)
+  if(CITCPP_COMPILER_HAS_MPOPCNT)
+    target_compile_options(citcpp_lib PRIVATE -mpopcnt)
   endif()
 endif()
 

@@ -12,7 +12,6 @@
     - **Build System:** CMake
     - **Decision Diagrams:** Sylvan & Lace (work-stealing framework)
     - **CLI:** CLI11
-    - **Parsing:** cpp-peglib (for ACTS model files)
     - **Testing:** doctest
 
 ## Directory Structure
@@ -20,9 +19,9 @@
 - `citcpp_lib/`: The core library containing the CIT logic.
     - `include/citcpp/`: Public API headers.
     - `src/`: Implementation files.
+    - `src/acts_model_parser.cpp`: Parser for ACTS (txt) model format.
     - `src/detail/`: Internal implementation details, including IPOG and decision diagram integration.
 - `src/`: Source code for the `citcpp` CLI application.
-    - `acts_model_parser.cpp`: Parser for ACTS (txt) model format.
     - `main.cpp`: Application entry point and CLI definition.
 - `3rd_party/`: Bundled external dependencies.
 - `tests/`: Comprehensive unit tests using `doctest`.
@@ -31,7 +30,7 @@
 
 ### Prerequisites
 
-- A C++20 compliant compiler (e.g., GCC 10+, Clang 10+, MSVC 2019+).
+- A C++20 compliant compiler (e.g., GCC 10+, Clang 10+).
 - CMake 3.16 or higher.
 
 ### Build Instructions
@@ -59,7 +58,7 @@ Generates a covering array for a given model.
 - `--doi <int>`: Degree of interaction (default: 2). Use `-1` for mixed strength.
 - `--num-threads <int>`: Number of threads to use (0 for auto).
 - `--progress`: Show computation progress.
-- `--seed-testset_file <file>`: Extend an existing test set.
+- `--seed-testset-file <file>`: Extend an existing test set.
 - `--randstar <on|off>`: Randomize "don't care" values (default: on).
 
 #### Coverage Measurement (`covm`)
@@ -74,7 +73,7 @@ Measures the t-way coverage of an existing test set.
 
 - **C++ Standard:** C++20 is strictly required.
 - **Coding Style:** The project uses `.clang-format` for consistent formatting.
-- **Testing:** New features should include unit tests in the `tests/` directory. Tests are discovered automatically via `doctest_discover_tests`.
+- **Testing:** New features should include unit tests in the `tests/` directory. A new test file has to be added to the list in `tests/CMakeLists.txt`; its test cases are then discovered automatically via `doctest_discover_tests`.
 - **Parallelism:** The project utilizes the Lace work-stealing framework for parallel execution. Ensure thread-safety when modifying core algorithms.
 - **Constraint Handling:** Constraints are handled via Sylvan LDDs. Modification to constraint logic should be done carefully within `citcpp_lib/src/detail/constraint_handler_sylvan_ldd.cpp`.
 
@@ -82,5 +81,5 @@ Measures the t-way coverage of an existing test set.
 
 - `citcpp_lib/include/citcpp/citcpp.hpp`: Main entry point for the library API.
 - `citcpp_lib/src/detail/citcpp_ipog.cpp`: Implementation of the IPOG algorithm.
-- `src/acts_model_parser.cpp`: Logic for parsing ACTS model files.
+- `citcpp_lib/src/acts_model_parser.cpp`: Logic for parsing ACTS model files.
 - `src/main.cpp`: CLI argument parsing and execution flow.

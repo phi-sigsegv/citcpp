@@ -853,8 +853,6 @@ component_idd_info* constraint_handler_sylvan_idd::get_component_for_parameter(
           .get_component_for_parameter(param_idx));
 }
 
-bool constraint_handler_sylvan_idd::is_thread_safe() const { return false; }
-
 bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) {
   for (const auto& comp : components_) {
     auto it = comp.test_to_idd.find(&t);
@@ -868,6 +866,24 @@ bool constraint_handler_sylvan_idd::is_valid_partial_test(const test& t) {
                                                    &comp.variable_order)) {
         return false;
       }
+    }
+  }
+  return true;
+}
+
+bool constraint_handler_sylvan_idd::is_valid_tuple(const param_vector& params,
+                                                   const value_vector& values) {
+  // The IDD check needs an assignment of all parameters (-1 for no value).
+  // Local to the call: a worker that waits for the Lace tasks of its check
+  // may run another task that calls is_valid_tuple again.
+  std::vector<int> assignment(model_.get_parameter_num_values().size(), -1);
+  for (std::size_t i = 0; i < params.size(); ++i) {
+    assignment[params[i]] = values[i];
+  }
+  for (const auto& comp : components_) {
+    if (!comp.idd.is_sat_with_partial_assignment(assignment,
+                                                 &comp.variable_order)) {
+      return false;
     }
   }
   return true;
@@ -925,6 +941,11 @@ constraint_handler_sylvan_idd::get_valid_parameter_assignments(
 }
 
 void constraint_handler_sylvan_idd::replace_dont_care_values(test& t) {
+  // A complete test has nothing to replace.
+  if (!t.has_dont_care_value()) {
+    return;
+  }
+
   for (const auto& comp : components_) {
     auto it = comp.test_to_idd.find(&t);
     if (it != comp.test_to_idd.end()) {

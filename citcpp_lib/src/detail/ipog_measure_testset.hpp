@@ -16,8 +16,7 @@ struct ipog_measure_testset_result {
 };
 
 ipog_measure_testset_result ipog_measure_testset(
-    const internal_model& model, const internal_test_set& test_set,
-    std::size_t num_seeded_tests,
+    const internal_test_set& test_set, std::size_t num_seeded_tests,
     std::vector<std::pair<const internal_relation*, ipog_coverage_map>>&
         relations);
 

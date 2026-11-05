@@ -111,7 +111,7 @@ void main_ipog_loop_body(
             ipog_coverage_map(relation.get_current_param_idx() + 1,
                               relation.get_current_interaction_strength(),
                               model, relation.get_parameter_index_map(),
-                              binomial_coeffs, true)));
+                              binomial_coeffs)));
         number_combos_to_process +=
             relation_cov_maps.back().second.get_total_number_of_tuples();
       }
@@ -119,7 +119,7 @@ void main_ipog_loop_body(
 
     if (num_seeded_tests > 0) {
       auto measure_coverage_res = ipog_measure_testset(
-          model, test_set, num_seeded_tests, relation_cov_maps);
+          test_set, num_seeded_tests, relation_cov_maps);
 
       for (const auto& relation_cov_result :
            measure_coverage_res.num_covered_tuples) {
@@ -479,13 +479,13 @@ void citcpp_ipog::entry_point(cagen_exec_handle_ipog_impl& exec_handle) {
 
   // Filter out invalid tests.
   {
-    constraint_evaluator constr_eval(input_model_.get_parameters());
+    constraint_evaluator constr_eval(input_model_);
     auto test_it = tests.get_list_of_tests().begin();
     while (test_it != tests.get_list_of_tests().end()) {
       const auto& t = *test_it;
       const bool is_valid = t.has_dont_care_value()
                                 ? constr_handler->is_valid_partial_test(t)
-                                : constr_eval(t, input_model_);
+                                : constr_eval(t);
       if (!is_valid) {
         test_it = tests.get_list_of_tests().erase(test_it);
       } else {

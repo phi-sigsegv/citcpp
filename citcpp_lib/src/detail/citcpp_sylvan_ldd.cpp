@@ -331,8 +331,12 @@ TASK_4(MDD, sylvan_idd_create_projection_cube, const uint32_t*,
   return cube;
 }
 
+// The recursions over a partial assignment depend on the level, as it decides
+// whether a node is matched against the assignment. A node does not know its
+// level: it can be shared by IDDs over different numbers of variables and then
+// sit at a different level in each of them. So their cache keys have to contain
+// the level.
 static const uint64_t CACHE_IDD_CONTAINS_PART_ASSIGN = (64LL << 40);
-static const uint64_t CACHE_IDD_MARK_VALID = (65LL << 40);
 
 TASK_5(uint64_t, sylvan_idd_sat_with_partial_assignment_recursive, MDD, ldd,
        uint32_t, var_idx, MDD, variables_cube, MDD, values_cube,
@@ -366,14 +370,14 @@ TASK_5(uint64_t, sylvan_idd_sat_with_partial_assignment_recursive, MDD, ldd,
         // We have found the value we are looking for. So recurse from here.
         // Use cached result if possible.
         uint64_t sat;
-        if (!cache_get3(CACHE_IDD_CONTAINS_PART_ASSIGN, ldd, variables_cube,
+        if (!cache_get4(CACHE_IDD_CONTAINS_PART_ASSIGN, ldd, var_idx, variables_cube,
                         values_cube, &sat)) {
           sat = CALL(sylvan_idd_sat_with_partial_assignment_recursive,
                      mddnode_getdown(nldd), var_idx + 1,
                      mddnode_getdown(var_node), mddnode_getdown(value_node),
                      terminate);
           if (!*terminate || sat == 1) {
-            cache_put3(CACHE_IDD_CONTAINS_PART_ASSIGN, ldd, variables_cube,
+            cache_put4(CACHE_IDD_CONTAINS_PART_ASSIGN, ldd, var_idx, variables_cube,
                        values_cube, sat);
           }
         }
@@ -398,8 +402,8 @@ TASK_5(uint64_t, sylvan_idd_sat_with_partial_assignment_recursive, MDD, ldd,
     const mddnode_t nldd = LDD_GETNODE(ldd);
     uint64_t sat = 0;
     // Use cached result if possible.
-    if (!cache_get3(CACHE_IDD_CONTAINS_PART_ASSIGN, ldd, variables_cube,
-                    values_cube, &sat)) {
+    if (!cache_get4(CACHE_IDD_CONTAINS_PART_ASSIGN, ldd, var_idx, variables_cube,
+                        values_cube, &sat)) {
       /* right = */ SPAWN(sylvan_idd_sat_with_partial_assignment_recursive,
                           mddnode_getright(nldd), var_idx, variables_cube,
                           values_cube, terminate);
@@ -410,8 +414,8 @@ TASK_5(uint64_t, sylvan_idd_sat_with_partial_assignment_recursive, MDD, ldd,
           SYNC(sylvan_idd_sat_with_partial_assignment_recursive);
       sat = down_sat || right_sat;
       if (!*terminate || sat == 1) {
-        cache_put3(CACHE_IDD_CONTAINS_PART_ASSIGN, ldd, variables_cube,
-                   values_cube, sat);
+        cache_put4(CACHE_IDD_CONTAINS_PART_ASSIGN, ldd, var_idx, variables_cube,
+                       values_cube, sat);
       }
     }
 
@@ -431,9 +435,12 @@ TASK_2(uint64_t, sylvan_idd_sat_with_partial_assignment, MDD, ldd,
        const partial_assignment_ctx*, ctx) {
 
   // First we create cubes that specifies which variable we have assignments
-  // for, and what are the assigned values.
+  // for, and what are the assigned values. (Protected while they are built:
+  // creating a node may trigger a garbage collection.)
   MDD variables_cube = lddmc_true;
   MDD values_cube = lddmc_true;
+  lddmc_refs_pushptr(&variables_cube);
+  lddmc_refs_pushptr(&values_cube);
   for (int v = ctx->num_variables - 1; v >= 0; --v) {
     const uint32_t var = ctx->variables[v];
     const int value = ctx->variable_order
@@ -446,14 +453,11 @@ TASK_2(uint64_t, sylvan_idd_sat_with_partial_assignment, MDD, ldd,
     }
   }
 
-  lddmc_refs_push(variables_cube);
-  lddmc_refs_push(values_cube);
-
   std::atomic<bool> terminate(false);
   const uint64_t sat = CALL(sylvan_idd_sat_with_partial_assignment_recursive,
                             ldd, 0, variables_cube, values_cube, &terminate);
 
-  lddmc_refs_pop(2);
+  lddmc_refs_popptr(2);
 
   return sat;
 }
@@ -823,6 +827,10 @@ TASK_7(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd, MDD,
 
   assert(ldd != lddmc_true);
 
+  // cache_get4 uses 40 bits of its last key, so each index gets 20 of them.
+  assert(cur_var_idx < (1u << 20) && variable_index < (1u << 20));
+  const uint64_t level_key = ((uint64_t)variable_index << 20) | cur_var_idx;
+
   mddnode_t var_node = LDD_GETNODE(variables_cube);
   uint32_t variable = mddnode_getvalue(var_node);
 
@@ -842,14 +850,14 @@ TASK_7(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd, MDD,
         // Use cached result if possible.
         MDD collected_values;
         if (!cache_get4(CACHE_IDD_GET_VALID_ASSIGNS, ldd, variables_cube,
-                        values_cube, variable_index, &collected_values)) {
+                        values_cube, level_key, &collected_values)) {
           collected_values = CALL(
               sylvan_idd_get_valid_variable_assignments_recursive, nldd_down,
               mddnode_getdown(var_node), mddnode_getdown(value_node),
               cur_var_idx + 1, variable_index, terminate, full_domain);
           if (!*terminate || collected_values == full_domain) {
             cache_put4(CACHE_IDD_GET_VALID_ASSIGNS, ldd, variables_cube,
-                       values_cube, variable_index, collected_values);
+                       values_cube, level_key, collected_values);
           }
         }
 
@@ -877,7 +885,7 @@ TASK_7(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd, MDD,
     MDD collected_values;
     // Use cached result if possible.
     if (!cache_get4(CACHE_IDD_GET_VALID_ASSIGNS, ldd, variables_cube,
-                    values_cube, variable_index, &collected_values)) {
+                        values_cube, level_key, &collected_values)) {
       /* right = */ lddmc_refs_spawn(
           SPAWN(sylvan_idd_get_valid_variable_assignments_recursive, nldd_right,
                 variables_cube, values_cube, cur_var_idx, variable_index,
@@ -936,7 +944,7 @@ TASK_7(MDD, sylvan_idd_get_valid_variable_assignments_recursive, MDD, ldd, MDD,
 
       if (!*terminate || collected_values == full_domain) {
         cache_put4(CACHE_IDD_GET_VALID_ASSIGNS, ldd, variables_cube,
-                   values_cube, variable_index, collected_values);
+                       values_cube, level_key, collected_values);
       }
     }
 
@@ -1047,8 +1055,8 @@ TASK_4(MDD, sylvan_idd_full_sat_one_under_partial_assignment_recursive, MDD,
         // We have found the value we are looking for. So recurse from here.
         // Use cached result if possible.
         MDD full_sat_one_cube;
-        if (!cache_get3(CACHE_IDD_FULL_SAT_ONE_PART_ASSIGN, ldd, variables_cube,
-                        values_cube, &full_sat_one_cube)) {
+        if (!cache_get4(CACHE_IDD_FULL_SAT_ONE_PART_ASSIGN, ldd, var_idx,
+                        variables_cube, values_cube, &full_sat_one_cube)) {
           full_sat_one_cube =
               CALL(sylvan_idd_full_sat_one_under_partial_assignment_recursive,
                    mddnode_getdown(nldd), var_idx + 1,
@@ -1058,8 +1066,8 @@ TASK_4(MDD, sylvan_idd_full_sat_one_under_partial_assignment_recursive, MDD,
             full_sat_one_cube =
                 lddmc_makenode(v, full_sat_one_cube, lddmc_false);
           }
-          cache_put3(CACHE_IDD_FULL_SAT_ONE_PART_ASSIGN, ldd, variables_cube,
-                     values_cube, full_sat_one_cube);
+          cache_put4(CACHE_IDD_FULL_SAT_ONE_PART_ASSIGN, ldd, var_idx,
+                       variables_cube, values_cube, full_sat_one_cube);
         }
 
         return full_sat_one_cube;
@@ -1083,8 +1091,8 @@ TASK_4(MDD, sylvan_idd_full_sat_one_under_partial_assignment_recursive, MDD,
     const mddnode_t nldd = LDD_GETNODE(ldd);
     MDD full_sat_one_cube;
     // Use cached result if possible.
-    if (!cache_get3(CACHE_IDD_FULL_SAT_ONE_PART_ASSIGN, ldd, variables_cube,
-                    values_cube, &full_sat_one_cube)) {
+    if (!cache_get4(CACHE_IDD_FULL_SAT_ONE_PART_ASSIGN, ldd, var_idx,
+                        variables_cube, values_cube, &full_sat_one_cube)) {
       /* right = */ SPAWN(
           sylvan_idd_full_sat_one_under_partial_assignment_recursive,
           mddnode_getright(nldd), var_idx, variables_cube, values_cube);
@@ -1105,8 +1113,8 @@ TASK_4(MDD, sylvan_idd_full_sat_one_under_partial_assignment_recursive, MDD,
         full_sat_one_cube = lddmc_false;
       }
 
-      cache_put3(CACHE_IDD_FULL_SAT_ONE_PART_ASSIGN, ldd, variables_cube,
-                 values_cube, full_sat_one_cube);
+      cache_put4(CACHE_IDD_FULL_SAT_ONE_PART_ASSIGN, ldd, var_idx,
+                       variables_cube, values_cube, full_sat_one_cube);
     }
 
     return full_sat_one_cube;
@@ -1532,8 +1540,6 @@ TASK_1(long double, sylvan_idd_satcount, MDD, mdd) {
 #define sylvan_idd_join(a, b, a_proj, b_proj) \
   RUN(sylvan_idd_join, a, b, a_proj, b_proj)
 
-#define sylvan_idd_mark_valid(ldd, vars, num_vars, ctx) \
-  RUN(sylvan_idd_mark_valid, ldd, vars, num_vars, ctx)
 
 #define sylvan_idd_satcount(mdd) RUN(sylvan_idd_satcount, mdd)
 

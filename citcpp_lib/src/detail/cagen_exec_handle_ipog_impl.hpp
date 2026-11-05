@@ -13,7 +13,9 @@ namespace detail {
 class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
                                     public cagen_exec_handle_base {
   public:
-    ~cagen_exec_handle_ipog_impl() override = default;
+    // Only created as joining_cagen_exec_handle (see there).
+    explicit cagen_exec_handle_ipog_impl(cagen_exec_handle_passkey passkey)
+        : cagen_exec_handle_base(passkey) {}
 
   public:
     unsigned int get_number_of_parameters_to_process() const override {
@@ -40,15 +42,12 @@ class cagen_exec_handle_ipog_impl : public virtual cagen_exec_handle_ipog,
      * as soon as this method is being called.
      */
     void set_runnable(std::unique_ptr<citcpp_ipog>&& runnable) {
-      runnable_ = std::move(runnable);
-      thread_ = std::thread(&citcpp_ipog::entry_point, runnable_.get(),
-                            std::ref(*this));
+      start(std::move(runnable), *this);
     }
 
   private:
     unsigned int num_parameters_to_process_{0};
     unsigned int num_processed_parameters_{0};
-    std::unique_ptr<citcpp_ipog> runnable_{};
 };
 
 }  // namespace detail

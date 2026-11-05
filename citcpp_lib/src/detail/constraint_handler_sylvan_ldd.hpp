@@ -72,12 +72,16 @@ class constraint_handler_sylvan_idd : public constraint_handler_sylvan_base {
     /**
      * See constraint_handler interface.
      */
-    bool is_thread_safe() const override;
+    bool is_valid_partial_test(const test& t) override;
 
     /**
-     * See constraint_handler interface.
+     * See constraint_handler interface. Without a lock: the check only reads
+     * the handler's state (apart from the caller's tuple assignments, see
+     * there), and its Sylvan operations run as Lace tasks, which may run
+     * concurrently on the workers.
      */
-    bool is_valid_partial_test(const test& t) override;
+    bool is_valid_tuple(const param_vector& params,
+                        const value_vector& values) override;
 
     /**
      * See constraint_handler interface.

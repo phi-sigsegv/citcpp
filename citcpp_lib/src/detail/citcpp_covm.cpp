@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <citcpp/coverage_measurement.hpp>
+#include <functional>
 #include <numeric>
 #include <thread>
 #include <unordered_map>
@@ -79,8 +80,6 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
   using namespace citcpp;
   using namespace citcpp::detail;
 
-  const bool with_mt = exec.get_num_workers() > 1;
-
   std::vector<internal_relation> relations(
       create_relations(input_model, model, strength));
 
@@ -95,12 +94,9 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
         int_relation.get_parameter_index_map().size());
 
     unsigned long long number_combos_to_cover =
-        with_mt ? number_of_combinations_to_cover(
-                      n, model, int_relation.get_parameter_index_map(),
-                      strength, false, exec)
-                : number_of_combinations_to_cover(
-                      n, model, int_relation.get_parameter_index_map(),
-                      strength, false);
+        number_of_combinations_to_cover(
+            n, model, int_relation.get_parameter_index_map(), strength, false,
+            exec);
 
     covm_per_relation[""].set_number_of_param_combos_to_cover(
         binomial_coeffs.get_coefficient(n, strength));
@@ -115,14 +111,9 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
           int_relation.get_parameter_index_map().size());
 
       unsigned long long number_combos_to_cover =
-          with_mt
-              ? number_of_combinations_to_cover(
-                    n, model, int_relation.get_parameter_index_map(),
-                    int_relation.get_specified_interaction_strength(), false,
-                    exec)
-              : number_of_combinations_to_cover(
-                    n, model, int_relation.get_parameter_index_map(),
-                    int_relation.get_specified_interaction_strength(), false);
+          number_of_combinations_to_cover(
+              n, model, int_relation.get_parameter_index_map(),
+              int_relation.get_specified_interaction_strength(), false, exec);
 
       covm_per_relation[relation.get_name()]
           .set_number_of_param_combos_to_cover(binomial_coeffs.get_coefficient(
@@ -140,32 +131,18 @@ std::unordered_map<std::string, citcpp::coverage_measurement> main_covm_loop(
   if (strength >= 1) {
     const auto& int_relation = relations[0];
 
-    if (with_mt) {
-      measure_coverage(int_relation.get_specified_interaction_strength(), model,
-                       int_relation.get_parameter_index_map(), test_set,
-                       constr_handler, exec_handle, covm_per_relation[""],
-                       exec);
-    } else {
-      measure_coverage(int_relation.get_specified_interaction_strength(), model,
-                       int_relation.get_parameter_index_map(), test_set,
-                       constr_handler, exec_handle, covm_per_relation[""]);
-    }
+    measure_coverage(int_relation.get_specified_interaction_strength(), model,
+                     int_relation.get_parameter_index_map(), test_set,
+                     constr_handler, exec_handle, covm_per_relation[""], exec);
   } else {
     for (decltype(relations.size()) i = 0; i < relations.size(); ++i) {
       const auto& relation = input_model.get_relations()[i];
       const auto& int_relation = relations[i];
 
-      if (with_mt) {
-        measure_coverage(int_relation.get_specified_interaction_strength(),
-                         model, int_relation.get_parameter_index_map(),
-                         test_set, constr_handler, exec_handle,
-                         covm_per_relation[relation.get_name()], exec);
-      } else {
-        measure_coverage(int_relation.get_specified_interaction_strength(),
-                         model, int_relation.get_parameter_index_map(),
-                         test_set, constr_handler, exec_handle,
-                         covm_per_relation[relation.get_name()]);
-      }
+      measure_coverage(int_relation.get_specified_interaction_strength(), model,
+                       int_relation.get_parameter_index_map(), test_set,
+                       constr_handler, exec_handle,
+                       covm_per_relation[relation.get_name()], exec);
     }
   }
 
@@ -215,14 +192,41 @@ void citcpp_covm::entry_point(covm_exec_handle_impl& exec_handle) {
   // Filter out invalid tests.
   std::vector<std::size_t> invalid_test_indices;
   {
-    constraint_evaluator constr_eval(input_model_.get_parameters());
+    // The complete tests are evaluated in parallel chunks (the evaluator is
+    // read only), the partial ones by the constraint handler.
+    const constraint_evaluator constr_eval(input_model_);
+    std::vector<const test*> all_tests;
+    for (const test& t : tests_.get_list_of_tests()) {
+      all_tests.push_back(&t);
+    }
+    std::vector<char> valid(all_tests.size(), 0);
+    const std::size_t num_chunks =
+        std::min<std::size_t>(all_tests.size(), std::size_t(num_threads) * 8);
+    std::vector<std::function<void()>> chunks;
+    for (std::size_t c = 0; c < num_chunks; ++c) {
+      chunks.emplace_back([&, c] {
+        const std::size_t lb = c * all_tests.size() / num_chunks;
+        const std::size_t ub = (c + 1) * all_tests.size() / num_chunks;
+        for (std::size_t i = lb; i < ub; ++i) {
+          if (!all_tests[i]->has_dont_care_value()) {
+            valid[i] = constr_eval(*all_tests[i]);
+          }
+        }
+      });
+    }
+    {
+      auto scope = exec.create_execution_scope();
+      scope.spawn_execution(chunks);
+    }
+    for (std::size_t i = 0; i < all_tests.size(); ++i) {
+      if (all_tests[i]->has_dont_care_value()) {
+        valid[i] = constr_handler->is_valid_partial_test(*all_tests[i]);
+      }
+    }
     std::size_t test_idx = 0;
     auto test_it = tests_.get_list_of_tests().begin();
     while (test_it != tests_.get_list_of_tests().end()) {
-      const auto& t = *test_it;
-      const bool is_valid = t.has_dont_care_value()
-                                ? constr_handler->is_valid_partial_test(t)
-                                : constr_eval(t, input_model_);
+      const bool is_valid = valid[test_idx] != 0;
       if (!is_valid) {
         test_it = tests_.get_list_of_tests().erase(test_it);
         invalid_test_indices.push_back(test_idx);

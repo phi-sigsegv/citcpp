@@ -25,11 +25,12 @@ std::ostream& operator<<(std::ostream& os,
     }
     os << "\n";
   }
-  os << "  ],\n";
+  os << "  ]";
   for (const auto& relation_and_covm : covm) {
     const auto& relation_name = relation_and_covm.first;
     const auto& relation_covm = relation_and_covm.second;
 
+    os << ",\n";
     os << "  \"" << relation_name << "\": {\n";
     os << "    \"num_tuples_to_cover\": "
        << relation_covm.get_number_of_combinations_to_cover() << ",\n";
@@ -63,9 +64,9 @@ std::ostream& operator<<(std::ostream& os,
       os << "\n";
     }
     os << "    ]\n";
-    os << "  }\n";
+    os << "  }";
   }
-  os << "}\n";
+  os << "\n}\n";
 
   return os;
 }

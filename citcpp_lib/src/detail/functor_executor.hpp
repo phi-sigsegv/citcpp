@@ -37,6 +37,7 @@ concept conc_is_void_functor_executor = requires(const T t) {
 
   { t.get_num_workers() } -> std::integral;
 
+  // In [0, get_num_workers()), for the calling worker.
   { t.get_worker_id() } -> std::integral;
 
   { const_cast<T&>(t).suspend_workers() } -> std::same_as<void>;

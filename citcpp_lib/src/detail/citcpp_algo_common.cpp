@@ -85,40 +85,23 @@ class num_combos_per_param_combo_functor {
     citcpp::detail::number_of_combinations num_combos_;
 };
 
-bool is_covered_by(const citcpp::detail::internal_relation& rel,
-                   const std::vector<unsigned int>& parameter_index_map,
-                   unsigned int interaction_strength) {
+// Whether every t_inner-wise interaction of the inner parameters is also one
+// of the t_outer-wise interactions of the outer parameters, i.e. covering the
+// latter covers the former.
+bool subsumes(const std::vector<unsigned int>& outer_params,
+              unsigned int t_outer,
+              const std::vector<unsigned int>& inner_params,
+              unsigned int t_inner) {
 
-  if (rel.get_specified_interaction_strength() > interaction_strength) {
+  if (t_inner > t_outer) {
     return false;
   }
 
-  std::unordered_set<unsigned int> param_indices(parameter_index_map.begin(),
-                                                 parameter_index_map.end());
+  std::unordered_set<unsigned int> outer_param_indices(outer_params.begin(),
+                                                       outer_params.end());
 
-  for (const unsigned int param_idx : rel.get_parameter_index_map()) {
-    if (param_indices.find(param_idx) == param_indices.end()) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool is_covered_by(const std::vector<unsigned int>& parameter_index_map,
-                   unsigned int interaction_strength,
-                   const citcpp::detail::internal_relation& rel) {
-
-  if (interaction_strength > rel.get_specified_interaction_strength()) {
-    return false;
-  }
-
-  std::unordered_set<unsigned int> param_indices(
-      rel.get_parameter_index_map().begin(),
-      rel.get_parameter_index_map().end());
-
-  for (const unsigned int param_idx : parameter_index_map) {
-    if (param_indices.find(param_idx) == param_indices.end()) {
+  for (const unsigned int param_idx : inner_params) {
+    if (outer_param_indices.find(param_idx) == outer_param_indices.end()) {
       return false;
     }
   }
@@ -220,8 +203,10 @@ std::vector<internal_relation> create_relations_for_cagen(
       while (rel_it != relations.end()) {
         const internal_relation& other_rel = *rel_it;
 
-        if (is_covered_by(parameter_index_map,
-                          relation.get_interaction_strength(), other_rel)) {
+        if (subsumes(other_rel.get_parameter_index_map(),
+                     other_rel.get_specified_interaction_strength(),
+                     parameter_index_map,
+                     relation.get_interaction_strength())) {
 
           // The relation we are currently creating is covered by an already
           // existing one. Thus there is no point in adding it.
@@ -232,8 +217,9 @@ std::vector<internal_relation> create_relations_for_cagen(
           break;
         }
 
-        if (is_covered_by(other_rel, parameter_index_map,
-                          relation.get_interaction_strength())) {
+        if (subsumes(parameter_index_map, relation.get_interaction_strength(),
+                     other_rel.get_parameter_index_map(),
+                     other_rel.get_specified_interaction_strength())) {
           // The relation we are currently creating covers an already
           // existing one. Thus, we remove that other relation, since
           // it is superfluous.

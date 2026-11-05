@@ -53,14 +53,12 @@ class functor_executor_lace {
 
     unsigned int get_num_workers() const;
 
+    // The index of the calling Lace worker (0 outside of Lace).
     std::size_t get_worker_id() const;
 
     void suspend_workers();
 
     functor_execution_scope_lace create_execution_scope();
-
-  private:
-    unsigned int n_workers_;
 };
 
 }  // namespace detail

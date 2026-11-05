@@ -295,6 +295,44 @@ TEST_CASE("constraint handler sylvan IDD, testing atomic prop & IMPL") {
   CHECK(test_with_dont_care_3.get_values()[4] == 0);
 }
 
+
+TEST_CASE("constraint handler sylvan IDD, testing tuples") {
+  using namespace citcpp;
+  using namespace citcpp::detail;
+
+  model model(create_simple_five_param_model());
+
+  auto P2_GT_200 = std::make_shared<int_proposition>(
+      parameter_reference("P2"), relational_operator::GT, 200);
+
+  auto P4_NEQ_5000 = std::make_shared<int_proposition>(
+      parameter_reference("P4"), relational_operator::NEQ, 5000);
+
+  model.add_constraint(std::make_shared<implication>(std::move(P2_GT_200),
+                                                     std::move(P4_NEQ_5000)));
+
+  internal_model i_model(model);
+
+  constraint_handler_sylvan_idd c_handler(i_model, 1,
+                                          (std::size_t)1 * 1024 * 1024 * 1024);
+
+  // A tuple is valid if and only if the partial test with its values is.
+  for (int p2 = 0; p2 < 5; ++p2) {
+    for (int p4 = 0; p4 < 3; ++p4) {
+      const test t({-1, p2, -1, p4, -1});
+      CHECK(c_handler.is_valid_tuple({1, 3}, {p2, p4}) ==
+            c_handler.is_valid_partial_test(t));
+    }
+  }
+  CHECK(!c_handler.is_valid_tuple({1, 3}, {2, 0}));
+  CHECK(c_handler.is_valid_tuple({1, 3}, {1, 0}));
+
+  // The values of a tuple do not stay assigned for the next one.
+  CHECK(!c_handler.is_valid_tuple({1, 3}, {4, 0}));
+  CHECK(c_handler.is_valid_tuple({1}, {4}));
+  CHECK(c_handler.is_valid_tuple({3}, {0}));
+  CHECK(c_handler.is_valid_tuple({0, 2, 4}, {5, 3, 1}));
+}
 TEST_CASE(
     "constraint handler sylvan IDD, testing atomic prop & IMPL implies prop") {
   using namespace citcpp;

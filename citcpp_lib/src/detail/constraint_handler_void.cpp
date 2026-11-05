@@ -6,9 +6,12 @@ namespace detail {
 constraint_handler_void::constraint_handler_void(const internal_model& model)
     : base_type(), model_(model) {}
 
-bool constraint_handler_void::is_thread_safe() const { return true; }
-
 bool constraint_handler_void::is_valid_partial_test(const test&) {
+  return true;
+}
+
+bool constraint_handler_void::is_valid_tuple(const param_vector&,
+                                             const value_vector&) {
   return true;
 }
 

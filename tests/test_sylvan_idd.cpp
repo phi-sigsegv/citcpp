@@ -507,4 +507,79 @@ TEST_CASE("sylvan IDD, testing atomic prop & OR") {
   }
 }
 
+TEST_CASE("sylvan IDD, testing a node shared at two levels") {
+  using namespace citcpp;
+  using namespace citcpp::detail;
+
+  sylvan_lifecycle sylvan_lifecycle;
+
+  // Nodes do not know their level, and the level is the position in the
+  // variables of the IDD. So the top node of "shorter" is at level 0 there, and
+  // at level 1 in "longer". The queries below look the same for that node, as
+  // both assign the variable at position 1 the value 0.
+  const sylvan_idd shorter = sylvan_idd::project_intersect(
+      sylvan_idd(1, relational_operator::EQ, 0, 5),
+      sylvan_idd(2, relational_operator::EQ, 1, 5));
+  const sylvan_idd longer = sylvan_idd::project_intersect(
+      sylvan_idd(0, relational_operator::EQ, 0, 5), shorter);
+  REQUIRE(longer.get_down_node() == shorter);
+
+  // Violates "variable 2 == 1".
+  const std::vector<int> shorter_query{-1, -1, 0};
+  // Agrees with "variable 1 == 0".
+  const std::vector<int> longer_query{-1, 0, -1};
+
+  const auto check_sat = [&](bool shorter_first) {
+    if (shorter_first) {
+      CHECK(!shorter.is_sat_with_partial_assignment(shorter_query));
+    }
+    CHECK(longer.is_sat_with_partial_assignment(longer_query));
+    if (!shorter_first) {
+      CHECK(!shorter.is_sat_with_partial_assignment(shorter_query));
+    }
+  };
+
+  const auto check_valid_values = [&](bool shorter_first) {
+    const auto check_shorter = [&] {
+      CHECK(shorter.get_valid_variable_assignments(1, 5, shorter_query)
+                .count() == 0);
+    };
+    if (shorter_first) {
+      check_shorter();
+    }
+    const auto longer_values =
+        longer.get_valid_variable_assignments(0, 5, longer_query);
+    CHECK(longer_values.count() == 1);
+    CHECK(longer_values.test(0));
+    if (!shorter_first) {
+      check_shorter();
+    }
+  };
+
+  const auto check_sat_one = [&](bool shorter_first) {
+    const auto check_shorter = [&] {
+      std::vector<int> assignment = shorter_query;
+      shorter.get_sat_one_under_partial_assignment(assignment);
+      CHECK(assignment == shorter_query);
+    };
+    if (shorter_first) {
+      check_shorter();
+    }
+    std::vector<int> assignment = longer_query;
+    longer.get_sat_one_under_partial_assignment(assignment);
+    CHECK(assignment == std::vector<int>{0, 0, 1});
+    if (!shorter_first) {
+      check_shorter();
+    }
+  };
+
+  // Each subcase runs with an empty cache, because Sylvan is restarted.
+  SUBCASE("is_sat, shorter first") { check_sat(true); }
+  SUBCASE("is_sat, longer first") { check_sat(false); }
+  SUBCASE("valid values, shorter first") { check_valid_values(true); }
+  SUBCASE("valid values, longer first") { check_valid_values(false); }
+  SUBCASE("sat one, shorter first") { check_sat_one(true); }
+  SUBCASE("sat one, longer first") { check_sat_one(false); }
+}
+
 }  // namespace

@@ -3,8 +3,8 @@
 
 #include <citcpp/constraints.hpp>
 #include <citcpp/model.hpp>
-#include <citcpp/test_set.hpp>
-#include <unordered_map>
+#include <cstdint>
+#include <vector>
 
 #include "internal_test_set.hpp"
 
@@ -12,48 +12,47 @@ namespace citcpp {
 namespace detail {
 
 /**
- * This class provides means to evaluate satisfaction of constraints
- * by a given test.
+ * This class provides means to evaluate satisfaction of the constraints of a
+ * model by a given (complete) test. The constraints are compiled once from
+ * the model: each proposition becomes a table over the value indices of its
+ * parameter, so an evaluation needs neither lookups of parameters nor
+ * comparisons of values. A proposition about a parameter that is not in the
+ * model is false. Read only after construction, so it may be used by several
+ * threads.
  */
 class constraint_evaluator {
   public:
-    constraint_evaluator(const std::vector<parameter>& parameters) {
-      int idx = 0;
-      for (const auto& param : parameters) {
-        param_to_index_.emplace(param, idx);
-        ++idx;
-      }
-    }
+    explicit constraint_evaluator(const model& model);
 
     /**
-     * Evaluates whether all tests in a given testset fulfill all the given
-     * constraints.
+     * Evaluates whether the given test fulfills all constraints of the model.
      */
-    bool operator()(
-        const test_set& tests,
-        const std::vector<std::shared_ptr<constraint>>& constraints) const;
+    bool operator()(const test& test) const;
 
-    /**
-     * Evaluates whether the given test fulfills the given constraint.
-     */
-    bool operator()(const test& test, const constraint& constr,
-                    const model& model) const;
+    enum class node_kind : std::uint8_t { CONSTANT, ATOM, NOT_OR, AND, OR };
 
-    /**
-     * Evaluates whether the given test fulfills all the given constraints.
-     */
-    bool operator()(const test& test, const model& model) const;
-
-    /**
-     * Evaluates whether all tests in a given testset fulfill all the given
-     * constraints.
-     */
-    bool operator()(const internal_test_set& tests,
-                    const citcpp::model& model) const;
+    struct node {
+        node_kind kind;
+        // CONSTANT: the value; ATOM: the parameter index; NOT_OR, AND, OR:
+        // the index of the first child in children_.
+        std::uint32_t a;
+        // ATOM: the offset of the table in tables_; NOT_OR, AND, OR: the
+        // number of children.
+        std::uint32_t b;
+        // ATOM: the number of values of the parameter.
+        std::uint32_t size;
+    };
 
   private:
-    std::unordered_map<parameter_reference, int, parameter_reference_hash>
-        param_to_index_;
+    bool eval(std::uint32_t node_idx, const test& test) const;
+
+    // The nodes of all constraints, the children of the inner nodes, the
+    // tables of the atoms (per value index of the parameter: whether the
+    // proposition holds), and the root node of each constraint.
+    std::vector<node> nodes_;
+    std::vector<std::uint32_t> children_;
+    std::vector<char> tables_;
+    std::vector<std::uint32_t> roots_;
 };
 
 }  // namespace detail

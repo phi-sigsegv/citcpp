@@ -12,6 +12,7 @@
 #include <memory>
 #include <sstream>
 #include <thread>
+#include <utility>
 
 #include "config.hpp"
 #include "covm_json.hpp"
@@ -156,7 +157,7 @@ int execute_cagen(const std::string& model_file_path,
   std::unique_ptr<cagen_exec_handle_ipog> handle =
       seed_test_set
           ? compute_covering_array_ipog(
-                *model, *seed_test_set, interaction_strength,
+                std::move(*model), *seed_test_set, interaction_strength,
                 covering_array_computation_config()
                     .with_algorithm(cagen_algo)
                     .with_replace_dont_care_values(rand_star)
@@ -164,7 +165,7 @@ int execute_cagen(const std::string& model_file_path,
                     .with_constraint_handler_memory_limit_gb(mem_limit_gb)
                     .with_value_separator(sep))
           : compute_covering_array_ipog(
-                *model, interaction_strength,
+                std::move(*model), interaction_strength,
                 covering_array_computation_config()
                     .with_algorithm(cagen_algo)
                     .with_replace_dont_care_values(rand_star)
@@ -224,6 +225,18 @@ int execute_cagen(const std::string& model_file_path,
     }
   }
 
+  cagen_exec_result result(f.get());
+
+  if (result.get_result_code() ==
+      cagen_exec_result::cagen_result_code::COVERING_ARRAY_GENERATION_ERROR) {
+    if (show_progress) {
+      // End the progress line, so that the error message starts on its own.
+      std::cout << std::endl;
+    }
+    std::cerr << "ERROR: " << result.get_error_message() << std::endl;
+    return 1;
+  }
+
   unsigned int constr_init_progress_tgt =
       handle->get_constraint_handler_init_progress_target();
   unsigned int constr_init_progress_cur =
@@ -254,8 +267,6 @@ int execute_cagen(const std::string& model_file_path,
   // restore defaults in formatting.
   std::cout << std::setprecision(default_precision);
   std::cout << std::defaultfloat;
-
-  cagen_exec_result result(f.get());
 
   if (aborted) {
     std::cout << "WARNING: Covering array computation has been aborted. The "
@@ -315,7 +326,7 @@ int execute_covm(const std::string& model_file_path,
             << std::endl;
 
   std::unique_ptr<covm_exec_handle> handle = measure_coverage(
-      *model, *tests, interaction_strength,
+      std::move(*model), *tests, interaction_strength,
       coverage_measurement_config()
           .with_number_of_threads(num_threads)
           .with_constraint_handler_memory_limit_gb(mem_limit_gb)

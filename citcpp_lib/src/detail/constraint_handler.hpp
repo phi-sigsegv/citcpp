@@ -18,21 +18,24 @@ class constraint_handler {
     virtual ~constraint_handler() = default;
 
     /**
-     * Returns whether this constraint handler is thread safe. This
-     * method shall return true, if and only if:
-     * 1. Each individual method can be called concurrently by different
-     * threads.
-     * 2. Different methods mentioned by this interface can be called
-     * concurrently by different threads.
-     */
-    virtual bool is_thread_safe() const = 0;
-
-    /**
      * This method reads the given partial test, in particular the
      * assignments of values to parameters, and returns whether the
      * combination of those assignments is valid.
      */
     virtual bool is_valid_partial_test(const test& t) = 0;
+
+    /**
+     * Returns whether the tuple that assigns values[i] to the parameter
+     * params[i] (and no value to the other parameters) is valid. Must allow
+     * concurrent calls by different workers of the Lace executor (while no
+     * other method is called); the other methods need not allow concurrent
+     * calls. An implementation must not serialize the calls with a lock if its
+     * checks run Lace tasks: a worker that waits for its tasks may run
+     * another check, and a blocked worker cannot take part in the operations
+     * of the other ones.
+     */
+    virtual bool is_valid_tuple(const param_vector& params,
+                                const value_vector& values) = 0;
 
     /**
      * This method reads the given partial tests, in particular the
